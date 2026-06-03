@@ -1,5 +1,4 @@
 ---
-import { Image } from 'astro:assets';
 import { getPostsInLocale, articleHasTerm } from '../lib/posts';
 import { ui, postPath, STATUS_COLOR, type Locale } from '../lib/i18n';
 import { termBySlug, termLabel, type TermGroup } from '../lib/terms';
@@ -20,6 +19,11 @@ const shown = activeTerm
   : posts;
 
 const heroTitle = activeTerm ? activeTerm.label[locale] : t.articlesTitle;
+
+const coverSrc = (cover: unknown): string =>
+  typeof cover === 'string'
+    ? cover
+    : (cover as { src?: string })?.src ?? '';
 ---
 
 <section class="hero">
@@ -39,12 +43,11 @@ const heroTitle = activeTerm ? activeTerm.label[locale] : t.articlesTitle;
             <a class="card" href={postPath(locale, p.slug)}>
               <div class="thumb">
                 {d.cover ? (
-                  <Image
-                    src={d.cover}
+                  <img
+                    src={coverSrc(d.cover)}
                     alt=""
-                    widths={[400, 800]}
-                    sizes="(max-width: 720px) 100vw, 360px"
                     loading="lazy"
+                    decoding="async"
                   />
                 ) : (
                   <div class="thumb-fallback">

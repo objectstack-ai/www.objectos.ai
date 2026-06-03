@@ -1,6 +1,5 @@
 ---
 import Base from './Base.astro';
-import { Image } from 'astro:assets';
 import type { CollectionEntry } from 'astro:content';
 import { ui, homePath, STATUS_COLOR, type Locale } from '../lib/i18n';
 import { termBySlug, termHref, termLabel } from '../lib/terms';
@@ -14,6 +13,10 @@ interface Props {
 const { data, locale, alternates } = Astro.props;
 const t = ui[locale];
 const dateStr = data.date.toISOString().slice(0, 10);
+const coverSrc =
+  typeof data.cover === 'string'
+    ? data.cover
+    : (data.cover as { src?: string } | undefined)?.src;
 ---
 
 <Base
@@ -60,14 +63,13 @@ const dateStr = data.date.toISOString().slice(0, 10);
       {data.description && <p class="lead">{data.description}</p>}
 
       {
-        data.cover && (
-          <Image
+        coverSrc && (
+          <img
             class="cover"
-            src={data.cover}
+            src={coverSrc}
             alt=""
-            widths={[760, 1200]}
-            sizes="(max-width: 820px) 100vw, 760px"
             loading="eager"
+            decoding="async"
           />
         )
       }
