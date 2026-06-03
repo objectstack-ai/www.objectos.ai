@@ -1,18 +1,7 @@
 ---
-import {
-  getPostGroups,
-  entryFor,
-  getUsedTerms,
-  articleHasTerm,
-} from '../lib/posts';
-import { ui, homePath, postPath, STATUS_COLOR, type Locale } from '../lib/i18n';
-import {
-  termBySlug,
-  termHref,
-  termLabel,
-  groupMeta,
-  type TermGroup,
-} from '../lib/terms';
+import { getPostGroups, entryFor, articleHasTerm } from '../lib/posts';
+import { ui, postPath, STATUS_COLOR, type Locale } from '../lib/i18n';
+import { termBySlug, termLabel, type TermGroup } from '../lib/terms';
 
 interface Props {
   locale: Locale;
@@ -22,12 +11,6 @@ const { locale, filter = null } = Astro.props;
 const t = ui[locale];
 
 const groups = await getPostGroups();
-
-// Secondary filter rows (topic lives in the header). Each hidden until used.
-const SECONDARY: TermGroup[] = ['solution', 'role', 'industry'];
-const filterRows = await Promise.all(
-  SECONDARY.map(async (group) => ({ group, terms: await getUsedTerms(group) }))
-);
 
 const activeTerm = filter ? termBySlug(filter.slug) : null;
 const shown = activeTerm
@@ -41,30 +24,6 @@ const heroTitle = activeTerm ? activeTerm.label[locale] : t.articlesTitle;
   <h1>{heroTitle}</h1>
   <p class="lead">{t.articlesLead(shown.length)}</p>
 </section>
-
-<div class="filters">
-  {
-    filterRows
-      .filter((row) => row.terms.length > 0)
-      .map((row) => (
-        <div class="row">
-          <span class="row-label">{groupMeta(row.group).label[locale]}</span>
-          <a
-            href={homePath(locale)}
-            class:list={['chip', { active: filter?.group !== row.group }]}>
-            {t.all}
-          </a>
-          {row.terms.map((term) => (
-            <a
-              href={termHref(locale, term)}
-              class:list={['chip', { active: filter?.slug === term.slug }]}>
-              {term.label[locale]}
-            </a>
-          ))}
-        </div>
-      ))
-  }
-</div>
 
 {
   shown.length === 0 ? (
@@ -108,7 +67,7 @@ const heroTitle = activeTerm ? activeTerm.label[locale] : t.articlesTitle;
 
 <style>
   .hero {
-    margin-bottom: 1.5rem;
+    margin-bottom: 2.25rem;
   }
   .hero h1 {
     font-size: clamp(2rem, 5vw, 2.8rem);
@@ -122,48 +81,6 @@ const heroTitle = activeTerm ? activeTerm.label[locale] : t.articlesTitle;
   }
   .empty {
     color: var(--ink-soft);
-  }
-
-  .filters {
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
-    margin-bottom: 2.25rem;
-  }
-  .row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  .row-label {
-    font-size: 0.78rem;
-    color: var(--muted);
-    margin-right: 0.15rem;
-    min-width: 2.6em;
-  }
-  .chip {
-    font-size: 0.82rem;
-    line-height: 1;
-    padding: 0.38rem 0.7rem;
-    border-radius: 999px;
-    text-decoration: none;
-    color: var(--ink-soft);
-    background: var(--surface-sunk);
-    border: 1px solid transparent;
-    transition:
-      color 0.15s ease,
-      background 0.15s ease,
-      border-color 0.15s ease;
-  }
-  .chip:hover {
-    color: var(--ink);
-  }
-  .chip.active {
-    color: var(--accent);
-    background: var(--accent-soft);
-    border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
-    font-weight: 600;
   }
 
   .list {
