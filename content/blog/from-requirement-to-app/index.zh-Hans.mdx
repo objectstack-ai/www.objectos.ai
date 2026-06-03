@@ -1,0 +1,217 @@
+---
+title: 从一句话需求到能用的应用，中间发生了什么
+description: 你对编码 Agent 说"我要一个报修系统"，几分钟后应用就跑了起来。这篇把中间的每一步拆开——真实的交互、生成的对象与 API、迭代回路，以及 Agent 会在哪出错、你得收哪些尾。
+author: ObjectStack Team
+date: 2026-06-03
+status: draft
+topic: app-building
+audience: developer
+tags:
+  - 低代码
+  - AI 开发
+  - 对象建模
+---
+
+你对一个编码 Agent 说一句话：
+
+> "帮我做一个设备报修系统：能建工单、关联设备、派给工程师、跟踪状态，高优先级自动派单。"
+
+几分钟后，一个带 REST API、带后台、能建单能流转的应用跑了起来。
+
+"这不就是 AI 生成代码嘛"——但如果你真让 Agent 从零写一个传统应用，你会很快撞墙。这篇我们把中间这几分钟逐步拆开：它到底做了什么，生成的东西长什么样，你要在哪里接手，以及它会在哪出错。
+
+## 为什么让 Agent 直接写传统应用会失败
+
+一个普通内部系统，本质是几万行散落的东西：建表 DDL、CRUD controller、表单、校验、列表页、权限判断、API 路由、状态机……分布在几十个文件里。
+
+让 Agent 一次写出这一整坨，两个问题绕不过去：
+
+- **上下文装不下**。跨几十个文件的一致性它保证不了，写到一半就开始自相矛盾。
+- **你 review 不动**。就算它生成了，几千行胶水你没法逐行确认没埋雷——于是"能生成、不敢用"。
+
+ObjectStack 改变的是这个前提：把一个应用的**本质**压缩成几百行声明式 metadata。Agent 的活，从"写一个应用"变成"写一份你能读完的规格"。
+
+## Step 0：它先内省，再动手
+
+第一件值得注意的事：好的 Agent 不会上来就吐代码，它会**先看、再问**。
+
+针对上面那句需求，Agent 大致会这样推进：
+
+> - 扫一遍现有项目：有没有 `user`、`device` 这种对象可以复用？
+> - 拆出需要的对象：`device`（设备）、`repair_order`（工单）。
+> - 把不确定的点抛回给你："工程师用现有的 `user` 对象，还是单独建 `engineer`？成本字段要不要对工程师隐藏？"
+
+它在建**领域模型**，不是在拼界面。这一步决定了后面所有派生物的质量。
+
+## Step 1：需求 → 对象（带关系、枚举、校验）
+
+确认后，它把模型写成 `ObjectSchema`。注意关系、枚举、校验都在同一份声明里：
+
+```ts
+import { ObjectSchema, Field } from '@objectstack/spec/data';
+
+export const RepairOrder = ObjectSchema.create({
+  name: 'repair_order',
+  label: '报修工单',
+  fields: {
+    title:    Field.text({ label: '故障描述', required: true }),
+    device:   Field.lookup('device', { label: '设备', required: true }),
+    status:   Field.select({
+      label: '状态',
+      options: [
+        { label: '待派单', value: 'pending', default: true },
+        { label: '维修中', value: 'in_repair' },
+        { label: '已完成', value: 'done' },
+      ],
+    }),
+    priority: Field.select({
+      label: '优先级',
+      options: [
+        { label: '低', value: 'low' },
+        { label: '中', value: 'medium', default: true },
+        { label: '高', value: 'high' },
+      ],
+    }),
+    assignee:    Field.lookup('user', { label: '工程师' }),
+    cost:        Field.currency({ label: '维修成本' }),
+    reported_at: Field.datetime({ label: '报修时间' }),
+  },
+});
+```
+
+几个 Agent 的判断值得点出来：
+
+- `device`、`assignee` 用 **`Field.lookup('目标对象', …)`**（关系，目标对象是第一个参数），而不是塞一个字符串 ID——所以列表页能直接显示设备名、能反查"这台设备的所有工单"；
+- `status`/`priority` 用 **`select` + 枚举**：`value` 用小写存库、`label` 给中文展示、`default: true` 标默认值——校验、筛选、看板分组全有了依据；
+- `cost` 先是个普通字段；至于"工程师看不到成本"，**字段级可见性不写在字段上**，而是在权限集里配（下面 Step 3 会说）。
+
+这不是伪代码或文档，**是你仓库里能提交、能 diff 的源码**。
+
+## Step 2：metadata → 一切自动派生
+
+schema 一落地，下面这些你一行都不用写——它们都是这份元数据的**投影**：
+
+**REST API**（`/api/v1/data/<对象>` 下现成的增删改查、关系展开）：
+
+```bash
+# 建单
+curl -X POST /api/v1/data/repair_order \
+  -d '{ "title": "3 号机床异响", "device": "dev_012", "priority": "high" }'
+
+# 取单，并把关联的设备展开出来
+curl '/api/v1/data/repair_order/ro_8841?expand=device'
+```
+
+```json
+{
+  "id": "ro_8841",
+  "title": "3 号机床异响",
+  "status": "pending",
+  "priority": "high",
+  "device": { "id": "dev_012", "name": "CNC-3 号机床" }
+}
+```
+
+注意返回的就是记录本身（不多包一层）；`status`/`priority` 存的是 `value`（`pending`/`high`），界面上自动显示对应的中文 `label`。
+
+**后台界面**：Studio 里按字段类型自动渲染出列表、表单、详情页——`select` 成下拉、`lookup` 成关联选择器。
+
+**给 AI 的工具**：同一个对象自动暴露成 agent 能调的 `describe_object` / `query_records` / `get_record`。也就是说，你刚建的这个系统，**本身就是 AI-ready 的**。
+
+没有 controller、没有手写表单、没有手配路由。
+
+## Step 3：你接手——审核与收口
+
+这是"敢用"的关键。因为产出是几百行声明式规格，**你能整份读完**。真实会发生的收口，通常是这几类：
+
+- **它过度建模**：给你加了 `customer`、`warranty` 这种你这一期用不到的字段——删掉；
+- **关系猜错**：`assignee` 它可能写成 `Field.lookup('engineer', …)`，而你想复用 `user`——改一处；
+- **字段级安全**：把成本对工程师设为不可见，不是改字段，而是在**权限集**里加一行：
+
+```ts
+// 权限集（permission set）里，而不是字段定义上
+fields: {
+  'repair_order.cost': { readable: false, editable: false },
+}
+```
+
+关键是：这些都是**改一处声明**的事，不是去十几个文件里追胶水。AI 起草，你审核收口，你掌控的是一份看得懂的规格。
+
+## Step 4：业务逻辑——依然是声明式
+
+"高优先级自动派单"这类规则，不写成挂在对象上的代码，而是一个**独立的 `*.hook.ts`**（同样是能被系统读懂、注册、审计的元数据）：
+
+```ts
+// src/hooks/repair-order.hook.ts
+import type { Hook, HookContext } from '@objectstack/spec';
+
+export const AutoAssignHook: Hook = {
+  name: 'repair_auto_assign',
+  object: 'repair_order',
+  events: ['beforeInsert'],
+  handler: async (ctx: HookContext) => {
+    const input = ctx.input as { priority?: string; assignee?: string };
+    if (input.priority === 'high' && !input.assignee) {
+      input.assignee = await pickDutyEngineer();
+    }
+  },
+};
+```
+
+派生字段则用**公式**——查询期计算、无需落库（注意公式里字段名是裸写的）：
+
+```ts
+import { cel } from '@objectstack/spec';
+
+// 放进对象的 fields 里：含税成本
+cost_with_tax: Field.formula({
+  label: '含税成本',
+  expression: cel`(cost == null ? 0 : cost) * 1.06`,
+}),
+```
+
+这里有个对开发者很重要的细节：**表达式是构建期校验的**。如果在校验条件里把字段名拼错——比如写成 `record.prioriy`——不会上线后默默失效，而是**构建时直接报错**，还带修正建议：
+
+```
+unknown field `prioriy` on `repair_order` — did you mean `priority`?
+```
+
+（"4 小时未处理就提醒"这类定时规则，用一个定时 flow 表达，这里不展开。）
+
+## Step 5：跑起来，然后——迭代
+
+```bash
+pnpm dev   # → REST API + Studio 同时起来
+```
+
+但真正的开发不是一次成型，而是**回路**。三天后产品说"工单要能加备注和图片"。传统项目这是一圈活：改表、改 API、改表单、改详情页。在这里：
+
+```ts
+// 往同一份 schema 加两个字段
+notes:  Field.textarea({ label: '维修备注' }),
+photos: Field.image({ label: '现场照片', multiple: true }),
+```
+
+存盘——API、表单、详情页、给 AI 的工具**重新投影一遍**就有了。需求改的是**规格**，不是散落的实现。这就是它和"一次性脚手架代码生成"的本质区别：metadata 是活的源头，不是生成完就各走各路的产物。
+
+## 它会在哪出错（诚实的部分）
+
+别把它当魔法。Agent 仍然会：
+
+- **把枚举值猜得不对**（`select` 选项不符合你实际业务）；
+- **关系建反**（一对多建成多对一）；
+- **过度设计**，一上来给你十几个对象。
+
+但和"几千行胶水里埋雷"不同——这些错误**都摆在一份你读得完的声明里**，要么你一眼看出来，要么构建期校验帮你拦下来。可审、可改、可控，这才是区别。
+
+## 为什么这事现在才成立
+
+不是模型突然开窍了，而是**整个应用小到能塞进 Agent 的上下文窗口**了。
+
+当一个应用就是几百行类型化的声明式规格，Agent 能一次读完、理解每处依赖、**跨数据 / API / UI / 权限一起改**——而不是在几十个文件里盲人摸象。这就是 AI 从"自动补全"跨到"共同维护者"的门槛。
+
+---
+
+所以"从一句话到能用的应用"，中间不是 AI 凭空写出了一个系统，而是：**它写了一份你能读懂、能审、能改的规格，平台把规格变成了应用，并在每次需求变更时重新投影。**
+
+> 想自己跑一遍？`npx create-objectstack`，打开 Studio 里的 AI 助手，对它说一句你的需求，看着对象、API、界面一层层被建出来——再试着改一个字段，看它如何重新长好。
