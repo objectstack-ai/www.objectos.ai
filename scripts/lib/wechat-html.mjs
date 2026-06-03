@@ -7,29 +7,35 @@
 import { marked } from 'marked';
 
 // --- Inline style palette (tweak here to restyle every export) ---------------
+// Accent: indigo #4f46e5. Designed for WeChat (inline styles only; classes and
+// <style> tags are stripped by the editor).
 const S = {
   section:
-    'font-size:15px;line-height:1.75;color:#3f3f3f;letter-spacing:0.02em;word-break:break-word;',
-  h1: 'font-size:22px;font-weight:bold;color:#1f2328;margin:1.6em 0 0.8em;line-height:1.4;',
-  h2: 'font-size:20px;font-weight:bold;color:#1f2328;margin:1.6em 0 0.8em;padding-left:10px;border-left:4px solid #2563eb;line-height:1.4;',
-  h3: 'font-size:17px;font-weight:bold;color:#1f2328;margin:1.4em 0 0.6em;line-height:1.4;',
-  h4: 'font-size:15px;font-weight:bold;color:#1f2328;margin:1.2em 0 0.5em;',
-  p: 'margin:0 0 1em;',
-  strong: 'font-weight:bold;color:#1f2328;',
-  em: 'font-style:italic;',
+    'font-size:16px;line-height:1.9;color:#3f3f3f;letter-spacing:0.034em;word-break:break-word;',
+  h1: 'font-size:22px;font-weight:bold;color:#1d1d2c;margin:1.8em 0 0.9em;line-height:1.5;',
+  // Tinted block header with accent bar — the main visual anchor.
+  h2: 'font-size:19px;font-weight:bold;color:#1d1d2c;margin:2.2em 0 1em;padding:9px 16px;background:#eef0fe;border-left:4px solid #4f46e5;border-radius:6px;line-height:1.6;',
+  h3: 'font-size:16px;font-weight:bold;color:#4f46e5;margin:1.8em 0 0.7em;padding-left:11px;border-left:3px solid #4f46e5;line-height:1.5;',
+  h4: 'font-size:15px;font-weight:bold;color:#1d1d2c;margin:1.4em 0 0.5em;',
+  p: 'margin:0 0 1.35em;',
+  // Colored bold makes key phrases pop on scan — standard WeChat treatment.
+  strong: 'font-weight:bold;color:#4f46e5;',
+  em: 'font-style:italic;color:#1d1d2c;',
+  // Card-style callout — used for 金句 / CTA blocks.
   blockquote:
-    'margin:1em 0;padding:0.6em 1em;background:#f7f8fa;border-left:3px solid #d0d7de;color:#57606a;',
-  pre: 'margin:1em 0;padding:14px 16px;background:#f6f8fa;border-radius:6px;overflow-x:auto;font-size:13px;line-height:1.5;white-space:pre;',
+    'margin:1.6em 0;padding:16px 18px;background:#f6f7fc;border-left:4px solid #4f46e5;border-radius:10px;color:#4a4a5c;font-size:15px;line-height:1.8;',
+  pre: 'margin:1.4em 0;padding:14px 16px;background:#f6f8fa;border-radius:8px;overflow-x:auto;font-size:13px;line-height:1.6;white-space:pre;',
   codeInPre: 'font-family:Menlo,Consolas,monospace;color:#24292f;background:none;padding:0;',
   codeInline:
-    'background:#f2f3f5;color:#c7254e;padding:2px 5px;border-radius:3px;font-size:13px;font-family:Menlo,Consolas,monospace;',
-  ul: 'margin:0 0 1em;padding-left:1.4em;',
-  ol: 'margin:0 0 1em;padding-left:1.4em;',
-  li: 'margin:0.3em 0;',
-  link: 'color:#2563eb;border-bottom:1px solid #2563eb;',
-  sup: 'color:#2563eb;font-size:12px;',
-  hr: 'border:none;border-top:1px solid #e5e7eb;margin:1.6em 0;',
-  img: 'max-width:100%;border-radius:6px;display:block;margin:1em auto;',
+    'background:#eef0fe;color:#4f46e5;padding:2px 6px;border-radius:4px;font-size:14px;font-family:Menlo,Consolas,monospace;',
+  ul: 'margin:0.4em 0 1.35em;padding-left:1.5em;',
+  ol: 'margin:0.4em 0 1.35em;padding-left:1.5em;',
+  li: 'margin:0.55em 0;',
+  link: 'color:#4f46e5;border-bottom:1px solid #4f46e5;',
+  sup: 'color:#4f46e5;font-size:12px;',
+  // Short centered rule reads as an intentional section break.
+  hr: 'border:none;border-top:2px solid #e6e6ef;width:40px;margin:2.6em auto;',
+  img: 'max-width:100%;border-radius:8px;display:block;margin:1.2em auto;',
   refUrl: 'color:#8c8c8c;font-size:13px;word-break:break-all;',
 };
 

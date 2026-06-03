@@ -34,13 +34,25 @@ if (!slug) {
   exit(1);
 }
 
-const fileName = locale === 'en' ? `${slug}.mdx` : `${slug}.${locale}.mdx`;
-const srcPath = path.join(cwd(), 'content', 'blog', fileName);
-
-try {
-  await access(srcPath);
-} catch {
-  console.error(`✗ Not found: content/blog/${fileName}`);
+const indexName = locale === 'en' ? 'index.mdx' : `index.${locale}.mdx`;
+const flatName = locale === 'en' ? `${slug}.mdx` : `${slug}.${locale}.mdx`;
+// Prefer folder-per-post layout, fall back to flat files.
+const candidates = [
+  path.join(cwd(), 'content', 'blog', slug, indexName),
+  path.join(cwd(), 'content', 'blog', flatName),
+];
+let srcPath;
+for (const c of candidates) {
+  try {
+    await access(c);
+    srcPath = c;
+    break;
+  } catch {
+    /* try next */
+  }
+}
+if (!srcPath) {
+  console.error(`✗ Not found: content/blog/${slug}/${indexName}`);
   exit(1);
 }
 

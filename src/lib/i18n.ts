@@ -19,6 +19,8 @@ type StatusKey = 'draft' | 'review' | 'published' | 'archived';
 interface Strings {
   siteName: string;
   nav: string;
+  all: string;
+  audience: string;
   articlesTitle: string;
   articlesLead: (n: number) => string;
   backToList: string;
@@ -33,6 +35,8 @@ export const ui: Record<Locale, Strings> = {
   en: {
     siteName: 'ObjectStack',
     nav: 'Writing',
+    all: 'All',
+    audience: 'Audience',
     articlesTitle: 'Articles',
     articlesLead: (n) => `${n} ${n === 1 ? 'piece' : 'pieces'} on building AI-native software.`,
     backToList: 'All articles',
@@ -50,6 +54,8 @@ export const ui: Record<Locale, Strings> = {
   'zh-Hans': {
     siteName: 'ObjectStack',
     nav: '文章',
+    all: '全部',
+    audience: '受众',
     articlesTitle: '文章',
     articlesLead: (n) => `${n} 篇关于构建 AI-native 软件的文章。`,
     backToList: '全部文章',

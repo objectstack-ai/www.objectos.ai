@@ -1,5 +1,7 @@
 import { getCollection, type CollectionEntry } from 'astro:content';
 import type { Locale } from './i18n';
+import { PRODUCTS, type ProductSlug } from './products';
+import { AUDIENCES, type AudienceSlug } from './audiences';
 
 export interface PostGroup {
   slug: string; // base slug, shared across languages
@@ -42,4 +44,18 @@ export function entryFor(
   locale: Locale
 ): CollectionEntry<'blog'> {
   return group.langs[locale] ?? group.primary;
+}
+
+/** Products that actually have at least one post, in canonical order. */
+export async function getUsedProducts(): Promise<ProductSlug[]> {
+  const groups = await getPostGroups();
+  const present = new Set(groups.map((g) => g.primary.data.product));
+  return PRODUCTS.map((p) => p.slug).filter((slug) => present.has(slug));
+}
+
+/** Audiences that actually have at least one post, in canonical order. */
+export async function getUsedAudiences(): Promise<AudienceSlug[]> {
+  const groups = await getPostGroups();
+  const present = new Set(groups.map((g) => g.primary.data.audience));
+  return AUDIENCES.map((a) => a.slug).filter((slug) => present.has(slug));
 }

@@ -1,5 +1,7 @@
 ---
 import { ui, homePath, type Locale } from '../lib/i18n';
+import { getUsedProducts } from '../lib/posts';
+import { productLabel, productPath } from '../lib/products';
 
 interface Props {
   locale: Locale;
@@ -9,11 +11,16 @@ interface Props {
 
 const { locale, enHref, zhHref } = Astro.props;
 const t = ui[locale];
+
+const products = await getUsedProducts();
+const pathname = Astro.url.pathname;
+const homeHref = homePath(locale);
+const onHome = pathname === homeHref;
 ---
 
 <header class="site-header">
   <div class="bar">
-    <a class="wordmark" href={homePath(locale)}>
+    <a class="wordmark" href={homeHref}>
       <span class="mark">◆</span>
       <span class="name">{t.siteName}</span>
       <span class="sep">/</span>
@@ -33,6 +40,28 @@ const t = ui[locale];
       >
     </nav>
   </div>
+
+  {
+    products.length > 0 && (
+      <nav class="products" aria-label="Products">
+        <div class="products-inner">
+          <a class:list={['prod', { active: onHome }]} href={homeHref}>
+            {t.all}
+          </a>
+          {products.map((slug) => (
+            <a
+              class:list={[
+                'prod',
+                { active: pathname.startsWith(productPath(locale, slug)) },
+              ]}
+              href={productPath(locale, slug)}>
+              {productLabel(slug, locale)}
+            </a>
+          ))}
+        </div>
+      </nav>
+    )
+  }
 </header>
 
 <style>
@@ -93,7 +122,9 @@ const t = ui[locale];
     border-radius: 999px;
     text-decoration: none;
     color: var(--ink-soft);
-    transition: color 0.15s, background 0.15s;
+    transition:
+      color 0.15s,
+      background 0.15s;
   }
   .seg:hover {
     color: var(--ink);
@@ -103,5 +134,37 @@ const t = ui[locale];
     color: var(--ink);
     font-weight: 600;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  }
+
+  /* Product-level nav (primary axis) */
+  .products {
+    border-top: 1px solid var(--line);
+  }
+  .products-inner {
+    max-width: var(--maxw);
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    overflow-x: auto;
+  }
+  .prod {
+    font-size: 0.88rem;
+    color: var(--ink-soft);
+    text-decoration: none;
+    white-space: nowrap;
+    padding: 0.2rem 0;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s;
+  }
+  .prod:hover {
+    color: var(--ink);
+  }
+  .prod.active {
+    color: var(--ink);
+    font-weight: 600;
+    border-bottom-color: var(--accent);
   }
 </style>

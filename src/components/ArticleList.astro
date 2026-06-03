@@ -1,27 +1,75 @@
 ---
 import { getPostGroups, entryFor } from '../lib/posts';
-import { ui, postPath, STATUS_COLOR, type Locale } from '../lib/i18n';
+import { ui, homePath, postPath, STATUS_COLOR, type Locale } from '../lib/i18n';
+import {
+  AUDIENCES,
+  audienceLabel,
+  audiencePath,
+  type AudienceSlug,
+} from '../lib/audiences';
+import { productLabel, type ProductSlug } from '../lib/products';
 
 interface Props {
   locale: Locale;
+  activeProduct?: ProductSlug | null;
+  activeAudience?: AudienceSlug | null;
 }
-const { locale } = Astro.props;
+const { locale, activeProduct = null, activeAudience = null } = Astro.props;
 const t = ui[locale];
 
 const groups = await getPostGroups();
+
+// Audience filter row: only values that actually have posts.
+const audiences = AUDIENCES.filter((a) =>
+  groups.some((g) => entryFor(g, locale).data.audience === a.slug)
+);
+
+let shown = groups;
+if (activeProduct)
+  shown = shown.filter((g) => entryFor(g, locale).data.product === activeProduct);
+if (activeAudience)
+  shown = shown.filter((g) => entryFor(g, locale).data.audience === activeAudience);
+
+const heroTitle = activeProduct
+  ? productLabel(activeProduct, locale)
+  : activeAudience
+    ? audienceLabel(activeAudience, locale)
+    : t.articlesTitle;
 ---
 
 <section class="hero">
-  <h1>{t.articlesTitle}</h1>
-  <p class="lead">{t.articlesLead(groups.length)}</p>
+  <h1>{heroTitle}</h1>
+  <p class="lead">{t.articlesLead(shown.length)}</p>
 </section>
 
 {
-  groups.length === 0 ? (
+  audiences.length > 0 && (
+    <div class="filters">
+      <div class="row">
+        <span class="row-label">{t.audience}</span>
+        <a
+          href={homePath(locale)}
+          class:list={['chip', { active: !activeAudience }]}>
+          {t.all}
+        </a>
+        {audiences.map((a) => (
+          <a
+            href={audiencePath(locale, a.slug)}
+            class:list={['chip', { active: activeAudience === a.slug }]}>
+            {a.label[locale]}
+          </a>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+{
+  shown.length === 0 ? (
     <p class="empty">{t.empty}</p>
   ) : (
     <ul class="list">
-      {groups.map((g) => {
+      {shown.map((g) => {
         const entry = entryFor(g, locale);
         const d = entry.data;
         return (
@@ -35,13 +83,13 @@ const groups = await getPostGroups();
               </div>
               <h2>{d.title}</h2>
               <p class="desc">{d.description}</p>
-              {d.channels.length > 0 && (
-                <div class="foot">
-                  <span class="chcount">
-                    {t.alsoOn} {d.channels.map((c) => c.platform).join(' · ')}
-                  </span>
-                </div>
-              )}
+              <div class="facets">
+                <span class="facet product">{productLabel(d.product, locale)}</span>
+                <span class="facet">{audienceLabel(d.audience, locale)}</span>
+                {d.tags.map((tag) => (
+                  <span class="facet tag">{tag}</span>
+                ))}
+              </div>
             </a>
           </li>
         );
@@ -52,7 +100,7 @@ const groups = await getPostGroups();
 
 <style>
   .hero {
-    margin-bottom: 2.5rem;
+    margin-bottom: 1.5rem;
   }
   .hero h1 {
     font-size: clamp(2rem, 5vw, 2.8rem);
@@ -66,6 +114,46 @@ const groups = await getPostGroups();
   }
   .empty {
     color: var(--ink-soft);
+  }
+
+  /* Audience filter row */
+  .filters {
+    margin-bottom: 2.25rem;
+  }
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .row-label {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-right: 0.15rem;
+    min-width: 2.6em;
+  }
+  .chip {
+    font-size: 0.82rem;
+    line-height: 1;
+    padding: 0.38rem 0.7rem;
+    border-radius: 999px;
+    text-decoration: none;
+    color: var(--ink-soft);
+    background: var(--surface-sunk);
+    border: 1px solid transparent;
+    transition:
+      color 0.15s ease,
+      background 0.15s ease,
+      border-color 0.15s ease;
+  }
+  .chip:hover {
+    color: var(--ink);
+  }
+  .chip.active {
+    color: var(--accent);
+    background: var(--accent-soft);
+    border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+    font-weight: 600;
   }
 
   .list {
@@ -98,12 +186,14 @@ const groups = await getPostGroups();
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 0.75rem;
     margin-bottom: 0.6rem;
   }
   .top time {
     font-size: 0.8rem;
     color: var(--muted);
     font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
   }
   .card h2 {
     font-size: 1.3rem;
@@ -116,7 +206,7 @@ const groups = await getPostGroups();
     color: var(--accent);
   }
   .desc {
-    margin: 0 0 1rem;
+    margin: 0 0 0.9rem;
     color: var(--ink-soft);
     font-size: 0.96rem;
     line-height: 1.6;
@@ -125,14 +215,31 @@ const groups = await getPostGroups();
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-  .foot {
+  .facets {
     display: flex;
-    align-items: center;
-    gap: 0.9rem;
-    font-size: 0.78rem;
-    color: var(--muted);
+    flex-wrap: wrap;
+    gap: 0.4rem;
   }
-  .chcount {
+  .facet {
+    font-size: 0.72rem;
     color: var(--ink-soft);
+    background: var(--surface-sunk);
+    padding: 0.12rem 0.5rem;
+    border-radius: 5px;
+    white-space: nowrap;
+  }
+  .facet.product {
+    color: var(--accent);
+    background: var(--accent-soft);
+    font-weight: 600;
+  }
+  .facet.tag {
+    color: var(--muted);
+    background: transparent;
+    padding: 0.12rem 0.35rem;
+  }
+  .facet.tag::before {
+    content: '#';
+    opacity: 0.6;
   }
 </style>
