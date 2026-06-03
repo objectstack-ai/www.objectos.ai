@@ -91,10 +91,14 @@ async function addDraft(token, article) {
 }
 
 // --- main --------------------------------------------------------------------
-const fileName = locale === 'en' ? `${slug}.mdx` : `${slug}.${locale}.mdx`;
-const source = await readFile(path.join(cwd(), 'content', 'blog', fileName), 'utf8').catch(() =>
-  die(`Not found: content/blog/${fileName}`)
-);
+const indexName = locale === 'en' ? 'index.mdx' : `index.${locale}.mdx`;
+const flatName = locale === 'en' ? `${slug}.mdx` : `${slug}.${locale}.mdx`;
+const source = await readFile(
+  path.join(cwd(), 'content', 'blog', slug, indexName),
+  'utf8'
+)
+  .catch(() => readFile(path.join(cwd(), 'content', 'blog', flatName), 'utf8'))
+  .catch(() => die(`Not found: content/blog/${slug}/${indexName}`));
 
 const { html, title, description, author } = toWechatHtml(source);
 if (!title) die('Article frontmatter has no title.');

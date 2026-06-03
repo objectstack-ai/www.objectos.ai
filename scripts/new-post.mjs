@@ -9,7 +9,7 @@
 // Locale defaults to "en" (file: <slug>.mdx). Any other locale produces
 // <slug>.<locale>.mdx so it groups with its translation on the dashboard.
 
-import { writeFile, access } from 'node:fs/promises';
+import { writeFile, access, mkdir } from 'node:fs/promises';
 import { argv, exit, cwd } from 'node:process';
 import path from 'node:path';
 
@@ -48,8 +48,10 @@ if (!slug) {
 }
 
 const today = new Date().toISOString().slice(0, 10);
-const fileName = locale === 'en' ? `${slug}.mdx` : `${slug}.${locale}.mdx`;
-const filePath = path.join(cwd(), 'content', 'blog', fileName);
+// Folder-per-post: content/blog/<slug>/index[.locale].mdx — co-locate images here.
+const dir = path.join(cwd(), 'content', 'blog', slug);
+const fileName = locale === 'en' ? 'index.mdx' : `index.${locale}.mdx`;
+const filePath = path.join(dir, fileName);
 
 const frontmatter = `---
 title: ${title}
@@ -57,7 +59,12 @@ description: ""
 author: ObjectStack Team
 date: ${today}
 status: draft
+product: objectstack
+# Audience: boss | developer | general
+audience: boss
+# Topic / long-tail — freeform, e.g. [AI落地, 降本增效]
 tags: []
+# cover: ./cover.png   # drop an image in this folder and Astro will optimize it
 # canonical_url: https://your-domain.com/blog/${slug}
 # channels:
 #   - platform: own-blog
@@ -70,12 +77,13 @@ Write your article here.
 
 try {
   await access(filePath);
-  console.error(`✗ File already exists: content/blog/${fileName}`);
+  console.error(`✗ File already exists: content/blog/${slug}/${fileName}`);
   exit(1);
 } catch {
   // does not exist — good
 }
 
+await mkdir(dir, { recursive: true });
 await writeFile(filePath, frontmatter, 'utf8');
-console.log(`✓ Created content/blog/${fileName}`);
+console.log(`✓ Created content/blog/${slug}/${fileName}`);
 console.log(`  Preview at http://localhost:4321/blog/${locale === 'en' ? slug : `${slug}.${locale}`}`);
