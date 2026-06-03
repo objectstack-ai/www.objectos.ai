@@ -1,5 +1,11 @@
 ---
-import { ui, homePath, LOCALES, LANG_LABEL, type Locale } from '../lib/i18n';
+import {
+  ui,
+  homePath,
+  LOCALES,
+  LANG_NATIVE,
+  type Locale,
+} from '../lib/i18n';
 import { getUsedTerms } from '../lib/posts';
 import { termHref, groupMeta, type TermGroup } from '../lib/terms';
 
@@ -38,19 +44,43 @@ const menus = (
       <span class="nav">{t.nav}</span>
     </a>
 
-    <nav class="lang" aria-label="Language">
-      {
-        LOCALES.map((l) => (
-          <a
-            class:list={['seg', { active: l === locale }]}
-            href={alternates[l] ?? homePath(l)}
-            data-lang={l}
-            aria-current={l === locale ? 'true' : undefined}>
-            {LANG_LABEL[l]}
-          </a>
-        ))
-      }
-    </nav>
+    <div class="bar-right">
+      <button
+        type="button"
+        class="iconbtn"
+        data-theme-toggle
+        aria-label="Toggle dark mode"
+        title="Toggle dark mode">
+        <span class="moon" aria-hidden="true">☾</span>
+        <span class="sun" aria-hidden="true">☀</span>
+      </button>
+
+      <div class="menu langmenu" data-menu>
+        <button
+          type="button"
+          class="lang-trigger"
+          aria-expanded="false"
+          aria-haspopup="true"
+          data-menu-trigger>
+          <span class="globe" aria-hidden="true">🌐</span>
+          <span class="lang-cur">{LANG_NATIVE[locale]}</span>
+          <span class="caret" aria-hidden="true">▾</span>
+        </button>
+        <div class="menu-panel lang-panel" role="menu">
+          {
+            LOCALES.map((l) => (
+              <a
+                class:list={['menu-item', { active: l === locale }]}
+                href={alternates[l] ?? homePath(l)}
+                data-lang={l}
+                role="menuitem">
+                {LANG_NATIVE[l]}
+              </a>
+            ))
+          }
+        </div>
+      </div>
+    </div>
   </div>
 
   {
@@ -94,7 +124,7 @@ const menus = (
 
 <script>
   // Remember the reader's language choice so `/` redirects there next time.
-  document.querySelectorAll<HTMLAnchorElement>('.lang [data-lang]').forEach((a) => {
+  document.querySelectorAll<HTMLAnchorElement>('[data-lang]').forEach((a) => {
     a.addEventListener('click', () => {
       try {
         localStorage.setItem('preferred-lang', a.dataset.lang || 'en');
@@ -104,7 +134,20 @@ const menus = (
     });
   });
 
-  // Dropdown menus: click to open, single-open, close on outside-click / Escape.
+  // Dark-mode toggle (persisted; default comes from the inline head script).
+  document.querySelector('[data-theme-toggle]')?.addEventListener('click', () => {
+    const root = document.documentElement;
+    const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
+    root.dataset.theme = next;
+    try {
+      localStorage.setItem('theme', next);
+    } catch {
+      /* ignore */
+    }
+  });
+
+  // Dropdown menus (axes + language): click to open, single-open, close on
+  // outside-click / Escape.
   const menus = document.querySelectorAll<HTMLElement>('[data-menu]');
   function closeAll(except?: HTMLElement) {
     menus.forEach((m) => {
@@ -171,33 +214,60 @@ const menus = (
     font-weight: 450;
   }
 
-  .lang {
+  .bar-right {
     display: inline-flex;
-    padding: 3px;
-    gap: 2px;
-    background: var(--surface-sunk);
-    border: 1px solid var(--line);
-    border-radius: 999px;
+    align-items: center;
+    gap: 0.5rem;
   }
-  .seg {
-    font-size: 0.8rem;
-    line-height: 1;
-    padding: 0.4rem 0.7rem;
+
+  .iconbtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
     border-radius: 999px;
-    text-decoration: none;
+    border: 1px solid var(--line);
+    background: var(--surface-sunk);
     color: var(--ink-soft);
+    cursor: pointer;
+    font-size: 0.95rem;
+    line-height: 1;
     transition:
       color 0.15s,
       background 0.15s;
   }
-  .seg:hover {
+  .iconbtn:hover {
     color: var(--ink);
   }
-  .seg.active {
-    background: var(--surface);
+
+  /* Language dropdown */
+  .langmenu {
+    position: relative;
+  }
+  .lang-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: inherit;
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+    background: var(--surface-sunk);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 0.4rem 0.7rem;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .lang-trigger:hover {
     color: var(--ink);
-    font-weight: 600;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  }
+  .lang-trigger .globe {
+    font-size: 0.85rem;
+  }
+  .lang-panel {
+    left: auto;
+    right: 0;
   }
 
   /* Grouped mega-menu (one dropdown per axis) */
@@ -258,11 +328,11 @@ const menus = (
     position: absolute;
     top: calc(100% + 4px);
     left: 0;
-    min-width: 200px;
+    min-width: 180px;
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 12px;
-    box-shadow: 0 14px 36px -14px rgba(28, 25, 23, 0.3);
+    box-shadow: 0 14px 36px -14px rgba(0, 0, 0, 0.3);
     padding: 0.4rem;
     display: none;
     flex-direction: column;

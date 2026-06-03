@@ -27,6 +27,19 @@ const xDefault = alternates?.en ? site + alternates.en : null;
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script is:inline>
+      // Set the theme before first paint (no flash). Manual choice wins,
+      // else follow the system preference.
+      (function () {
+        try {
+          var t = localStorage.getItem('theme');
+          if (t !== 'dark' && t !== 'light') {
+            t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          }
+          document.documentElement.dataset.theme = t;
+        } catch (e) {}
+      })();
+    </script>
     <title>{title}</title>
     {description && <meta name="description" content={description} />}
     {canonical && <link rel="canonical" href={canonical} />}
@@ -57,12 +70,40 @@ const xDefault = alternates?.en ? site + alternates.en : null;
         --line: #e7e5e4;
         --accent: #4f46e5;
         --accent-soft: #eef2ff;
+        --shadow: 28, 25, 23;
         --maxw: 1120px;
         --font-sans:
           ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
           'Helvetica Neue', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei',
           sans-serif;
         --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+      }
+
+      :root[data-theme='dark'] {
+        --bg: #18181b;
+        --surface: #232328;
+        --surface-sunk: #2c2c31;
+        --ink: #f4f4f5;
+        --ink-soft: #a1a1aa;
+        --muted: #71717a;
+        --line: #34343b;
+        --accent: #818cf8;
+        --accent-soft: #232145;
+        --shadow: 0, 0, 0;
+      }
+
+      /* Dark-mode toggle icon swap (button markup lives in the header). */
+      .iconbtn .sun {
+        display: none;
+      }
+      .iconbtn .moon {
+        display: inline;
+      }
+      :root[data-theme='dark'] .iconbtn .moon {
+        display: none;
+      }
+      :root[data-theme='dark'] .iconbtn .sun {
+        display: inline;
       }
 
       * {
