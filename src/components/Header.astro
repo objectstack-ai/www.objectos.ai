@@ -1,7 +1,7 @@
 ---
 import { ui, homePath, type Locale } from '../lib/i18n';
-import { getUsedProducts } from '../lib/posts';
-import { productLabel, productPath } from '../lib/products';
+import { getUsedTerms } from '../lib/posts';
+import { termHref } from '../lib/terms';
 
 interface Props {
   locale: Locale;
@@ -12,7 +12,8 @@ interface Props {
 const { locale, enHref, zhHref } = Astro.props;
 const t = ui[locale];
 
-const products = await getUsedProducts();
+// Primary nav = the topic axis (top-level topics that have content).
+const topics = (await getUsedTerms('topic')).filter((term) => !term.parent);
 const pathname = Astro.url.pathname;
 const homeHref = homePath(locale);
 const onHome = pathname === homeHref;
@@ -42,20 +43,20 @@ const onHome = pathname === homeHref;
   </div>
 
   {
-    products.length > 0 && (
-      <nav class="products" aria-label="Products">
+    topics.length > 0 && (
+      <nav class="products" aria-label="Topics">
         <div class="products-inner">
           <a class:list={['prod', { active: onHome }]} href={homeHref}>
             {t.all}
           </a>
-          {products.map((slug) => (
+          {topics.map((term) => (
             <a
               class:list={[
                 'prod',
-                { active: pathname.startsWith(productPath(locale, slug)) },
+                { active: pathname.startsWith(termHref(locale, term)) },
               ]}
-              href={productPath(locale, slug)}>
-              {productLabel(slug, locale)}
+              href={termHref(locale, term)}>
+              {term.label[locale]}
             </a>
           ))}
         </div>

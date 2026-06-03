@@ -1,13 +1,20 @@
 import { getCollection, type CollectionEntry } from 'astro:content';
 import type { Locale } from './i18n';
-import { PRODUCTS, type ProductSlug } from './products';
-import { AUDIENCES, type AudienceSlug } from './audiences';
+import {
+  TERMS,
+  termBySlug,
+  termsByGroup,
+  type Term,
+  type TermGroup,
+} from './terms';
 
 export interface PostGroup {
   slug: string; // base slug, shared across languages
   langs: Partial<Record<Locale, CollectionEntry<'blog'>>>;
   primary: CollectionEntry<'blog'>; // prefer English, else whatever exists
 }
+
+type PostData = CollectionEntry<'blog'>['data'];
 
 /** Split an entry id like "my-post.zh-Hans" into { slug, locale }. */
 export function parseId(id: string): { slug: string; locale: Locale } {
@@ -23,11 +30,7 @@ export async function getPostGroups(): Promise<PostGroup[]> {
 
   for (const entry of entries) {
     const { slug, locale } = parseId(entry.id);
-    const group = groups.get(slug) ?? {
-      slug,
-      langs: {},
-      primary: entry,
-    };
+    const group = groups.get(slug) ?? { slug, langs: {}, primary: entry };
     group.langs[locale] = entry;
     if (locale === 'en') group.primary = entry;
     groups.set(slug, group);
@@ -46,16 +49,41 @@ export function entryFor(
   return group.langs[locale] ?? group.primary;
 }
 
-/** Products that actually have at least one post, in canonical order. */
-export async function getUsedProducts(): Promise<ProductSlug[]> {
-  const groups = await getPostGroups();
-  const present = new Set(groups.map((g) => g.primary.data.product));
-  return PRODUCTS.map((p) => p.slug).filter((slug) => present.has(slug));
+/** The term slugs an article carries for a given axis. */
+export function articleTermSlugs(data: PostData, group: TermGroup): string[] {
+  switch (group) {
+    case 'topic':
+      return data.topic ? [data.topic] : [];
+    case 'role':
+      return data.audience ? [data.audience] : [];
+    case 'solution':
+      return data.solutions ?? [];
+    case 'industry':
+      return data.industries ?? [];
+  }
 }
 
-/** Audiences that actually have at least one post, in canonical order. */
-export async function getUsedAudiences(): Promise<AudienceSlug[]> {
+/** Does an article belong to a term's hub? (topic hubs aggregate their children.) */
+export function articleHasTerm(data: PostData, term: Term): boolean {
+  if (term.group === 'topic') {
+    if (data.topic === term.slug) return true;
+    return termBySlug(data.topic)?.parent === term.slug; // child rolls up to parent
+  }
+  return articleTermSlugs(data, term.group).includes(term.slug);
+}
+
+/** Terms of a group that have at least one post, in canonical order. */
+export async function getUsedTerms(group: TermGroup): Promise<Term[]> {
   const groups = await getPostGroups();
-  const present = new Set(groups.map((g) => g.primary.data.audience));
-  return AUDIENCES.map((a) => a.slug).filter((slug) => present.has(slug));
+  return termsByGroup(group).filter((term) =>
+    groups.some((g) => articleHasTerm(g.primary.data, term))
+  );
+}
+
+/** Every term (any group) that has content — used to generate hub pages. */
+export async function getAllUsedTerms(): Promise<Term[]> {
+  const groups = await getPostGroups();
+  return TERMS.filter((term) =>
+    groups.some((g) => articleHasTerm(g.primary.data, term))
+  );
 }

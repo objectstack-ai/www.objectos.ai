@@ -1,7 +1,11 @@
 import { defineCollection, z } from 'astro:content';
 import { glob } from 'astro/loaders';
-import { PRODUCT_SLUGS } from './lib/products';
-import { AUDIENCE_SLUGS } from './lib/audiences';
+import { slugsByGroup } from './lib/terms';
+
+const TOPIC = slugsByGroup('topic') as [string, ...string[]];
+const ROLE = slugsByGroup('role') as [string, ...string[]];
+const SOLUTION = slugsByGroup('solution') as [string, ...string[]];
+const INDUSTRY = slugsByGroup('industry') as [string, ...string[]];
 
 // One external publication of an article (own blog, Medium, WeChat, ...).
 const channel = z.object({
@@ -38,10 +42,12 @@ const blog = defineCollection({
       // The canonical (original) URL — point every reprint back here for SEO.
       canonical_url: z.string().url().optional(),
 
-      // Faceted taxonomy — one value each, from controlled lists.
-      product: z.enum(PRODUCT_SLUGS), // primary axis (top-level nav)
-      audience: z.enum(AUDIENCE_SLUGS), // who it's written for
-      tags: z.array(z.string()).default([]), // topic / long-tail (freeform)
+      // Faceted taxonomy — terms from the unified list (src/lib/terms.ts).
+      topic: z.enum(TOPIC), // primary axis (header nav) — required, single
+      audience: z.enum(ROLE), // who it's written for — required, single
+      solutions: z.array(z.enum(SOLUTION)).default([]), // optional, 0..n
+      industries: z.array(z.enum(INDUSTRY)).default([]), // optional, 0..n
+      tags: z.array(z.string()).default([]), // long-tail (freeform)
       cover: image().optional(),
 
       // Where this article has been published externally.
