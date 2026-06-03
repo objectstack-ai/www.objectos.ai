@@ -36,10 +36,14 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Create Pages project
+        run: pnpm dlx wrangler@3.90.0 pages project create blog-objectos-ai --production-branch=main || true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
       - name: Deploy
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=blog-objectos-ai
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm dlx wrangler@3.90.0 pages deploy dist --project-name=blog-objectos-ai --branch=main --commit-dirty=true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
