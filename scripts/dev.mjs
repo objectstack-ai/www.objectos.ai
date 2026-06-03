@@ -47,6 +47,13 @@ try {
   /* nothing to clear */
 }
 
+// 2.5) Refresh auto-generated Traditional-Chinese posts from Simplified.
+try {
+  execSync('node scripts/gen-zh-hant.mjs', { stdio: 'inherit', cwd: root });
+} catch {
+  /* non-fatal — keep the dev server starting even if generation hiccups */
+}
+
 // 3) Start one clean dev server (port/host come from astro.config.mjs).
 const child = spawn(`${root}node_modules/.bin/astro`, ['dev', '--port', String(PORT)], {
   stdio: 'inherit',

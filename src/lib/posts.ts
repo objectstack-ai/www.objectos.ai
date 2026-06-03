@@ -72,18 +72,34 @@ export function articleHasTerm(data: PostData, term: Term): boolean {
   return articleTermSlugs(data, term.group).includes(term.slug);
 }
 
-/** Terms of a group that have at least one post, in canonical order. */
-export async function getUsedTerms(group: TermGroup): Promise<Term[]> {
+export interface LocalePost {
+  slug: string; // base slug (no locale suffix)
+  entry: CollectionEntry<'blog'>;
+}
+
+/** Posts that actually exist in a locale (untranslated posts are excluded). */
+export async function getPostsInLocale(locale: Locale): Promise<LocalePost[]> {
+  const groups = await getPostGroups();
+  return groups
+    .filter((g) => g.langs[locale])
+    .map((g) => ({ slug: g.slug, entry: g.langs[locale]! }));
+}
+
+/** Terms of a group used by posts that exist in `locale`, in canonical order. */
+export async function getUsedTerms(
+  group: TermGroup,
+  locale: Locale
+): Promise<Term[]> {
   const groups = await getPostGroups();
   return termsByGroup(group).filter((term) =>
-    groups.some((g) => articleHasTerm(g.primary.data, term))
+    groups.some((g) => g.langs[locale] && articleHasTerm(g.langs[locale]!.data, term))
   );
 }
 
-/** Every term (any group) that has content — used to generate hub pages. */
-export async function getAllUsedTerms(): Promise<Term[]> {
+/** Every term (any group) with content in `locale` — used to generate hubs. */
+export async function getAllUsedTerms(locale: Locale): Promise<Term[]> {
   const groups = await getPostGroups();
   return TERMS.filter((term) =>
-    groups.some((g) => articleHasTerm(g.primary.data, term))
+    groups.some((g) => g.langs[locale] && articleHasTerm(g.langs[locale]!.data, term))
   );
 }

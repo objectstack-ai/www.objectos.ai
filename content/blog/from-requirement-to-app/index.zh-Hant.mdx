@@ -1,0 +1,219 @@
+---
+# @generated zh-Hant from zh-Hans (s2twp) — edit the zh-Hans file; delete this line to hand-maintain.
+title: 從一句話需求到能用的應用，中間發生了什麼
+description: 你對編碼 Agent 說"我要一個報修系統"，幾分鐘後應用就跑了起來。這篇把中間的每一步拆開——真實的互動、生成的物件與 API、迭代迴路，以及 Agent 會在哪出錯、你得收哪些尾。
+author: ObjectStack Team
+date: 2026-06-03
+status: draft
+topic: app-building
+audience: developer
+cover: ./cover.jpg
+tags:
+  - 低程式碼
+  - AI 開發
+  - 物件建模
+---
+
+你對一個編碼 Agent 說一句話：
+
+> "幫我做一個裝置報修系統：能建工單、關聯裝置、派給工程師、跟蹤狀態，高優先順序自動派單。"
+
+幾分鐘後，一個帶 REST API、帶後臺、能建單能流轉的應用跑了起來。
+
+"這不就是 AI 生成程式碼嘛"——但如果你真讓 Agent 從零寫一個傳統應用，你會很快撞牆。這篇我們把中間這幾分鐘逐步拆開：它到底做了什麼，生成的東西長什麼樣，你要在哪裡接手，以及它會在哪出錯。
+
+## 為什麼讓 Agent 直接寫傳統應用會失敗
+
+一個普通內部系統，本質是幾萬行散落的東西：建表 DDL、CRUD controller、表單、校驗、列表頁、許可權判斷、API 路由、狀態機……分佈在幾十個檔案裡。
+
+讓 Agent 一次寫出這一整坨，兩個問題繞不過去：
+
+- **上下文裝不下**。跨幾十個檔案的一致性它保證不了，寫到一半就開始自相矛盾。
+- **你 review 不動**。就算它生成了，幾千行膠水你沒法逐行確認沒埋雷——於是"能生成、不敢用"。
+
+ObjectStack 改變的是這個前提：把一個應用的**本質**壓縮成幾百行宣告式 metadata。Agent 的活，從"寫一個應用"變成"寫一份你能讀完的規格"。
+
+## Step 0：它先內省，再動手
+
+第一件值得注意的事：好的 Agent 不會上來就吐程式碼，它會**先看、再問**。
+
+針對上面那句需求，Agent 大致會這樣推進：
+
+> - 掃一遍現有專案：有沒有 `user`、`device` 這種物件可以複用？
+> - 拆出需要的物件：`device`（裝置）、`repair_order`（工單）。
+> - 把不確定的點拋回給你："工程師用現有的 `user` 物件，還是單獨建 `engineer`？成本欄位要不要對工程師隱藏？"
+
+它在建**領域模型**，不是在拼介面。這一步決定了後面所有派生物的質量。
+
+## Step 1：需求 → 物件（帶關係、列舉、校驗）
+
+確認後，它把模型寫成 `ObjectSchema`。注意關係、列舉、校驗都在同一份聲明裡：
+
+```ts
+import { ObjectSchema, Field } from '@objectstack/spec/data';
+
+export const RepairOrder = ObjectSchema.create({
+  name: 'repair_order',
+  label: '報修工單',
+  fields: {
+    title:    Field.text({ label: '故障描述', required: true }),
+    device:   Field.lookup('device', { label: '裝置', required: true }),
+    status:   Field.select({
+      label: '狀態',
+      options: [
+        { label: '待派單', value: 'pending', default: true },
+        { label: '維修中', value: 'in_repair' },
+        { label: '已完成', value: 'done' },
+      ],
+    }),
+    priority: Field.select({
+      label: '優先順序',
+      options: [
+        { label: '低', value: 'low' },
+        { label: '中', value: 'medium', default: true },
+        { label: '高', value: 'high' },
+      ],
+    }),
+    assignee:    Field.lookup('user', { label: '工程師' }),
+    cost:        Field.currency({ label: '維修成本' }),
+    reported_at: Field.datetime({ label: '報修時間' }),
+  },
+});
+```
+
+幾個 Agent 的判斷值得點出來：
+
+- `device`、`assignee` 用 **`Field.lookup('目標物件', …)`**（關係，目標物件是第一個引數），而不是塞一個字串 ID——所以列表頁能直接顯示裝置名、能反查"這臺裝置的所有工單"；
+- `status`/`priority` 用 **`select` + 列舉**：`value` 用小寫存庫、`label` 給中文展示、`default: true` 標預設值——校驗、篩選、看板分組全有了依據；
+- `cost` 先是個普通欄位；至於"工程師看不到成本"，**欄位級可見性不寫在欄位上**，而是在許可權集裡配（下面 Step 3 會說）。
+
+這不是虛擬碼或文件，**是你倉庫裡能提交、能 diff 的原始碼**。
+
+## Step 2：metadata → 一切自動派生
+
+schema 一落地，下面這些你一行都不用寫——它們都是這份後設資料的**投影**：
+
+**REST API**（`/api/v1/data/<物件>` 下現成的增刪改查、關係展開）：
+
+```bash
+# 建單
+curl -X POST /api/v1/data/repair_order \
+  -d '{ "title": "3 號機床異響", "device": "dev_012", "priority": "high" }'
+
+# 取單，並把關聯的裝置展開出來
+curl '/api/v1/data/repair_order/ro_8841?expand=device'
+```
+
+```json
+{
+  "id": "ro_8841",
+  "title": "3 號機床異響",
+  "status": "pending",
+  "priority": "high",
+  "device": { "id": "dev_012", "name": "CNC-3 號機床" }
+}
+```
+
+注意返回的就是記錄本身（不多包一層）；`status`/`priority` 存的是 `value`（`pending`/`high`），介面上自動顯示對應的中文 `label`。
+
+**後臺介面**：Studio 裡按欄位型別自動渲染出列表、表單、詳情頁——`select` 成下拉、`lookup` 成關聯選擇器。
+
+**給 AI 的工具**：同一個物件自動暴露成 agent 能調的 `describe_object` / `query_records` / `get_record`。也就是說，你剛建的這個系統，**本身就是 AI-ready 的**。
+
+沒有 controller、沒有手寫表單、沒有手配路由。
+
+## Step 3：你接手——稽核與收口
+
+這是"敢用"的關鍵。因為產出是幾百行宣告式規格，**你能整份讀完**。真實會發生的收口，通常是這幾類：
+
+- **它過度建模**：給你加了 `customer`、`warranty` 這種你這一期用不到的欄位——刪掉；
+- **關係猜錯**：`assignee` 它可能寫成 `Field.lookup('engineer', …)`，而你想複用 `user`——改一處；
+- **欄位級安全**：把成本對工程師設為不可見，不是改欄位，而是在**許可權集**里加一行：
+
+```ts
+// 許可權集（permission set）裡，而不是欄位定義上
+fields: {
+  'repair_order.cost': { readable: false, editable: false },
+}
+```
+
+關鍵是：這些都是**改一處宣告**的事，不是去十幾個檔案裡追膠水。AI 起草，你稽核收口，你掌控的是一份看得懂的規格。
+
+## Step 4：業務邏輯——依然是宣告式
+
+"高優先順序自動派單"這類規則，不寫成掛在物件上的程式碼，而是一個**獨立的 `*.hook.ts`**（同樣是能被系統讀懂、註冊、審計的後設資料）：
+
+```ts
+// src/hooks/repair-order.hook.ts
+import type { Hook, HookContext } from '@objectstack/spec';
+
+export const AutoAssignHook: Hook = {
+  name: 'repair_auto_assign',
+  object: 'repair_order',
+  events: ['beforeInsert'],
+  handler: async (ctx: HookContext) => {
+    const input = ctx.input as { priority?: string; assignee?: string };
+    if (input.priority === 'high' && !input.assignee) {
+      input.assignee = await pickDutyEngineer();
+    }
+  },
+};
+```
+
+派生欄位則用**公式**——查詢期計算、無需落庫（注意公式裡欄位名是裸寫的）：
+
+```ts
+import { cel } from '@objectstack/spec';
+
+// 放進物件的 fields 裡：含稅成本
+cost_with_tax: Field.formula({
+  label: '含稅成本',
+  expression: cel`(cost == null ? 0 : cost) * 1.06`,
+}),
+```
+
+這裡有個對開發者很重要的細節：**表示式是構建期校驗的**。如果在校驗條件裡把欄位名拼錯——比如寫成 `record.prioriy`——不會上線後默默失效，而是**構建時直接報錯**，還帶修正建議：
+
+```
+unknown field `prioriy` on `repair_order` — did you mean `priority`?
+```
+
+（"4 小時未處理就提醒"這類定時規則，用一個定時 flow 表達，這裡不展開。）
+
+## Step 5：跑起來，然後——迭代
+
+```bash
+pnpm dev   # → REST API + Studio 同時起來
+```
+
+但真正的開發不是一次成型，而是**迴路**。三天後產品說"工單要能加備註和圖片"。傳統專案這是一圈活：改表、改 API、改表單、改詳情頁。在這裡：
+
+```ts
+// 往同一份 schema 加兩個欄位
+notes:  Field.textarea({ label: '維修備註' }),
+photos: Field.image({ label: '現場照片', multiple: true }),
+```
+
+存檔——API、表單、詳情頁、給 AI 的工具**重新投影一遍**就有了。需求改的是**規格**，不是散落的實現。這就是它和"一次性腳手架程式碼生成"的本質區別：metadata 是活的源頭，不是生成完就各走各路的產物。
+
+## 它會在哪出錯（誠實的部分）
+
+別把它當魔法。Agent 仍然會：
+
+- **把列舉值猜得不對**（`select` 選項不符合你實際業務）；
+- **關係建反**（一對多建成多對一）；
+- **過度設計**，一上來給你十幾個物件。
+
+但和"幾千行膠水裡埋雷"不同——這些錯誤**都擺在一份你讀得完的聲明裡**，要麼你一眼看出來，要麼構建期校驗幫你攔下來。可審、可改、可控，這才是區別。
+
+## 為什麼這事現在才成立
+
+不是模型突然開竅了，而是**整個應用小到能塞進 Agent 的上下文視窗**了。
+
+當一個應用就是幾百行型別化的宣告式規格，Agent 能一次讀完、理解每處依賴、**跨資料 / API / UI / 許可權一起改**——而不是在幾十個檔案裡盲人摸象。這就是 AI 從"自動補全"跨到"共同維護者"的門檻。
+
+---
+
+所以"從一句話到能用的應用"，中間不是 AI 憑空寫出了一個系統，而是：**它寫了一份你能讀懂、能審、能改的規格，平臺把規格變成了應用，並在每次需求變更時重新投影。**
+
+> 想自己跑一遍？`npx create-objectstack`，開啟 Studio 裡的 AI 助手，對它說一句你的需求，看著物件、API、介面一層層被建出來——再試著改一個欄位，看它如何重新長好。

@@ -1,0 +1,31 @@
+---
+import { render } from 'astro:content';
+import BlogPost from '../../../layouts/BlogPost.astro';
+import { getPostGroups } from '../../../lib/posts';
+import { LOCALES, localeSeg, postPath } from '../../../lib/i18n';
+
+export async function getStaticPaths() {
+  const groups = await getPostGroups();
+  const paths = [];
+  for (const g of groups) {
+    const present = LOCALES.filter((l) => g.langs[l]);
+    const alternates = Object.fromEntries(
+      present.map((l) => [l, postPath(l, g.slug)])
+    );
+    for (const locale of present) {
+      paths.push({
+        params: { lang: localeSeg(locale), slug: g.slug },
+        props: { entry: g.langs[locale]!, locale, alternates },
+      });
+    }
+  }
+  return paths;
+}
+
+const { entry, locale, alternates } = Astro.props;
+const { Content } = await render(entry);
+---
+
+<BlogPost data={entry.data} {locale} {alternates}>
+  <Content />
+</BlogPost>

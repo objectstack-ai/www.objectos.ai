@@ -1,5 +1,6 @@
 ---
-import { getPostGroups, entryFor, articleHasTerm } from '../lib/posts';
+import { Image } from 'astro:assets';
+import { getPostsInLocale, articleHasTerm } from '../lib/posts';
 import { ui, postPath, STATUS_COLOR, type Locale } from '../lib/i18n';
 import { termBySlug, termLabel, type TermGroup } from '../lib/terms';
 
@@ -10,12 +11,13 @@ interface Props {
 const { locale, filter = null } = Astro.props;
 const t = ui[locale];
 
-const groups = await getPostGroups();
+// Only posts that exist in this locale — untranslated ones don't appear.
+const posts = await getPostsInLocale(locale);
 
 const activeTerm = filter ? termBySlug(filter.slug) : null;
 const shown = activeTerm
-  ? groups.filter((g) => articleHasTerm(entryFor(g, locale).data, activeTerm))
-  : groups;
+  ? posts.filter((p) => articleHasTerm(p.entry.data, activeTerm))
+  : posts;
 
 const heroTitle = activeTerm ? activeTerm.label[locale] : t.articlesTitle;
 ---
@@ -30,15 +32,20 @@ const heroTitle = activeTerm ? activeTerm.label[locale] : t.articlesTitle;
     <p class="empty">{t.empty}</p>
   ) : (
     <ul class="grid">
-      {shown.map((g) => {
-        const entry = entryFor(g, locale);
-        const d = entry.data;
+      {shown.map((p) => {
+        const d = p.entry.data;
         return (
           <li>
-            <a class="card" href={postPath(entry.id)}>
+            <a class="card" href={postPath(locale, p.slug)}>
               <div class="thumb">
                 {d.cover ? (
-                  <img src={d.cover.src} alt="" loading="lazy" decoding="async" />
+                  <Image
+                    src={d.cover}
+                    alt=""
+                    widths={[400, 800]}
+                    sizes="(max-width: 720px) 100vw, 360px"
+                    loading="lazy"
+                  />
                 ) : (
                   <div class="thumb-fallback">
                     <span class="fmark">◆</span>
