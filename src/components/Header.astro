@@ -1,26 +1,25 @@
 ---
-import { ui, homePath, type Locale } from '../lib/i18n';
+import { ui, homePath, LOCALES, LANG_LABEL, type Locale } from '../lib/i18n';
 import { getUsedTerms } from '../lib/posts';
 import { termHref, groupMeta, type TermGroup } from '../lib/terms';
 
 interface Props {
   locale: Locale;
-  enHref: string;
-  zhHref: string;
+  alternates?: Partial<Record<Locale, string>>;
 }
 
-const { locale, enHref, zhHref } = Astro.props;
+const { locale, alternates = {} } = Astro.props;
 const t = ui[locale];
 const pathname = Astro.url.pathname;
 const homeHref = homePath(locale);
 const onHome = pathname === homeHref;
 
-// One dropdown per axis, in this order. Empty axes are dropped.
+// One dropdown per axis (only terms that have content in THIS locale).
 const AXES: TermGroup[] = ['topic', 'solution', 'role', 'industry'];
 const menus = (
   await Promise.all(
     AXES.map(async (group) => {
-      const terms = (await getUsedTerms(group)).filter((term) => !term.parent);
+      const terms = (await getUsedTerms(group, locale)).filter((term) => !term.parent);
       const active = terms.some((term) =>
         pathname.startsWith(termHref(locale, term))
       );
@@ -40,16 +39,17 @@ const menus = (
     </a>
 
     <nav class="lang" aria-label="Language">
-      <a
-        class:list={['seg', { active: locale === 'en' }]}
-        href={enHref}
-        aria-current={locale === 'en' ? 'true' : undefined}>EN</a
-      >
-      <a
-        class:list={['seg', { active: locale === 'zh-Hans' }]}
-        href={zhHref}
-        aria-current={locale === 'zh-Hans' ? 'true' : undefined}>中文</a
-      >
+      {
+        LOCALES.map((l) => (
+          <a
+            class:list={['seg', { active: l === locale }]}
+            href={alternates[l] ?? homePath(l)}
+            data-lang={l}
+            aria-current={l === locale ? 'true' : undefined}>
+            {LANG_LABEL[l]}
+          </a>
+        ))
+      }
     </nav>
   </div>
 
@@ -93,6 +93,18 @@ const menus = (
 </header>
 
 <script>
+  // Remember the reader's language choice so `/` redirects there next time.
+  document.querySelectorAll<HTMLAnchorElement>('.lang [data-lang]').forEach((a) => {
+    a.addEventListener('click', () => {
+      try {
+        localStorage.setItem('preferred-lang', a.dataset.lang || 'en');
+      } catch {
+        /* ignore */
+      }
+    });
+  });
+
+  // Dropdown menus: click to open, single-open, close on outside-click / Escape.
   const menus = document.querySelectorAll<HTMLElement>('[data-menu]');
   function closeAll(except?: HTMLElement) {
     menus.forEach((m) => {

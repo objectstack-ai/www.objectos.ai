@@ -1,14 +1,47 @@
 ---
-import Base from '../layouts/Base.astro';
-import ArticleList from '../components/ArticleList.astro';
-import { ui } from '../lib/i18n';
+// Root `/`: detect the reader's language and redirect to the right locale.
+// Static page — runs client-side. Honors a remembered choice (set by the
+// header toggle); otherwise: zh-TW / zh-HK / zh-Hant → Traditional, other
+// zh → Simplified, everything else → English (default/fallback).
 ---
 
-<Base
-  title={`${ui.en.articlesTitle} · ${ui.en.siteName}`}
-  description="Writing on building AI-native software."
-  locale="en"
-  enHref="/"
-  zhHref="/zh/">
-  <ArticleList locale="en" />
-</Base>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>ObjectOS</title>
+    <link rel="alternate" hreflang="en" href="/en/" />
+    <link rel="alternate" hreflang="zh-Hans" href="/zh-Hans/" />
+    <link rel="alternate" hreflang="zh-Hant" href="/zh-Hant/" />
+    <link rel="alternate" hreflang="x-default" href="/en/" />
+    <script is:inline>
+      (function () {
+        try {
+          var ok = ['en', 'zh-Hans', 'zh-Hant'];
+          var saved = localStorage.getItem('preferred-lang');
+          var lang;
+          if (saved && ok.indexOf(saved) !== -1) {
+            lang = saved;
+          } else {
+            var nav = (navigator.language || '').toLowerCase();
+            if (nav.indexOf('zh') === 0) {
+              lang = /hant|tw|hk|mo/.test(nav) ? 'zh-Hant' : 'zh-Hans';
+            } else {
+              lang = 'en';
+            }
+          }
+          location.replace('/' + lang + '/');
+        } catch (e) {
+          location.replace('/en/');
+        }
+      })();
+    </script>
+    <meta http-equiv="refresh" content="0; url=/en/" />
+  </head>
+  <body>
+    <p>Redirecting… <a href="/en/">English</a> · <a href="/zh-Hans/">简体</a> ·
+      <a href="/zh-Hant/">繁體</a></p>
+  </body>
+</html>

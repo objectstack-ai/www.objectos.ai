@@ -1,14 +1,13 @@
-import type { Locale } from './i18n';
+import { localeSeg, type Locale } from './i18n';
+import { s2t } from './zhconvert';
 
 // One unified taxonomy. Every browse axis (topic / role / solution / industry)
 // is just a "term" with a `group`. Hubs all live under one flat URL namespace
-// (/blog/topics/<slug>); the axis never appears in the URL — it only groups
-// terms in the menus. The `topic` axis may nest one level (parent -> child),
-// expressed as /blog/topics/<parent>/<child>.
+// (/<locale>/blog/topics/<slug>); the axis never appears in the URL — it only
+// groups terms in the menus. `topic` may nest one level (parent -> child).
 //
-// Lists grounded in how global low-code platforms (Mendix, OutSystems, Appian,
-// Power Platform, ServiceNow, Salesforce, Pega) categorize their content.
-// The platform itself (ObjectStack) is implicit — it isn't a browse term.
+// Labels are authored in English + Simplified Chinese; Traditional (zh-Hant)
+// is auto-derived via OpenCC s2twp, so we never hand-maintain a third copy.
 
 export type TermGroup = 'topic' | 'role' | 'solution' | 'industry';
 
@@ -26,14 +25,25 @@ export interface GroupMeta {
   inMainNav: boolean; // topic = primary header nav; others = filters
 }
 
-export const GROUPS: GroupMeta[] = [
+type LabelInput = { en: string; 'zh-Hans': string };
+type RawTerm = Omit<Term, 'label'> & { label: LabelInput };
+type RawGroup = Omit<GroupMeta, 'label'> & { label: LabelInput };
+
+const addHant = <T extends { label: LabelInput }>(
+  x: T
+): T & { label: Record<Locale, string> } => ({
+  ...x,
+  label: { ...x.label, 'zh-Hant': s2t(x.label['zh-Hans']) },
+});
+
+const RAW_GROUPS: RawGroup[] = [
   { group: 'topic', label: { en: 'Topics', 'zh-Hans': '主题' }, cardinality: 'one', inMainNav: true },
   { group: 'solution', label: { en: 'Solutions', 'zh-Hans': '解决方案' }, cardinality: 'many', inMainNav: false },
   { group: 'role', label: { en: 'Audience', 'zh-Hans': '受众' }, cardinality: 'one', inMainNav: false },
   { group: 'industry', label: { en: 'Industry', 'zh-Hans': '行业' }, cardinality: 'many', inMainNav: false },
 ];
 
-export const TERMS: Term[] = [
+const RAW_TERMS: RawTerm[] = [
   // — Topics (主题) — primary axis. Horizontal themes. Can nest via `parent`.
   { slug: 'ai-agents', group: 'topic', label: { en: 'AI & Agents', 'zh-Hans': 'AI 与智能体' } },
   { slug: 'app-building', group: 'topic', label: { en: 'App Development', 'zh-Hans': '应用搭建' } },
@@ -42,8 +52,6 @@ export const TERMS: Term[] = [
   { slug: 'modernization', group: 'topic', label: { en: 'Modernization', 'zh-Hans': '系统现代化' } },
   { slug: 'governance', group: 'topic', label: { en: 'Security & Governance', 'zh-Hans': '安全与治理' } },
   { slug: 'customer-stories', group: 'topic', label: { en: 'Customer Stories', 'zh-Hans': '客户故事' } },
-  // Example subtopic — only add once a topic is crowded:
-  // { slug: 'agentic-ai', group: 'topic', parent: 'ai-agents', label: { en: 'Agentic AI', 'zh-Hans': '智能体' } },
 
   // — Roles (受众) — single, required.
   { slug: 'business', group: 'role', label: { en: 'Business Leaders', 'zh-Hans': '业务决策者' } },
@@ -69,11 +77,10 @@ export const TERMS: Term[] = [
   { slug: 'public-sector', group: 'industry', label: { en: 'Public Sector', 'zh-Hans': '政府公共' } },
   { slug: 'telecom-media', group: 'industry', label: { en: 'Telecom & Media', 'zh-Hans': '电信媒体' } },
   { slug: 'energy-utilities', group: 'industry', label: { en: 'Energy & Utilities', 'zh-Hans': '能源公用' } },
-  // Optional — uncomment when you serve them:
-  // { slug: 'transportation-logistics', group: 'industry', label: { en: 'Transportation & Logistics', 'zh-Hans': '交通物流' } },
-  // { slug: 'education', group: 'industry', label: { en: 'Education', 'zh-Hans': '教育' } },
-  // { slug: 'technology', group: 'industry', label: { en: 'Technology & Professional Services', 'zh-Hans': '科技与专业服务' } },
 ];
+
+export const GROUPS: GroupMeta[] = RAW_GROUPS.map(addHant);
+export const TERMS: Term[] = RAW_TERMS.map(addHant);
 
 // --- lookups -----------------------------------------------------------------
 const BY_SLUG = new Map(TERMS.map((t) => [t.slug, t]));
@@ -97,8 +104,7 @@ export function termSlugPath(term: Term): string {
     : term.slug;
 }
 
-/** Full hub href for a term, locale-aware. */
+/** Full hub href for a term: /<locale>/blog/topics/<slugPath>. */
 export function termHref(locale: Locale, term: Term): string {
-  const base = locale === 'en' ? '/blog/topics' : '/zh/blog/topics';
-  return `${base}/${termSlugPath(term)}`;
+  return `/${localeSeg(locale)}/blog/topics/${termSlugPath(term)}`;
 }
