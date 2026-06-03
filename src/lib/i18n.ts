@@ -33,7 +33,7 @@ interface Strings {
 
 export const ui: Record<Locale, Strings> = {
   en: {
-    siteName: 'ObjectStack',
+    siteName: 'ObjectOS',
     nav: 'Writing',
     all: 'All',
     audience: 'Audience',
@@ -52,7 +52,7 @@ export const ui: Record<Locale, Strings> = {
     },
   },
   'zh-Hans': {
-    siteName: 'ObjectStack',
+    siteName: 'ObjectOS',
     nav: '文章',
     all: '全部',
     audience: '受众',
