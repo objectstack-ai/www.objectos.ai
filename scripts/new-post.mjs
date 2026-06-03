@@ -59,10 +59,15 @@ description: ""
 author: ObjectStack Team
 date: ${today}
 status: draft
-product: objectstack
-# Audience: boss | developer | general
-audience: boss
-# Topic / long-tail — freeform, e.g. [AI落地, 降本增效]
+# Topic (main axis): ai-agents | app-building | integration-data | automation | modernization | governance | customer-stories
+topic: ai-agents
+# Audience: business | it | developer | general
+audience: business
+# Solutions (optional, 0..n): crm | portals | onboarding | case-management | field-service | supply-chain | hr
+solutions: []
+# Industries (optional, 0..n): financial-services | insurance | healthcare | manufacturing | retail | public-sector | telecom-media | energy-utilities
+industries: []
+# Tags — freeform long-tail, e.g. [降本增效, 趋势观点]
 tags: []
 # cover: ./cover.png   # drop an image in this folder and Astro will optimize it
 # canonical_url: https://your-domain.com/blog/${slug}

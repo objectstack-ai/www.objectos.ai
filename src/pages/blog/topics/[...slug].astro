@@ -1,0 +1,27 @@
+---
+import Base from '../../../layouts/Base.astro';
+import ArticleList from '../../../components/ArticleList.astro';
+import { getAllUsedTerms } from '../../../lib/posts';
+import { termBySlug, termSlugPath, termHref } from '../../../lib/terms';
+import { ui } from '../../../lib/i18n';
+
+export async function getStaticPaths() {
+  const terms = await getAllUsedTerms();
+  return terms.map((term) => ({
+    params: { slug: termSlugPath(term) },
+    props: { group: term.group, slug: term.slug },
+  }));
+}
+
+const { group, slug } = Astro.props;
+const term = termBySlug(slug)!;
+---
+
+<Base
+  title={`${term.label.en} · ${ui.en.siteName}`}
+  description={`${term.label.en} — articles on building AI-native software.`}
+  locale="en"
+  enHref={termHref('en', term)}
+  zhHref={termHref('zh-Hans', term)}>
+  <ArticleList locale="en" filter={{ group, slug }} />
+</Base>

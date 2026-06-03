@@ -2,8 +2,7 @@
 import Base from './Base.astro';
 import type { CollectionEntry } from 'astro:content';
 import { ui, homePath, STATUS_COLOR, type Locale } from '../lib/i18n';
-import { productLabel, productPath } from '../lib/products';
-import { audienceLabel, audiencePath } from '../lib/audiences';
+import { termBySlug, termHref, termLabel } from '../lib/terms';
 
 interface Props {
   data: CollectionEntry<'blog'>['data'];
@@ -29,12 +28,26 @@ const dateStr = data.date.toISOString().slice(0, 10);
 
     <header class="post-head">
       <div class="meta">
-        <a class="cat product" href={productPath(locale, data.product)}>
-          {productLabel(data.product, locale)}
+        <a class="cat topic" href={termHref(locale, termBySlug(data.topic)!)}>
+          {termLabel(data.topic, locale)}
         </a>
-        <a class="cat" href={audiencePath(locale, data.audience)}>
-          {audienceLabel(data.audience, locale)}
+        <a class="cat" href={termHref(locale, termBySlug(data.audience)!)}>
+          {termLabel(data.audience, locale)}
         </a>
+        {
+          (data.solutions ?? []).map((slug) => (
+            <a class="cat" href={termHref(locale, termBySlug(slug)!)}>
+              {termLabel(slug, locale)}
+            </a>
+          ))
+        }
+        {
+          (data.industries ?? []).map((slug) => (
+            <a class="cat" href={termHref(locale, termBySlug(slug)!)}>
+              {termLabel(slug, locale)}
+            </a>
+          ))
+        }
         <span class="pill" style={`--c:${STATUS_COLOR[data.status]}`}>
           {t.status[data.status]}
         </span>

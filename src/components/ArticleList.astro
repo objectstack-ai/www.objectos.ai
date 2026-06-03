@@ -1,40 +1,40 @@
 ---
-import { getPostGroups, entryFor } from '../lib/posts';
+import {
+  getPostGroups,
+  entryFor,
+  getUsedTerms,
+  articleHasTerm,
+} from '../lib/posts';
 import { ui, homePath, postPath, STATUS_COLOR, type Locale } from '../lib/i18n';
 import {
-  AUDIENCES,
-  audienceLabel,
-  audiencePath,
-  type AudienceSlug,
-} from '../lib/audiences';
-import { productLabel, type ProductSlug } from '../lib/products';
+  termBySlug,
+  termHref,
+  termLabel,
+  groupMeta,
+  type TermGroup,
+} from '../lib/terms';
 
 interface Props {
   locale: Locale;
-  activeProduct?: ProductSlug | null;
-  activeAudience?: AudienceSlug | null;
+  filter?: { group: TermGroup; slug: string } | null;
 }
-const { locale, activeProduct = null, activeAudience = null } = Astro.props;
+const { locale, filter = null } = Astro.props;
 const t = ui[locale];
 
 const groups = await getPostGroups();
 
-// Audience filter row: only values that actually have posts.
-const audiences = AUDIENCES.filter((a) =>
-  groups.some((g) => entryFor(g, locale).data.audience === a.slug)
+// Secondary filter rows (topic lives in the header). Each hidden until used.
+const SECONDARY: TermGroup[] = ['solution', 'role', 'industry'];
+const filterRows = await Promise.all(
+  SECONDARY.map(async (group) => ({ group, terms: await getUsedTerms(group) }))
 );
 
-let shown = groups;
-if (activeProduct)
-  shown = shown.filter((g) => entryFor(g, locale).data.product === activeProduct);
-if (activeAudience)
-  shown = shown.filter((g) => entryFor(g, locale).data.audience === activeAudience);
+const activeTerm = filter ? termBySlug(filter.slug) : null;
+const shown = activeTerm
+  ? groups.filter((g) => articleHasTerm(entryFor(g, locale).data, activeTerm))
+  : groups;
 
-const heroTitle = activeProduct
-  ? productLabel(activeProduct, locale)
-  : activeAudience
-    ? audienceLabel(activeAudience, locale)
-    : t.articlesTitle;
+const heroTitle = activeTerm ? activeTerm.label[locale] : t.articlesTitle;
 ---
 
 <section class="hero">
@@ -42,27 +42,29 @@ const heroTitle = activeProduct
   <p class="lead">{t.articlesLead(shown.length)}</p>
 </section>
 
-{
-  audiences.length > 0 && (
-    <div class="filters">
-      <div class="row">
-        <span class="row-label">{t.audience}</span>
-        <a
-          href={homePath(locale)}
-          class:list={['chip', { active: !activeAudience }]}>
-          {t.all}
-        </a>
-        {audiences.map((a) => (
+<div class="filters">
+  {
+    filterRows
+      .filter((row) => row.terms.length > 0)
+      .map((row) => (
+        <div class="row">
+          <span class="row-label">{groupMeta(row.group).label[locale]}</span>
           <a
-            href={audiencePath(locale, a.slug)}
-            class:list={['chip', { active: activeAudience === a.slug }]}>
-            {a.label[locale]}
+            href={homePath(locale)}
+            class:list={['chip', { active: filter?.group !== row.group }]}>
+            {t.all}
           </a>
-        ))}
-      </div>
-    </div>
-  )
-}
+          {row.terms.map((term) => (
+            <a
+              href={termHref(locale, term)}
+              class:list={['chip', { active: filter?.slug === term.slug }]}>
+              {term.label[locale]}
+            </a>
+          ))}
+        </div>
+      ))
+  }
+</div>
 
 {
   shown.length === 0 ? (
@@ -84,8 +86,14 @@ const heroTitle = activeProduct
               <h2>{d.title}</h2>
               <p class="desc">{d.description}</p>
               <div class="facets">
-                <span class="facet product">{productLabel(d.product, locale)}</span>
-                <span class="facet">{audienceLabel(d.audience, locale)}</span>
+                <span class="facet topic">{termLabel(d.topic, locale)}</span>
+                <span class="facet">{termLabel(d.audience, locale)}</span>
+                {(d.solutions ?? []).map((slug) => (
+                  <span class="facet">{termLabel(slug, locale)}</span>
+                ))}
+                {(d.industries ?? []).map((slug) => (
+                  <span class="facet">{termLabel(slug, locale)}</span>
+                ))}
                 {d.tags.map((tag) => (
                   <span class="facet tag">{tag}</span>
                 ))}
@@ -116,8 +124,10 @@ const heroTitle = activeProduct
     color: var(--ink-soft);
   }
 
-  /* Audience filter row */
   .filters {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
     margin-bottom: 2.25rem;
   }
   .row {
@@ -228,7 +238,7 @@ const heroTitle = activeProduct
     border-radius: 5px;
     white-space: nowrap;
   }
-  .facet.product {
+  .facet.topic {
     color: var(--accent);
     background: var(--accent-soft);
     font-weight: 600;
