@@ -1,7 +1,7 @@
 ---
 import { ui, homePath, type Locale } from '../lib/i18n';
 import { getUsedTerms } from '../lib/posts';
-import { termHref } from '../lib/terms';
+import { termHref, groupMeta, type TermGroup } from '../lib/terms';
 
 interface Props {
   locale: Locale;
@@ -11,12 +11,23 @@ interface Props {
 
 const { locale, enHref, zhHref } = Astro.props;
 const t = ui[locale];
-
-// Primary nav = the topic axis (top-level topics that have content).
-const topics = (await getUsedTerms('topic')).filter((term) => !term.parent);
 const pathname = Astro.url.pathname;
 const homeHref = homePath(locale);
 const onHome = pathname === homeHref;
+
+// One dropdown per axis, in this order. Empty axes are dropped.
+const AXES: TermGroup[] = ['topic', 'solution', 'role', 'industry'];
+const menus = (
+  await Promise.all(
+    AXES.map(async (group) => {
+      const terms = (await getUsedTerms(group)).filter((term) => !term.parent);
+      const active = terms.some((term) =>
+        pathname.startsWith(termHref(locale, term))
+      );
+      return { group, terms, active };
+    })
+  )
+).filter((m) => m.terms.length > 0);
 ---
 
 <header class="site-header">
@@ -43,27 +54,67 @@ const onHome = pathname === homeHref;
   </div>
 
   {
-    topics.length > 0 && (
-      <nav class="products" aria-label="Topics">
-        <div class="products-inner">
-          <a class:list={['prod', { active: onHome }]} href={homeHref}>
+    menus.length > 0 && (
+      <nav class="mainnav" aria-label="Browse">
+        <div class="mainnav-inner">
+          <a class:list={['nav-link', { active: onHome }]} href={homeHref}>
             {t.all}
           </a>
-          {topics.map((term) => (
-            <a
-              class:list={[
-                'prod',
-                { active: pathname.startsWith(termHref(locale, term)) },
-              ]}
-              href={termHref(locale, term)}>
-              {term.label[locale]}
-            </a>
+          {menus.map((m) => (
+            <div class="menu" data-menu>
+              <button
+                type="button"
+                class:list={['menu-trigger', { active: m.active }]}
+                aria-expanded="false"
+                aria-haspopup="true"
+                data-menu-trigger>
+                {groupMeta(m.group).label[locale]}
+                <span class="caret" aria-hidden="true">▾</span>
+              </button>
+              <div class="menu-panel" role="menu">
+                {m.terms.map((term) => (
+                  <a
+                    class:list={[
+                      'menu-item',
+                      { active: pathname.startsWith(termHref(locale, term)) },
+                    ]}
+                    href={termHref(locale, term)}
+                    role="menuitem">
+                    {term.label[locale]}
+                  </a>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       </nav>
     )
   }
 </header>
+
+<script>
+  const menus = document.querySelectorAll<HTMLElement>('[data-menu]');
+  function closeAll(except?: HTMLElement) {
+    menus.forEach((m) => {
+      if (m === except) return;
+      m.classList.remove('open');
+      m.querySelector('[data-menu-trigger]')?.setAttribute('aria-expanded', 'false');
+    });
+  }
+  menus.forEach((menu) => {
+    const trigger = menu.querySelector('[data-menu-trigger]');
+    trigger?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const open = menu.classList.toggle('open');
+      trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+      closeAll(menu);
+    });
+  });
+  document.addEventListener('click', () => closeAll());
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeAll();
+  });
+</script>
 
 <style>
   .site-header {
@@ -137,35 +188,93 @@ const onHome = pathname === homeHref;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
   }
 
-  /* Product-level nav (primary axis) */
-  .products {
+  /* Grouped mega-menu (one dropdown per axis) */
+  .mainnav {
     border-top: 1px solid var(--line);
   }
-  .products-inner {
+  .mainnav-inner {
     max-width: var(--maxw);
     margin: 0 auto;
-    padding: 0 1.5rem;
-    height: 44px;
+    padding: 0 1.25rem;
+    min-height: 46px;
     display: flex;
     align-items: center;
-    gap: 1.25rem;
-    overflow-x: auto;
+    flex-wrap: wrap;
+    gap: 0.15rem;
   }
-  .prod {
+  .nav-link,
+  .menu-trigger {
+    font-family: inherit;
     font-size: 0.88rem;
     color: var(--ink-soft);
     text-decoration: none;
+    padding: 0.4rem 0.65rem;
+    border-radius: 8px;
+    background: none;
+    border: none;
+    cursor: pointer;
     white-space: nowrap;
-    padding: 0.2rem 0;
-    border-bottom: 2px solid transparent;
-    transition: color 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    transition:
+      color 0.15s,
+      background 0.15s;
   }
-  .prod:hover {
+  .nav-link:hover,
+  .menu-trigger:hover {
     color: var(--ink);
+    background: var(--surface-sunk);
   }
-  .prod.active {
+  .nav-link.active,
+  .menu-trigger.active {
     color: var(--ink);
     font-weight: 600;
-    border-bottom-color: var(--accent);
+  }
+  .caret {
+    font-size: 0.6rem;
+    opacity: 0.55;
+    transition: transform 0.15s;
+  }
+  .menu {
+    position: relative;
+  }
+  .menu.open .caret {
+    transform: rotate(180deg);
+  }
+  .menu-panel {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    min-width: 200px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: 0 14px 36px -14px rgba(28, 25, 23, 0.3);
+    padding: 0.4rem;
+    display: none;
+    flex-direction: column;
+    gap: 1px;
+    z-index: 20;
+  }
+  .menu.open .menu-panel {
+    display: flex;
+  }
+  .menu-item {
+    font-size: 0.88rem;
+    color: var(--ink-soft);
+    text-decoration: none;
+    padding: 0.45rem 0.65rem;
+    border-radius: 8px;
+    white-space: nowrap;
+  }
+  .menu-item:hover {
+    background: var(--surface-sunk);
+    color: var(--ink);
+  }
+  .menu-item.active {
+    color: var(--accent);
+    background: var(--accent-soft);
+    font-weight: 600;
   }
 </style>
