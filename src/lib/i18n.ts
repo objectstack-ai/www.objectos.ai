@@ -28,6 +28,13 @@ export const LANG_LABEL: Record<Locale, string> = {
   'zh-Hant': '繁',
 };
 
+/** Native name, shown in the language dropdown (scales to many locales). */
+export const LANG_NATIVE: Record<Locale, string> = {
+  en: 'English',
+  'zh-Hans': '简体中文',
+  'zh-Hant': '繁體中文',
+};
+
 type StatusKey = 'draft' | 'review' | 'published' | 'archived';
 
 interface Strings {
