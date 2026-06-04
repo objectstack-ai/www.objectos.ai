@@ -71,6 +71,7 @@ interface Strings {
   references: string;
   by: string;
   empty: string;
+  relatedTitle: string;
   status: Record<StatusKey, string>;
 }
 
@@ -87,6 +88,7 @@ const en: Strings = {
   references: 'References',
   by: 'By',
   empty: 'No articles yet.',
+  relatedTitle: 'Related articles',
   status: { published: 'Published', archived: 'Archived' },
 };
 
@@ -103,6 +105,7 @@ const zhHans: Strings = {
   references: '参考链接',
   by: '作者',
   empty: '还没有文章。',
+  relatedTitle: '相关文章',
   status: { published: '已发布', archived: '已归档' },
 };
 
@@ -119,6 +122,7 @@ const ja: Strings = {
   references: '参考リンク',
   by: '著者',
   empty: '記事はまだありません。',
+  relatedTitle: '関連記事',
   status: { published: '公開済み', archived: 'アーカイブ済み' },
 };
 
@@ -135,6 +139,7 @@ const de: Strings = {
   references: 'Referenzen',
   by: 'Von',
   empty: 'Noch keine Artikel.',
+  relatedTitle: 'Ähnliche Artikel',
   status: { published: 'Veröffentlicht', archived: 'Archiviert' },
 };
 
@@ -151,6 +156,7 @@ const es: Strings = {
   references: 'Referencias',
   by: 'Por',
   empty: 'Aún no hay artículos.',
+  relatedTitle: 'Artículos relacionados',
   status: { published: 'Publicado', archived: 'Archivado' },
 };
 
@@ -167,6 +173,7 @@ const fr: Strings = {
   references: 'Références',
   by: 'Par',
   empty: 'Aucun article pour le moment.',
+  relatedTitle: 'Articles liés',
   status: { published: 'Publié', archived: 'Archivé' },
 };
 
@@ -183,6 +190,7 @@ const ko: Strings = {
   references: '참고 링크',
   by: '작성자',
   empty: '아직 글이 없습니다.',
+  relatedTitle: '관련 글',
   status: { published: '게시됨', archived: '보관됨' },
 };
 
@@ -209,6 +217,7 @@ const toHant = (s: Strings): Strings => ({
   references: s2t(s.references),
   by: s2t(s.by),
   empty: s2t(s.empty),
+  relatedTitle: s2t(s.relatedTitle),
   status: {
     published: s2t(s.status.published),
     archived: s2t(s.status.archived),

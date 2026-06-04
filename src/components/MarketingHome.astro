@@ -2,7 +2,7 @@
 import { getPostsInLocale } from '../lib/posts';
 import { blogPath, postPath, securityPath, type Locale } from '../lib/i18n';
 import { homeCopy } from '../lib/home';
-import { termBySlug, termHref } from '../lib/terms';
+import { termBySlug, termHref, termLabel } from '../lib/terms';
 
 interface Props {
   locale: Locale;
@@ -33,6 +33,15 @@ const templateLinks = [
     tone: 'amber',
   },
 ];
+const insightTerms = [
+  'app-building',
+  'integration-data',
+  'governance',
+  'crm',
+  'manufacturing',
+]
+  .map((slug) => termBySlug(slug))
+  .filter(Boolean);
 
 const coverSrc = (cover: unknown): string =>
   typeof cover === 'string'
@@ -191,6 +200,13 @@ const coverSrc = (cover: unknown): string =>
         </div>
         <a class="text-link" href={blogPath(locale)}>{copy.insightsLink} <span>→</span></a>
       </div>
+      <nav class="insight-links" aria-label={copy.insightsTitle}>
+        {insightTerms.map((term) => (
+          <a href={termHref(locale, term!)}>
+            {termLabel(term!.slug, locale)}
+          </a>
+        ))}
+      </nav>
       <div class="article-grid">
         {posts.map((post) => (
           <a class="article" href={postPath(locale, post.slug)}>
@@ -684,6 +700,27 @@ const coverSrc = (cover: unknown): string =>
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 1.25rem;
+  }
+  .insight-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    margin: -1.7rem 0 2rem;
+  }
+  .insight-links a {
+    color: var(--ink);
+    text-decoration: none;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.2;
+    padding: 0.45rem 0.7rem;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--surface);
+  }
+  .insight-links a:hover {
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
   }
   .article {
     color: var(--ink);
