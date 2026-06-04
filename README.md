@@ -16,3 +16,6 @@ pnpm content:lint --published
 
 `content:lint` is deterministic and runs during `pnpm build` for published
 content.
+
+Feeds are generated at `/rss.xml` for English and `/<locale>/rss.xml` for each
+localized blog.

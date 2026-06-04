@@ -17,6 +17,9 @@ export const homePath = (l: Locale): string => `/${l}/`;
 /** Blog index URL: /<locale>/blog/. */
 export const blogPath = (l: Locale): string => `/${l}/blog/`;
 
+/** RSS feed URL: /<locale>/rss.xml. */
+export const rssPath = (l: Locale): string => `/${l}/rss.xml`;
+
 /** Legal page URLs. */
 export const securityPath = (l: Locale): string => `/${l}/security/`;
 export const termsPath = (l: Locale): string => `/${l}/terms/`;
