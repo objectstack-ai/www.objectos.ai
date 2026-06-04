@@ -11,11 +11,38 @@ export function getStaticPaths() {
 const locale = segToLocale(Astro.params.lang!)!;
 const copy = homeCopy[locale];
 const alternates = Object.fromEntries(LOCALES.map((l) => [l, homePath(l)]));
+const site = Astro.site?.toString().replace(/\/$/, '') ?? '';
+const absoluteUrl = (href: string): string =>
+  site ? new URL(href, `${site}/`).toString() : new URL(href, Astro.url).toString();
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: copy.title,
+    description: copy.description,
+    url: absoluteUrl(homePath(locale)),
+    inLanguage: locale,
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'ObjectOS',
+    applicationCategory: 'BusinessApplication',
+    operatingSystem: 'Web',
+    description: copy.description,
+    url: absoluteUrl(homePath(locale)),
+    publisher: {
+      '@type': 'Organization',
+      name: 'ObjectStack AI LLC',
+    },
+  },
+];
 ---
 
 <Base
   title={copy.title}
   description={copy.description}
+  jsonLd={jsonLd}
   {locale}
   {alternates}>
   <MarketingHome {locale} />

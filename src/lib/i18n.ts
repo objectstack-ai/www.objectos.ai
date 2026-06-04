@@ -24,7 +24,7 @@ export const privacyPath = (l: Locale): string => `/${l}/privacy/`;
 
 /** Article URL: /<locale>/blog/<baseSlug>. */
 export const postPath = (l: Locale, slug: string): string =>
-  `/${l}/blog/${slug}`;
+  `/${l}/blog/${slug}/`;
 
 /** BCP-47 lang attribute (the locale codes are already valid). */
 export const htmlLang = (l: Locale): string => l;
@@ -53,7 +53,7 @@ export const LANG_NATIVE: Record<Locale, string> = {
   ko: '한국어',
 };
 
-type StatusKey = 'draft' | 'review' | 'published' | 'archived';
+type StatusKey = 'published' | 'archived';
 
 interface Strings {
   siteName: string;
@@ -84,7 +84,7 @@ const en: Strings = {
   references: 'References',
   by: 'By',
   empty: 'No articles yet.',
-  status: { draft: 'Draft', review: 'In review', published: 'Published', archived: 'Archived' },
+  status: { published: 'Published', archived: 'Archived' },
 };
 
 const zhHans: Strings = {
@@ -100,7 +100,7 @@ const zhHans: Strings = {
   references: '参考链接',
   by: '作者',
   empty: '还没有文章。',
-  status: { draft: '草稿', review: '审阅中', published: '已发布', archived: '已归档' },
+  status: { published: '已发布', archived: '已归档' },
 };
 
 const ja: Strings = {
@@ -116,7 +116,7 @@ const ja: Strings = {
   references: '参考リンク',
   by: '著者',
   empty: '記事はまだありません。',
-  status: { draft: '下書き', review: 'レビュー中', published: '公開済み', archived: 'アーカイブ済み' },
+  status: { published: '公開済み', archived: 'アーカイブ済み' },
 };
 
 const de: Strings = {
@@ -132,7 +132,7 @@ const de: Strings = {
   references: 'Referenzen',
   by: 'Von',
   empty: 'Noch keine Artikel.',
-  status: { draft: 'Entwurf', review: 'In Prüfung', published: 'Veröffentlicht', archived: 'Archiviert' },
+  status: { published: 'Veröffentlicht', archived: 'Archiviert' },
 };
 
 const es: Strings = {
@@ -148,7 +148,7 @@ const es: Strings = {
   references: 'Referencias',
   by: 'Por',
   empty: 'Aún no hay artículos.',
-  status: { draft: 'Borrador', review: 'En revisión', published: 'Publicado', archived: 'Archivado' },
+  status: { published: 'Publicado', archived: 'Archivado' },
 };
 
 const fr: Strings = {
@@ -164,7 +164,7 @@ const fr: Strings = {
   references: 'Références',
   by: 'Par',
   empty: 'Aucun article pour le moment.',
-  status: { draft: 'Brouillon', review: 'En revue', published: 'Publié', archived: 'Archivé' },
+  status: { published: 'Publié', archived: 'Archivé' },
 };
 
 const ko: Strings = {
@@ -180,7 +180,7 @@ const ko: Strings = {
   references: '참고 링크',
   by: '작성자',
   empty: '아직 글이 없습니다.',
-  status: { draft: '초안', review: '검토 중', published: '게시됨', archived: '보관됨' },
+  status: { published: '게시됨', archived: '보관됨' },
 };
 
 // Traditional UI is auto-derived from Simplified (s2twp) — never hand-kept.
@@ -207,8 +207,6 @@ const toHant = (s: Strings): Strings => ({
   by: s2t(s.by),
   empty: s2t(s.empty),
   status: {
-    draft: s2t(s.status.draft),
-    review: s2t(s.status.review),
     published: s2t(s.status.published),
     archived: s2t(s.status.archived),
   },
@@ -226,8 +224,6 @@ export const ui: Record<Locale, Strings> = {
 };
 
 export const STATUS_COLOR: Record<StatusKey, string> = {
-  draft: '#a8a29e',
-  review: '#d97706',
   published: '#059669',
   archived: '#78716c',
 };

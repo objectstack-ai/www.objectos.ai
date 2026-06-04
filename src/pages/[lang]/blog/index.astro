@@ -12,11 +12,24 @@ const locale = segToLocale(Astro.params.lang!)!;
 const t = ui[locale];
 const postCount = (await getPostsInLocale(locale)).length;
 const alternates = Object.fromEntries(LOCALES.map((language) => [language, blogPath(language)]));
+const site = Astro.site?.toString().replace(/\/$/, '') ?? '';
+const absoluteUrl = (href: string): string =>
+  site ? new URL(href, `${site}/`).toString() : new URL(href, Astro.url).toString();
+const description = t.articlesLead(postCount);
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: `${t.articlesTitle} · ${t.siteName}`,
+  description,
+  url: absoluteUrl(blogPath(locale)),
+  inLanguage: locale,
+};
 ---
 
 <Base
   title={`${t.articlesTitle} · ${t.siteName}`}
-  description={t.articlesLead(postCount)}
+  description={description}
+  jsonLd={jsonLd}
   {locale}
   {alternates}>
   <ArticleList {locale} />

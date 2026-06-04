@@ -15,6 +15,19 @@ export interface PostGroup {
 }
 
 type PostData = CollectionEntry<'blog'>['data'];
+type StatusKey = PostData['status'];
+
+const PUBLIC_STATUSES: StatusKey[] = ['published'];
+const includeArchived =
+  import.meta.env.DEV || import.meta.env.CONTENT_INCLUDE_ARCHIVED === 'true';
+
+export function isPublicPost(data: PostData): boolean {
+  return PUBLIC_STATUSES.includes(data.status);
+}
+
+export function shouldExposePost(data: PostData): boolean {
+  return includeArchived || isPublicPost(data);
+}
 
 /** Split an entry id like "my-post.zh-Hans" into { slug, locale }. */
 export function parseId(id: string): { slug: string; locale: Locale } {
@@ -25,7 +38,9 @@ export function parseId(id: string): { slug: string; locale: Locale } {
 
 /** All blog entries grouped by base slug, so each article = one row. */
 export async function getPostGroups(): Promise<PostGroup[]> {
-  const entries = await getCollection('blog');
+  const entries = (await getCollection('blog')).filter((entry) =>
+    shouldExposePost(entry.data)
+  );
   const groups = new Map<string, PostGroup>();
 
   for (const entry of entries) {

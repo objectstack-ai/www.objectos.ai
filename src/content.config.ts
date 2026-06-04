@@ -36,8 +36,8 @@ const blog = defineCollection({
 
       // Publishing lifecycle — `astro check` fails on an invalid value.
       status: z
-        .enum(['draft', 'review', 'published', 'archived'])
-        .default('draft'),
+        .enum(['published', 'archived'])
+        .default('published'),
 
       // The canonical (original) URL — point every reprint back here for SEO.
       canonical_url: z.string().url().optional(),

@@ -1,8 +1,9 @@
 ---
 import Base from './Base.astro';
 import type { CollectionEntry } from 'astro:content';
-import { ui, blogPath, STATUS_COLOR, type Locale } from '../lib/i18n';
+import { ui, blogPath, postPath, STATUS_COLOR, type Locale } from '../lib/i18n';
 import { termBySlug, termHref, termLabel } from '../lib/terms';
+import { isPublicPost } from '../lib/posts';
 
 interface Props {
   data: CollectionEntry<'blog'>['data'];
@@ -17,12 +18,78 @@ const coverSrc =
   typeof data.cover === 'string'
     ? data.cover
     : (data.cover as { src?: string } | undefined)?.src;
+const site = Astro.site?.toString().replace(/\/$/, '') ?? '';
+const absoluteUrl = (href: string): string =>
+  site ? new URL(href, `${site}/`).toString() : new URL(href, Astro.url).toString();
+const currentUrl = site ? `${site}${Astro.url.pathname}` : Astro.url.href;
+const slug = Astro.url.pathname.split('/blog/')[1]?.replace(/\/$/, '') ?? '';
+const imageUrl = coverSrc ? absoluteUrl(coverSrc) : absoluteUrl('/images/objectos-home-hero.png');
+const topic = termBySlug(data.topic)!;
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: data.title,
+    description: data.description,
+    datePublished: data.date.toISOString(),
+    dateModified: data.date.toISOString(),
+    author: {
+      '@type': 'Organization',
+      name: data.author,
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'ObjectStack AI LLC',
+      logo: {
+        '@type': 'ImageObject',
+        url: absoluteUrl('/logo.svg'),
+      },
+    },
+    mainEntityOfPage: currentUrl,
+    url: currentUrl,
+    image: imageUrl,
+    articleSection: termLabel(data.topic, locale),
+    keywords: data.tags,
+    inLanguage: locale,
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: t.articlesTitle,
+        item: absoluteUrl(blogPath(locale)),
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: termLabel(data.topic, locale),
+        item: absoluteUrl(termHref(locale, topic)),
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: data.title,
+        item: slug ? absoluteUrl(postPath(locale, slug)) : currentUrl,
+      },
+    ],
+  },
+];
 ---
 
 <Base
   title={data.title}
   description={data.description}
   canonical={data.canonical_url}
+  image={coverSrc}
+  type="article"
+  noindex={!isPublicPost(data)}
+  publishedTime={data.date.toISOString()}
+  modifiedTime={data.date.toISOString()}
+  author={data.author}
+  jsonLd={jsonLd}
   {locale}
   {alternates}>
   <article>
@@ -30,7 +97,7 @@ const coverSrc =
 
     <header class="post-head">
       <div class="meta">
-        <a class="cat topic" href={termHref(locale, termBySlug(data.topic)!)}>
+        <a class="cat topic" href={termHref(locale, topic)}>
           {termLabel(data.topic, locale)}
         </a>
         <a class="cat" href={termHref(locale, termBySlug(data.audience)!)}>
@@ -54,7 +121,7 @@ const coverSrc =
           {t.status[data.status]}
         </span>
         <span class="dot">·</span>
-        <time>{dateStr}</time>
+        <time datetime={dateStr}>{dateStr}</time>
         <span class="dot">·</span>
         <span>{t.by} {data.author}</span>
       </div>
@@ -67,7 +134,7 @@ const coverSrc =
           <img
             class="cover"
             src={coverSrc}
-            alt=""
+            alt={data.title}
             loading="eager"
             decoding="async"
           />

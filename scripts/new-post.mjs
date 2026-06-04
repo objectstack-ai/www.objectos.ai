@@ -58,7 +58,7 @@ title: ${title}
 description: ""
 author: ObjectStack Team
 date: ${today}
-status: draft
+status: published
 # Topic (main axis): ai-agents | app-building | integration-data | automation | modernization | governance | customer-stories
 topic: ai-agents
 # Audience: business | it | developer | general
@@ -91,4 +91,4 @@ try {
 await mkdir(dir, { recursive: true });
 await writeFile(filePath, frontmatter, 'utf8');
 console.log(`✓ Created content/blog/${slug}/${fileName}`);
-console.log(`  Preview at http://localhost:4321/blog/${locale === 'en' ? slug : `${slug}.${locale}`}`);
+console.log(`  Preview at http://localhost:4321/${locale}/blog/${slug}/`);

@@ -1,7 +1,7 @@
 ---
 import { getPostsInLocale, articleHasTerm } from '../lib/posts';
 import { ui, postPath, STATUS_COLOR, type Locale } from '../lib/i18n';
-import { termBySlug, termLabel, type TermGroup } from '../lib/terms';
+import { termBySlug, termDescription, termLabel, type TermGroup } from '../lib/terms';
 
 interface Props {
   locale: Locale;
@@ -19,6 +19,9 @@ const shown = activeTerm
   : posts;
 
 const heroTitle = activeTerm ? activeTerm.label[locale] : t.articlesTitle;
+const heroLead = activeTerm
+  ? termDescription(activeTerm, locale)
+  : t.articlesLead(shown.length);
 
 const coverSrc = (cover: unknown): string =>
   typeof cover === 'string'
@@ -28,7 +31,7 @@ const coverSrc = (cover: unknown): string =>
 
 <section class="hero">
   <h1>{heroTitle}</h1>
-  <p class="lead">{t.articlesLead(shown.length)}</p>
+  <p class="lead">{heroLead}</p>
 </section>
 
 {
@@ -45,7 +48,7 @@ const coverSrc = (cover: unknown): string =>
                 {d.cover ? (
                   <img
                     src={coverSrc(d.cover)}
-                    alt=""
+                    alt={d.title}
                     loading="lazy"
                     decoding="async"
                   />
@@ -61,7 +64,7 @@ const coverSrc = (cover: unknown): string =>
                   <span class="pill" style={`--c:${STATUS_COLOR[d.status]}`}>
                     {t.status[d.status]}
                   </span>
-                  <time>{d.date.toISOString().slice(0, 10)}</time>
+                  <time datetime={d.date.toISOString().slice(0, 10)}>{d.date.toISOString().slice(0, 10)}</time>
                 </div>
                 <h2>{d.title}</h2>
                 <p class="desc">{d.description}</p>
