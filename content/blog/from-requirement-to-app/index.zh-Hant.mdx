@@ -1,71 +1,106 @@
 ---
 # @generated zh-Hant from zh-Hans (s2twp) — edit the zh-Hans file; delete this line to hand-maintain.
-title: 從一句話需求到能用的應用，中間發生了什麼
-description: 你對編碼 Agent 說"我要一個報修系統"，幾分鐘後應用就跑了起來。這篇把中間的每一步拆開——真實的互動、生成的物件與 API、迭代迴路，以及 Agent 會在哪出錯、你得收哪些尾。
+title: 從一句話需求到可執行應用：用裝置報修看 ObjectStack 後設資料
+description: 用一個裝置報修場景拆開 AI Builder 的生成過程：物件、欄位、關係、檢視、許可權、動作、流程、API 和 Agent 工具如何由同一份 ObjectStack 後設資料驅動。
 author: ObjectStack Team
-date: 2026-06-03
+date: 2026-06-04
 status: draft
 topic: app-building
 audience: developer
 cover: ./cover.jpg
 tags:
-  - 低程式碼
-  - AI 開發
+  - AI Builder
+  - 應用搭建
+  - 後設資料
   - 物件建模
 ---
 
-你對一個編碼 Agent 說一句話：
+你對 AI Builder 說一句話：
 
-> "幫我做一個裝置報修系統：能建工單、關聯裝置、派給工程師、跟蹤狀態，高優先順序自動派單。"
+> 幫我做一個裝置報修系統：員工能提交故障，系統能關聯裝置、分派工程師、跟蹤狀態、計算停機時間，高優先順序自動派單，關閉工單前要填寫維修結果和成本。
 
-幾分鐘後，一個帶 REST API、帶後臺、能建單能流轉的應用跑了起來。
+幾分鐘後，一個可執行的應用出現了。它不只是有頁面，也有物件、欄位、關係、許可權、檢視、流程、動作、API 和 Agent 工具。
 
-"這不就是 AI 生成程式碼嘛"——但如果你真讓 Agent 從零寫一個傳統應用，你會很快撞牆。這篇我們把中間這幾分鐘逐步拆開：它到底做了什麼，生成的東西長什麼樣，你要在哪裡接手，以及它會在哪出錯。
+這篇不泛講“AI 生成應用”，而是用這個具體業務場景拆開看：ObjectStack 後設資料到底生成了什麼，為什麼它比一次性程式碼生成更適合企業應用。
 
-## 為什麼讓 Agent 直接寫傳統應用會失敗
+![從需求到應用的生成流程](./requirement-to-app-pipeline.webp)
 
-一個普通內部系統，本質是幾萬行散落的東西：建表 DDL、CRUD controller、表單、校驗、列表頁、許可權判斷、API 路由、狀態機……分佈在幾十個檔案裡。
+## 業務場景先說清楚
 
-讓 Agent 一次寫出這一整坨，兩個問題繞不過去：
+裝置報修看起來簡單，實際包含一條完整業務鏈：
 
-- **上下文裝不下**。跨幾十個檔案的一致性它保證不了，寫到一半就開始自相矛盾。
-- **你 review 不動**。就算它生成了，幾千行膠水你沒法逐行確認沒埋雷——於是"能生成、不敢用"。
+1. 一線員工發現裝置異常，提交報修；
+2. 系統根據裝置、位置、優先順序和班組分派工程師；
+3. 工程師接單、到場、維修、補充照片和備註；
+4. 主管檢視超時、停機時間和成本；
+5. 高風險或高成本工單進入審批；
+6. 工單關閉後形成裝置維修歷史。
 
-ObjectStack 改變的是這個前提：把一個應用的**本質**壓縮成幾百行宣告式 metadata。Agent 的活，從"寫一個應用"變成"寫一份你能讀完的規格"。
+如果用傳統方式做，這會散落在資料表、API、頁面、許可權、狀態機、通知、審計和報表裡。
 
-## Step 0：它先內省，再動手
+ObjectStack 的核心思路是把這些東西先描述成後設資料。AI Builder 的任務不是憑空寫一堆膠水程式碼，而是先起草一份業務系統規格。
 
-第一件值得注意的事：好的 Agent 不會上來就吐程式碼，它會**先看、再問**。
+| 業務問題 | 後設資料能力 |
+| --- | --- |
+| 裝置、工單、工程師是什麼 | 物件與關係 |
+| 哪些欄位必填、可選、列舉 | 欄位型別與校驗 |
+| 員工、工程師、主管看到什麼 | 許可權集與欄位級許可權 |
+| 列表、看板、詳情如何展示 | 檢視後設資料 |
+| 派單、升級、關閉如何執行 | 動作與流程 |
+| AI Agent 能查詢和操作什麼 | 受控工具與審計 |
 
-針對上面那句需求，Agent 大致會這樣推進：
+## 先建物件，而不是先畫頁面
 
-> - 掃一遍現有專案：有沒有 `user`、`device` 這種物件可以複用？
-> - 拆出需要的物件：`device`（裝置）、`repair_order`（工單）。
-> - 把不確定的點拋回給你："工程師用現有的 `user` 物件，還是單獨建 `engineer`？成本欄位要不要對工程師隱藏？"
+AI Builder 第一步應該拆業務物件：
 
-它在建**領域模型**，不是在拼介面。這一步決定了後面所有派生物的質量。
+- `device`：裝置臺賬；
+- `repair_order`：報修工單；
+- `repair_comment`：維修備註和現場記錄；
+- `user`：員工、工程師、主管複用現有使用者物件；
+- `team`：班組或維修隊。
 
-## Step 1：需求 → 物件（帶關係、列舉、校驗）
+真正的應用從物件開始，因為物件會同時影響 API、UI、許可權、流程和 Agent 工具。
 
-確認後，它把模型寫成 `ObjectSchema`。注意關係、列舉、校驗都在同一份聲明裡：
+下面是簡化後的裝置物件：
 
 ```ts
 import { ObjectSchema, Field } from '@objectstack/spec/data';
 
+export const Device = ObjectSchema.create({
+  name: 'device',
+  label: '裝置',
+  fields: {
+    name: Field.text({ label: '裝置名稱', required: true }),
+    code: Field.text({ label: '裝置編號', required: true, unique: true }),
+    location: Field.text({ label: '所在位置' }),
+    team: Field.lookup('team', { label: '負責班組' }),
+    status: Field.select({
+      label: '裝置狀態',
+      options: [
+        { label: '執行中', value: 'running', default: true },
+        { label: '維修中', value: 'maintenance' },
+        { label: '停用', value: 'disabled' },
+      ],
+    }),
+  },
+});
+```
+
+注意這裡已經不是“表單欄位”這麼簡單。`team` 是關係，`status` 是列舉，`code` 是唯一約束。這些資訊後面會被 API、頁面、篩選、許可權和 Agent 一起使用。
+
+## 工單物件承載業務規則
+
+報修工單是業務主物件。它不僅記錄文本，還要表達狀態、優先順序、關係、時間和成本。
+
+```ts
 export const RepairOrder = ObjectSchema.create({
   name: 'repair_order',
   label: '報修工單',
   fields: {
-    title:    Field.text({ label: '故障描述', required: true }),
-    device:   Field.lookup('device', { label: '裝置', required: true }),
-    status:   Field.select({
-      label: '狀態',
-      options: [
-        { label: '待派單', value: 'pending', default: true },
-        { label: '維修中', value: 'in_repair' },
-        { label: '已完成', value: 'done' },
-      ],
-    }),
+    title: Field.text({ label: '故障描述', required: true }),
+    device: Field.lookup('device', { label: '裝置', required: true }),
+    reporter: Field.lookup('user', { label: '報修人', required: true }),
+    assignee: Field.lookup('user', { label: '工程師' }),
     priority: Field.select({
       label: '優先順序',
       options: [
@@ -74,148 +109,238 @@ export const RepairOrder = ObjectSchema.create({
         { label: '高', value: 'high' },
       ],
     }),
-    assignee:    Field.lookup('user', { label: '工程師' }),
-    cost:        Field.currency({ label: '維修成本' }),
-    reported_at: Field.datetime({ label: '報修時間' }),
+    status: Field.select({
+      label: '狀態',
+      options: [
+        { label: '待派單', value: 'pending', default: true },
+        { label: '維修中', value: 'in_repair' },
+        { label: '待驗收', value: 'waiting_acceptance' },
+        { label: '已關閉', value: 'closed' },
+      ],
+    }),
+    reported_at: Field.datetime({ label: '報修時間', required: true }),
+    started_at: Field.datetime({ label: '開始維修時間' }),
+    closed_at: Field.datetime({ label: '關閉時間' }),
+    cost: Field.currency({ label: '維修成本' }),
+    photos: Field.image({ label: '現場照片', multiple: true }),
   },
 });
 ```
 
-幾個 Agent 的判斷值得點出來：
+這些欄位會帶來幾種派生能力：
 
-- `device`、`assignee` 用 **`Field.lookup('目標物件', …)`**（關係，目標物件是第一個引數），而不是塞一個字串 ID——所以列表頁能直接顯示裝置名、能反查"這臺裝置的所有工單"；
-- `status`/`priority` 用 **`select` + 列舉**：`value` 用小寫存庫、`label` 給中文展示、`default: true` 標預設值——校驗、篩選、看板分組全有了依據；
-- `cost` 先是個普通欄位；至於"工程師看不到成本"，**欄位級可見性不寫在欄位上**，而是在許可權集裡配（下面 Step 3 會說）。
+- `lookup` 讓工單和裝置、使用者建立關係；
+- `select` 讓狀態可以用於篩選、看板和流程判斷；
+- `datetime` 讓 SLA、停機時間和超時提醒可以被計算；
+- `currency` 讓成本欄位可以做欄位級許可權和審批條件；
+- `image` 讓現場照片自動進入表單、詳情頁和檔案許可權體系。
 
-這不是虛擬碼或文件，**是你倉庫裡能提交、能 diff 的原始碼**。
+## 公式和校驗也應該是後設資料
 
-## Step 2：metadata → 一切自動派生
-
-schema 一落地，下面這些你一行都不用寫——它們都是這份後設資料的**投影**：
-
-**REST API**（`/api/v1/data/<物件>` 下現成的增刪改查、關係展開）：
-
-```bash
-# 建單
-curl -X POST /api/v1/data/repair_order \
-  -d '{ "title": "3 號機床異響", "device": "dev_012", "priority": "high" }'
-
-# 取單，並把關聯的裝置展開出來
-curl '/api/v1/data/repair_order/ro_8841?expand=device'
-```
-
-```json
-{
-  "id": "ro_8841",
-  "title": "3 號機床異響",
-  "status": "pending",
-  "priority": "high",
-  "device": { "id": "dev_012", "name": "CNC-3 號機床" }
-}
-```
-
-注意返回的就是記錄本身（不多包一層）；`status`/`priority` 存的是 `value`（`pending`/`high`），介面上自動顯示對應的中文 `label`。
-
-**後臺介面**：Studio 裡按欄位型別自動渲染出列表、表單、詳情頁——`select` 成下拉、`lookup` 成關聯選擇器。
-
-**給 AI 的工具**：同一個物件自動暴露成 agent 能調的 `describe_object` / `query_records` / `get_record`。也就是說，你剛建的這個系統，**本身就是 AI-ready 的**。
-
-沒有 controller、沒有手寫表單、沒有手配路由。
-
-![概念示意圖](./requirement-to-app-pipeline.webp)
-
-## Step 3：你接手——稽核與收口
-
-這是"敢用"的關鍵。因為產出是幾百行宣告式規格，**你能整份讀完**。真實會發生的收口，通常是這幾類：
-
-- **它過度建模**：給你加了 `customer`、`warranty` 這種你這一期用不到的欄位——刪掉；
-- **關係猜錯**：`assignee` 它可能寫成 `Field.lookup('engineer', …)`，而你想複用 `user`——改一處；
-- **欄位級安全**：把成本對工程師設為不可見，不是改欄位，而是在**許可權集**里加一行：
-
-```ts
-// 許可權集（permission set）裡，而不是欄位定義上
-fields: {
-  'repair_order.cost': { readable: false, editable: false },
-}
-```
-
-關鍵是：這些都是**改一處宣告**的事，不是去十幾個檔案裡追膠水。AI 起草，你稽核收口，你掌控的是一份看得懂的規格。
-
-## Step 4：業務邏輯——依然是宣告式
-
-"高優先順序自動派單"這類規則，不寫成掛在物件上的程式碼，而是一個**獨立的 `*.hook.ts`**（同樣是能被系統讀懂、註冊、審計的後設資料）：
-
-```ts
-// src/hooks/repair-order.hook.ts
-import type { Hook, HookContext } from '@objectstack/spec';
-
-export const AutoAssignHook: Hook = {
-  name: 'repair_auto_assign',
-  object: 'repair_order',
-  events: ['beforeInsert'],
-  handler: async (ctx: HookContext) => {
-    const input = ctx.input as { priority?: string; assignee?: string };
-    if (input.priority === 'high' && !input.assignee) {
-      input.assignee = await pickDutyEngineer();
-    }
-  },
-};
-```
-
-派生欄位則用**公式**——查詢期計算、無需落庫（注意公式裡欄位名是裸寫的）：
+裝置報修常見的指標是停機時間。它不一定需要落庫，可以用公式欄位表達：
 
 ```ts
 import { cel } from '@objectstack/spec';
 
-// 放進物件的 fields 裡：含稅成本
-cost_with_tax: Field.formula({
-  label: '含稅成本',
-  expression: cel`(cost == null ? 0 : cost) * 1.06`,
-}),
+downtime_hours: Field.formula({
+  label: '停機時長',
+  expression: cel`
+    closed_at == null || reported_at == null
+      ? null
+      : hours_between(reported_at, closed_at)
+  `,
+});
 ```
 
-這裡有個對開發者很重要的細節：**表示式是構建期校驗的**。如果在校驗條件裡把欄位名拼錯——比如寫成 `record.prioriy`——不會上線後默默失效，而是**構建時直接報錯**，還帶修正建議：
-
-```
-unknown field `prioriy` on `repair_order` — did you mean `priority`?
-```
-
-（"4 小時未處理就提醒"這類定時規則，用一個定時 flow 表達，這裡不展開。）
-
-## Step 5：跑起來，然後——迭代
-
-```bash
-pnpm dev   # → REST API + Studio 同時起來
-```
-
-但真正的開發不是一次成型，而是**迴路**。三天後產品說"工單要能加備註和圖片"。傳統專案這是一圈活：改表、改 API、改表單、改詳情頁。在這裡：
+關閉工單前，也可以要求填寫維修結果：
 
 ```ts
-// 往同一份 schema 加兩個欄位
-notes:  Field.textarea({ label: '維修備註' }),
-photos: Field.image({ label: '現場照片', multiple: true }),
+resolution: Field.textarea({
+  label: '維修結果',
+  requiredWhen: cel`status == "closed"`,
+});
 ```
 
-存檔——API、表單、詳情頁、給 AI 的工具**重新投影一遍**就有了。需求改的是**規格**，不是散落的實現。這就是它和"一次性腳手架程式碼生成"的本質區別：metadata 是活的源頭，不是生成完就各走各路的產物。
+這類規則如果寫在頁面裡，API、Agent 和批次操作可能繞過去。寫成後設資料後，校驗會成為執行時的一部分。
 
-## 它會在哪出錯（誠實的部分）
+## 檢視後設資料決定使用者看到什麼
 
-別把它當魔法。Agent 仍然會：
+企業應用不是隻有一張列表。報修系統至少需要三類檢視：
 
-- **把列舉值猜得不對**（`select` 選項不符合你實際業務）；
-- **關係建反**（一對多建成多對一）；
-- **過度設計**，一上來給你十幾個物件。
+- 員工看“我提交的工單”；
+- 工程師看“分派給我的工單”；
+- 主管看“全部工單、超時工單、高成本工單”。
 
-但和"幾千行膠水裡埋雷"不同——這些錯誤**都擺在一份你讀得完的聲明裡**，要麼你一眼看出來，要麼構建期校驗幫你攔下來。可審、可改、可控，這才是區別。
+這些可以由檢視後設資料描述：
 
-## 為什麼這事現在才成立
+```ts
+export const EngineerQueueView = {
+  object: 'repair_order',
+  label: '我的維修佇列',
+  type: 'list',
+  filter: cel`assignee == $currentUser && status != "closed"`,
+  columns: ['title', 'device', 'priority', 'status', 'reported_at'],
+  sort: [{ field: 'priority', direction: 'desc' }, { field: 'reported_at', direction: 'asc' }],
+};
 
-不是模型突然開竅了，而是**整個應用小到能塞進 Agent 的上下文視窗**了。
+export const RepairBoardView = {
+  object: 'repair_order',
+  label: '維修看板',
+  type: 'kanban',
+  groupBy: 'status',
+  cardFields: ['title', 'device', 'assignee', 'priority'],
+};
+```
 
-當一個應用就是幾百行型別化的宣告式規格，Agent 能一次讀完、理解每處依賴、**跨資料 / API / UI / 許可權一起改**——而不是在幾十個檔案裡盲人摸象。這就是 AI 從"自動補全"跨到"共同維護者"的門檻。
+檢視不是純前端配置。它定義了使用者如何掃描業務，也影響 Agent 如何向用戶展示結果。例如 Agent 回答“哪些高優先順序工單還沒處理”時，可以複用同樣的物件、欄位和篩選語義。
 
----
+## 許可權不是最後補的
 
-所以"從一句話到能用的應用"，中間不是 AI 憑空寫出了一個系統，而是：**它寫了一份你能讀懂、能審、能改的規格，平臺把規格變成了應用，並在每次需求變更時重新投影。**
+同一個 `repair_order`，不同角色邊界完全不同：
 
-> 想自己跑一遍？`npx create-objectstack`，開啟 Studio 裡的 AI 助手，對它說一句你的需求，看著物件、API、介面一層層被建出來——再試著改一個欄位，看它如何重新長好。
+- 報修人只能建立和檢視自己的工單；
+- 工程師可以更新維修狀態和備註，但不能看維修成本；
+- 主管可以分派工程師、檢視成本、關閉異常工單；
+- 財務可以看成本，但不一定能改維修狀態。
+
+所以許可權也必須進入後設資料：
+
+```ts
+export const EngineerPermission = {
+  role: 'maintenance_engineer',
+  object: 'repair_order',
+  readable: cel`assignee == $currentUser`,
+  editable: cel`assignee == $currentUser && status != "closed"`,
+  fields: {
+    cost: { readable: false, editable: false },
+    resolution: { readable: true, editable: true },
+    photos: { readable: true, editable: true },
+  },
+  actions: {
+    start_repair: true,
+    submit_acceptance: true,
+    close_order: false,
+  },
+};
+```
+
+這段後設資料會影響 UI、API 和 Agent。工程師在頁面上看不到成本，通過 API 也讀不到成本，Agent 以工程師身份查詢時同樣拿不到成本。
+
+這就是企業級 AI 應用必須強調許可權的原因：Agent 不能比使用者擁有更多業務權力。
+
+## 動作讓業務行為可控
+
+“開始維修”“提交驗收”“關閉工單”不是普通欄位更新，而是業務動作。動作可以定義輸入、前置條件、許可權和審計。
+
+```ts
+export const StartRepairAction = {
+  name: 'start_repair',
+  label: '開始維修',
+  object: 'repair_order',
+  availableWhen: cel`status == "pending" && assignee == $currentUser`,
+  input: {
+    started_at: Field.datetime({ label: '開始時間', default: 'now' }),
+  },
+  changes: {
+    status: 'in_repair',
+    started_at: '$input.started_at',
+  },
+  audit: true,
+};
+```
+
+當動作被後設資料化，三件事會變得清楚：
+
+- 誰能看到這個按鈕；
+- 呼叫動作前要滿足什麼條件；
+- 執行後哪些欄位會變化，審計如何記錄。
+
+Agent 呼叫的也應該是這種動作，而不是直接發一個任意 PATCH 請求。
+
+## 流程把自動化和審批連起來
+
+高優先順序自動派單可以寫成流程：
+
+```ts
+export const AutoAssignHighPriorityRepair = {
+  name: 'auto_assign_high_priority_repair',
+  trigger: {
+    object: 'repair_order',
+    event: 'afterInsert',
+    when: cel`priority == "high" && assignee == null`,
+  },
+  steps: [
+    { action: 'find_on_duty_engineer', output: 'engineer' },
+    { action: 'assign_repair_order', input: { assignee: '$engineer.id' } },
+    { action: 'notify_user', input: { user: '$engineer.id' } },
+  ],
+};
+```
+
+高成本關閉則應該進入審批：
+
+```ts
+export const HighCostCloseApproval = {
+  object: 'repair_order',
+  action: 'close_order',
+  when: cel`cost > 5000`,
+  approvers: ['maintenance_manager'],
+  reason: '高成本維修需要主管審批',
+};
+```
+
+這樣 AI 可以建議流程，也可以觸發低風險動作；但高風險動作仍然被審批和審計攔住。
+
+## API 和 Agent 工具來自同一份後設資料
+
+物件定義完成後，平臺可以投影出 API：
+
+```bash
+curl -X POST /api/v1/data/repair_order \
+  -d '{ "title": "3 號機床異響", "device": "dev_012", "priority": "high" }'
+```
+
+也可以投影出 Agent 工具：
+
+```ts
+export const RepairAgentTools = [
+  tool.queryRecords('repair_order'),
+  tool.getRecord('repair_order'),
+  tool.runAction('repair_order', 'start_repair'),
+  tool.runAction('repair_order', 'submit_acceptance'),
+];
+```
+
+於是使用者可以問：
+
+> 幫我找出今天還沒開始維修的高優先順序工單，並說明可能影響哪些裝置。
+
+Agent 不需要猜資料庫結構。它通過受控工具查詢 `repair_order`，展開關聯的 `device`，遵守當前使用者許可權，然後把結果總結給使用者。
+
+如果使用者繼續說“把第一條工單派給今天值班工程師”，Agent 呼叫的是 `assign_repair_order` 動作；如果成本過高或許可權不足，執行時會拒絕或進入審批。
+
+## 這和一次性程式碼生成的區別
+
+一次性程式碼生成的結果通常是很多檔案：頁面、API、資料庫、許可權判斷、指令碼。第一版看起來快，但後續需求變化會讓程式碼逐漸分叉。
+
+ObjectStack 後設資料的價值在於：**業務結構只有一個源頭**。
+
+- 物件欄位變了，API、表單、詳情頁和 Agent 工具一起變；
+- 許可權變了，UI、API 和 Agent 都遵守同一套規則；
+- 動作變了，按鈕、流程、審計和工具呼叫都跟著變；
+- 檢視變了，人和 Agent 對業務佇列的理解也同步變化。
+
+AI Builder 不是替你繞過軟體工程，而是把軟體工程裡最重要的結構先起草出來，讓人可以稽核，讓平臺可以執行，讓後續變化繼續落在同一份規格上。
+
+## 從一句話到應用，真正發生了什麼
+
+用裝置報修這個場景看，中間發生的是：
+
+1. 自然語言被拆成真實業務物件；
+2. 物件、欄位、關係、公式和校驗進入後設資料；
+3. 檢視、許可權、動作和流程補齊業務邊界；
+4. 平臺把後設資料投影成 API、介面和 Agent 工具；
+5. AI 在許可權內查詢和建議，高風險動作進入審批；
+6. 人 review 後繼續迭代同一份規格。
+
+這才是 AI-native 應用平臺真正有價值的地方：不是讓 AI 一次性寫出一堆程式碼，而是讓 AI 和人一起維護一套可治理、可演進、能進入生產的業務系統。
