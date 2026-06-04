@@ -1,0 +1,91 @@
+---
+import Base from '../../layouts/Base.astro';
+import ClusterPage from '../../components/ClusterPage.astro';
+import { CLUSTERS, clusterPath, type Cluster } from '../../lib/clusters';
+import { getPostsInLocale, type LocalePost } from '../../lib/posts';
+import { postPath } from '../../lib/i18n';
+
+export function getStaticPaths() {
+  return CLUSTERS.map((cluster) => ({
+    params: { cluster: cluster.slug },
+    props: { cluster },
+  }));
+}
+
+const { cluster } = Astro.props as { cluster: Cluster };
+const posts = await getPostsInLocale('en');
+const bySlug = new Map(posts.map((post) => [post.slug, post]));
+const relatedPosts = cluster.articleSlugs
+  .map((slug) => bySlug.get(slug))
+  .filter((post): post is LocalePost => Boolean(post));
+const site = Astro.site?.toString().replace(/\/$/, '') ?? '';
+const absoluteUrl = (href: string): string =>
+  site ? new URL(href, `${site}/`).toString() : new URL(href, Astro.url).toString();
+const pagePath = clusterPath(cluster.slug);
+const pageUrl = absoluteUrl(pagePath);
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: cluster.title,
+    description: cluster.description,
+    url: pageUrl,
+    inLanguage: 'en',
+    isPartOf: {
+      '@type': 'WebSite',
+      name: 'ObjectOS',
+      url: absoluteUrl('/en/'),
+    },
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'ObjectOS',
+        item: absoluteUrl('/en/'),
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: cluster.title,
+        item: pageUrl,
+      },
+    ],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: cluster.faq.map((item) => ({
+      '@type': 'Question',
+      name: item.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: item.answer,
+      },
+    })),
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: `${cluster.title} reading path`,
+    itemListElement: relatedPosts.map((post, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      url: absoluteUrl(postPath('en', post!.slug)),
+      name: post!.entry.data.title,
+    })),
+  },
+];
+---
+
+<Base
+  title={`${cluster.title} · ObjectOS`}
+  description={cluster.description}
+  locale="en"
+  alternates={{ en: pagePath }}
+  jsonLd={jsonLd}>
+  <ClusterPage {cluster} posts={relatedPosts} />
+</Base>

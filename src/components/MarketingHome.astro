@@ -3,6 +3,7 @@ import { getPostsInLocale } from '../lib/posts';
 import { blogPath, postPath, securityPath, type Locale } from '../lib/i18n';
 import { homeCopy } from '../lib/home';
 import { termBySlug, termHref, termLabel } from '../lib/terms';
+import { CLUSTERS, clusterPath } from '../lib/clusters';
 
 interface Props {
   locale: Locale;
@@ -42,6 +43,7 @@ const insightTerms = [
 ]
   .map((slug) => termBySlug(slug))
   .filter(Boolean);
+const clusterLinks = locale === 'en' ? CLUSTERS : [];
 
 const coverSrc = (cover: unknown): string =>
   typeof cover === 'string'
@@ -207,6 +209,13 @@ const coverSrc = (cover: unknown): string =>
           </a>
         ))}
       </nav>
+      {clusterLinks.length > 0 && (
+        <nav class="cluster-links" aria-label="Topic clusters">
+          {clusterLinks.map((cluster) => (
+            <a href={clusterPath(cluster.slug)}>{cluster.shortTitle}</a>
+          ))}
+        </nav>
+      )}
       <div class="article-grid">
         {posts.map((post) => (
           <a class="article" href={postPath(locale, post.slug)}>
@@ -722,6 +731,32 @@ const coverSrc = (cover: unknown): string =>
     color: var(--accent);
     border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
   }
+  .cluster-links {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.6rem;
+    margin: -1rem 0 2.4rem;
+  }
+  .cluster-links a {
+    min-height: 72px;
+    display: flex;
+    align-items: flex-end;
+    color: var(--ink);
+    text-decoration: none;
+    font-size: 0.82rem;
+    font-weight: 760;
+    line-height: 1.25;
+    padding: 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background:
+      linear-gradient(180deg, transparent, color-mix(in srgb, var(--home-green) 7%, transparent)),
+      var(--surface);
+  }
+  .cluster-links a:hover {
+    color: var(--home-green);
+    border-color: color-mix(in srgb, var(--home-green) 38%, var(--line));
+  }
   .article {
     color: var(--ink);
     text-decoration: none;
@@ -793,6 +828,9 @@ const coverSrc = (cover: unknown): string =>
     .article-grid {
       grid-template-columns: 1fr 1fr;
     }
+    .cluster-links {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
     .solution:last-child {
       grid-column: span 2;
       min-height: 240px;
@@ -860,6 +898,9 @@ const coverSrc = (cover: unknown): string =>
     .solution-grid,
     .article-grid {
       grid-template-columns: 1fr;
+    }
+    .cluster-links {
+      grid-template-columns: minmax(0, 1fr);
     }
     .solution,
     .solution:last-child {

@@ -9,6 +9,7 @@ import {
   termsPath,
   type Locale,
 } from '../lib/i18n';
+import { CLUSTERS, clusterPath } from '../lib/clusters';
 
 const absoluteUrl = (site: URL | string | undefined, path: string): string => {
   const base = site ? site.toString() : 'https://www.objectos.ai/';
@@ -36,6 +37,10 @@ export const GET: APIRoute = async ({ site }) => {
     '## Primary Pages',
     '',
     `- [Home](${absoluteUrl(site, homePath('en'))}): AI-native enterprise application platform overview.`,
+    ...CLUSTERS.map(
+      (cluster) =>
+        `- [${cluster.title}](${absoluteUrl(site, clusterPath(cluster.slug))}): ${cluster.description}`
+    ),
     `- [Security](${absoluteUrl(site, securityPath('en'))}): Data residency, permissions, approvals, audit logs, and self-hosted deployment boundaries.`,
     `- [Articles](${absoluteUrl(site, blogPath('en'))}): Practical writing on AI-native software, enterprise AI agents, integration, modernization, and governance.`,
     `- [Documentation](https://docs.objectos.ai/): Product and developer documentation.`,

@@ -7,6 +7,13 @@ const ROOT = cwd();
 const DIST = path.join(ROOT, 'dist');
 const SITE = 'https://www.objectos.ai';
 const LOCALES = ['en', 'zh-Hans', 'zh-Hant', 'ja', 'de', 'es', 'fr', 'ko'];
+const CLUSTER_PATHS = [
+  '/en/ai-native-app-platform/',
+  '/en/legacy-system-modernization/',
+  '/en/self-hosted-ai/',
+  '/en/crm-case-management-ai/',
+  '/en/manufacturing-ai/',
+];
 const issues = [];
 
 async function readDist(file) {
@@ -53,6 +60,9 @@ const llms = await readDist('llms.txt');
 requireContains('llms.txt', llms, '# ObjectOS', 'missing title');
 requireContains('llms.txt', llms, '## English Articles', 'missing English article section');
 requireContains('llms.txt', llms, '## Simplified Chinese Articles', 'missing Simplified Chinese article section');
+for (const clusterPath of CLUSTER_PATHS) {
+  requireContains('llms.txt', llms, `${SITE}${clusterPath}`, `missing cluster page ${clusterPath}`);
+}
 
 const rootRss = await readDist('rss.xml');
 requireContains('rss.xml', rootRss, '<rss version="2.0"', 'is not an RSS feed');
@@ -64,6 +74,14 @@ for (const locale of LOCALES) {
   requireContains(`${locale}/rss.xml`, rss, '<rss version="2.0"', 'is not an RSS feed');
   requireContains(`${locale}/rss.xml`, rss, `${SITE}/${locale}/rss.xml`, 'missing locale feed self URL');
   requireContains(`${locale}/rss.xml`, rss, '<item>', 'has no feed items');
+}
+
+for (const clusterPath of CLUSTER_PATHS) {
+  const file = `${clusterPath.replace(/^\//, '')}index.html`;
+  const html = await readDist(file);
+  requireContains(file, html, `${SITE}${clusterPath}`, 'missing absolute cluster URL');
+  requireContains(file, html, '"@type":"FAQPage"', 'missing FAQPage JSON-LD');
+  requireContains(file, html, '"@type":"ItemList"', 'missing reading path ItemList JSON-LD');
 }
 
 const htmlFiles = (await walk(DIST))

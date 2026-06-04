@@ -1,0 +1,378 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import type { Cluster } from '../lib/clusters';
+import { postPath } from '../lib/i18n';
+import { termBySlug, termHref, termLabel } from '../lib/terms';
+
+interface Props {
+  cluster: Cluster;
+  posts: { slug: string; entry: CollectionEntry<'blog'> }[];
+}
+
+const { cluster, posts } = Astro.props;
+const coverSrc = (cover: unknown): string =>
+  typeof cover === 'string'
+    ? cover
+    : (cover as { src?: string })?.src ?? '';
+---
+
+<article class="cluster">
+  <section class="cluster-hero">
+    <div>
+      <p class="eyebrow">{cluster.eyebrow}</p>
+      <h1>{cluster.title}</h1>
+      <p class="lead">{cluster.lead}</p>
+    </div>
+    <aside class="hero-rail" aria-label="Cluster signals">
+      <span>Object layer</span>
+      <span>Governed agents</span>
+      <span>Existing systems</span>
+      <span>Audit-ready workflows</span>
+    </aside>
+  </section>
+
+  <section class="definition">
+    <p>{cluster.definition}</p>
+  </section>
+
+  <section class="split">
+    <div>
+      <p class="section-kicker">Why it matters now</p>
+      <ul class="signal-list">
+        {cluster.whyNow.map((item) => <li>{item}</li>)}
+      </ul>
+    </div>
+    <div>
+      <p class="section-kicker">What the platform needs</p>
+      <ul class="signal-list">
+        {cluster.capabilities.map((item) => <li>{item}</li>)}
+      </ul>
+    </div>
+  </section>
+
+  <section class="use-cases">
+    <p class="section-kicker">Use cases</p>
+    <div class="use-grid">
+      {cluster.useCases.map((item, index) => (
+        <div class="use-case">
+          <span>{String(index + 1).padStart(2, '0')}</span>
+          <p>{item}</p>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <section class="reading-path">
+    <div class="section-head">
+      <div>
+        <p class="section-kicker">Reading path</p>
+        <h2>Related articles</h2>
+      </div>
+      <a href="/en/blog/">All articles <span>→</span></a>
+    </div>
+    <div class="article-grid">
+      {posts.map(({ slug, entry }) => (
+        <a class="article-card" href={postPath('en', slug)}>
+          {entry.data.cover && (
+            <img
+              src={coverSrc(entry.data.cover)}
+              alt={entry.data.title}
+              loading="lazy"
+              decoding="async"
+            />
+          )}
+          <div>
+            <time datetime={entry.data.date.toISOString().slice(0, 10)}>
+              {entry.data.date.toISOString().slice(0, 10)}
+            </time>
+            <h3>{entry.data.title}</h3>
+            <p>{entry.data.description}</p>
+          </div>
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <section class="terms">
+    <p class="section-kicker">Explore the cluster</p>
+    <div class="term-row">
+      {cluster.relatedTerms.map((slug) => {
+        const term = termBySlug(slug);
+        return term && (
+          <a href={termHref('en', term)}>
+            {termLabel(slug, 'en')}
+          </a>
+        );
+      })}
+    </div>
+  </section>
+
+  <section class="faq">
+    <p class="section-kicker">FAQ</p>
+    <div class="faq-list">
+      {cluster.faq.map((item) => (
+        <details>
+          <summary>{item.question}</summary>
+          <p>{item.answer}</p>
+        </details>
+      ))}
+    </div>
+  </section>
+</article>
+
+<style>
+  .cluster {
+    display: grid;
+    gap: 3rem;
+  }
+  .cluster-hero {
+    min-height: min(620px, calc(100vh - 132px));
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    gap: 3rem;
+    align-items: center;
+  }
+  .eyebrow,
+  .section-kicker {
+    color: #087f5b;
+    font-size: 0.74rem;
+    font-weight: 750;
+    letter-spacing: 0.08em;
+    margin: 0 0 0.8rem;
+    text-transform: uppercase;
+  }
+  .cluster-hero h1 {
+    font-size: clamp(2.5rem, 7vw, 5.6rem);
+    line-height: 0.96;
+    letter-spacing: 0;
+    margin: 0 0 1.25rem;
+    max-width: 920px;
+  }
+  .lead {
+    color: var(--ink-soft);
+    font-size: clamp(1.05rem, 2vw, 1.35rem);
+    line-height: 1.6;
+    margin: 0;
+    max-width: 850px;
+  }
+  .hero-rail {
+    border-left: 1px solid var(--line);
+    display: grid;
+    gap: 0.7rem;
+    padding-left: 1.2rem;
+  }
+  .hero-rail span {
+    color: var(--ink-soft);
+    font-size: 0.88rem;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .definition {
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    padding: 2rem 0;
+  }
+  .definition p {
+    font-size: clamp(1.25rem, 2.5vw, 1.8rem);
+    line-height: 1.45;
+    margin: 0;
+    max-width: 980px;
+  }
+  .split {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2rem;
+  }
+  .signal-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.85rem;
+  }
+  .signal-list li {
+    border-top: 1px solid var(--line);
+    color: var(--ink-soft);
+    padding-top: 0.85rem;
+  }
+  .use-cases,
+  .reading-path,
+  .terms,
+  .faq {
+    display: grid;
+    gap: 1rem;
+  }
+  .use-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+  }
+  .use-case,
+  .article-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+  .use-case {
+    padding: 1rem;
+  }
+  .use-case span {
+    color: var(--muted);
+    display: block;
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 0.8rem;
+  }
+  .use-case p {
+    margin: 0;
+  }
+  .section-head {
+    align-items: end;
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .section-head h2 {
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    line-height: 1.05;
+    margin: 0;
+  }
+  .section-head a {
+    color: var(--accent);
+    flex-shrink: 0;
+    font-weight: 650;
+    text-decoration: none;
+  }
+  .article-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+  .article-card {
+    color: inherit;
+    display: grid;
+    grid-template-columns: 180px minmax(0, 1fr);
+    min-height: 190px;
+    overflow: hidden;
+    text-decoration: none;
+    transition:
+      border-color 0.18s ease,
+      box-shadow 0.18s ease,
+      transform 0.18s ease;
+  }
+  .article-card:hover {
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+    box-shadow: 0 10px 30px -14px rgba(28, 25, 23, 0.28);
+    transform: translateY(-2px);
+  }
+  .article-card img {
+    width: 100%;
+    height: 100%;
+    min-height: 190px;
+    object-fit: cover;
+  }
+  .article-card div {
+    padding: 1rem;
+  }
+  .article-card time {
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .article-card h3 {
+    font-size: 1.1rem;
+    line-height: 1.3;
+    margin: 0.35rem 0;
+  }
+  .article-card p {
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+    line-height: 1.55;
+    margin: 0;
+  }
+  .term-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+  .term-row a {
+    background: var(--accent-soft);
+    border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--line));
+    border-radius: 6px;
+    color: var(--accent);
+    font-size: 0.86rem;
+    font-weight: 650;
+    padding: 0.45rem 0.7rem;
+    text-decoration: none;
+  }
+  .faq-list {
+    display: grid;
+    gap: 0.75rem;
+  }
+  details {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 1rem;
+  }
+  summary {
+    cursor: pointer;
+    font-weight: 720;
+  }
+  details p {
+    color: var(--ink-soft);
+    margin: 0.75rem 0 0;
+  }
+  @media (max-width: 900px) {
+    .cluster {
+      gap: 2.4rem;
+    }
+    .cluster-hero,
+    .split,
+    .use-grid,
+    .article-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .cluster-hero {
+      min-height: 0;
+      padding: 2rem 0 1rem;
+    }
+    .hero-rail {
+      border-left: 0;
+      border-top: 1px solid var(--line);
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      padding: 1rem 0 0;
+    }
+    .article-card {
+      grid-template-columns: 150px minmax(0, 1fr);
+    }
+  }
+  @media (max-width: 640px) {
+    .cluster {
+      gap: 2rem;
+    }
+    .cluster-hero h1 {
+      font-size: 2.45rem;
+      line-height: 1.05;
+      overflow-wrap: anywhere;
+    }
+    .lead,
+    .definition p {
+      font-size: 1rem;
+    }
+    .hero-rail {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .section-head {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+    .article-card {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .article-card img {
+      aspect-ratio: 16 / 9;
+      min-height: 0;
+    }
+  }
+</style>
