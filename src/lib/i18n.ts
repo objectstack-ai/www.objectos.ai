@@ -52,7 +52,7 @@ type StatusKey = 'draft' | 'review' | 'published' | 'archived';
 
 interface Strings {
   siteName: string;
-  siteNav: { platform: string; solutions: string; blog: string };
+  siteNav: { platform: string; solutions: string; blog: string; docs: string };
   all: string;
   audience: string;
   articlesTitle: string;
@@ -67,7 +67,7 @@ interface Strings {
 
 const en: Strings = {
   siteName: 'ObjectOS',
-  siteNav: { platform: 'Platform', solutions: 'Solutions', blog: 'Blog' },
+  siteNav: { platform: 'Platform', solutions: 'Solutions', blog: 'Blog', docs: 'Docs' },
   all: 'All',
   audience: 'Audience',
   articlesTitle: 'Articles',
@@ -82,7 +82,7 @@ const en: Strings = {
 
 const zhHans: Strings = {
   siteName: 'ObjectOS',
-  siteNav: { platform: '平台能力', solutions: '解决方案', blog: 'Blog' },
+  siteNav: { platform: '平台能力', solutions: '解决方案', blog: 'Blog', docs: '文档' },
   all: '全部',
   audience: '受众',
   articlesTitle: '文章',
@@ -97,7 +97,7 @@ const zhHans: Strings = {
 
 const ja: Strings = {
   siteName: 'ObjectOS',
-  siteNav: { platform: 'プラットフォーム', solutions: 'ソリューション', blog: 'Blog' },
+  siteNav: { platform: 'プラットフォーム', solutions: 'ソリューション', blog: 'Blog', docs: 'ドキュメント' },
   all: 'すべて',
   audience: '読者',
   articlesTitle: '記事',
@@ -112,7 +112,7 @@ const ja: Strings = {
 
 const de: Strings = {
   siteName: 'ObjectOS',
-  siteNav: { platform: 'Plattform', solutions: 'Lösungen', blog: 'Blog' },
+  siteNav: { platform: 'Plattform', solutions: 'Lösungen', blog: 'Blog', docs: 'Dokumentation' },
   all: 'Alle',
   audience: 'Zielgruppe',
   articlesTitle: 'Artikel',
@@ -127,7 +127,7 @@ const de: Strings = {
 
 const es: Strings = {
   siteName: 'ObjectOS',
-  siteNav: { platform: 'Plataforma', solutions: 'Soluciones', blog: 'Blog' },
+  siteNav: { platform: 'Plataforma', solutions: 'Soluciones', blog: 'Blog', docs: 'Documentación' },
   all: 'Todo',
   audience: 'Audiencia',
   articlesTitle: 'Artículos',
@@ -142,7 +142,7 @@ const es: Strings = {
 
 const fr: Strings = {
   siteName: 'ObjectOS',
-  siteNav: { platform: 'Plateforme', solutions: 'Solutions', blog: 'Blog' },
+  siteNav: { platform: 'Plateforme', solutions: 'Solutions', blog: 'Blog', docs: 'Documentation' },
   all: 'Tous',
   audience: 'Audience',
   articlesTitle: 'Articles',
@@ -157,7 +157,7 @@ const fr: Strings = {
 
 const ko: Strings = {
   siteName: 'ObjectOS',
-  siteNav: { platform: '플랫폼', solutions: '솔루션', blog: 'Blog' },
+  siteNav: { platform: '플랫폼', solutions: '솔루션', blog: 'Blog', docs: '문서' },
   all: '전체',
   audience: '대상',
   articlesTitle: '글',
@@ -177,6 +177,7 @@ const toHant = (s: Strings): Strings => ({
     platform: s2t(s.siteNav.platform),
     solutions: s2t(s.siteNav.solutions),
     blog: s2t(s.siteNav.blog),
+    docs: s2t(s.siteNav.docs),
   },
   all: s2t(s.all),
   audience: s2t(s.audience),
