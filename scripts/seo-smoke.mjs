@@ -7,13 +7,16 @@ const ROOT = cwd();
 const DIST = path.join(ROOT, 'dist');
 const SITE = 'https://www.objectos.ai';
 const LOCALES = ['en', 'zh-Hans', 'zh-Hant', 'ja', 'de', 'es', 'fr', 'ko'];
-const CLUSTER_PATHS = [
-  '/en/ai-native-app-platform/',
-  '/en/legacy-system-modernization/',
-  '/en/self-hosted-ai/',
-  '/en/crm-case-management-ai/',
-  '/en/manufacturing-ai/',
+const CLUSTER_SLUGS = [
+  'ai-native-app-platform',
+  'legacy-system-modernization',
+  'self-hosted-ai',
+  'crm-case-management-ai',
+  'manufacturing-ai',
 ];
+const CLUSTER_PATHS = LOCALES.flatMap((locale) =>
+  CLUSTER_SLUGS.map((slug) => `/${locale}/${slug}/`)
+);
 const issues = [];
 
 async function readDist(file) {
@@ -62,6 +65,7 @@ requireContains('llms.txt', llms, '## English Articles', 'missing English articl
 requireContains('llms.txt', llms, '## Simplified Chinese Articles', 'missing Simplified Chinese article section');
 for (const clusterPath of CLUSTER_PATHS) {
   requireContains('llms.txt', llms, `${SITE}${clusterPath}`, `missing cluster page ${clusterPath}`);
+  requireContains('sitemap-0.xml', sitemap, `${SITE}${clusterPath}`, `missing cluster page ${clusterPath}`);
 }
 
 const rootRss = await readDist('rss.xml');

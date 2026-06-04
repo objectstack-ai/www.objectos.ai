@@ -1,19 +1,28 @@
 ---
 import Base from '../../layouts/Base.astro';
 import ClusterPage from '../../components/ClusterPage.astro';
+import { clusterCopy } from '../../lib/cluster-i18n';
 import { CLUSTERS, clusterPath, type Cluster } from '../../lib/clusters';
 import { getPostsInLocale, type LocalePost } from '../../lib/posts';
-import { postPath } from '../../lib/i18n';
+import { htmlLang, homePath, LOCALES, postPath, segToLocale, type Locale } from '../../lib/i18n';
 
 export function getStaticPaths() {
-  return CLUSTERS.map((cluster) => ({
-    params: { cluster: cluster.slug },
-    props: { cluster },
-  }));
+  const paths = [];
+  for (const locale of LOCALES) {
+    for (const cluster of CLUSTERS) {
+      paths.push({
+        params: { lang: locale, cluster: cluster.slug },
+        props: { cluster, locale },
+      });
+    }
+  }
+  return paths;
 }
 
-const { cluster } = Astro.props as { cluster: Cluster };
-const posts = await getPostsInLocale('en');
+const { cluster } = Astro.props as { cluster: Cluster; locale: Locale };
+const currentLocale = segToLocale(Astro.params.lang!)!;
+const copy = clusterCopy(cluster, currentLocale);
+const posts = await getPostsInLocale(currentLocale);
 const bySlug = new Map(posts.map((post) => [post.slug, post]));
 const relatedPosts = cluster.articleSlugs
   .map((slug) => bySlug.get(slug))
@@ -21,20 +30,23 @@ const relatedPosts = cluster.articleSlugs
 const site = Astro.site?.toString().replace(/\/$/, '') ?? '';
 const absoluteUrl = (href: string): string =>
   site ? new URL(href, `${site}/`).toString() : new URL(href, Astro.url).toString();
-const pagePath = clusterPath(cluster.slug);
+const pagePath = clusterPath(currentLocale, cluster.slug);
 const pageUrl = absoluteUrl(pagePath);
+const alternates = Object.fromEntries(
+  LOCALES.map((language) => [language, clusterPath(language, cluster.slug)])
+);
 const jsonLd = [
   {
     '@context': 'https://schema.org',
     '@type': 'WebPage',
-    name: cluster.title,
-    description: cluster.description,
+    name: copy.title,
+    description: copy.description,
     url: pageUrl,
-    inLanguage: 'en',
+    inLanguage: htmlLang(currentLocale),
     isPartOf: {
       '@type': 'WebSite',
       name: 'ObjectOS',
-      url: absoluteUrl('/en/'),
+      url: absoluteUrl(homePath(currentLocale)),
     },
   },
   {
@@ -45,12 +57,12 @@ const jsonLd = [
         '@type': 'ListItem',
         position: 1,
         name: 'ObjectOS',
-        item: absoluteUrl('/en/'),
+        item: absoluteUrl(homePath(currentLocale)),
       },
       {
         '@type': 'ListItem',
         position: 2,
-        name: cluster.title,
+        name: copy.title,
         item: pageUrl,
       },
     ],
@@ -58,7 +70,7 @@ const jsonLd = [
   {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
-    mainEntity: cluster.faq.map((item) => ({
+    mainEntity: copy.faq.map((item) => ({
       '@type': 'Question',
       name: item.question,
       acceptedAnswer: {
@@ -70,22 +82,22 @@ const jsonLd = [
   {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
-    name: `${cluster.title} reading path`,
+    name: `${copy.title} reading path`,
     itemListElement: relatedPosts.map((post, index) => ({
       '@type': 'ListItem',
       position: index + 1,
-      url: absoluteUrl(postPath('en', post!.slug)),
-      name: post!.entry.data.title,
+      url: absoluteUrl(postPath(currentLocale, post.slug)),
+      name: post.entry.data.title,
     })),
   },
 ];
 ---
 
 <Base
-  title={`${cluster.title} · ObjectOS`}
-  description={cluster.description}
-  locale="en"
-  alternates={{ en: pagePath }}
+  title={`${copy.title} · ObjectOS`}
+  description={copy.description}
+  locale={currentLocale}
+  {alternates}
   jsonLd={jsonLd}>
-  <ClusterPage {cluster} posts={relatedPosts} />
+  <ClusterPage cluster={cluster} locale={currentLocale} posts={relatedPosts} />
 </Base>

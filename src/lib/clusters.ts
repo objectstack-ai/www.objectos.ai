@@ -1,3 +1,5 @@
+import type { Locale } from './i18n';
+
 export interface ClusterFaq {
   question: string;
   answer: string;
@@ -288,6 +290,6 @@ export function clusterBySlug(slug: string): Cluster | undefined {
   return BY_SLUG.get(slug);
 }
 
-export function clusterPath(slug: string): string {
-  return `/en/${slug}/`;
+export function clusterPath(locale: Locale, slug: string): string {
+  return `/${locale}/${slug}/`;
 }

@@ -1,15 +1,19 @@
 ---
 import type { CollectionEntry } from 'astro:content';
 import type { Cluster } from '../lib/clusters';
-import { postPath } from '../lib/i18n';
+import { clusterCopy, clusterLabels } from '../lib/cluster-i18n';
+import { blogPath, postPath, type Locale } from '../lib/i18n';
 import { termBySlug, termHref, termLabel } from '../lib/terms';
 
 interface Props {
   cluster: Cluster;
+  locale: Locale;
   posts: { slug: string; entry: CollectionEntry<'blog'> }[];
 }
 
-const { cluster, posts } = Astro.props;
+const { cluster, locale, posts } = Astro.props;
+const copy = clusterCopy(cluster, locale);
+const labels = clusterLabels(locale);
 const coverSrc = (cover: unknown): string =>
   typeof cover === 'string'
     ? cover
@@ -19,41 +23,38 @@ const coverSrc = (cover: unknown): string =>
 <article class="cluster">
   <section class="cluster-hero">
     <div>
-      <p class="eyebrow">{cluster.eyebrow}</p>
-      <h1>{cluster.title}</h1>
-      <p class="lead">{cluster.lead}</p>
+      <p class="eyebrow">{copy.eyebrow}</p>
+      <h1>{copy.title}</h1>
+      <p class="lead">{copy.lead}</p>
     </div>
-    <aside class="hero-rail" aria-label="Cluster signals">
-      <span>Object layer</span>
-      <span>Governed agents</span>
-      <span>Existing systems</span>
-      <span>Audit-ready workflows</span>
+    <aside class="hero-rail" aria-label={labels.clusterSignals}>
+      {labels.heroRail.map((item) => <span>{item}</span>)}
     </aside>
   </section>
 
   <section class="definition">
-    <p>{cluster.definition}</p>
+    <p>{copy.definition}</p>
   </section>
 
   <section class="split">
     <div>
-      <p class="section-kicker">Why it matters now</p>
+      <p class="section-kicker">{labels.whyNow}</p>
       <ul class="signal-list">
-        {cluster.whyNow.map((item) => <li>{item}</li>)}
+        {copy.whyNow.map((item) => <li>{item}</li>)}
       </ul>
     </div>
     <div>
-      <p class="section-kicker">What the platform needs</p>
+      <p class="section-kicker">{labels.capabilities}</p>
       <ul class="signal-list">
-        {cluster.capabilities.map((item) => <li>{item}</li>)}
+        {copy.capabilities.map((item) => <li>{item}</li>)}
       </ul>
     </div>
   </section>
 
   <section class="use-cases">
-    <p class="section-kicker">Use cases</p>
+    <p class="section-kicker">{labels.useCases}</p>
     <div class="use-grid">
-      {cluster.useCases.map((item, index) => (
+      {copy.useCases.map((item, index) => (
         <div class="use-case">
           <span>{String(index + 1).padStart(2, '0')}</span>
           <p>{item}</p>
@@ -65,14 +66,14 @@ const coverSrc = (cover: unknown): string =>
   <section class="reading-path">
     <div class="section-head">
       <div>
-        <p class="section-kicker">Reading path</p>
-        <h2>Related articles</h2>
+        <p class="section-kicker">{labels.readingPath}</p>
+        <h2>{labels.relatedArticles}</h2>
       </div>
-      <a href="/en/blog/">All articles <span>→</span></a>
+      <a href={blogPath(locale)}>{labels.allArticles} <span>→</span></a>
     </div>
     <div class="article-grid">
       {posts.map(({ slug, entry }) => (
-        <a class="article-card" href={postPath('en', slug)}>
+        <a class="article-card" href={postPath(locale, slug)}>
           {entry.data.cover && (
             <img
               src={coverSrc(entry.data.cover)}
@@ -94,13 +95,13 @@ const coverSrc = (cover: unknown): string =>
   </section>
 
   <section class="terms">
-    <p class="section-kicker">Explore the cluster</p>
+    <p class="section-kicker">{labels.explore}</p>
     <div class="term-row">
       {cluster.relatedTerms.map((slug) => {
         const term = termBySlug(slug);
         return term && (
-          <a href={termHref('en', term)}>
-            {termLabel(slug, 'en')}
+          <a href={termHref(locale, term)}>
+            {termLabel(slug, locale)}
           </a>
         );
       })}
@@ -108,9 +109,9 @@ const coverSrc = (cover: unknown): string =>
   </section>
 
   <section class="faq">
-    <p class="section-kicker">FAQ</p>
+    <p class="section-kicker">{labels.faq}</p>
     <div class="faq-list">
-      {cluster.faq.map((item) => (
+      {copy.faq.map((item) => (
         <details>
           <summary>{item.question}</summary>
           <p>{item.answer}</p>
