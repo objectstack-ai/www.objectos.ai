@@ -17,6 +17,11 @@ export const homePath = (l: Locale): string => `/${l}/`;
 /** Blog index URL: /<locale>/blog/. */
 export const blogPath = (l: Locale): string => `/${l}/blog/`;
 
+/** Legal page URLs. */
+export const securityPath = (l: Locale): string => `/${l}/security/`;
+export const termsPath = (l: Locale): string => `/${l}/terms/`;
+export const privacyPath = (l: Locale): string => `/${l}/privacy/`;
+
 /** Article URL: /<locale>/blog/<baseSlug>. */
 export const postPath = (l: Locale, slug: string): string =>
   `/${l}/blog/${slug}`;
@@ -52,7 +57,8 @@ type StatusKey = 'draft' | 'review' | 'published' | 'archived';
 
 interface Strings {
   siteName: string;
-  siteNav: { platform: string; solutions: string; blog: string; docs: string };
+  siteNav: { platform: string; solutions: string; security: string; docs: string; blog: string };
+  footer: { terms: string; privacy: string };
   all: string;
   audience: string;
   articlesTitle: string;
@@ -67,7 +73,8 @@ interface Strings {
 
 const en: Strings = {
   siteName: 'ObjectOS',
-  siteNav: { platform: 'Platform', solutions: 'Solutions', blog: 'Blog', docs: 'Docs' },
+  siteNav: { platform: 'Platform', solutions: 'Solutions', security: 'Security', docs: 'Docs', blog: 'Blog' },
+  footer: { terms: 'Terms & License', privacy: 'Privacy' },
   all: 'All',
   audience: 'Audience',
   articlesTitle: 'Articles',
@@ -82,7 +89,8 @@ const en: Strings = {
 
 const zhHans: Strings = {
   siteName: 'ObjectOS',
-  siteNav: { platform: '平台能力', solutions: '解决方案', blog: 'Blog', docs: '文档' },
+  siteNav: { platform: '平台', solutions: '解决方案', security: '安全', docs: '文档', blog: '博客' },
+  footer: { terms: '许可协议', privacy: '隐私政策' },
   all: '全部',
   audience: '受众',
   articlesTitle: '文章',
@@ -97,7 +105,8 @@ const zhHans: Strings = {
 
 const ja: Strings = {
   siteName: 'ObjectOS',
-  siteNav: { platform: 'プラットフォーム', solutions: 'ソリューション', blog: 'Blog', docs: 'ドキュメント' },
+  siteNav: { platform: 'プラットフォーム', solutions: 'ソリューション', security: 'セキュリティ', docs: 'ドキュメント', blog: 'Blog' },
+  footer: { terms: '利用規約・ライセンス', privacy: 'プライバシー' },
   all: 'すべて',
   audience: '読者',
   articlesTitle: '記事',
@@ -112,7 +121,8 @@ const ja: Strings = {
 
 const de: Strings = {
   siteName: 'ObjectOS',
-  siteNav: { platform: 'Plattform', solutions: 'Lösungen', blog: 'Blog', docs: 'Dokumentation' },
+  siteNav: { platform: 'Plattform', solutions: 'Lösungen', security: 'Sicherheit', docs: 'Dokumentation', blog: 'Blog' },
+  footer: { terms: 'Bedingungen & Lizenz', privacy: 'Datenschutz' },
   all: 'Alle',
   audience: 'Zielgruppe',
   articlesTitle: 'Artikel',
@@ -127,7 +137,8 @@ const de: Strings = {
 
 const es: Strings = {
   siteName: 'ObjectOS',
-  siteNav: { platform: 'Plataforma', solutions: 'Soluciones', blog: 'Blog', docs: 'Documentación' },
+  siteNav: { platform: 'Plataforma', solutions: 'Soluciones', security: 'Seguridad', docs: 'Documentación', blog: 'Blog' },
+  footer: { terms: 'Términos y licencia', privacy: 'Privacidad' },
   all: 'Todo',
   audience: 'Audiencia',
   articlesTitle: 'Artículos',
@@ -142,7 +153,8 @@ const es: Strings = {
 
 const fr: Strings = {
   siteName: 'ObjectOS',
-  siteNav: { platform: 'Plateforme', solutions: 'Solutions', blog: 'Blog', docs: 'Documentation' },
+  siteNav: { platform: 'Plateforme', solutions: 'Solutions', security: 'Sécurité', docs: 'Documentation', blog: 'Blog' },
+  footer: { terms: 'Conditions et licence', privacy: 'Confidentialité' },
   all: 'Tous',
   audience: 'Audience',
   articlesTitle: 'Articles',
@@ -157,7 +169,8 @@ const fr: Strings = {
 
 const ko: Strings = {
   siteName: 'ObjectOS',
-  siteNav: { platform: '플랫폼', solutions: '솔루션', blog: 'Blog', docs: '문서' },
+  siteNav: { platform: '플랫폼', solutions: '솔루션', security: '보안', docs: '문서', blog: 'Blog' },
+  footer: { terms: '약관 및 라이선스', privacy: '개인정보 보호' },
   all: '전체',
   audience: '대상',
   articlesTitle: '글',
@@ -176,8 +189,13 @@ const toHant = (s: Strings): Strings => ({
   siteNav: {
     platform: s2t(s.siteNav.platform),
     solutions: s2t(s.siteNav.solutions),
+    security: s2t(s.siteNav.security),
     blog: s2t(s.siteNav.blog),
     docs: s2t(s.siteNav.docs),
+  },
+  footer: {
+    terms: s2t(s.footer.terms),
+    privacy: s2t(s.footer.privacy),
   },
   all: s2t(s.all),
   audience: s2t(s.audience),

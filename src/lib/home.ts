@@ -34,6 +34,11 @@ interface HomeCopy {
   solutionsTitle: [string, string];
   solutionLink: string;
   solutions: { title: string; copy: string }[];
+  securityKicker: string;
+  securityTitle: [string, string];
+  securityCopy: string;
+  securityItems: { title: string; copy: string }[];
+  securityLink: string;
   insightsKicker: string;
   insightsTitle: string;
   insightsLink: string;
@@ -85,6 +90,16 @@ const zhHans: HomeCopy = {
     { title: '案件与工单管理', copy: '快速搭建可配置、可追踪、可自动分派的复杂业务流程。' },
     { title: '系统现代化', copy: '保留稳定运行的核心系统，在其上逐步叠加现代应用体验和 AI 能力。' },
   ],
+  securityKicker: '安全与治理',
+  securityTitle: ['数据留在你的网络里，', 'AI 在权限边界内工作'],
+  securityCopy: 'ObjectOS 作为自托管运行时部署在你的基础设施中。业务数据、身份、审计日志和文件仍由你控制；AI Agent 通过受控工具访问对象，并继承登录用户已有的权限。',
+  securityItems: [
+    { title: '数据不出网', copy: '连接你的数据库和存储；除非你显式配置外部服务，否则 ObjectOS 不回传、不查 license server、也不收集遥测。' },
+    { title: '继承用户权限', copy: 'Agent 以登录用户身份执行，遵守对象级、记录级和字段级权限，看不到用户本来无权看到的数据。' },
+    { title: '审批与审计', copy: '结构性变更进入人机协作审批队列；读取、写入、工具调用和权限变更都能写入审计日志。' },
+    { title: '支持离线部署', copy: '可在 VPC、本地服务器或隔离网络中运行，并可接入本地模型、内部身份系统和自有密钥管理。' },
+  ],
+  securityLink: '了解安全与治理',
   insightsKicker: '最新洞察',
   insightsTitle: '关于 AI-native 软件的实践思考',
   insightsLink: '浏览全部文章',
@@ -136,6 +151,16 @@ const en: HomeCopy = {
     { title: 'Case management', copy: 'Build configurable, traceable, and automatically routed processes for complex operations.' },
     { title: 'System modernization', copy: 'Keep stable core systems while adding modern application experiences and AI capabilities.' },
   ],
+  securityKicker: 'Security and governance',
+  securityTitle: ['Keep data in your network.', 'Let AI work inside permissions.'],
+  securityCopy: 'ObjectOS runs as a self-hosted runtime on your infrastructure. Business records, identities, audit logs, and files remain under your control; AI agents access objects through governed tools and inherit the permissions of the signed-in user.',
+  securityItems: [
+    { title: 'Data residency', copy: 'Connect your databases and storage. Unless you configure an external service, ObjectOS does not phone home, check a license server, or collect telemetry.' },
+    { title: 'User-scoped AI', copy: 'Agents act as signed-in users and obey object, record, and field permissions, so they cannot see data the user cannot see.' },
+    { title: 'Approval and audit', copy: 'Structural changes go through a human approval queue; reads, writes, tool calls, and permission changes can be written to audit logs.' },
+    { title: 'Offline ready', copy: 'Run in a VPC, on local servers, or in air-gapped networks with local models, internal identity, and your own secrets management.' },
+  ],
+  securityLink: 'Explore security and governance',
   insightsKicker: 'Latest insights',
   insightsTitle: 'Practical thinking on AI-native software',
   insightsLink: 'Browse all articles',
@@ -188,6 +213,16 @@ const ja: HomeCopy = {
     { title: '案件・ケース管理', copy: '複雑な業務向けに、設定可能で追跡でき、自動振り分け可能なプロセスを構築します。' },
     { title: 'システムモダナイゼーション', copy: '安定した基幹システムを維持しながら、最新のアプリ体験と AI 機能を追加します。' },
   ],
+  securityKicker: 'セキュリティとガバナンス',
+  securityTitle: ['データは自社ネットワーク内に。', 'AI は権限の内側で動く。'],
+  securityCopy: 'ObjectOS は自社インフラ上で動くセルフホスト型ランタイムです。業務データ、ID、監査ログ、ファイルは自社管理のまま。AI エージェントは管理されたツール経由でオブジェクトにアクセスし、ログインユーザーの権限を継承します。',
+  securityItems: [
+    { title: 'データ所在地', copy: '自社のデータベースとストレージに接続します。外部サービスを明示的に設定しない限り、ObjectOS は外部送信、ライセンス確認、テレメトリ収集を行いません。' },
+    { title: 'ユーザー権限で動く AI', copy: 'エージェントはログインユーザーとして動作し、オブジェクト、レコード、フィールドの権限に従います。' },
+    { title: '承認と監査', copy: '構造的な変更は人の承認キューに入り、読み取り、書き込み、ツール呼び出し、権限変更は監査ログに記録できます。' },
+    { title: 'オフライン対応', copy: 'VPC、ローカルサーバー、隔離ネットワークで動作し、ローカルモデル、社内 ID、独自のシークレット管理に接続できます。' },
+  ],
+  securityLink: 'セキュリティとガバナンスを見る',
   insightsKicker: '最新インサイト',
   insightsTitle: 'AI-native ソフトウェアの実践知',
   insightsLink: 'すべての記事',
@@ -240,6 +275,16 @@ const de: HomeCopy = {
     { title: 'Fallmanagement', copy: 'Erstellen Sie konfigurierbare, nachvollziehbare und automatisch zugewiesene Geschäftsprozesse.' },
     { title: 'Systemmodernisierung', copy: 'Behalten Sie stabile Kernsysteme und ergänzen Sie moderne Anwendungen und AI-Funktionen.' },
   ],
+  securityKicker: 'Sicherheit und Governance',
+  securityTitle: ['Daten bleiben in Ihrem Netzwerk.', 'AI arbeitet innerhalb von Berechtigungen.'],
+  securityCopy: 'ObjectOS läuft als selbst gehostete Runtime auf Ihrer Infrastruktur. Geschäftsdaten, Identitäten, Audit-Logs und Dateien bleiben unter Ihrer Kontrolle; AI Agents greifen über kontrollierte Tools auf Objekte zu und erben die Rechte des angemeldeten Nutzers.',
+  securityItems: [
+    { title: 'Datenresidenz', copy: 'Verbinden Sie Ihre Datenbanken und Speicher. Ohne explizit konfigurierte externe Dienste ruft ObjectOS nicht nach Hause, prüft keinen Lizenzserver und sammelt keine Telemetrie.' },
+    { title: 'AI mit Nutzerrechten', copy: 'Agents handeln als angemeldete Nutzer und beachten Objekt-, Datensatz- und Feldrechte.' },
+    { title: 'Freigabe und Audit', copy: 'Strukturelle Änderungen laufen durch eine menschliche Freigabe; Lesezugriffe, Schreibzugriffe, Tool-Aufrufe und Rechteänderungen können protokolliert werden.' },
+    { title: 'Offline bereit', copy: 'Betrieb in VPCs, auf lokalen Servern oder in isolierten Netzen mit lokalen Modellen, interner Identität und eigenem Secret Management.' },
+  ],
+  securityLink: 'Sicherheit und Governance ansehen',
   insightsKicker: 'Aktuelle Einblicke',
   insightsTitle: 'Praxiswissen zu AI-nativer Software',
   insightsLink: 'Alle Artikel',
@@ -292,6 +337,16 @@ const es: HomeCopy = {
     { title: 'Gestión de casos', copy: 'Crea procesos configurables, trazables y asignados automáticamente para operaciones complejas.' },
     { title: 'Modernización de sistemas', copy: 'Conserva los sistemas centrales y añade experiencias modernas y capacidades de AI.' },
   ],
+  securityKicker: 'Seguridad y gobierno',
+  securityTitle: ['Los datos permanecen en tu red.', 'La AI trabaja dentro de permisos.'],
+  securityCopy: 'ObjectOS se ejecuta como runtime autohospedado en tu infraestructura. Registros de negocio, identidades, auditoría y archivos siguen bajo tu control; los agentes de AI acceden a objetos mediante herramientas gobernadas y heredan los permisos del usuario conectado.',
+  securityItems: [
+    { title: 'Residencia de datos', copy: 'Conecta tus bases de datos y almacenamiento. Si no configuras servicios externos, ObjectOS no llama a casa, no consulta un servidor de licencias ni recopila telemetría.' },
+    { title: 'AI con permisos de usuario', copy: 'Los agentes actúan como usuarios conectados y respetan permisos de objeto, registro y campo.' },
+    { title: 'Aprobación y auditoría', copy: 'Los cambios estructurales pasan por una cola de aprobación humana; lecturas, escrituras, llamadas a herramientas y cambios de permisos pueden auditarse.' },
+    { title: 'Listo para operar sin conexión', copy: 'Ejecuta en VPC, servidores locales o redes aisladas con modelos locales, identidad interna y tu propia gestión de secretos.' },
+  ],
+  securityLink: 'Ver seguridad y gobierno',
   insightsKicker: 'Últimos análisis',
   insightsTitle: 'Ideas prácticas sobre software AI-native',
   insightsLink: 'Ver todos los artículos',
@@ -344,6 +399,16 @@ const fr: HomeCopy = {
     { title: 'Gestion des dossiers', copy: 'Créez des processus configurables, traçables et automatiquement attribués.' },
     { title: 'Modernisation des systèmes', copy: 'Conservez les systèmes centraux stables tout en ajoutant des expériences modernes et l’AI.' },
   ],
+  securityKicker: 'Sécurité et gouvernance',
+  securityTitle: ['Les données restent dans votre réseau.', 'L’AI agit dans les permissions.'],
+  securityCopy: 'ObjectOS s’exécute comme runtime auto-hébergé sur votre infrastructure. Données métier, identités, journaux d’audit et fichiers restent sous votre contrôle ; les agents AI accèdent aux objets via des outils gouvernés et héritent des permissions de l’utilisateur connecté.',
+  securityItems: [
+    { title: 'Résidence des données', copy: 'Connectez vos bases de données et stockages. Sans service externe configuré, ObjectOS ne rappelle pas, ne vérifie pas de serveur de licence et ne collecte pas de télémétrie.' },
+    { title: 'AI portée par l’utilisateur', copy: 'Les agents agissent comme l’utilisateur connecté et respectent les permissions d’objet, d’enregistrement et de champ.' },
+    { title: 'Approbation et audit', copy: 'Les changements structurants passent par une file de validation humaine ; lectures, écritures, appels d’outils et changements de droits peuvent être audités.' },
+    { title: 'Prêt pour l’isolement', copy: 'Exécutez en VPC, sur serveurs locaux ou en réseau isolé avec modèles locaux, identité interne et votre gestion des secrets.' },
+  ],
+  securityLink: 'Voir sécurité et gouvernance',
   insightsKicker: 'Dernières analyses',
   insightsTitle: 'Réflexions pratiques sur les logiciels AI-native',
   insightsLink: 'Voir tous les articles',
@@ -396,6 +461,16 @@ const ko: HomeCopy = {
     { title: '케이스 관리', copy: '복잡한 운영을 위한 설정 가능하고 추적 가능하며 자동 배정되는 프로세스를 구축합니다.' },
     { title: '시스템 현대화', copy: '안정적인 핵심 시스템은 유지하면서 현대적인 앱 경험과 AI 기능을 추가합니다.' },
   ],
+  securityKicker: '보안 및 거버넌스',
+  securityTitle: ['데이터는 네트워크 안에 유지하고,', 'AI는 권한 경계 안에서 작동합니다'],
+  securityCopy: 'ObjectOS는 사용자의 인프라에서 실행되는 셀프 호스팅 런타임입니다. 비즈니스 기록, ID, 감사 로그와 파일은 사용자가 통제하며, AI 에이전트는 관리되는 도구로 객체에 접근하고 로그인한 사용자의 권한을 상속합니다.',
+  securityItems: [
+    { title: '데이터 레지던시', copy: '사용자의 데이터베이스와 스토리지를 연결합니다. 외부 서비스를 명시적으로 구성하지 않으면 ObjectOS는 콜백, 라이선스 서버 확인, 텔레메트리 수집을 하지 않습니다.' },
+    { title: '사용자 범위 AI', copy: '에이전트는 로그인한 사용자로 동작하며 객체, 레코드, 필드 권한을 따릅니다.' },
+    { title: '승인 및 감사', copy: '구조적 변경은 사람의 승인 대기열을 거치고 읽기, 쓰기, 도구 호출과 권한 변경은 감사 로그에 기록할 수 있습니다.' },
+    { title: '오프라인 준비', copy: 'VPC, 로컬 서버, 격리 네트워크에서 로컬 모델, 내부 ID, 자체 시크릿 관리와 함께 실행할 수 있습니다.' },
+  ],
+  securityLink: '보안 및 거버넌스 보기',
   insightsKicker: '최신 인사이트',
   insightsTitle: 'AI-native 소프트웨어에 대한 실무적 관점',
   insightsLink: '모든 글 보기',
