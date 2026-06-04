@@ -11,8 +11,11 @@ export const localeSeg = (l: Locale): string => l;
 export const segToLocale = (seg: string): Locale | undefined =>
   (LOCALES as string[]).includes(seg) ? (seg as Locale) : undefined;
 
-/** Home (article list) URL: /en/, /zh-Hans/, /zh-Hant/. */
+/** Marketing home URL: /en/, /zh-Hans/, /zh-Hant/, ... */
 export const homePath = (l: Locale): string => `/${l}/`;
+
+/** Blog index URL: /<locale>/blog/. */
+export const blogPath = (l: Locale): string => `/${l}/blog/`;
 
 /** Article URL: /<locale>/blog/<baseSlug>. */
 export const postPath = (l: Locale, slug: string): string =>
@@ -49,7 +52,7 @@ type StatusKey = 'draft' | 'review' | 'published' | 'archived';
 
 interface Strings {
   siteName: string;
-  nav: string;
+  siteNav: { platform: string; solutions: string; blog: string };
   all: string;
   audience: string;
   articlesTitle: string;
@@ -64,7 +67,7 @@ interface Strings {
 
 const en: Strings = {
   siteName: 'ObjectOS',
-  nav: 'Writing',
+  siteNav: { platform: 'Platform', solutions: 'Solutions', blog: 'Blog' },
   all: 'All',
   audience: 'Audience',
   articlesTitle: 'Articles',
@@ -79,7 +82,7 @@ const en: Strings = {
 
 const zhHans: Strings = {
   siteName: 'ObjectOS',
-  nav: '文章',
+  siteNav: { platform: '平台能力', solutions: '解决方案', blog: 'Blog' },
   all: '全部',
   audience: '受众',
   articlesTitle: '文章',
@@ -94,7 +97,7 @@ const zhHans: Strings = {
 
 const ja: Strings = {
   siteName: 'ObjectOS',
-  nav: '記事',
+  siteNav: { platform: 'プラットフォーム', solutions: 'ソリューション', blog: 'Blog' },
   all: 'すべて',
   audience: '読者',
   articlesTitle: '記事',
@@ -109,7 +112,7 @@ const ja: Strings = {
 
 const de: Strings = {
   siteName: 'ObjectOS',
-  nav: 'Artikel',
+  siteNav: { platform: 'Plattform', solutions: 'Lösungen', blog: 'Blog' },
   all: 'Alle',
   audience: 'Zielgruppe',
   articlesTitle: 'Artikel',
@@ -124,7 +127,7 @@ const de: Strings = {
 
 const es: Strings = {
   siteName: 'ObjectOS',
-  nav: 'Artículos',
+  siteNav: { platform: 'Plataforma', solutions: 'Soluciones', blog: 'Blog' },
   all: 'Todo',
   audience: 'Audiencia',
   articlesTitle: 'Artículos',
@@ -139,7 +142,7 @@ const es: Strings = {
 
 const fr: Strings = {
   siteName: 'ObjectOS',
-  nav: 'Articles',
+  siteNav: { platform: 'Plateforme', solutions: 'Solutions', blog: 'Blog' },
   all: 'Tous',
   audience: 'Audience',
   articlesTitle: 'Articles',
@@ -154,7 +157,7 @@ const fr: Strings = {
 
 const ko: Strings = {
   siteName: 'ObjectOS',
-  nav: '글',
+  siteNav: { platform: '플랫폼', solutions: '솔루션', blog: 'Blog' },
   all: '전체',
   audience: '대상',
   articlesTitle: '글',
@@ -170,7 +173,11 @@ const ko: Strings = {
 // Traditional UI is auto-derived from Simplified (s2twp) — never hand-kept.
 const toHant = (s: Strings): Strings => ({
   siteName: s2t(s.siteName),
-  nav: s2t(s.nav),
+  siteNav: {
+    platform: s2t(s.siteNav.platform),
+    solutions: s2t(s.siteNav.solutions),
+    blog: s2t(s.siteNav.blog),
+  },
   all: s2t(s.all),
   audience: s2t(s.audience),
   articlesTitle: s2t(s.articlesTitle),

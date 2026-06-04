@@ -1,6 +1,7 @@
 ---
 import {
   ui,
+  blogPath,
   homePath,
   LOCALES,
   LANG_NATIVE,
@@ -19,7 +20,9 @@ const { locale, alternates = {} } = Astro.props;
 const t = ui[locale];
 const pathname = Astro.url.pathname;
 const homeHref = homePath(locale);
-const onHome = pathname === homeHref;
+const blogHref = blogPath(locale);
+const onBlogHome = pathname === blogHref;
+const inBlog = pathname.startsWith(`/${locale}/blog`);
 
 // One dropdown per axis (only terms that have content in THIS locale).
 const AXES: TermGroup[] = ['topic', 'solution', 'role', 'industry'];
@@ -41,9 +44,13 @@ const menus = (
     <a class="wordmark" href={homeHref}>
       <Logo size={22} class="logo" />
       <span class="name">{t.siteName}</span>
-      <span class="sep">/</span>
-      <span class="nav">{t.nav}</span>
     </a>
+
+    <nav class="site-nav" aria-label="Primary">
+      <a href={`${homeHref}#capabilities`}>{t.siteNav.platform}</a>
+      <a href={`${homeHref}#solutions`}>{t.siteNav.solutions}</a>
+      <a class:list={{ active: inBlog }} href={blogHref}>{t.siteNav.blog}</a>
+    </nav>
 
     <div class="bar-right">
       <button
@@ -85,10 +92,10 @@ const menus = (
   </div>
 
   {
-    menus.length > 0 && (
-      <nav class="mainnav" aria-label="Browse">
+    inBlog && menus.length > 0 && (
+      <nav class="blognav" aria-label="Browse">
         <div class="mainnav-inner">
-          <a class:list={['nav-link', { active: onHome }]} href={homeHref}>
+          <a class:list={['nav-link', { active: onBlogHome }]} href={blogHref}>
             {t.all}
           </a>
           {menus.map((m) => (
@@ -206,12 +213,25 @@ const menus = (
     font-weight: 650;
     letter-spacing: -0.01em;
   }
-  .sep {
-    color: var(--muted);
+  .site-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    margin-right: auto;
+    margin-left: 2.25rem;
   }
-  .nav {
+  .site-nav a {
     color: var(--ink-soft);
-    font-weight: 450;
+    font-size: 0.84rem;
+    font-weight: 550;
+    text-decoration: none;
+    padding: 0.4rem 0.65rem;
+    border-radius: 6px;
+  }
+  .site-nav a:hover,
+  .site-nav a.active {
+    color: var(--ink);
+    background: var(--surface-sunk);
   }
 
   .bar-right {
@@ -271,7 +291,7 @@ const menus = (
   }
 
   /* Grouped mega-menu (one dropdown per axis) */
-  .mainnav {
+  .blognav {
     border-top: 1px solid var(--line);
   }
   .mainnav-inner {
@@ -358,5 +378,39 @@ const menus = (
     color: var(--accent);
     background: var(--accent-soft);
     font-weight: 600;
+  }
+  @media (max-width: 720px) {
+    .bar {
+      height: auto;
+      min-height: 58px;
+      flex-wrap: wrap;
+      gap: 0.35rem 0.5rem;
+      padding-top: 0.65rem;
+      padding-bottom: 0.55rem;
+    }
+    .site-nav {
+      order: 3;
+      width: 100%;
+      margin: 0;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .site-nav a {
+      padding-left: 0;
+      padding-right: 1rem;
+      white-space: nowrap;
+    }
+    .bar-right {
+      margin-left: auto;
+    }
+    .mainnav-inner {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .site-nav::-webkit-scrollbar,
+    .mainnav-inner::-webkit-scrollbar {
+      display: none;
+    }
   }
 </style>

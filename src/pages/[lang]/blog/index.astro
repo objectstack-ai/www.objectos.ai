@@ -1,0 +1,23 @@
+---
+import Base from '../../../layouts/Base.astro';
+import ArticleList from '../../../components/ArticleList.astro';
+import { blogPath, LOCALES, segToLocale, ui } from '../../../lib/i18n';
+import { getPostsInLocale } from '../../../lib/posts';
+
+export function getStaticPaths() {
+  return LOCALES.map((locale) => ({ params: { lang: locale } }));
+}
+
+const locale = segToLocale(Astro.params.lang!)!;
+const t = ui[locale];
+const postCount = (await getPostsInLocale(locale)).length;
+const alternates = Object.fromEntries(LOCALES.map((language) => [language, blogPath(language)]));
+---
+
+<Base
+  title={`${t.articlesTitle} · ${t.siteName}`}
+  description={t.articlesLead(postCount)}
+  {locale}
+  {alternates}>
+  <ArticleList {locale} />
+</Base>
