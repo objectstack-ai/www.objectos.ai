@@ -1,0 +1,132 @@
+---
+title: Rendre votre système métier existant AI-native sans migration
+description: Connectez ObjectOS à la base de données que vous exploitez déjà, laissez un agent de code modéliser les tables comme des objets et mettez l'AI sur des données réelles, sous vos permissions et sans toucher au système d'origine.
+author: ObjectStack Team
+date: 2026-05-30
+status: published
+topic: integration-data
+audience: general
+cover: ./cover.jpg
+tags:
+  - Data Sources
+  - AI-Native
+  - Architecture
+---
+
+La plupart des discours sur “ajouter l'AI au métier” supposent discrètement une reconstruction : déplacer les données, réimplémenter les workflows, reformer l'équipe et espérer que la migration réussisse. C'est précisément la partie que personne ne veut. Le système de référence, CRM, ERP, outil de tickets ou back-office maison, fonctionne déjà et c'est là que vivent les données.
+
+ObjectOS prend la position inverse. **Vous ne migrez pas. Vous connectez.**
+
+## L'idée en une phrase
+
+Pointez ObjectOS vers votre base existante, décrivez les tables importantes comme des objets, et chaque agent AI, flow, API et dashboard travaille immédiatement sur ces données, routées vers le bon système et gouvernées par les mêmes permissions que vos utilisateurs possèdent déjà.
+
+L'application d'origine ne change pas. Les lignes ne bougent pas. ObjectOS devient une surface AI-native et consciente des permissions au-dessus de ce que vous exploitez déjà.
+
+## Un exemple concret
+
+Imaginez une équipe commerciale sur un CRM Postgres de 40 tables : comptes, contacts, opportunités, lignes, activités. Des années de données réelles, une application de production utilisée chaque jour. La direction veut poser des questions en langage naturel :
+
+> « Quelles opportunités enterprise sont sorties de Q2, et qui en est responsable ? »
+
+La réponse “reconstruction” est un projet de six mois. La réponse ObjectOS commence en un après-midi :
+
+1. Connecter la base CRM comme datasource **read-only**.
+2. Faire modéliser par un agent de code les tables réellement importantes.
+3. Interroger les données et câbler une première automatisation.
+
+Personne ne touche au CRM. Les commerciaux ne voient rien changer. Vous obtenez une couche AI-native sur les mêmes lignes.
+
+## Comment cela fonctionne aujourd'hui
+
+### 1. Connecter la base comme datasource
+
+Une datasource est une connexion nommée : Postgres, MySQL, MongoDB ou SQLite. Les identifiants viennent de l'environnement, jamais du code source. Pour commencer par l'analyse, utilisez une réplique ou un utilisateur read-only.
+
+```ts
+import type { Datasource } from '@objectstack/spec';
+
+export const BusinessDb: Datasource = {
+  name: 'business_primary',
+  label: 'Business System (Postgres)',
+  driver: 'postgres',
+  config: {
+    connection: {
+      host: process.env.BIZ_DB_HOST,
+      user: process.env.BIZ_DB_USER,
+      password: process.env.BIZ_DB_PASSWORD,
+      database: process.env.BIZ_DB_NAME,
+    },
+  },
+  pool: { min: 1, max: 10 },
+  active: true,
+};
+```
+
+### 2. Modéliser les tables comme objets avec un agent de code
+
+Vous n'écrivez pas chaque objet à la main. Un agent comme Claude Code lit le schema connecté, inspecte colonnes, types et clés étrangères, puis produit un premier brouillon.
+
+> « Connecte-toi à `business_primary`. Pour `accounts`, `contacts`, `opportunities` et `line_items`, génère un fichier `src/objects/<name>.object.ts` avec `ObjectSchema.create`. Mappe les colonnes SQL vers les bons `Field.*`, transforme les clés étrangères en `Field.lookup(...)` et ajoute `datasource: 'business_primary'`. »
+
+Le résultat est du code source ordinaire que vous possédez et commitez. Vous gardez les colonnes utiles, retirez celles que l'AI ne doit pas voir, puis ajoutez labels, validations et permissions.
+
+### 3. Lier les objets à la datasource
+
+Chaque objet peut porter une `datasource`, ou vous pouvez déclarer une règle pour tout un namespace :
+
+```ts
+datasourceMapping: [
+  { namespace: 'biz', datasource: 'business_primary' },
+  { default: true,    datasource: 'default' },
+]
+```
+
+Les décisions de résidence des données restent au même endroit.
+
+### 4. Laisser l'AI travailler
+
+Dès qu'une table devient objet, la couche AI sait l'utiliser. Les outils `list_objects`, `describe_object`, `query_records`, `aggregate_data` et l'agent data-chat passent par ObjectQL, qui route chaque objet vers sa datasource et pousse filtres, tris et agrégations dans la base quand le driver le permet.
+
+Quand un utilisateur demande quelles opportunités sont sorties de Q2, l'agent ne met pas toute la table dans un prompt. Il compile une requête ObjectQL sur `biz_opportunity`, avec `WHERE` sur le statut et la date de clôture, un join vers le responsable, et l'exécute dans Postgres. Surtout, la requête s'exécute **comme l'utilisateur connecté** : si un commercial ne peut pas voir une région, l'agent ne le peut pas non plus.
+
+## Pourquoi c'est sûr
+
+- **L'AI agit comme l'utilisateur, jamais au-dessus de lui.** Les permissions objet, enregistrement et champ sont appliquées par la runtime.
+- **Read-only si vous le souhaitez.** Liez les objets à une connexion ou un utilisateur read-only.
+- **Tout est audité.** Lectures, écritures et escalades conservent qui, quoi, quand et pourquoi.
+- **Les données restent dans votre réseau.** ObjectOS tourne dans votre environnement.
+
+## Reconstruire ou connecter
+
+| | Reconstruire sur une nouvelle plateforme | Connecter avec ObjectOS |
+|---|---|---|
+| **Temps jusqu'à la valeur** | Des mois | Un après-midi |
+| **Risque pour le système de référence** | Élevé | Aucun |
+| **Lieu des données** | Déplacées | Inchangé |
+| **Modélisation** | Réimplémentation manuelle | Brouillon depuis le schema réel |
+| **Permissions** | Reconstruites | Héritées |
+| **Réversibilité** | Difficile | Déconnecter la datasource |
+
+## Ce que vous obtenez le premier jour
+
+- Analyse en langage naturel sur des données vivantes.
+- Automatisation gouvernée et auditée.
+- API et Console générées depuis les mêmes métadonnées.
+- Un seul modèle de permissions pour humains et AI.
+
+## Ce qui existe et ce qui arrive
+
+Ce flux fonctionne **aujourd'hui** avec les datasources, le routing par objet, le pushdown ObjectQL et la couche d'agents. Une expérience de fédération plus turn-key, import de schema, binding à des schemas externes et garde-fous d'écriture, est en conception dans [ADR-0015](https://github.com/objectstack-ai/framework/blob/main/docs/adr/0015-external-datasource-federation.md).
+
+## Questions fréquentes
+
+**Dois-je modéliser toutes les tables ?** Non. Seulement celles que l'AI et l'automatisation doivent toucher.
+
+**Cela écrira-t-il en production ?** Seulement si vous l'autorisez. Une connexion read-only rend l'écriture impossible.
+
+**Mes données partent-elles chez un fournisseur de modèles ?** ObjectOS tourne dans votre environnement. Vous contrôlez fournisseur et visibilité.
+
+**Et si le schema change ?** Relancez l'agent de code et régénérez ou comparez les objets concernés.
+
+Si vous avez déjà une base métier, vous êtes presque arrivé. Connectez-la, modélisez quelques tables et posez une question à vos données.
