@@ -57,7 +57,7 @@ type StatusKey = 'draft' | 'review' | 'published' | 'archived';
 
 interface Strings {
   siteName: string;
-  siteNav: { platform: string; solutions: string; security: string; docs: string; blog: string };
+  siteNav: { platform: string; ai: string; security: string; resources: string; docs: string };
   footer: { terms: string; privacy: string };
   all: string;
   audience: string;
@@ -73,7 +73,7 @@ interface Strings {
 
 const en: Strings = {
   siteName: 'ObjectOS',
-  siteNav: { platform: 'Platform', solutions: 'Solutions', security: 'Security', docs: 'Docs', blog: 'Blog' },
+  siteNav: { platform: 'Platform', ai: 'AI', security: 'Security', resources: 'Resources', docs: 'Docs' },
   footer: { terms: 'Terms & License', privacy: 'Privacy' },
   all: 'All',
   audience: 'Audience',
@@ -89,7 +89,7 @@ const en: Strings = {
 
 const zhHans: Strings = {
   siteName: 'ObjectOS',
-  siteNav: { platform: '平台', solutions: '解决方案', security: '安全', docs: '文档', blog: '博客' },
+  siteNav: { platform: '平台', ai: 'AI', security: '安全', resources: '资源', docs: '文档' },
   footer: { terms: '许可协议', privacy: '隐私政策' },
   all: '全部',
   audience: '受众',
@@ -105,7 +105,7 @@ const zhHans: Strings = {
 
 const ja: Strings = {
   siteName: 'ObjectOS',
-  siteNav: { platform: 'プラットフォーム', solutions: 'ソリューション', security: 'セキュリティ', docs: 'ドキュメント', blog: 'Blog' },
+  siteNav: { platform: 'プラットフォーム', ai: 'AI', security: 'セキュリティ', resources: 'リソース', docs: 'ドキュメント' },
   footer: { terms: '利用規約・ライセンス', privacy: 'プライバシー' },
   all: 'すべて',
   audience: '読者',
@@ -121,7 +121,7 @@ const ja: Strings = {
 
 const de: Strings = {
   siteName: 'ObjectOS',
-  siteNav: { platform: 'Plattform', solutions: 'Lösungen', security: 'Sicherheit', docs: 'Dokumentation', blog: 'Blog' },
+  siteNav: { platform: 'Plattform', ai: 'AI', security: 'Sicherheit', resources: 'Ressourcen', docs: 'Dokumentation' },
   footer: { terms: 'Bedingungen & Lizenz', privacy: 'Datenschutz' },
   all: 'Alle',
   audience: 'Zielgruppe',
@@ -137,7 +137,7 @@ const de: Strings = {
 
 const es: Strings = {
   siteName: 'ObjectOS',
-  siteNav: { platform: 'Plataforma', solutions: 'Soluciones', security: 'Seguridad', docs: 'Documentación', blog: 'Blog' },
+  siteNav: { platform: 'Plataforma', ai: 'AI', security: 'Seguridad', resources: 'Recursos', docs: 'Documentación' },
   footer: { terms: 'Términos y licencia', privacy: 'Privacidad' },
   all: 'Todo',
   audience: 'Audiencia',
@@ -153,7 +153,7 @@ const es: Strings = {
 
 const fr: Strings = {
   siteName: 'ObjectOS',
-  siteNav: { platform: 'Plateforme', solutions: 'Solutions', security: 'Sécurité', docs: 'Documentation', blog: 'Blog' },
+  siteNav: { platform: 'Plateforme', ai: 'AI', security: 'Sécurité', resources: 'Ressources', docs: 'Documentation' },
   footer: { terms: 'Conditions et licence', privacy: 'Confidentialité' },
   all: 'Tous',
   audience: 'Audience',
@@ -169,7 +169,7 @@ const fr: Strings = {
 
 const ko: Strings = {
   siteName: 'ObjectOS',
-  siteNav: { platform: '플랫폼', solutions: '솔루션', security: '보안', docs: '문서', blog: 'Blog' },
+  siteNav: { platform: '플랫폼', ai: 'AI', security: '보안', resources: '리소스', docs: '문서' },
   footer: { terms: '약관 및 라이선스', privacy: '개인정보 보호' },
   all: '전체',
   audience: '대상',
@@ -188,9 +188,9 @@ const toHant = (s: Strings): Strings => ({
   siteName: s2t(s.siteName),
   siteNav: {
     platform: s2t(s.siteNav.platform),
-    solutions: s2t(s.siteNav.solutions),
+    ai: s2t(s.siteNav.ai),
     security: s2t(s.siteNav.security),
-    blog: s2t(s.siteNav.blog),
+    resources: s2t(s.siteNav.resources),
     docs: s2t(s.siteNav.docs),
   },
   footer: {
