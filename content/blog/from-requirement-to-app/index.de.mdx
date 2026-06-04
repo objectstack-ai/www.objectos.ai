@@ -1,0 +1,248 @@
+---
+title: "Von einer Anforderung zur laufenden App: ObjectStack-Metadaten im Reparaturprozess"
+description: Ein konkretes Reparaturszenario zeigt, wie AI Builder eine Anforderung in Objekte, Felder, Beziehungen, Views, Rechte, Aktionen, Workflows, APIs und Agent-Tools übersetzt.
+author: ObjectStack Team
+date: 2026-06-04
+status: draft
+topic: app-building
+audience: developer
+cover: ./cover.jpg
+tags:
+  - AI Builder
+  - App Development
+  - Metadata
+  - Object Modeling
+---
+
+Sie sagen zu AI Builder:
+
+> Erstelle ein System für Gerätereparaturen. Mitarbeitende melden Störungen, Tickets werden Geräten zugeordnet, Techniker zugewiesen, Status verfolgt, Ausfallzeit berechnet, hohe Priorität automatisch zugewiesen und vor Abschluss müssen Lösung und Kosten erfasst werden.
+
+Nach wenigen Minuten gibt es nicht nur Seiten, sondern Objekte, Felder, Beziehungen, Rechte, Views, Workflows, Aktionen, APIs und Agent-Tools.
+
+Dies ist keine allgemeine Geschichte über “AI generiert Apps”. Es zeigt konkret, was ObjectStack-Metadaten erzeugen und warum das für Unternehmensanwendungen besser ist als einmalige Codegenerierung.
+
+![Pipeline von Anforderung zu Anwendung](./requirement-to-app-pipeline.webp)
+
+## Mit dem Geschäftsprozess beginnen
+
+Eine Reparatur wirkt einfach, enthält aber einen vollständigen Ablauf: Störung melden, Techniker zuweisen, Reparatur dokumentieren, Ausfallzeit und Kosten prüfen, hohe Risiken freigeben und Historie für das Gerät aufbauen.
+
+Traditionell verteilt sich das auf Tabellen, APIs, Seiten, Rechte, Statusmaschinen, Benachrichtigungen, Audit und Reporting.
+
+ObjectStack beschreibt das System zuerst als Metadaten. AI Builder entwirft die Geschäftsspezifikation statt direkt Glue Code zu erzeugen.
+
+| Geschäftsfrage | Metadatenfähigkeit |
+| --- | --- |
+| Was sind Gerät, Ticket und Techniker? | Objekte und Beziehungen |
+| Welche Felder sind erforderlich oder enumeriert? | Feldtypen und Validierung |
+| Wer sieht was? | Permission Sets und Feldsicherheit |
+| Wie sehen Queues und Boards aus? | View-Metadaten |
+| Wie laufen Zuweisung, Eskalation und Abschluss? | Aktionen und Workflows |
+| Was darf ein Agent abfragen oder ausführen? | Kontrollierte Tools und Audit |
+
+## Objekte vor Seiten
+
+AI Builder identifiziert zuerst Geschäftsobjekte: `device`, `repair_order`, `repair_comment`, `user` und `team`. Anwendungen beginnen mit Objekten, weil diese API, UI, Rechte, Workflows und Agent-Tools antreiben.
+
+```ts
+import { ObjectSchema, Field } from '@objectstack/spec/data';
+
+export const Device = ObjectSchema.create({
+  name: 'device',
+  label: 'Device',
+  fields: {
+    name: Field.text({ label: 'Device name', required: true }),
+    code: Field.text({ label: 'Device code', required: true, unique: true }),
+    location: Field.text({ label: 'Location' }),
+    team: Field.lookup('team', { label: 'Responsible team' }),
+    status: Field.select({
+      label: 'Device status',
+      options: [
+        { label: 'Running', value: 'running', default: true },
+        { label: 'Maintenance', value: 'maintenance' },
+        { label: 'Disabled', value: 'disabled' },
+      ],
+    }),
+  },
+});
+```
+
+`team` ist eine Beziehung, `status` ein Enum und `code` eine Unique-Constraint. Dieselbe Information nutzt API, UI, Filter, Berechtigungen und Agent.
+
+## Das Ticket trägt Geschäftsregeln
+
+```ts
+export const RepairOrder = ObjectSchema.create({
+  name: 'repair_order',
+  label: 'Repair ticket',
+  fields: {
+    title: Field.text({ label: 'Failure description', required: true }),
+    device: Field.lookup('device', { label: 'Device', required: true }),
+    reporter: Field.lookup('user', { label: 'Reporter', required: true }),
+    assignee: Field.lookup('user', { label: 'Engineer' }),
+    priority: Field.select({
+      label: 'Priority',
+      options: [
+        { label: 'Low', value: 'low' },
+        { label: 'Medium', value: 'medium', default: true },
+        { label: 'High', value: 'high' },
+      ],
+    }),
+    status: Field.select({
+      label: 'Status',
+      options: [
+        { label: 'Pending assignment', value: 'pending', default: true },
+        { label: 'In repair', value: 'in_repair' },
+        { label: 'Waiting acceptance', value: 'waiting_acceptance' },
+        { label: 'Closed', value: 'closed' },
+      ],
+    }),
+    reported_at: Field.datetime({ label: 'Reported at', required: true }),
+    started_at: Field.datetime({ label: 'Started at' }),
+    closed_at: Field.datetime({ label: 'Closed at' }),
+    cost: Field.currency({ label: 'Repair cost' }),
+    photos: Field.image({ label: 'On-site photos', multiple: true }),
+  },
+});
+```
+
+Lookup-Felder verbinden Tickets mit Geräten und Nutzern. Select-Felder treiben Filter, Boards und Workflowbedingungen. Datetime-Felder ermöglichen SLA und Ausfallzeit. Currency-Felder eignen sich für Feldrechte und Freigaben.
+
+## Formeln, Validierung, Views und Rechte
+
+Ausfallzeit kann eine Formel sein:
+
+```ts
+import { cel } from '@objectstack/spec';
+
+downtime_hours: Field.formula({
+  label: 'Downtime hours',
+  expression: cel`
+    closed_at == null || reported_at == null
+      ? null
+      : hours_between(reported_at, closed_at)
+  `,
+});
+```
+
+Vor Abschluss kann die Lösung verpflichtend sein:
+
+```ts
+resolution: Field.textarea({
+  label: 'Resolution',
+  requiredWhen: cel`status == "closed"`,
+});
+```
+
+Views strukturieren Arbeit:
+
+```ts
+export const EngineerQueueView = {
+  object: 'repair_order',
+  label: 'My repair queue',
+  type: 'list',
+  filter: cel`assignee == $currentUser && status != "closed"`,
+  columns: ['title', 'device', 'priority', 'status', 'reported_at'],
+};
+```
+
+Rechte wirken gleichzeitig auf UI, API und Agent:
+
+```ts
+export const EngineerPermission = {
+  role: 'maintenance_engineer',
+  object: 'repair_order',
+  readable: cel`assignee == $currentUser`,
+  editable: cel`assignee == $currentUser && status != "closed"`,
+  fields: {
+    cost: { readable: false, editable: false },
+    resolution: { readable: true, editable: true },
+    photos: { readable: true, editable: true },
+  },
+  actions: {
+    start_repair: true,
+    submit_acceptance: true,
+    close_order: false,
+  },
+};
+```
+
+Ein Techniker sieht Kosten weder in der UI noch über API oder Agent-Abfragen.
+
+## Aktionen und Workflows machen Verhalten kontrollierbar
+
+```ts
+export const StartRepairAction = {
+  name: 'start_repair',
+  label: 'Start repair',
+  object: 'repair_order',
+  availableWhen: cel`status == "pending" && assignee == $currentUser`,
+  input: {
+    started_at: Field.datetime({ label: 'Start time', default: 'now' }),
+  },
+  changes: {
+    status: 'in_repair',
+    started_at: '$input.started_at',
+  },
+  audit: true,
+};
+```
+
+Automatische Zuweisung und Freigaben werden ebenfalls Metadaten:
+
+```ts
+export const AutoAssignHighPriorityRepair = {
+  name: 'auto_assign_high_priority_repair',
+  trigger: {
+    object: 'repair_order',
+    event: 'afterInsert',
+    when: cel`priority == "high" && assignee == null`,
+  },
+  steps: [
+    { action: 'find_on_duty_engineer', output: 'engineer' },
+    { action: 'assign_repair_order', input: { assignee: '$engineer.id' } },
+    { action: 'notify_user', input: { user: '$engineer.id' } },
+  ],
+};
+```
+
+Hochkosten-Abschluss kann zur Freigabe gehen:
+
+```ts
+export const HighCostCloseApproval = {
+  object: 'repair_order',
+  action: 'close_order',
+  when: cel`cost > 5000`,
+  approvers: ['maintenance_manager'],
+  reason: 'High-cost repair requires manager approval',
+};
+```
+
+Agents rufen solche Aktionen auf, keine beliebigen PATCH-Requests.
+
+## API und Agent-Tools aus derselben Quelle
+
+```bash
+curl -X POST /api/v1/data/repair_order \
+  -d '{ "title": "CNC-3 abnormal noise", "device": "dev_012", "priority": "high" }'
+```
+
+```ts
+export const RepairAgentTools = [
+  tool.queryRecords('repair_order'),
+  tool.getRecord('repair_order'),
+  tool.runAction('repair_order', 'start_repair'),
+  tool.runAction('repair_order', 'submit_acceptance'),
+];
+```
+
+Ein Nutzer fragt nach heutigen, noch nicht gestarteten High-Priority-Tickets. Der Agent nutzt kontrollierte Tools, erweitert `device`, respektiert Rechte und fasst zusammen. Eine Zuweisung läuft über eine Aktion und bei Risiko über Freigabe.
+
+## Der Unterschied zu einmaliger Codegenerierung
+
+Einmalige Codegenerierung erzeugt viele Dateien. Die erste Version wirkt schnell, spätere Änderungen driften.
+
+ObjectStack-Metadaten geben der Geschäftsstruktur eine Quelle der Wahrheit: Felder, Rechte, Aktionen und Views verändern API, UI, Audit und Agent-Tools gemeinsam.
+
+AI Builder ersetzt Software Engineering nicht. Es entwirft die wichtigste Struktur, damit Menschen sie prüfen, die Plattform sie ausführen und künftige Änderungen in derselben Spezifikation landen können.

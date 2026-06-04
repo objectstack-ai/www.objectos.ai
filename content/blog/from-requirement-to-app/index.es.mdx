@@ -1,0 +1,244 @@
+---
+title: "De un requisito a una app operativa: metadatos ObjectStack en un flujo de reparación"
+description: Un escenario de reparación de equipos muestra cómo AI Builder convierte una petición en objetos, campos, relaciones, vistas, permisos, acciones, workflows, API y herramientas de agente.
+author: ObjectStack Team
+date: 2026-06-04
+status: draft
+topic: app-building
+audience: developer
+cover: ./cover.jpg
+tags:
+  - AI Builder
+  - App Development
+  - Metadata
+  - Object Modeling
+---
+
+Le dices a AI Builder:
+
+> Crea un sistema de reparación de equipos. Los empleados reportan fallos, cada ticket se vincula a un equipo, se asignan ingenieros, se rastrea el estado, se calcula el tiempo de parada, la alta prioridad se asigna automáticamente y antes de cerrar hay que registrar resolución y coste.
+
+Minutos después aparece una aplicación operativa: no solo páginas, sino objetos, campos, relaciones, permisos, vistas, workflows, acciones, API y herramientas de agente.
+
+No es una historia genérica sobre “AI generando apps”. Es una mirada concreta a lo que crean los metadatos ObjectStack.
+
+![Pipeline de requisito a aplicación](./requirement-to-app-pipeline.webp)
+
+## Empieza por el escenario de negocio
+
+La reparación de equipos incluye un flujo completo: reportar fallo, asignar ingeniero, reparar, añadir fotos y notas, revisar retrasos y costes, aprobar casos de alto riesgo y guardar historial.
+
+En una implementación tradicional se reparte entre tablas, API, páginas, permisos, máquinas de estado, notificaciones, auditoría y reportes.
+
+ObjectStack describe primero el sistema como metadatos. AI Builder redacta la especificación de negocio antes de generar código pegamento.
+
+| Pregunta de negocio | Capacidad de metadatos |
+| --- | --- |
+| Qué son equipos, tickets e ingenieros | Objetos y relaciones |
+| Qué campos son obligatorios o enumerados | Tipos de campo y validación |
+| Quién ve qué | Permisos y seguridad de campo |
+| Cómo se muestran colas y tableros | Metadatos de vista |
+| Cómo se asigna, escala y cierra | Acciones y workflows |
+| Qué puede consultar o ejecutar un agente | Herramientas gobernadas y auditoría |
+
+## Objetos antes que páginas
+
+AI Builder identifica `device`, `repair_order`, `repair_comment`, `user` y `team`. Las aplicaciones empiezan por objetos porque impulsan API, UI, permisos, workflows y herramientas de agente.
+
+```ts
+import { ObjectSchema, Field } from '@objectstack/spec/data';
+
+export const Device = ObjectSchema.create({
+  name: 'device',
+  label: 'Device',
+  fields: {
+    name: Field.text({ label: 'Device name', required: true }),
+    code: Field.text({ label: 'Device code', required: true, unique: true }),
+    location: Field.text({ label: 'Location' }),
+    team: Field.lookup('team', { label: 'Responsible team' }),
+    status: Field.select({
+      label: 'Device status',
+      options: [
+        { label: 'Running', value: 'running', default: true },
+        { label: 'Maintenance', value: 'maintenance' },
+        { label: 'Disabled', value: 'disabled' },
+      ],
+    }),
+  },
+});
+```
+
+`team` es una relación, `status` es un enum y `code` es una restricción única. API, páginas, filtros, permisos y agentes usan la misma información.
+
+## El ticket contiene reglas de negocio
+
+```ts
+export const RepairOrder = ObjectSchema.create({
+  name: 'repair_order',
+  label: 'Repair ticket',
+  fields: {
+    title: Field.text({ label: 'Failure description', required: true }),
+    device: Field.lookup('device', { label: 'Device', required: true }),
+    reporter: Field.lookup('user', { label: 'Reporter', required: true }),
+    assignee: Field.lookup('user', { label: 'Engineer' }),
+    priority: Field.select({
+      label: 'Priority',
+      options: [
+        { label: 'Low', value: 'low' },
+        { label: 'Medium', value: 'medium', default: true },
+        { label: 'High', value: 'high' },
+      ],
+    }),
+    status: Field.select({
+      label: 'Status',
+      options: [
+        { label: 'Pending assignment', value: 'pending', default: true },
+        { label: 'In repair', value: 'in_repair' },
+        { label: 'Waiting acceptance', value: 'waiting_acceptance' },
+        { label: 'Closed', value: 'closed' },
+      ],
+    }),
+    reported_at: Field.datetime({ label: 'Reported at', required: true }),
+    started_at: Field.datetime({ label: 'Started at' }),
+    closed_at: Field.datetime({ label: 'Closed at' }),
+    cost: Field.currency({ label: 'Repair cost' }),
+    photos: Field.image({ label: 'On-site photos', multiple: true }),
+  },
+});
+```
+
+Los `lookup` conectan equipos y usuarios; los `select` impulsan filtros, tableros y condiciones; los `datetime` permiten SLA y parada; `currency` sirve para permisos y aprobación.
+
+## Fórmulas, validación, vistas y permisos
+
+```ts
+import { cel } from '@objectstack/spec';
+
+downtime_hours: Field.formula({
+  label: 'Downtime hours',
+  expression: cel`
+    closed_at == null || reported_at == null
+      ? null
+      : hours_between(reported_at, closed_at)
+  `,
+});
+```
+
+```ts
+resolution: Field.textarea({
+  label: 'Resolution',
+  requiredWhen: cel`status == "closed"`,
+});
+```
+
+Las reglas escritas solo en la página pueden ser saltadas por API, agentes o procesos masivos. Como metadatos, forman parte del runtime.
+
+```ts
+export const EngineerQueueView = {
+  object: 'repair_order',
+  label: 'My repair queue',
+  type: 'list',
+  filter: cel`assignee == $currentUser && status != "closed"`,
+  columns: ['title', 'device', 'priority', 'status', 'reported_at'],
+};
+```
+
+```ts
+export const EngineerPermission = {
+  role: 'maintenance_engineer',
+  object: 'repair_order',
+  readable: cel`assignee == $currentUser`,
+  editable: cel`assignee == $currentUser && status != "closed"`,
+  fields: {
+    cost: { readable: false, editable: false },
+    resolution: { readable: true, editable: true },
+    photos: { readable: true, editable: true },
+  },
+  actions: {
+    start_repair: true,
+    submit_acceptance: true,
+    close_order: false,
+  },
+};
+```
+
+Un ingeniero no ve el coste en UI, API ni mediante un agente que actúe como él.
+
+## Acciones, workflows, API y herramientas
+
+Las acciones hacen gobernable el comportamiento:
+
+```ts
+export const StartRepairAction = {
+  name: 'start_repair',
+  label: 'Start repair',
+  object: 'repair_order',
+  availableWhen: cel`status == "pending" && assignee == $currentUser`,
+  input: {
+    started_at: Field.datetime({ label: 'Start time', default: 'now' }),
+  },
+  changes: {
+    status: 'in_repair',
+    started_at: '$input.started_at',
+  },
+  audit: true,
+};
+```
+
+La asignación automática de alta prioridad puede ser workflow:
+
+```ts
+export const AutoAssignHighPriorityRepair = {
+  name: 'auto_assign_high_priority_repair',
+  trigger: {
+    object: 'repair_order',
+    event: 'afterInsert',
+    when: cel`priority == "high" && assignee == null`,
+  },
+  steps: [
+    { action: 'find_on_duty_engineer', output: 'engineer' },
+    { action: 'assign_repair_order', input: { assignee: '$engineer.id' } },
+    { action: 'notify_user', input: { user: '$engineer.id' } },
+  ],
+};
+```
+
+El cierre de alto coste puede requerir aprobación:
+
+```ts
+export const HighCostCloseApproval = {
+  object: 'repair_order',
+  action: 'close_order',
+  when: cel`cost > 5000`,
+  approvers: ['maintenance_manager'],
+  reason: 'High-cost repair requires manager approval',
+};
+```
+
+La misma metadata proyecta API:
+
+```bash
+curl -X POST /api/v1/data/repair_order \
+  -d '{ "title": "CNC-3 abnormal noise", "device": "dev_012", "priority": "high" }'
+```
+
+y herramientas de agente:
+
+```ts
+export const RepairAgentTools = [
+  tool.queryRecords('repair_order'),
+  tool.getRecord('repair_order'),
+  tool.runAction('repair_order', 'start_repair'),
+  tool.runAction('repair_order', 'submit_acceptance'),
+];
+```
+
+El agente consulta con herramientas gobernadas, expande `device`, respeta permisos y resume. Si ejecuta, llama acciones; si hay riesgo, entra en aprobación.
+
+## Diferencia frente a generación puntual de código
+
+La generación puntual crea páginas, API, lógica de base de datos, permisos y scripts. La primera versión parece rápida, pero los cambios posteriores se desalinean.
+
+Con metadatos ObjectStack, la estructura de negocio tiene una fuente única. Si cambian campos, permisos, acciones o vistas, API, UI, auditoría y herramientas de agente cambian juntas.
+
+AI Builder no evita la ingeniería de software. Redacta la estructura importante para que humanos la revisen, la plataforma la ejecute y los cambios sigan aterrizando en la misma especificación.

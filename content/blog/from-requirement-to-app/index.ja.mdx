@@ -1,0 +1,291 @@
+---
+title: 一つの要件から動くアプリへ：修理業務で見る ObjectStack メタデータ
+description: 設備修理の具体例で、AI Builder が一つの要件をオブジェクト、フィールド、関係、ビュー、権限、アクション、ワークフロー、API、Agent ツールへ変換する過程を示します。
+author: ObjectStack Team
+date: 2026-06-04
+status: draft
+topic: app-building
+audience: developer
+cover: ./cover.jpg
+tags:
+  - AI Builder
+  - App Development
+  - Metadata
+  - Object Modeling
+---
+
+AI Builder にこう伝えます。
+
+> 設備修理システムを作ってください。従業員が故障を報告し、チケットを設備に関連付け、エンジニアを割り当て、状態を追跡し、停止時間を計算し、高優先度は自動割り当てし、終了前に修理結果と費用を必須にする。
+
+数分後、ページだけでなく、オブジェクト、フィールド、関係、権限、ビュー、ワークフロー、アクション、API、Agent ツールを持つアプリが動きます。
+
+これは一般的な「AI がアプリを生成する」話ではありません。ObjectStack メタデータが何を作り、なぜ一回限りのコード生成より企業アプリに向いているのかを、具体的な業務で見ます。
+
+![要件からアプリへの生成パイプライン](./requirement-to-app-pipeline.webp)
+
+## 業務シナリオから始める
+
+設備修理は単純に見えて、完全な業務フローを含みます。
+
+1. 従業員が設備故障を発見してチケットを作成する。
+2. システムが設備、場所、優先度、チームからエンジニアを割り当てる。
+3. エンジニアが受け付け、現場へ行き、修理し、写真とメモを追加する。
+4. 管理者が遅延、停止時間、費用を確認する。
+5. 高リスクまたは高コストのチケットは承認へ進む。
+6. 終了したチケットは設備の保守履歴になる。
+
+従来の実装では、これはテーブル、API、画面、権限、状態遷移、通知、監査、レポートに分散します。
+
+ObjectStack はまずシステムをメタデータとして記述します。AI Builder は最初に大量の接着コードを書くのではなく、業務仕様を起草します。
+
+| 業務上の問い | メタデータ能力 |
+| --- | --- |
+| 設備、チケット、エンジニアとは何か | オブジェクトと関係 |
+| 必須、任意、列挙フィールドは何か | フィールド型と検証 |
+| 誰が何を見られるか | 権限セットとフィールドセキュリティ |
+| キューや看板はどう見せるか | ビュー メタデータ |
+| 割当、エスカレーション、終了はどう実行するか | アクションとワークフロー |
+| Agent は何を問い合わせ、操作できるか | 管理されたツールと監査 |
+
+## 画面より先にオブジェクトを建てる
+
+AI Builder はまず業務オブジェクトを見つけます。
+
+- `device`: 設備台帳。
+- `repair_order`: 修理チケット。
+- `repair_comment`: 保守メモと現場記録。
+- `user`: 従業員、エンジニア、管理者は既存ユーザーを再利用。
+- `team`: 保守チームやシフト。
+
+アプリはオブジェクトから始まります。オブジェクトが API、UI、権限、ワークフロー、Agent ツールを動かすからです。
+
+```ts
+import { ObjectSchema, Field } from '@objectstack/spec/data';
+
+export const Device = ObjectSchema.create({
+  name: 'device',
+  label: 'Device',
+  fields: {
+    name: Field.text({ label: 'Device name', required: true }),
+    code: Field.text({ label: 'Device code', required: true, unique: true }),
+    location: Field.text({ label: 'Location' }),
+    team: Field.lookup('team', { label: 'Responsible team' }),
+    status: Field.select({
+      label: 'Device status',
+      options: [
+        { label: 'Running', value: 'running', default: true },
+        { label: 'Maintenance', value: 'maintenance' },
+        { label: 'Disabled', value: 'disabled' },
+      ],
+    }),
+  },
+});
+```
+
+これは単なるフォーム設定ではありません。`team` は関係、`status` は列挙、`code` は一意制約です。同じ情報を API、画面、フィルター、権限、Agent が利用できます。
+
+## チケットオブジェクトに業務ルールを載せる
+
+修理チケットは主オブジェクトです。状態、優先度、関係、時間、写真、費用を表します。
+
+```ts
+export const RepairOrder = ObjectSchema.create({
+  name: 'repair_order',
+  label: 'Repair ticket',
+  fields: {
+    title: Field.text({ label: 'Failure description', required: true }),
+    device: Field.lookup('device', { label: 'Device', required: true }),
+    reporter: Field.lookup('user', { label: 'Reporter', required: true }),
+    assignee: Field.lookup('user', { label: 'Engineer' }),
+    priority: Field.select({
+      label: 'Priority',
+      options: [
+        { label: 'Low', value: 'low' },
+        { label: 'Medium', value: 'medium', default: true },
+        { label: 'High', value: 'high' },
+      ],
+    }),
+    status: Field.select({
+      label: 'Status',
+      options: [
+        { label: 'Pending assignment', value: 'pending', default: true },
+        { label: 'In repair', value: 'in_repair' },
+        { label: 'Waiting acceptance', value: 'waiting_acceptance' },
+        { label: 'Closed', value: 'closed' },
+      ],
+    }),
+    reported_at: Field.datetime({ label: 'Reported at', required: true }),
+    started_at: Field.datetime({ label: 'Started at' }),
+    closed_at: Field.datetime({ label: 'Closed at' }),
+    cost: Field.currency({ label: 'Repair cost' }),
+    photos: Field.image({ label: 'On-site photos', multiple: true }),
+  },
+});
+```
+
+`lookup` は設備とユーザーを接続し、`select` はフィルターや看板とフロー条件を支え、`datetime` は SLA と停止時間を計算し、`currency` はフィールド権限と承認条件に使えます。
+
+## 式と検証もメタデータにする
+
+停止時間は式フィールドで表せます。
+
+```ts
+import { cel } from '@objectstack/spec';
+
+downtime_hours: Field.formula({
+  label: 'Downtime hours',
+  expression: cel`
+    closed_at == null || reported_at == null
+      ? null
+      : hours_between(reported_at, closed_at)
+  `,
+});
+```
+
+終了前には修理結果を必須にできます。
+
+```ts
+resolution: Field.textarea({
+  label: 'Resolution',
+  requiredWhen: cel`status == "closed"`,
+});
+```
+
+画面だけに書いたルールは API、Agent、一括操作で迂回されます。メタデータにすればランタイムの一部になります。
+
+## ビュー メタデータが作業を形作る
+
+修理システムには複数のビューが必要です。従業員は自分のチケット、エンジニアは自分のキュー、管理者は全体、遅延、高コストを見ます。
+
+```ts
+export const EngineerQueueView = {
+  object: 'repair_order',
+  label: 'My repair queue',
+  type: 'list',
+  filter: cel`assignee == $currentUser && status != "closed"`,
+  columns: ['title', 'device', 'priority', 'status', 'reported_at'],
+  sort: [{ field: 'priority', direction: 'desc' }, { field: 'reported_at', direction: 'asc' }],
+};
+```
+
+ビューは単なる UI 設定ではありません。人が業務キューをどう見るかを定義し、Agent が結果を提示するときの語彙にもなります。
+
+## 権限は最後に足さない
+
+同じ `repair_order` でも、役割ごとに境界が違います。報告者は自分のチケット、エンジニアは状態とメモ、管理者は割当と費用、財務は費用を見るかもしれません。
+
+```ts
+export const EngineerPermission = {
+  role: 'maintenance_engineer',
+  object: 'repair_order',
+  readable: cel`assignee == $currentUser`,
+  editable: cel`assignee == $currentUser && status != "closed"`,
+  fields: {
+    cost: { readable: false, editable: false },
+    resolution: { readable: true, editable: true },
+    photos: { readable: true, editable: true },
+  },
+  actions: {
+    start_repair: true,
+    submit_acceptance: true,
+    close_order: false,
+  },
+};
+```
+
+この権限は UI、API、Agent に同時に効きます。エンジニアは費用を画面でも API でも Agent 経由でも取得できません。
+
+## アクションで業務行動を制御する
+
+「修理開始」「検収提出」「チケット終了」は単なるフィールド更新ではなく、入力、条件、権限、監査を持つ業務アクションです。
+
+```ts
+export const StartRepairAction = {
+  name: 'start_repair',
+  label: 'Start repair',
+  object: 'repair_order',
+  availableWhen: cel`status == "pending" && assignee == $currentUser`,
+  input: {
+    started_at: Field.datetime({ label: 'Start time', default: 'now' }),
+  },
+  changes: {
+    status: 'in_repair',
+    started_at: '$input.started_at',
+  },
+  audit: true,
+};
+```
+
+Agent も任意の PATCH ではなく、このようなアクションを呼ぶべきです。
+
+## ワークフローが自動化と承認をつなぐ
+
+高優先度の自動割当はワークフローとして表現できます。
+
+```ts
+export const AutoAssignHighPriorityRepair = {
+  name: 'auto_assign_high_priority_repair',
+  trigger: {
+    object: 'repair_order',
+    event: 'afterInsert',
+    when: cel`priority == "high" && assignee == null`,
+  },
+  steps: [
+    { action: 'find_on_duty_engineer', output: 'engineer' },
+    { action: 'assign_repair_order', input: { assignee: '$engineer.id' } },
+    { action: 'notify_user', input: { user: '$engineer.id' } },
+  ],
+};
+```
+
+高コストの終了は承認へ送ります。
+
+```ts
+export const HighCostCloseApproval = {
+  object: 'repair_order',
+  action: 'close_order',
+  when: cel`cost > 5000`,
+  approvers: ['maintenance_manager'],
+  reason: 'High-cost repair requires manager approval',
+};
+```
+
+AI は低リスク操作を実行できますが、高リスク操作は承認と監査に残ります。
+
+## API と Agent ツールは同じメタデータから生まれる
+
+```bash
+curl -X POST /api/v1/data/repair_order \
+  -d '{ "title": "CNC-3 abnormal noise", "device": "dev_012", "priority": "high" }'
+```
+
+```ts
+export const RepairAgentTools = [
+  tool.queryRecords('repair_order'),
+  tool.getRecord('repair_order'),
+  tool.runAction('repair_order', 'start_repair'),
+  tool.runAction('repair_order', 'submit_acceptance'),
+];
+```
+
+ユーザーが「今日まだ修理開始していない高優先度チケットを探して」と聞くと、Agent は `repair_order` を管理されたツールで問い合わせ、関連 `device` を展開し、ユーザー権限を守って要約します。
+
+## 一回限りのコード生成との違い
+
+一回限りのコード生成はページ、API、DB ロジック、権限判断、スクリプトを大量に作ります。第一版は速く見えますが、変更のたびに分岐します。
+
+ObjectStack メタデータでは業務構造が一つの源泉になります。フィールドが変われば API、フォーム、詳細、Agent ツールが一緒に変わります。権限が変われば UI、API、Agent が同じ規則に従います。
+
+AI Builder はソフトウェア工学を省略するものではありません。人がレビューでき、プラットフォームが実行でき、将来の変更が同じ仕様に入るように、重要な構造を起草します。
+
+## 要件からアプリまでに起きること
+
+1. 自然言語が業務オブジェクトになる。
+2. オブジェクト、フィールド、関係、式、検証がメタデータになる。
+3. ビュー、権限、アクション、ワークフローが業務境界を定義する。
+4. プラットフォームが API、UI、Agent ツールを投影する。
+5. AI は権限内で問い合わせ、提案し、危険な操作は承認へ進む。
+6. 人がレビューし、同じ仕様を継続的に進化させる。
+
+これが AI-native アプリ基盤の価値です。AI に一度だけコードを生成させるのではなく、人と AI が本番に入れる業務システムを継続的に維持することです。

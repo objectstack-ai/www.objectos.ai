@@ -1,0 +1,107 @@
+---
+title: Wie AI Agents innerhalb von Unternehmensberechtigungen arbeiten
+description: Unternehmen brauchen keine AI Agents als Super-Admins. Sie brauchen kontrollierte Nutzer, die Berechtigungen erben, riskante Aktionen zur Freigabe senden und auditierbar bleiben.
+author: ObjectStack Team
+date: 2026-06-04
+status: draft
+topic: governance
+audience: it
+solutions: []
+industries: []
+cover: ./cover.jpg
+tags:
+  - AI Agent
+  - Berechtigungen
+  - Datensicherheit
+  - Audit
+---
+
+Wenn Unternehmen über AI Agents sprechen, lautet die erste Frage oft:
+
+> Können Agents CRM, ERP, Tickets, Verträge, Aufträge und andere echte Geschäftssysteme nutzen?
+
+Die bessere Frage ist: Mit wessen Identität greifen sie zu? Was dürfen sie lesen? Was dürfen sie ändern? Und kann man im Fehlerfall nachvollziehen, was passiert ist, und sofort stoppen?
+
+Ohne diese Antworten wird ein Agent schnell zum Schattenadministrator: Er kann systemübergreifend Daten lesen, Tools aufrufen und Datensätze ändern, ohne an die Rolle eines realen Nutzers gebunden zu sein.
+
+Das Ziel eines Enterprise Agents ist nicht Superuser-Macht für AI. Ziel ist, dass AI Nutzern innerhalb klarer Grenzen hilft.
+
+![Sicherheitsgrenzen für AI Agents](./security-boundaries.webp)
+
+## Agents müssen Nutzeridentität erben
+
+Ein Agent sollte nicht mit einem eigenen Allzweckkonto oder Datenbank-Adminrechten laufen.
+
+Er sollte im Namen des angemeldeten Nutzers handeln. Wenn ein Vertriebsmitarbeiter nur eigene Kunden sieht, sieht der Agent auch nur diese Kunden. Wenn ein Support-Mitarbeiter nur seine Queue bearbeiten darf, bleibt der Agent in dieser Queue. Wenn ein Techniker Vertragswerte nicht sehen darf, darf der Agent sie nicht wegen “Analysebedarf” umgehen.
+
+Diese Regel macht das System steuerbar: Kündigung, Rollenwechsel und Berechtigungsänderungen wirken sofort auf den Agent. Audit-Logs lassen sich einer realen Identität zuordnen.
+
+Das darf nicht nur im Prompt stehen. Prompts können erinnern, aber Runtime-Berechtigungen müssen die Grenze erzwingen.
+
+## Berechtigungen brauchen Objekt-, Datensatz-, Feld- und Aktionsumfang
+
+“Zugriff auf CRM” ist für Unternehmensberechtigungen zu grob.
+
+Ein sicherer Agent braucht vier Ebenen:
+
+- Objektberechtigungen für Kunden, Aufträge, Tickets oder Verträge;
+- Datensatzberechtigungen für konkrete Datensätze wie eigene Kunden oder regionale Aufträge;
+- Feldberechtigungen für sensible Felder wie Vertragswert, Kosten oder interne Notizen;
+- Aktionsberechtigungen für Aufgaben, Statuswechsel, Angebotsversand, Rabattänderungen oder Rollenänderungen.
+
+Viele AI-Projekte scheitern, weil das Berechtigungsmodell zu grob ist. Das System weiß, dass der Agent “Kunden abfragen” darf, aber nicht, dass er nicht alle Kunden, nicht alle Felder und nicht alle Aktionen nutzen darf.
+
+ObjectOS beschreibt Geschäftsobjekte, Felder, Aktionen und Berechtigungen als deklarative Metadaten. Agents greifen nicht direkt auf Tabellen oder beliebige APIs zu, sondern arbeiten über kontrollierte Tools innerhalb dieser Grenzen.
+
+## Erst lesen, dann empfehlen, dann ausführen
+
+Agents sollten nicht am ersten Tag Geschäftsdaten ändern.
+
+Ein sicherer Rollout hat drei Stufen:
+
+**Nur lesen**: Der Agent findet Tickets außerhalb der SLA, fasst Kundenprobleme zusammen oder listet verspätungsgefährdete Aufträge. Er schreibt nichts.
+
+**Empfehlen**: Der Agent erstellt Vorschläge wie “diese Tickets eskalieren” oder “Follow-up-Aufgaben anlegen”. Ein Mensch bestätigt.
+
+**Kontrolliert ausführen**: Niedrigriskante, klar begrenzte und reversible Aktionen können automatisch laufen. Hochriskante Aktionen bleiben freigabepflichtig.
+
+So können Unternehmen den Agent-Umfang schrittweise erweitern.
+
+## Riskante Aktionen brauchen Freigabe und Rollback
+
+Löschen, Massenänderungen, Änderungen an Beträgen oder Rabatten, externe E-Mails, Vertragsversand, Rollenänderungen und kostenpflichtige externe Dienste verdienen eine höhere Hürde.
+
+Das System sollte vor der Ausführung Auswirkung, Grund und Datensatzmenge zeigen und auf eine berechtigte Freigabe warten.
+
+Es sollte außerdem Vorher-Nachher-Zustände speichern. Wenn ein Agent 500 Datensätze ändern will, sensible Kunden berührt oder Schwellenwerte überschreitet, muss die Runtime stoppen und eskalieren.
+
+Freigabe verlangsamt AI nicht. Sie macht AI produktionsfähig.
+
+## Lesen und Schreiben müssen auditierbar sein
+
+Agent-Aktivität ist eine Kette: Daten lesen, Kontext analysieren, Vorschlag erzeugen, Tool aufrufen, Bestätigung abwarten, Datensatz ändern. Im Fehlerfall reicht “Datensatz wurde geändert” nicht aus.
+
+Audit muss beantworten: Wer hat den Agent gestartet? Welche Objekte und Datensätze wurden gelesen? Welche Felder wurden verborgen oder verweigert? Welche Tools wurden aufgerufen? Was wurde empfohlen? Wer hat bestätigt? Was änderte sich vor und nach der Ausführung?
+
+Audit ist nicht nur Schuldzuweisung. Audit erlaubt Teams, den Agent-Umfang sicher zu erweitern.
+
+## Kontrollierter Nutzer oder Schattenadministrator?
+
+Prüfen Sie eine Agent-Architektur mit sechs Fragen:
+
+1. Läuft der Agent als realer Nutzer?
+2. Erbt er Objekt-, Datensatz-, Feld- und Aktionsrechte?
+3. Greift er über kontrollierte Tools statt ganze Datenbanken zu lesen?
+4. Gibt es Stufen für Lesen, Empfehlung und Ausführung?
+5. Haben riskante Aktionen Freigabe, Rollback und Stop-Regeln?
+6. Sind Lesen, Empfehlungen und Änderungen auditierbar?
+
+Wenn die meisten Antworten nein sind, ist der Agent kein Enterprise Agent, sondern ein Sicherheitsblindfleck.
+
+## Die ObjectOS-Perspektive
+
+ObjectOS geht davon aus, dass wertvolle AI in Geschäftssysteme eintreten wird. Sie muss Kunden, Aufträge, Tickets, Verträge und Freigaben lesen, Beziehungen verstehen und Arbeit voranbringen.
+
+Aber sie darf Governance nicht umgehen.
+
+ObjectOS legt Objekte, Felder, Workflows, Berechtigungen und Aktionen in eine Metadatenschicht. Agents arbeiten durch diese Schicht. AI kommt näher an echte Geschäftsarbeit, aber jeder Schritt hat Identität, Grenze und Nachweis.

@@ -1,0 +1,109 @@
+---
+title: Comment les agents AI travaillent dans les permissions d’entreprise
+description: Les entreprises n’ont pas besoin d’agents AI super-administrateurs. Elles ont besoin d’agents contrôlés, qui héritent des permissions, demandent validation pour les actions risquées et restent auditables.
+author: ObjectStack Team
+date: 2026-06-04
+status: draft
+topic: governance
+audience: it
+solutions: []
+industries: []
+cover: ./cover.jpg
+tags:
+  - AI Agent
+  - Permissions
+  - Sécurité des données
+  - Audit
+---
+
+Quand une entreprise parle d’agents AI, la première question est souvent :
+
+> Peuvent-ils se connecter au CRM, à l’ERP, aux tickets, aux contrats, aux commandes et aux vrais systèmes métier ?
+
+La meilleure question est : avec quelle identité accèdent-ils, que peuvent-ils lire, que peuvent-ils modifier, et peut-on tout auditer et arrêter en cas de problème ?
+
+Sans ces réponses, un agent puissant devient un administrateur fantôme : il lit plusieurs systèmes, appelle des outils et modifie des enregistrements sans être limité par le rôle d’une vraie personne.
+
+Le but d’un agent d’entreprise n’est pas de donner tous les pouvoirs à l’AI. C’est de l’aider à travailler dans des limites claires.
+
+![Limites de sécurité des agents AI](./security-boundaries.webp)
+
+## L’agent doit hériter de l’identité utilisateur
+
+Un agent ne doit pas utiliser un compte universel ni des droits d’administrateur de base de données.
+
+Il doit agir au nom de l’utilisateur connecté. Si un commercial ne voit que ses comptes, l’agent ne voit que ces comptes. Si le support ne travaille que sa file de tickets, l’agent reste dans cette file. Si un ingénieur ne peut pas voir la valeur d’un contrat, l’agent ne doit pas la voir non plus.
+
+Cette règle rend le système gouvernable : départs, changements de rôle et changements de permissions s’appliquent aussi à l’agent, et les journaux d’audit restent liés à une identité réelle.
+
+Il ne suffit pas de l’écrire dans le prompt. Les permissions du runtime doivent imposer la limite.
+
+## Les permissions doivent couvrir objets, enregistrements, champs et actions
+
+“Accès au CRM” est trop vague.
+
+Un agent sûr doit respecter quatre niveaux :
+
+- permissions d’objet pour clients, commandes, tickets ou contrats ;
+- permissions d’enregistrement pour les données concrètes visibles par l’utilisateur ;
+- permissions de champ pour montants, coûts, identifiants ou notes internes ;
+- permissions d’action pour créer des tâches, fermer des tickets, envoyer des devis, changer des remises ou modifier des rôles.
+
+Beaucoup de projets AI échouent parce que le modèle de permissions est trop grossier. Le système sait que l’agent peut “chercher des clients”, mais pas qu’il ne peut pas tout voir ni tout faire.
+
+ObjectOS décrit objets, champs, actions et permissions comme des métadonnées déclaratives. Les agents ne touchent pas les tables brutes ni des API arbitraires ; ils passent par des outils gouvernés.
+
+## Lire, puis recommander, puis exécuter
+
+Laisser un agent modifier des données métier dès le premier jour est rarement le bon départ.
+
+Un déploiement sûr suit trois étapes :
+
+**Lecture seule** : l’agent résume, détecte les tickets hors SLA ou les commandes à risque. Il n’écrit rien.
+
+**Recommandation** : il propose des actions, puis une personne confirme.
+
+**Exécution contrôlée** : les actions de faible risque, bornées et réversibles peuvent s’exécuter automatiquement. Les actions risquées restent soumises à validation.
+
+Cette progression permet d’élargir le périmètre sans passer de “pas d’AI” à “tout automatique”.
+
+## Les actions risquées exigent validation et retour arrière
+
+Suppression, modifications de masse, changements de montants ou remises, envoi de communications externes, changements de droits et services externes payants doivent être traités comme risqués.
+
+Avant exécution, le système doit afficher l’impact, la raison et les enregistrements concernés, puis attendre une validation autorisée.
+
+Il doit aussi garder l’état avant et après. Si l’agent tente de modifier 500 enregistrements, touche un client sensible ou dépasse un seuil, le runtime doit stopper et escalader.
+
+La validation ne ralentit pas l’AI ; elle permet de la mettre en production.
+
+## Tout accès et toute modification doivent être auditables
+
+L’activité d’un agent est une chaîne : lire, analyser, recommander, appeler un outil, attendre confirmation, modifier. En cas d’incident, savoir qu’un enregistrement a changé ne suffit pas.
+
+L’audit doit indiquer qui a lancé la tâche, quels objets et enregistrements ont été lus, quels champs ont été masqués, quels outils ont été appelés, ce qui a été recommandé, qui a validé et comment les données ont changé.
+
+L’audit n’est pas seulement défensif. Il permet aux équipes d’augmenter progressivement le périmètre des agents.
+
+## Utilisateur contrôlé ou administrateur fantôme ?
+
+Six questions permettent d’évaluer une architecture :
+
+1. L’agent agit-il comme un utilisateur réel ?
+2. Hérite-t-il des permissions d’objet, d’enregistrement, de champ et d’action ?
+3. Accède-t-il aux données par des outils gouvernés ?
+4. Existe-t-il des étapes lecture, recommandation, exécution ?
+5. Les actions risquées ont-elles validation, retour arrière et arrêt automatique ?
+6. Les lectures, recommandations et modifications sont-elles auditables ?
+
+Si la plupart des réponses sont négatives, ce n’est pas un agent d’entreprise, mais un angle mort de sécurité.
+
+## La position d’ObjectOS
+
+ObjectOS part d’un constat : l’AI utile entrera dans les systèmes métier.
+
+Elle doit lire clients, commandes, tickets, contrats et validations, comprendre leurs relations et faire avancer le travail quand elle y est autorisée.
+
+Mais elle ne doit pas contourner la gouvernance.
+
+ObjectOS place objets, champs, workflows, permissions et actions dans une couche de métadonnées. Les agents travaillent à travers cette couche. L’AI se rapproche du métier réel, mais chaque étape garde identité, limites et preuves.

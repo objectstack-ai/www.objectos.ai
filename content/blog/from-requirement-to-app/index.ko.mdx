@@ -1,0 +1,236 @@
+---
+title: "하나의 요구사항에서 실행 앱까지: 수리 업무로 보는 ObjectStack 메타데이터"
+description: 장비 수리 시나리오를 통해 AI Builder가 하나의 요청을 객체, 필드, 관계, 뷰, 권한, 작업, 워크플로, API, 에이전트 도구로 바꾸는 과정을 보여줍니다.
+author: ObjectStack Team
+date: 2026-06-04
+status: draft
+topic: app-building
+audience: developer
+cover: ./cover.jpg
+tags:
+  - AI Builder
+  - App Development
+  - Metadata
+  - Object Modeling
+---
+
+AI Builder에게 이렇게 말합니다.
+
+> 장비 수리 시스템을 만들어 주세요. 직원은 고장을 신고하고, 티켓은 장비와 연결되며, 엔지니어를 배정하고, 상태를 추적하고, 중단 시간을 계산하고, 높은 우선순위는 자동 배정하며, 종료 전 해결 내용과 비용을 필수로 입력해야 합니다.
+
+몇 분 뒤 페이지뿐 아니라 객체, 필드, 관계, 권한, 뷰, 워크플로, 작업, API, 에이전트 도구가 있는 앱이 실행됩니다.
+
+이 글은 “AI가 앱을 생성한다”는 일반론이 아니라 ObjectStack 메타데이터가 실제로 무엇을 만드는지 보여줍니다.
+
+![요구사항에서 애플리케이션까지의 파이프라인](./requirement-to-app-pipeline.webp)
+
+## 업무 시나리오에서 시작합니다
+
+장비 수리는 단순해 보여도 전체 운영 흐름을 포함합니다. 직원이 고장을 신고하고, 시스템이 장비와 위치와 우선순위에 따라 엔지니어를 배정하고, 엔지니어는 수리와 사진과 메모를 남기며, 관리자는 지연과 중단 시간과 비용을 봅니다. 고위험이나 고비용 티켓은 승인으로 가고, 종료된 티켓은 장비 이력이 됩니다.
+
+전통적인 구현에서는 이 흐름이 테이블, API, 화면, 권한, 상태 머신, 알림, 감사, 리포트에 흩어집니다.
+
+ObjectStack은 먼저 시스템을 메타데이터로 설명합니다. AI Builder는 접착 코드를 쏟아내기 전에 업무 명세를 초안화합니다.
+
+| 업무 질문 | 메타데이터 능력 |
+| --- | --- |
+| 장비, 티켓, 엔지니어란 무엇인가 | 객체와 관계 |
+| 필수, 선택, 열거 필드는 무엇인가 | 필드 타입과 검증 |
+| 누가 무엇을 볼 수 있는가 | 권한 세트와 필드 보안 |
+| 큐와 보드를 어떻게 보여줄 것인가 | 뷰 메타데이터 |
+| 배정, 에스컬레이션, 종료는 어떻게 실행되는가 | 작업과 워크플로 |
+| 에이전트는 무엇을 조회하고 실행할 수 있는가 | 관리되는 도구와 감사 |
+
+## 페이지보다 객체를 먼저 만듭니다
+
+AI Builder는 `device`, `repair_order`, `repair_comment`, `user`, `team`을 식별합니다. 애플리케이션은 객체에서 시작합니다. 객체가 API, UI, 권한, 워크플로, 에이전트 도구를 움직이기 때문입니다.
+
+```ts
+import { ObjectSchema, Field } from '@objectstack/spec/data';
+
+export const Device = ObjectSchema.create({
+  name: 'device',
+  label: 'Device',
+  fields: {
+    name: Field.text({ label: 'Device name', required: true }),
+    code: Field.text({ label: 'Device code', required: true, unique: true }),
+    location: Field.text({ label: 'Location' }),
+    team: Field.lookup('team', { label: 'Responsible team' }),
+    status: Field.select({
+      label: 'Device status',
+      options: [
+        { label: 'Running', value: 'running', default: true },
+        { label: 'Maintenance', value: 'maintenance' },
+        { label: 'Disabled', value: 'disabled' },
+      ],
+    }),
+  },
+});
+```
+
+`team`은 관계, `status`는 열거형, `code`는 유니크 제약입니다. API, 페이지, 필터, 권한, 에이전트가 같은 정보를 사용합니다.
+
+## 티켓 객체가 업무 규칙을 담습니다
+
+```ts
+export const RepairOrder = ObjectSchema.create({
+  name: 'repair_order',
+  label: 'Repair ticket',
+  fields: {
+    title: Field.text({ label: 'Failure description', required: true }),
+    device: Field.lookup('device', { label: 'Device', required: true }),
+    reporter: Field.lookup('user', { label: 'Reporter', required: true }),
+    assignee: Field.lookup('user', { label: 'Engineer' }),
+    priority: Field.select({
+      label: 'Priority',
+      options: [
+        { label: 'Low', value: 'low' },
+        { label: 'Medium', value: 'medium', default: true },
+        { label: 'High', value: 'high' },
+      ],
+    }),
+    status: Field.select({
+      label: 'Status',
+      options: [
+        { label: 'Pending assignment', value: 'pending', default: true },
+        { label: 'In repair', value: 'in_repair' },
+        { label: 'Waiting acceptance', value: 'waiting_acceptance' },
+        { label: 'Closed', value: 'closed' },
+      ],
+    }),
+    reported_at: Field.datetime({ label: 'Reported at', required: true }),
+    started_at: Field.datetime({ label: 'Started at' }),
+    closed_at: Field.datetime({ label: 'Closed at' }),
+    cost: Field.currency({ label: 'Repair cost' }),
+    photos: Field.image({ label: 'On-site photos', multiple: true }),
+  },
+});
+```
+
+`lookup`은 장비와 사용자를 연결하고, `select`는 필터와 보드와 조건을 만들며, 날짜 필드는 SLA와 중단 시간을 계산하고, 비용 필드는 권한과 승인 조건에 쓰입니다.
+
+## 공식, 검증, 뷰, 권한
+
+```ts
+import { cel } from '@objectstack/spec';
+
+downtime_hours: Field.formula({
+  label: 'Downtime hours',
+  expression: cel`
+    closed_at == null || reported_at == null
+      ? null
+      : hours_between(reported_at, closed_at)
+  `,
+});
+```
+
+```ts
+resolution: Field.textarea({
+  label: 'Resolution',
+  requiredWhen: cel`status == "closed"`,
+});
+```
+
+규칙이 화면에만 있으면 API, 에이전트, 대량 작업이 우회할 수 있습니다. 메타데이터가 되면 런타임의 일부가 됩니다.
+
+```ts
+export const EngineerQueueView = {
+  object: 'repair_order',
+  label: 'My repair queue',
+  type: 'list',
+  filter: cel`assignee == $currentUser && status != "closed"`,
+  columns: ['title', 'device', 'priority', 'status', 'reported_at'],
+};
+```
+
+```ts
+export const EngineerPermission = {
+  role: 'maintenance_engineer',
+  object: 'repair_order',
+  readable: cel`assignee == $currentUser`,
+  editable: cel`assignee == $currentUser && status != "closed"`,
+  fields: {
+    cost: { readable: false, editable: false },
+    resolution: { readable: true, editable: true },
+    photos: { readable: true, editable: true },
+  },
+  actions: {
+    start_repair: true,
+    submit_acceptance: true,
+    close_order: false,
+  },
+};
+```
+
+엔지니어는 UI, API, 자신으로 실행되는 에이전트 조회에서 모두 비용을 볼 수 없습니다.
+
+## 작업, 워크플로, API, 도구
+
+```ts
+export const StartRepairAction = {
+  name: 'start_repair',
+  label: 'Start repair',
+  object: 'repair_order',
+  availableWhen: cel`status == "pending" && assignee == $currentUser`,
+  input: {
+    started_at: Field.datetime({ label: 'Start time', default: 'now' }),
+  },
+  changes: {
+    status: 'in_repair',
+    started_at: '$input.started_at',
+  },
+  audit: true,
+};
+```
+
+```ts
+export const AutoAssignHighPriorityRepair = {
+  name: 'auto_assign_high_priority_repair',
+  trigger: {
+    object: 'repair_order',
+    event: 'afterInsert',
+    when: cel`priority == "high" && assignee == null`,
+  },
+  steps: [
+    { action: 'find_on_duty_engineer', output: 'engineer' },
+    { action: 'assign_repair_order', input: { assignee: '$engineer.id' } },
+    { action: 'notify_user', input: { user: '$engineer.id' } },
+  ],
+};
+```
+
+```ts
+export const HighCostCloseApproval = {
+  object: 'repair_order',
+  action: 'close_order',
+  when: cel`cost > 5000`,
+  approvers: ['maintenance_manager'],
+  reason: 'High-cost repair requires manager approval',
+};
+```
+
+같은 메타데이터가 API와 에이전트 도구를 만듭니다.
+
+```bash
+curl -X POST /api/v1/data/repair_order \
+  -d '{ "title": "CNC-3 abnormal noise", "device": "dev_012", "priority": "high" }'
+```
+
+```ts
+export const RepairAgentTools = [
+  tool.queryRecords('repair_order'),
+  tool.getRecord('repair_order'),
+  tool.runAction('repair_order', 'start_repair'),
+  tool.runAction('repair_order', 'submit_acceptance'),
+];
+```
+
+에이전트는 관리되는 도구로 조회하고, `device`를 확장하고, 사용자 권한을 지키며 요약합니다. 실행은 작업을 호출하고, 위험이 있으면 승인으로 갑니다.
+
+## 일회성 코드 생성과의 차이
+
+일회성 코드 생성은 페이지, API, DB 로직, 권한, 스크립트를 만듭니다. 첫 버전은 빠르지만 이후 변경은 어긋납니다.
+
+ObjectStack 메타데이터는 업무 구조에 하나의 출처를 줍니다. 필드, 권한, 작업, 뷰가 바뀌면 API, UI, 감사, 에이전트 도구가 함께 바뀝니다.
+
+AI Builder는 소프트웨어 엔지니어링을 건너뛰는 것이 아닙니다. 사람이 검토하고 플랫폼이 실행하며 이후 변경이 같은 명세에 남도록 중요한 구조를 초안화합니다.

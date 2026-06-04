@@ -1,0 +1,109 @@
+---
+title: Cómo trabajan los agentes de AI dentro de los permisos empresariales
+description: Las empresas no necesitan agentes de AI como superadministradores. Necesitan agentes controlados que hereden permisos, envíen acciones riesgosas a aprobación y dejen auditoría.
+author: ObjectStack Team
+date: 2026-06-04
+status: draft
+topic: governance
+audience: it
+solutions: []
+industries: []
+cover: ./cover.jpg
+tags:
+  - AI Agent
+  - Permisos
+  - Seguridad de datos
+  - Auditoría
+---
+
+Cuando una empresa evalúa agentes de AI, la primera pregunta suele ser:
+
+> ¿Puede conectarse a CRM, ERP, tickets, contratos, pedidos y otros sistemas reales?
+
+La pregunta más importante es otra: ¿con qué identidad accede, qué puede leer, qué puede cambiar y si todo puede detenerse y auditarse cuando algo falla?
+
+Sin esas respuestas, un agente potente se convierte en un administrador oculto: consulta sistemas, llama herramientas y modifica registros sin estar limitado por el rol de una persona real.
+
+El objetivo no es dar superpoderes a la AI. Es permitir que ayude dentro de límites claros.
+
+![Límites de seguridad para agentes de AI](./security-boundaries.webp)
+
+## El agente debe heredar la identidad del usuario
+
+Un agente no debería usar una cuenta universal ni credenciales de administrador de base de datos.
+
+Debe actuar en nombre del usuario conectado. Si un vendedor solo ve sus cuentas, el agente solo ve esas cuentas. Si soporte solo trabaja su cola de tickets, el agente permanece en esa cola. Si un técnico no puede ver el valor de un contrato, el agente tampoco debería verlo.
+
+Esto hace que el sistema sea gobernable: bajas, cambios de rol y cambios de permisos afectan al agente de inmediato, y la auditoría se vincula con una identidad real.
+
+No basta con ponerlo en el prompt. Los permisos del runtime deben imponer la frontera.
+
+## Los permisos necesitan alcance de objeto, registro, campo y acción
+
+“Acceso a CRM” es demasiado amplio.
+
+Un agente seguro necesita cuatro niveles:
+
+- permisos de objeto para clientes, pedidos, tickets o contratos;
+- permisos de registro para datos concretos, como cuentas propias o pedidos regionales;
+- permisos de campo para importes, costes, identificadores o notas internas;
+- permisos de acción para crear tareas, cerrar tickets, enviar presupuestos, cambiar descuentos o modificar roles.
+
+Muchos proyectos de AI fallan porque el modelo de permisos es demasiado grueso. El sistema sabe que el agente puede “consultar clientes”, pero no sabe que no puede ver todos los clientes, todos los campos o todas las acciones.
+
+ObjectOS describe objetos, campos, acciones y permisos como metadatos declarativos. Los agentes no tocan tablas ni API arbitrarias; trabajan mediante herramientas gobernadas.
+
+## Primero leer, luego recomendar, luego ejecutar
+
+No conviene dejar que un agente modifique datos de negocio desde el primer día.
+
+Un despliegue seguro tiene tres fases:
+
+**Solo lectura**: el agente resume, encuentra tickets fuera de SLA o detecta pedidos con riesgo. No escribe datos.
+
+**Recomendación**: propone acciones, como escalar tickets o crear tareas, y una persona confirma.
+
+**Ejecución controlada**: acciones de bajo riesgo, delimitadas y reversibles pueden automatizarse. Las de alto riesgo requieren aprobación.
+
+Así la empresa amplía el alcance del agente gradualmente.
+
+## Las acciones riesgosas requieren aprobación y reversión
+
+Eliminar registros, cambiar datos en masa, modificar importes o descuentos, enviar comunicaciones externas, cambiar permisos o llamar servicios con coste real son acciones de alto riesgo.
+
+Antes de ejecutarlas, el sistema debe mostrar impacto, motivo y registros afectados, y esperar la aprobación de alguien autorizado.
+
+También debe guardar estado antes y después. Si el agente intenta modificar 500 registros, toca clientes sensibles o supera umbrales, el runtime debe detenerse y escalar.
+
+La aprobación no frena la AI. Permite llevarla a producción.
+
+## Todo acceso y cambio debe ser auditable
+
+La actividad de un agente es una cadena: lee datos, analiza contexto, genera una recomendación, llama una herramienta, espera confirmación y modifica registros. Si algo falla, no basta saber que un registro cambió.
+
+La auditoría debe responder quién inició la tarea, qué objetos y registros se leyeron, qué campos se ocultaron, qué herramientas se llamaron, qué recomendó el agente, quién aprobó y cómo cambiaron los datos.
+
+La auditoría no es solo para asignar culpa. Es la base para ampliar el uso del agente con seguridad.
+
+## ¿Usuario controlado o administrador oculto?
+
+Evalúa una arquitectura de agentes con seis preguntas:
+
+1. ¿El agente corre como un usuario real?
+2. ¿Hereda permisos de objeto, registro, campo y acción?
+3. ¿Accede mediante herramientas gobernadas?
+4. ¿Hay fases de lectura, recomendación y ejecución?
+5. ¿Las acciones riesgosas tienen aprobación, reversión y parada automática?
+6. ¿Lecturas, recomendaciones y cambios son auditables?
+
+Si la mayoría de respuestas son negativas, no es un agente empresarial: es un nuevo punto ciego.
+
+## La posición de ObjectOS
+
+ObjectOS parte de una realidad: la AI útil entrará en los sistemas de negocio.
+
+Debe leer clientes, pedidos, tickets, contratos y aprobaciones, entender relaciones y avanzar trabajo cuando esté autorizada.
+
+Pero no puede saltarse la gobernanza.
+
+ObjectOS coloca objetos, campos, workflows, permisos y acciones en una capa de metadatos. Los agentes trabajan a través de esa capa. La AI se acerca al negocio real, pero cada paso tiene identidad, frontera y evidencia.
