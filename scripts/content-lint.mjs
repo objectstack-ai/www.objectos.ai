@@ -84,6 +84,13 @@ function localAssetRefs(data, body) {
   return refs;
 }
 
+function bodyImageRefs(body) {
+  const refs = [];
+  const imagePattern = /!\[[^\]]*]\((\.\/[^)\s]+)(?:\s+"[^"]*")?\)/g;
+  for (const match of body.matchAll(imagePattern)) refs.push(match[1]);
+  return refs;
+}
+
 function addIssue(issues, file, data, severity, message) {
   issues.push({
     file,
@@ -179,6 +186,25 @@ for (const file of files) {
       await access(target);
     } catch {
       addIssue(issues, rel, data, 'error', `Missing local asset: ${ref}`);
+    }
+  }
+
+  if (
+    typeof data.cover === 'string' &&
+    data.cover.startsWith('./') &&
+    bodyImageRefs(body).includes(data.cover)
+  ) {
+    addIssue(issues, rel, data, 'error', `Cover image is duplicated in article body: ${data.cover}`);
+  }
+
+  const seenBodyImages = new Map();
+  for (const ref of bodyImageRefs(body)) {
+    const count = seenBodyImages.get(ref) ?? 0;
+    seenBodyImages.set(ref, count + 1);
+  }
+  for (const [ref, count] of seenBodyImages) {
+    if (count > 1) {
+      addIssue(issues, rel, data, 'error', `Body image is repeated ${count} times: ${ref}`);
     }
   }
 }

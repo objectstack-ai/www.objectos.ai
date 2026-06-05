@@ -52,7 +52,9 @@ export async function getPostGroups(): Promise<PostGroup[]> {
   }
 
   return [...groups.values()].sort(
-    (a, b) => b.primary.data.date.getTime() - a.primary.data.date.getTime()
+    (a, b) =>
+      b.primary.data.date.getTime() - a.primary.data.date.getTime() ||
+      b.slug.localeCompare(a.slug)
   );
 }
 
