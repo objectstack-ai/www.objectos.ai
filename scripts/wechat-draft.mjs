@@ -2,6 +2,10 @@
 // Create a WeChat Official Account DRAFT from an article via the official API.
 // (Stops at draft — you press the final "发布" in the WeChat backend after review.)
 //
+// In-body images are handled automatically: every local <img> (e.g. ./pic.webp)
+// is uploaded to WeChat and rewritten to an mmbiz URL so the draft renders with
+// images intact. webp/svg/gif are converted to PNG (SVG is rasterized) first.
+//
 // Requires a *verified* service/subscription account. Set credentials in .env:
 //   WECHAT_APPID=...
 //   WECHAT_APPSECRET=...
@@ -11,9 +15,10 @@
 //   pnpm wechat:draft <slug> --cover ./path/to/cover.jpg
 //   pnpm wechat:draft <slug> --locale zh-Hans --cover ./cover.jpg
 
-import { readFile } from 'node:fs/promises';
+import { readFile, access } from 'node:fs/promises';
 import { argv, exit, cwd, env } from 'node:process';
 import path from 'node:path';
+import sharp from 'sharp';
 import { toWechatHtml } from './lib/wechat-html.mjs';
 
 const API = 'https://api.weixin.qq.com/cgi-bin';
@@ -81,6 +86,50 @@ async function uploadCover(token, file) {
   return json.media_id;
 }
 
+// Upload one in-body image and return a WeChat-hosted URL usable in article
+// content. Uses cgi-bin/media/uploadimg, which (unlike add_material) does NOT
+// count against the media library quota and returns a permanent mmbiz URL.
+// WeChat's content uploader only accepts JPG/PNG, so webp/svg/gif are
+// rasterized to PNG (SVG is rendered at its intrinsic size) via sharp.
+async function uploadContentImage(token, file) {
+  const ext = path.extname(file).toLowerCase();
+  let buf = await readFile(file);
+  let name = path.basename(file);
+  if (ext !== '.jpg' && ext !== '.jpeg' && ext !== '.png') {
+    buf = await sharp(buf).png().toBuffer();
+    name = path.basename(file, ext) + '.png';
+  }
+  const fd = new FormData();
+  fd.append('media', new Blob([buf]), name);
+  const url = `${API}/media/uploadimg?access_token=${token}`;
+  const json = await (await fetch(url, { method: 'POST', body: fd })).json();
+  check(json, `Upload image ${name}`);
+  return json.url;
+}
+
+// Find every <img> with a local src, upload it, and swap in the WeChat URL.
+// Remote (http/https) and data: sources are left untouched. Uploads are cached
+// by resolved path so a repeated image is only sent once.
+async function inlineImages(token, html, articleDir) {
+  const cache = new Map();
+  const matches = [...html.matchAll(/<img\b[^>]*?\bsrc="([^"]+)"[^>]*>/g)];
+  for (const [, src] of matches) {
+    if (/^(https?:|data:)/i.test(src)) continue;
+    const file = path.resolve(articleDir, src);
+    if (!cache.has(src)) {
+      try {
+        await access(file);
+      } catch {
+        die(`Image referenced but not found: ${src}\n  (resolved to ${file})`);
+      }
+      console.log(`  ↳ uploading image: ${src}…`);
+      cache.set(src, await uploadContentImage(token, file));
+    }
+    html = html.split(`src="${src}"`).join(`src="${cache.get(src)}"`);
+  }
+  return html;
+}
+
 async function addDraft(token, article) {
   const url = `${API}/draft/add?access_token=${token}`;
   const json = await (
@@ -93,18 +142,34 @@ async function addDraft(token, article) {
 // --- main --------------------------------------------------------------------
 const indexName = locale === 'en' ? 'index.mdx' : `index.${locale}.mdx`;
 const flatName = locale === 'en' ? `${slug}.mdx` : `${slug}.${locale}.mdx`;
-const source = await readFile(
+// Prefer folder-per-post layout, fall back to flat files. Track the resolved
+// path so relative in-body image references can be resolved against it.
+const candidates = [
   path.join(cwd(), 'content', 'blog', slug, indexName),
-  'utf8'
-)
-  .catch(() => readFile(path.join(cwd(), 'content', 'blog', flatName), 'utf8'))
-  .catch(() => die(`Not found: content/blog/${slug}/${indexName}`));
+  path.join(cwd(), 'content', 'blog', flatName),
+];
+let srcPath;
+for (const c of candidates) {
+  try {
+    await access(c);
+    srcPath = c;
+    break;
+  } catch {
+    /* try next */
+  }
+}
+if (!srcPath) die(`Not found: content/blog/${slug}/${indexName}`);
+const articleDir = path.dirname(srcPath);
+const source = await readFile(srcPath, 'utf8');
 
-const { html, title, description, author } = toWechatHtml(source);
+let { html, title, description, author } = toWechatHtml(source);
 if (!title) die('Article frontmatter has no title.');
 
 console.log('• Fetching access_token…');
 const token = await getToken();
+
+console.log('• Uploading in-body images…');
+html = await inlineImages(token, html, articleDir);
 
 console.log(`• Uploading cover: ${coverPath}…`);
 const thumb_media_id = await uploadCover(token, coverPath);
