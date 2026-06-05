@@ -1,0 +1,247 @@
+---
+import type { Locale } from '../lib/i18n';
+import { postPath, STATUS_COLOR, ui } from '../lib/i18n';
+import type { LocalePost } from '../lib/posts';
+import { termLabel } from '../lib/terms';
+
+interface Props {
+  post: LocalePost;
+  locale: Locale;
+  variant?: 'standard' | 'feature';
+}
+
+const { post, locale, variant = 'standard' } = Astro.props;
+const d = post.entry.data;
+const t = ui[locale];
+const coverSrc = (cover: unknown): string =>
+  typeof cover === 'string'
+    ? cover
+    : (cover as { src?: string })?.src ?? '';
+---
+
+<li class:list={['article-item', variant]}>
+  <a class="card" href={postPath(locale, post.slug)}>
+    <div class="thumb">
+      {d.cover ? (
+        <img
+          src={coverSrc(d.cover)}
+          alt={d.title}
+          loading="lazy"
+          decoding="async"
+        />
+      ) : (
+        <div class="thumb-fallback">
+          <span class="fmark">◆</span>
+          <span class="ftopic">{termLabel(d.topic, locale)}</span>
+        </div>
+      )}
+    </div>
+    <div class="body">
+      <div class="top">
+        <span class="pill" style={`--c:${STATUS_COLOR[d.status]}`}>
+          {t.status[d.status]}
+        </span>
+        <time datetime={d.date.toISOString()}>{d.date.toISOString().slice(0, 10)}</time>
+      </div>
+      <h2>{d.title}</h2>
+      <p class="desc">{d.description}</p>
+      <div class="facets">
+        <span class="facet topic">{termLabel(d.topic, locale)}</span>
+        <span class="facet">{termLabel(d.audience, locale)}</span>
+        {(d.solutions ?? []).map((slug) => (
+          <span class="facet">{termLabel(slug, locale)}</span>
+        ))}
+        {(d.industries ?? []).map((slug) => (
+          <span class="facet">{termLabel(slug, locale)}</span>
+        ))}
+        {d.tags.map((tag) => (
+          <span class="facet tag">{tag}</span>
+        ))}
+      </div>
+    </div>
+  </a>
+</li>
+
+<style>
+  .article-item {
+    min-width: 0;
+  }
+  .card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    text-decoration: none;
+    color: inherit;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 18px 48px -40px rgba(var(--shadow), 0.52);
+    transition:
+      border-color 0.18s ease,
+      box-shadow 0.18s ease,
+      transform 0.18s ease;
+  }
+  .card:hover {
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+    box-shadow: 0 28px 58px -40px rgba(var(--shadow), 0.72);
+    transform: translateY(-3px);
+  }
+  .thumb {
+    aspect-ratio: 16 / 10;
+    background: var(--surface-sunk);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .thumb :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.28s ease;
+  }
+  .card:hover .thumb :global(img) {
+    transform: scale(1.035);
+  }
+  .thumb-fallback {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    color: color-mix(in srgb, var(--accent) 50%, var(--muted));
+  }
+  .thumb-fallback .fmark {
+    font-size: 1.7rem;
+    opacity: 0.45;
+  }
+  .thumb-fallback .ftopic {
+    font-size: 0.78rem;
+    letter-spacing: 0.05em;
+  }
+  .body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    padding: 1.15rem 1.25rem 1.35rem;
+  }
+  .top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.55rem;
+  }
+  .pill {
+    font-size: 0.72rem;
+    color: var(--c);
+    background: color-mix(in srgb, var(--c) 9%, var(--surface));
+    border: 1px solid color-mix(in srgb, var(--c) 18%, transparent);
+    border-radius: 999px;
+    padding: 0.12rem 0.5rem;
+    text-transform: capitalize;
+  }
+  .top time {
+    font-size: 0.8rem;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+  }
+  h2 {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    line-height: 1.24;
+    letter-spacing: 0;
+    margin: 0 0 0.4rem;
+    transition: color 0.18s ease;
+  }
+  .card:hover h2 {
+    color: var(--accent);
+  }
+  .desc {
+    margin: 0 0 1rem;
+    color: var(--ink-soft);
+    font-size: 0.92rem;
+    line-height: 1.6;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .facets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: auto;
+  }
+  .facet {
+    font-size: 0.72rem;
+    color: var(--ink-soft);
+    background: var(--surface-sunk);
+    padding: 0.12rem 0.5rem;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .facet.topic {
+    color: var(--accent);
+    background: var(--accent-soft);
+    font-weight: 600;
+  }
+  .facet.tag {
+    color: var(--muted);
+    background: transparent;
+    padding: 0.12rem 0.35rem;
+  }
+  .facet.tag::before {
+    content: '#';
+    opacity: 0.6;
+  }
+  .feature .thumb {
+    aspect-ratio: 16 / 9;
+  }
+  .feature h2 {
+    font-size: clamp(1.55rem, 2.6vw, 2.15rem);
+    line-height: 1.12;
+  }
+  .feature .desc {
+    font-size: 1rem;
+    -webkit-line-clamp: 4;
+  }
+  .feature .body {
+    padding: 1.35rem 1.45rem 1.55rem;
+  }
+  @media (max-width: 640px) {
+    .card {
+      border-radius: 8px;
+    }
+    .thumb,
+    .feature .thumb {
+      aspect-ratio: 2 / 1;
+    }
+    .body,
+    .feature .body {
+      padding: 0.9rem 1rem 1rem;
+    }
+    h2,
+    .feature h2 {
+      font-size: 1.08rem;
+      line-height: 1.38;
+    }
+    .desc,
+    .feature .desc {
+      margin-bottom: 0.75rem;
+      font-size: 0.85rem;
+      line-height: 1.55;
+      -webkit-line-clamp: 2;
+    }
+    .facets {
+      gap: 0.3rem;
+    }
+    .facet {
+      font-size: 0.67rem;
+    }
+    .facet.tag {
+      display: none;
+    }
+  }
+</style>

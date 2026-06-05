@@ -1,0 +1,175 @@
+---
+title: "Cambiar sistemas de negocio conversando: campos, flujos, vistas y automatización"
+description: "El verdadero valor de AI Builder está en la iteración conversacional continua: campos, flujos, vistas, permisos y automatizaciones pueden evolucionar con seguridad en la capa de metadatos."
+author: ObjectStack Team
+date: 2026-06-05T10:10:00+08:00
+status: published
+topic: app-building
+audience: business
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Construccion conversacional
+  - AI Builder
+  - Automatizacion
+  - Permisos
+---
+
+Cuando un sistema de negocio entra en produccion, el verdadero trabajo apenas empieza.
+
+El responsable de soporte quiere un campo nuevo. La directora comercial quiere cambiar una etapa. Finanzas quiere agregar una aprobacion. Legal quiere ajustar reglas de riesgo. Operaciones necesita otro tablero. IT quiere restringir permisos. En el desarrollo tradicional, todo esto se convierte en tickets: estimar, planificar, desarrollar, probar y desplegar.
+
+La promesa más importante de un AI Builder es que una parte importante de esos cambios deje de ser "abrir una solicitud" y pase a ser "modificar mediante conversación".
+
+Pero hay que decirlo con precisión. La modificación conversacional no significa que la IA pueda cambiar el sistema de cualquier manera. Significa que el lenguaje natural debe generar un plan de cambio de metadatos que sea explicable, confirmable y reversible.
+
+## Lo que preocupa al lector
+
+Desde la perspectiva de un usuario de low-code, "cambiar una aplicacion conversando" suena comodo, pero tambien peligroso.
+
+Las preocupaciones aparecen enseguida:
+
+- ¿La IA podría modificar el objeto equivocado?
+- ¿Un campo nuevo podría afectar formularios existentes?
+- ¿Un cambio de flujo podría afectar solicitudes que ya están en aprobación?
+- ¿Un cambio de permisos podría exponer datos sensibles?
+- ¿Una automatización podría enviar una notificación incorrecta?
+- ¿Un Agent podría ejecutar una acción fuera de sus permisos?
+- ¿Se puede deshacer el cambio después?
+
+Por eso un articulo sobre AI Builder no debe limitarse a decir "cambia la aplicacion con una frase". Lo importante es explicar como la plataforma convierte una frase en un cambio controlado.
+
+## Tipo de cambio 1: agregar un campo
+
+El usuario dice:
+
+> Agrega a clientes un campo "riesgo de renovacion", con opciones bajo, medio y alto. Los clientes de alto riesgo deben aparecer en el tablero del gerente de customer success.
+
+Un AI Builder profesional no deberia ejecutarlo de inmediato. Primero deberia generar un plan de cambio:
+
+| Elemento | Plan |
+| --- | --- |
+| Objeto | Modificar `customer` |
+| Campo | Agregar campo enum `renewal_risk` |
+| Formularios | Mostrarlo en detalle y edicion de cliente |
+| Vista | Crear tablero "High-risk renewal customers" |
+| Permisos | Customer success puede editar; ventas solo lee |
+| Automatizacion | Notificar al responsable cuando el riesgo sea alto |
+| Agent | Permitir que los resúmenes de cliente usen el campo |
+
+Solo después de la confirmación del usuario la plataforma debería modificar los metadatos.
+
+Esto es distinto de "agregar una columna". El campo entra en todo el runtime de la aplicacion, no solo en la base de datos.
+
+## Tipo de cambio 2: modificar un flujo
+
+El usuario dice:
+
+> Cuando un reembolso supere 3.000, debe aprobar primero el jefe directo y luego el gerente de finanzas. Si el presupuesto del proyecto asociado no alcanza, tambien debe confirmar el responsable del presupuesto.
+
+Esta frase implica condiciones, nodos de aprobacion, estados, notificaciones, excepciones y auditoria.
+
+El Builder deberia generar:
+
+1. Una condicion de importe;
+2. Un nodo de aprobacion del jefe directo;
+3. Un nodo de aprobacion del gerente de finanzas;
+4. Una comprobacion de presupuesto;
+5. Un nodo para el responsable del presupuesto;
+6. Rutas de rechazo y solicitud de informacion adicional;
+7. Comentarios de aprobacion y auditoria con marcas de tiempo.
+
+También debería explicar el alcance del impacto: ¿el nuevo flujo afecta solo reembolsos nuevos o también reembolsos que ya están en proceso? Si afecta instancias en curso, ¿hace falta migrarlas?
+
+Este es un detalle profesional clave en plataformas low-code. Un flujo no termina cuando se dibuja. También tiene que convivir con instancias que ya están ejecutándose.
+
+## Tipo de cambio 3: generar una vista
+
+Las vistas son uno de los mejores casos para la generación conversacional porque los usuarios suelen saber qué quieren ver, pero no cómo configurar filtros y ordenación.
+
+El usuario dice:
+
+> Crea para los project managers una vista "proyectos de alto riesgo esta semana", ordenada por días estimados de retraso, y muestra solo los proyectos de los que soy responsable.
+
+La plataforma deberia generar:
+
+- Objeto: proyecto;
+- Filtro: nivel de riesgo alto y efecto previsto sobre un hito de esta semana;
+- Permiso: mostrar solo proyectos propiedad del usuario actual o en los que participa;
+- Orden: dias estimados de retraso en descendente;
+- Campos: nombre del proyecto, responsable, hito, motivo del riesgo, proxima accion;
+- Presentacion: lista o tablero.
+
+Un buen Builder tambien debe permitir una peticion posterior:
+
+> Agrega una columna más: "última decisión de reunión".
+
+En ese momento no debería reconstruir la página. Debería modificar los metadatos de la vista.
+
+## Tipo de cambio 4: ajustar permisos
+
+Los permisos son la parte más delicada de la modificación conversacional.
+
+El usuario dice:
+
+> Los vendedores solo pueden ver sus propios clientes, los gerentes regionales pueden ver los clientes de su region y la direccion puede ver todos los clientes.
+
+La frase parece clara, pero la plataforma debe generar y mostrar una matriz de permisos:
+
+| Rol | Alcance de registros | Alcance de campos | Acciones permitidas |
+| --- | --- | --- | --- |
+| Ventas | Clientes propios | Ocultar costes y clausulas sensibles del contrato | Crear seguimientos, actualizar actividades |
+| Gerente regional | Clientes de su region | Puede ver importes agregados | Asignar responsables, ver riesgos |
+| Direccion | Todos los clientes | Puede ver resumenes, no necesariamente editar | Ver informes; exportar requiere aprobacion |
+
+Las consultas de Agent también deben heredar esos permisos. Si un vendedor pregunta "¿qué clientes son de alto riesgo?", el sistema solo puede devolver clientes que ese usuario tenga derecho a ver.
+
+La IA puede ayudar a configurar permisos, pero no debe hacer que el control de acceso parezca informal o ligero.
+
+## Tipo de cambio 5: crear automatización y acciones de Agent
+
+El usuario dice:
+
+> Cada lunes por la manana, resume los clientes de alto riesgo para los gerentes de customer success y crea tareas de seguimiento para los responsables.
+
+La plataforma deberia dividirlo en:
+
+- Un disparador programado;
+- Una consulta de clientes de alto riesgo;
+- Agrupacion por responsable;
+- Un resumen interno;
+- Creacion de tareas de seguimiento;
+- Registro de ejecuciones de la automatización;
+- Aviso al administrador si falla.
+
+Tambien debe clasificar el riesgo de cada accion:
+
+- Resumen interno: bajo riesgo;
+- Crear tarea: riesgo bajo o medio;
+- Cambiar el nivel de riesgo del cliente: riesgo medio, requiere confirmacion;
+- Enviar email a un cliente: alto riesgo, requiere aprobacion o envio manual.
+
+La clave de la automatización conversacional no es "hacer más cosas automáticamente". Es separar con claridad lo que puede automatizarse de lo que debe confirmarse.
+
+## Cuatro detalles de producto que necesita un buen builder conversacional
+
+Primero, mostrar el plan de cambio. El usuario debe saber qué objetos, campos, vistas, flujos, permisos y automatizaciones pretende modificar la plataforma.
+
+Segundo, mostrar el alcance del impacto. Especialmente en permisos, flujos y automatizaciones, debe quedar claro qué roles, datos e instancias en ejecución se ven afectados.
+
+Tercero, admitir vista previa y rollback. Antes de cambiar, el usuario debe poder revisar. Despues, debe poder volver a una version anterior.
+
+Cuarto, dejar auditoría. Quién pidió el cambio, cómo lo explicó la IA, si una persona lo confirmó y qué cambió realmente el sistema deben quedar registrados.
+
+Sin estos cuatro detalles, "cambiar apps conversando" se convierte en una caja negra peligrosa.
+
+## El valor de ObjectStack
+
+ObjectStack encaja bien con la iteración conversacional de aplicaciones porque coloca la estructura de la aplicación en la capa de metadatos.
+
+Campos, vistas, flujos, permisos, automatizaciones y herramientas de Agent no quedan dispersos en el código. Son estructuras de negocio que pueden generarse, explicarse, modificarse, versionarse y auditarse.
+
+Los usuarios de negocio describen el cambio en lenguaje natural. La plataforma genera un plan de cambio. Un administrador o business owner lo confirma. El runtime trabaja con los nuevos metadatos, y los Agents heredan los mismos límites de objeto, permisos y acción.
+
+Esa es la clave para cambiar sistemas de negocio conversando: la IA no parchea temporalmente una función. El sistema se vuelve continuamente moldeable por lenguaje de negocio y conserva la gobernanza que una plataforma low-code debe tener.

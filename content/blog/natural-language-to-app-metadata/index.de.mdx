@@ -1,0 +1,129 @@
+---
+title: "Von einem Satz zu Objekten, Ansichten, Berechtigungen und Agents: die Generierungskette des AI Builder"
+description: "Der wichtige Teil von AI Builder ist nicht, einen Satz in Seiten zu verwandeln, sondern eine Geschäftsanforderung in Objekte, Felder, Ansichten, Workflows, Berechtigungen, Automationen und Agent-Tools zu zerlegen."
+author: ObjectStack Team
+date: 2026-06-05T10:30:00+08:00
+status: published
+topic: app-building
+audience: business
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - AI Builder
+  - Natural Language App Building
+  - Metadaten
+  - Agent
+---
+
+"Eine Anwendung aus einem Satz generieren" klingt stark, ist aber leicht missverständlich.
+
+Wenn Leser darunter nur verstehen, dass ein Prompt ein paar Seiten erzeugt, unterscheidet sich das kaum von vielen Codegenerierungs-Demos. Entscheidend ist, wie AI Builder eine Geschäftsanforderung in Anwendungsmetadaten zerlegt, die laufen, geändert und gesteuert werden können.
+
+Beispiel:
+
+> Baue eine Anwendung für Lieferantenrisiko. Sie soll Lieferanten, Qualifikationen, Angebote, Bestellungen, Lieferungen und Qualitätsprobleme verwalten. AI soll abgelaufene Qualifikationen, auffällige Angebote und Lieferrisiken erkennen. Kritische Lieferanten mit hohem Risiko sollen vom Einkaufsleiter genehmigt werden.
+
+Die eigentliche Frage lautet: Was passiert mit diesem Satz in der Plattform?
+
+## Schritt eins: Geschäftsobjekte statt Seiten
+
+AI Builder muss zuerst die Substantive des Geschäfts erkennen.
+
+Das ist keine einzelne Lieferantentabelle, sondern ein Objektgraph: `supplier`, `supplier_qualification`, `quotation`, `purchase_order`, `delivery_record`, `quality_issue`, `supplier_risk` und `approval_task`.
+
+Diese Trennung ist wichtig. Wenn alles in einer großen Tabelle steckt, kann das System später schwer erklären, welche Lieferung, welches Angebot oder welche Qualifikation ein Risiko ausgelöst hat. Sind Objekte sauber getrennt, kann Risiko auf Belege zeigen, Genehmigung auf Gründe, und ein Agent kann seine Grundlage erklären.
+
+## Schritt zwei: Felder und Beziehungen mit Semantik
+
+Ein schwacher Generator behandelt Felder als Formularfelder. Ein guter Builder behandelt sie als Geschäftsbedeutung.
+
+Eine Qualifikation ist nicht nur ein Anhang. Sie braucht Typ, Zertifikatsnummer, Startdatum, Ablaufdatum, Prüfstatus, Prüfer, Lieferantenbezug und Kennzeichnung als kritische Qualifikation.
+
+Ein Angebot ist nicht nur ein Betrag. Es braucht Material, Menge, Einzelpreis, Gültigkeit, Abweichung vom historischen Durchschnitt, Transport- und Serviceumfang sowie die zugehörige Einkaufsanforderung.
+
+Beziehungen sind ebenso wichtig. Ein Lieferant hat viele Qualifikationen, Angebote, Bestellungen, Lieferungen und Qualitätsprobleme. Ein Risikodatensatz muss auf diese Belege zurückverweisen.
+
+Nur dann ist spätere AI-Analyse keine Vermutung des Modells, sondern eine Erklärung auf Basis von Objektbeziehungen.
+
+## Schritt drei: Ansichten für Rollen
+
+Unternehmensanwendungen zeigen nicht allen dieselbe Tabelle.
+
+| Rolle | Ansichten |
+| --- | --- |
+| Einkäufer | Meine Lieferanten, fehlende Qualifikationen, Angebotsvergleich |
+| Einkaufsleiter | Hochrisiko-Lieferanten, offene Genehmigungen, Risiko kritischer Materialien |
+| Qualität | Aktuelle Qualitätsprobleme, wiederholte Fehler, Maßnahmenstatus |
+| Recht / Compliance | Qualifikationslücken, Vertragsrisiken, Sperrlisten |
+| Management | Risikoverteilung, Lieferantenkonzentration, Einkaufstrends |
+
+Das ähnelt View-Konfiguration in Low-Code. Der Wert von AI Builder liegt darin, aus der Anforderung einen sinnvollen Startpunkt zu erzeugen.
+
+Der Benutzer beginnt nicht mit einer leeren Fläche.
+
+## Schritt vier: Berechtigungen und Aktionsgrenzen
+
+Berechtigungen werden in Demos oft übersehen, unterscheiden aber professionelle Plattformen von Spielzeug.
+
+Im Lieferantenbeispiel sollte die Plattform Grenzen erzeugen:
+
+- Einkauf pflegt Lieferantenprofile, ändert aber keine Qualitätsurteile;
+- Qualität schließt Qualitätsprobleme, genehmigt aber keine Bestellungen;
+- Einkaufsleiter genehmigen Hochrisiko-Einkäufe;
+- normale Nutzer sehen keine sensiblen Finanzdaten;
+- AI darf Risiken vorschlagen, aber Lieferanten nicht automatisch sperren;
+- riskante Aktionen für kritische Materialien brauchen Genehmigung.
+
+Das sind Runtime-Regeln, keine Seitendetails.
+
+Wenn ein Agent später "Hochrisiko-Lieferanten finden und Einkauf pausieren" soll, muss er diese Grenzen einhalten.
+
+## Schritt fünf: Workflows, Automation und SLA
+
+Statische Objekte reichen nicht. Die Anwendung muss Arbeit bewegen.
+
+Der Prozess kann Lieferantenanlage, Upload von Qualifikationen, AI-Prüfung, Angebotsvergleich, Bestellung, Rückschreiben von Lieferungen, Risikoerkennung, Genehmigung, Maßnahmenvorschlag und Risikoschluss mit Audit umfassen.
+
+Auch Automation sollte aus der Anforderung entstehen:
+
+- Erinnerung 30 Tage vor Ablauf einer Qualifikation;
+- Blockade neuer Einkäufe bei abgelaufener kritischer Qualifikation;
+- Risikodatensatz bei schlechter Liefertermintreue;
+- Review-Aufgabe bei wiederholten Qualitätsproblemen;
+- Erinnerung bei überfälliger Hochrisiko-Genehmigung.
+
+Das ist Anwendungsgenerierung, nicht Seitengenerierung.
+
+## Schritt sechs: Agent-Tools
+
+Die letzte Schicht AI-nativer Anwendungen sind Agent-Tools.
+
+Die Plattform sollte kontrollierte Tools erzeugen, nicht dem Modell direkten Datenbankzugriff geben: Lieferantenrisiko abfragen, Angebote vergleichen, Risikoquellen erklären, Review-Aufgaben erstellen, Genehmigungen starten und Monatsberichte erzeugen.
+
+Jedes Tool braucht Eingaben, Ausgaben, Berechtigungen und Audit.
+
+Wenn ein Benutzer fragt, ob noch bestellt werden darf, muss der Agent Lieferant, Qualifikationen, Lieferungen, Qualität und Angebote prüfen und eine belegte Antwort geben. Kritische Aktionen müssen Plattformaktionen bleiben.
+
+## Gute Builder zeigen einen Generierungsplan
+
+AI Builder muss Vertrauen schaffen. Er sollte nicht still alles erzeugen, sondern zeigen:
+
+- welche Objekte entstehen;
+- welche Felder wichtig sind;
+- welche Beziehungen bestehen;
+- welche Ansichten erzeugt werden;
+- welche Berechtigungen gelten;
+- welche Automation läuft;
+- welche Tools der Agent nutzen darf;
+- welche Aktionen menschliche Bestätigung brauchen.
+
+Nach Bestätigung wird die Anwendung erzeugt. Der Builder ist ein kooperativer Anwendungsarchitekt, keine Blackbox.
+
+## Die ObjectStack-Kette
+
+ObjectStack sollte natürliche Sprache in eine Anwendungsspezifikation übersetzen, die dann die Runtime antreibt.
+
+**Natürliche Sprache → Geschäftsobjekte → Felder und Beziehungen → Ansichten und Formulare → Berechtigungsgrenzen → Workflow-Automation → Agent-Tools → Audit-Runtime**
+
+Je klarer diese Kette ist, desto einfacher versteht der Leser den Unterschied der Plattform.

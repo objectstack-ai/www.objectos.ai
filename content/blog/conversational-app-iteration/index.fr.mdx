@@ -1,0 +1,175 @@
+---
+title: "Modifier les applications metier par conversation : champs, workflows, vues et automatisation"
+description: "La vraie valeur d'un AI Builder est l'itération conversationnelle continue : champs, workflows, vues, permissions et automatisations peuvent évoluer en sécurité au niveau des métadonnées."
+author: ObjectStack Team
+date: 2026-06-05T10:10:00+08:00
+status: published
+topic: app-building
+audience: business
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Construction conversationnelle
+  - AI Builder
+  - Automatisation
+  - Permissions
+---
+
+Apres la mise en production d'une application metier, le vrai travail commence.
+
+Le responsable support veut ajouter un champ. La directrice commerciale veut changer une etape. La finance veut ajouter une approbation. Le juridique veut ajuster les regles de risque. Les operations veulent un tableau de bord supplementaire. L'IT veut resserrer les permissions. Dans un cycle logiciel classique, tout cela devient des demandes : estimer, planifier, developper, tester, deployer.
+
+La promesse la plus importante d'un AI Builder est de faire passer une grande partie de ces changements de "deposer une demande" a "modifier par conversation".
+
+Mais il faut être précis. La modification conversationnelle ne veut pas dire que l'IA peut changer le système librement. Elle veut dire que le langage naturel doit produire un plan de changement de métadonnées explicable, confirmable et réversible.
+
+## Ce qui inquiete les lecteurs
+
+Du point de vue des utilisateurs d'une plateforme low-code, "modifier une application par conversation" semble pratique, mais aussi risque.
+
+Ils se demanderont naturellement :
+
+- L'IA va-t-elle modifier le mauvais objet ?
+- Un nouveau champ peut-il perturber des formulaires existants ?
+- Un changement de workflow affectera-t-il des demandes déjà en approbation ?
+- Un changement de permissions peut-il exposer des donnees sensibles ?
+- Une automatisation peut-elle envoyer la mauvaise notification ?
+- Un Agent peut-il executer une action hors de ses droits ?
+- Peut-on revenir en arrière après modification ?
+
+Un article sur AI Builder ne doit donc pas seulement dire : "modifier une application avec une phrase". Le vrai sujet est la maniere dont la plateforme transforme une phrase en changement controle.
+
+## Type de changement 1 : ajouter un champ
+
+L'utilisateur dit :
+
+> Ajoute aux clients un champ "risque de renouvellement", avec les options faible, moyen et eleve. Les clients a risque eleve doivent apparaitre dans le tableau du responsable customer success.
+
+Un AI Builder professionnel ne devrait pas executer immediatement. Il devrait d'abord generer un plan de changement :
+
+| Element | Plan |
+| --- | --- |
+| Objet | Modifier `customer` |
+| Champ | Ajouter le champ enum `renewal_risk` |
+| Formulaires | L'afficher dans les pages detail et edition client |
+| Vue | Creer le tableau "High-risk renewal customers" |
+| Permissions | Customer success peut modifier; ventes en lecture seule |
+| Automatisation | Notifier le responsable quand le risque devient eleve |
+| Agent | Autoriser les resumes client a citer ce champ |
+
+La plateforme ne modifie les métadonnées qu'après confirmation de l'utilisateur.
+
+La difference avec "ajouter une colonne" est importante : le champ entre dans tout le runtime applicatif, pas seulement dans la base de donnees.
+
+## Type de changement 2 : modifier un workflow
+
+L'utilisateur dit :
+
+> Quand une note de frais depasse 3 000, elle doit etre approuvee d'abord par le manager direct, puis par le responsable financier. Si le budget du projet associe est insuffisant, le responsable du budget doit aussi confirmer.
+
+Cette phrase implique des conditions, des noeuds d'approbation, des etats, des notifications, des exceptions et de l'audit.
+
+Le Builder devrait generer :
+
+1. Une condition de montant;
+2. Un noeud d'approbation du manager direct;
+3. Un noeud d'approbation du responsable financier;
+4. Une verification du budget;
+5. Un noeud pour le responsable du budget;
+6. Des chemins de rejet et de demande de complements;
+7. Les commentaires d'approbation et les horodatages d'audit.
+
+Il devrait aussi indiquer le périmètre d'impact : ce workflow concerne-t-il seulement les nouvelles notes de frais, ou aussi celles déjà en cours d'approbation ? Si des instances en cours sont concernées, faut-il les migrer ?
+
+C'est un détail professionnel essentiel dans une plateforme low-code. Un workflow n'est pas terminé parce qu'il est dessiné. Il doit aussi cohabiter avec des instances déjà en exécution.
+
+## Type de changement 3 : generer une vue
+
+Les vues sont l'un des meilleurs cas pour la generation conversationnelle, car les utilisateurs savent souvent ce qu'ils veulent voir sans savoir configurer les filtres et le tri.
+
+L'utilisateur dit :
+
+> Cree pour les chefs de projet une vue "projets a haut risque cette semaine", triee par jours de retard prevus, et affiche seulement les projets dont je suis responsable.
+
+La plateforme devrait generer :
+
+- Objet : projet;
+- Filtre : niveau de risque eleve et impact attendu sur un jalon de cette semaine;
+- Permission : afficher seulement les projets possedes par l'utilisateur courant ou auxquels il participe;
+- Tri : jours de retard prevus en ordre decroissant;
+- Champs : nom du projet, responsable, jalon, raison du risque, prochaine action;
+- Presentation : liste ou tableau.
+
+Un bon Builder devrait aussi accepter une demande de suivi :
+
+> Ajoute une colonne "derniere decision de reunion".
+
+À ce moment, il ne doit pas reconstruire la page. Il doit modifier les métadonnées de la vue.
+
+## Type de changement 4 : ajuster les permissions
+
+Les permissions sont la partie la plus sensible de la modification conversationnelle.
+
+L'utilisateur dit :
+
+> Les commerciaux ne voient que leurs propres clients, les responsables régionaux voient les clients de leur région, et la direction voit tous les clients.
+
+La phrase semble claire, mais la plateforme doit generer et afficher une matrice de permissions :
+
+| Role | Perimetre des enregistrements | Perimetre des champs | Actions autorisees |
+| --- | --- | --- | --- |
+| Commercial | Ses propres clients | Masquer les couts et clauses sensibles du contrat | Creer des suivis, mettre a jour les activites |
+| Responsable regional | Clients de sa region | Peut voir les montants agreges | Assigner des responsables, voir les risques |
+| Direction | Tous les clients | Peut voir les resumes, pas forcement modifier | Voir les rapports; export avec approbation |
+
+Les requêtes d'Agent doivent hériter des mêmes permissions. Si un commercial demande "quels clients sont à haut risque ?", le système ne doit retourner que les clients qu'il a le droit de voir.
+
+L'IA peut aider a configurer les permissions, mais elle ne doit pas rendre le controle d'acces leger ou approximatif.
+
+## Type de changement 5 : creer une automatisation et des actions Agent
+
+L'utilisateur dit :
+
+> Chaque lundi matin, resume les clients a haut risque pour les responsables customer success et cree des taches de suivi pour les proprietaires.
+
+La plateforme devrait decomposer cela en :
+
+- Un declencheur planifie;
+- Une requete sur les clients a haut risque;
+- Un regroupement par proprietaire;
+- Un resume interne;
+- La creation de taches de suivi;
+- Les journaux d'execution de l'automatisation;
+- Une notification administrateur en cas d'echec.
+
+Elle doit aussi classer le risque des actions :
+
+- Resume interne : risque faible;
+- Creation de tache : risque faible a moyen;
+- Modification du niveau de risque client : risque moyen, confirmation requise;
+- Envoi d'un email au client : risque eleve, approbation ou envoi manuel requis.
+
+La cle de l'automatisation conversationnelle n'est pas "faire plus automatiquement". C'est distinguer clairement ce qui peut etre automatise de ce qui doit etre confirme.
+
+## Quatre details produit indispensables
+
+Premierement, afficher le plan de changement. L'utilisateur doit savoir quels objets, champs, vues, workflows, permissions et automatisations la plateforme veut modifier.
+
+Deuxiemement, afficher le perimetre d'impact. Pour les permissions, workflows et automatisations surtout, il faut expliquer quels roles, donnees et instances en cours sont concernes.
+
+Troisièmement, prendre en charge la prévisualisation et le rollback. Avant modification, on doit pouvoir prévisualiser. Après modification, on doit pouvoir revenir à une version précédente.
+
+Quatrièmement, conserver un audit. Qui a demandé le changement, comment l'IA l'a expliqué, si un humain l'a confirmé, et ce que le système a finalement changé doivent être enregistrés.
+
+Sans ces quatre details, "modifier les applications par conversation" devient une boite noire dangereuse.
+
+## La valeur d'ObjectStack
+
+ObjectStack convient bien à l'itération conversationnelle des applications parce qu'il place la structure applicative dans la couche de métadonnées.
+
+Champs, vues, workflows, permissions, automatisations et outils Agent ne sont pas disperses dans le code. Ce sont des structures metier qui peuvent etre generees, expliquees, modifiees, versionnees et auditees.
+
+Les utilisateurs métier décrivent le changement en langage naturel. La plateforme génère un plan. Un administrateur ou un business owner le confirme. Le runtime fonctionne ensuite avec les nouvelles métadonnées, et les Agents héritent des mêmes limites d'objet, de permission et d'action.
+
+C'est la clé pour modifier les systèmes métier par conversation : l'IA ne corrige pas temporairement une fonctionnalité. Le système devient continuellement modelable par le langage métier, tout en conservant la gouvernance attendue d'une plateforme low-code.

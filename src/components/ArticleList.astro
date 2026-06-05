@@ -1,7 +1,8 @@
 ---
 import { getPostsInLocale, articleHasTerm } from '../lib/posts';
-import { ui, postPath, STATUS_COLOR, type Locale } from '../lib/i18n';
-import { termBySlug, termDescription, termLabel, type TermGroup } from '../lib/terms';
+import { ui, type Locale } from '../lib/i18n';
+import { termBySlug, termDescription, type TermGroup } from '../lib/terms';
+import ArticleCard from './ArticleCard.astro';
 
 interface Props {
   locale: Locale;
@@ -23,10 +24,76 @@ const heroLead = activeTerm
   ? termDescription(activeTerm, locale)
   : t.articlesLead(shown.length);
 
-const coverSrc = (cover: unknown): string =>
-  typeof cover === 'string'
-    ? cover
-    : (cover as { src?: string })?.src ?? '';
+const featuredSlugs = [
+  'metadata-not-code-generation',
+  'natural-language-to-app-metadata',
+  'airtable-style-ai-builder',
+  'conversational-app-iteration',
+];
+const isBlogHome = !activeTerm;
+const featured = isBlogHome
+  ? featuredSlugs
+      .map((slug) => shown.find((post) => post.slug === slug))
+      .filter(Boolean)
+  : [];
+const featuredSet = new Set(featured.map((post) => post!.slug));
+const latest = isBlogHome ? shown.filter((post) => !featuredSet.has(post.slug)) : shown;
+const homeCopy: Record<Locale, {
+  recommendedTitle: string;
+  recommendedLead: string;
+  latestTitle: string;
+  latestLead: string;
+}> = {
+  en: {
+    recommendedTitle: 'Recommended',
+    recommendedLead: 'Start with the core ideas behind AI-native application building.',
+    latestTitle: 'Latest Articles',
+    latestLead: 'Fresh writing from the ObjectOS blog.',
+  },
+  'zh-Hans': {
+    recommendedTitle: '推荐文章',
+    recommendedLead: '先从 AI 原生应用搭建、元数据生成和对话式 Builder 的核心文章读起。',
+    latestTitle: '最新文章',
+    latestLead: '按发布时间浏览 ObjectOS 的最新内容。',
+  },
+  'zh-Hant': {
+    recommendedTitle: '推薦文章',
+    recommendedLead: '先從 AI 原生應用搭建、後設資料生成和對話式 Builder 的核心文章讀起。',
+    latestTitle: '最新文章',
+    latestLead: '按發布時間瀏覽 ObjectOS 的最新內容。',
+  },
+  ja: {
+    recommendedTitle: 'おすすめ記事',
+    recommendedLead: 'AI-native アプリ構築、メタデータ生成、対話型 Builder の中核から読み始められます。',
+    latestTitle: '最新記事',
+    latestLead: 'ObjectOS ブログの新着記事です。',
+  },
+  de: {
+    recommendedTitle: 'Empfohlen',
+    recommendedLead: 'Beginnen Sie mit den Kernideen für AI-native Anwendungsentwicklung.',
+    latestTitle: 'Neueste Artikel',
+    latestLead: 'Aktuelle Beiträge aus dem ObjectOS Blog.',
+  },
+  es: {
+    recommendedTitle: 'Recomendados',
+    recommendedLead: 'Empieza por las ideas centrales para crear aplicaciones AI-native.',
+    latestTitle: 'Artículos Recientes',
+    latestLead: 'Publicaciones recientes del blog de ObjectOS.',
+  },
+  fr: {
+    recommendedTitle: 'Recommandés',
+    recommendedLead: 'Commencez par les idées clés de la construction d’applications AI-native.',
+    latestTitle: 'Articles Récents',
+    latestLead: 'Les dernières publications du blog ObjectOS.',
+  },
+  ko: {
+    recommendedTitle: '추천 글',
+    recommendedLead: 'AI-native 애플리케이션 구축의 핵심 개념부터 읽어보세요.',
+    latestTitle: '최신 글',
+    latestLead: 'ObjectOS 블로그의 최신 글입니다.',
+  },
+};
+const c = homeCopy[locale];
 ---
 
 <section class="hero">
@@ -37,55 +104,44 @@ const coverSrc = (cover: unknown): string =>
 {
   shown.length === 0 ? (
     <p class="empty">{t.empty}</p>
+  ) : isBlogHome ? (
+    <>
+      {featured.length > 0 && (
+        <section class="section-block recommended" aria-labelledby="recommended-title">
+          <div class="section-head">
+            <p class="kicker">{c.recommendedTitle}</p>
+            <h2 id="recommended-title">{c.recommendedTitle}</h2>
+            <p>{c.recommendedLead}</p>
+          </div>
+          <ul class="featured-grid">
+            {featured.map((post, index) => (
+              <ArticleCard
+                post={post!}
+                {locale}
+                variant={index === 0 ? 'feature' : 'standard'}
+              />
+            ))}
+          </ul>
+        </section>
+      )}
+      <section class="section-block latest" aria-labelledby="latest-title">
+        <div class="section-head compact">
+          <p class="kicker">{c.latestTitle}</p>
+          <h2 id="latest-title">{c.latestTitle}</h2>
+          <p>{c.latestLead}</p>
+        </div>
+        <ul class="grid">
+          {latest.map((post) => (
+            <ArticleCard {post} {locale} />
+          ))}
+        </ul>
+      </section>
+    </>
   ) : (
     <ul class="grid">
-      {shown.map((p) => {
-        const d = p.entry.data;
-        return (
-          <li>
-            <a class="card" href={postPath(locale, p.slug)}>
-              <div class="thumb">
-                {d.cover ? (
-                  <img
-                    src={coverSrc(d.cover)}
-                    alt={d.title}
-                    loading="lazy"
-                    decoding="async"
-                  />
-                ) : (
-                  <div class="thumb-fallback">
-                    <span class="fmark">◆</span>
-                    <span class="ftopic">{termLabel(d.topic, locale)}</span>
-                  </div>
-                )}
-              </div>
-              <div class="body">
-                <div class="top">
-                  <span class="pill" style={`--c:${STATUS_COLOR[d.status]}`}>
-                    {t.status[d.status]}
-                  </span>
-                  <time datetime={d.date.toISOString().slice(0, 10)}>{d.date.toISOString().slice(0, 10)}</time>
-                </div>
-                <h2>{d.title}</h2>
-                <p class="desc">{d.description}</p>
-                <div class="facets">
-                  <span class="facet topic">{termLabel(d.topic, locale)}</span>
-                  <span class="facet">{termLabel(d.audience, locale)}</span>
-                  {(d.solutions ?? []).map((slug) => (
-                    <span class="facet">{termLabel(slug, locale)}</span>
-                  ))}
-                  {(d.industries ?? []).map((slug) => (
-                    <span class="facet">{termLabel(slug, locale)}</span>
-                  ))}
-                  {d.tags.map((tag) => (
-                    <span class="facet tag">{tag}</span>
-                  ))}
-                </div>
-              </div>
-            </a>
-          </li>
-        );
-      })}
+      {shown.map((post) => (
+        <ArticleCard {post} {locale} />
+      ))}
     </ul>
   )
 }
@@ -130,128 +186,44 @@ const coverSrc = (cover: unknown): string =>
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 1.25rem;
   }
-  .card {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    text-decoration: none;
-    color: inherit;
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 18px 48px -40px rgba(var(--shadow), 0.52);
-    transition:
-      border-color 0.18s ease,
-      box-shadow 0.18s ease,
-      transform 0.18s ease;
+  .section-block {
+    margin-top: 2.4rem;
   }
-  .card:hover {
-    border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
-    box-shadow: 0 28px 58px -40px rgba(var(--shadow), 0.72);
-    transform: translateY(-3px);
+  .section-head {
+    max-width: 760px;
+    margin-bottom: 1rem;
   }
-
-  .thumb {
-    aspect-ratio: 16 / 10;
-    background: var(--surface-sunk);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-  }
-  .thumb :global(img) {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.28s ease;
-  }
-  .card:hover .thumb :global(img) {
-    transform: scale(1.035);
-  }
-  .thumb-fallback {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.4rem;
-    color: color-mix(in srgb, var(--accent) 50%, var(--muted));
-  }
-  .thumb-fallback .fmark {
-    font-size: 1.7rem;
-    opacity: 0.45;
-  }
-  .thumb-fallback .ftopic {
+  .section-head .kicker {
+    margin: 0 0 0.25rem;
+    color: var(--accent);
     font-size: 0.78rem;
-    letter-spacing: 0.05em;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
   }
-
-  .body {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    padding: 1.15rem 1.25rem 1.35rem;
-  }
-  .top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-    margin-bottom: 0.55rem;
-  }
-  .top time {
-    font-size: 0.8rem;
-    color: var(--muted);
-    font-variant-numeric: tabular-nums;
-    flex-shrink: 0;
-  }
-  .card h2 {
+  .section-head h2 {
     font-family: var(--font-display);
-    font-size: 1.25rem;
-    line-height: 1.24;
+    font-size: clamp(1.65rem, 3vw, 2.3rem);
+    line-height: 1.08;
     letter-spacing: 0;
-    margin: 0 0 0.4rem;
-    transition: color 0.18s ease;
+    margin: 0;
   }
-  .card:hover h2 {
-    color: var(--accent);
-  }
-  .desc {
-    margin: 0 0 1rem;
+  .section-head p:last-child {
     color: var(--ink-soft);
-    font-size: 0.92rem;
-    line-height: 1.6;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    margin: 0.45rem 0 0;
+    line-height: 1.65;
   }
-  .facets {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem;
-    margin-top: auto;
+  .featured-grid {
+    list-style: none;
+    display: grid;
+    grid-template-columns: minmax(0, 1.28fr) minmax(280px, 0.72fr);
+    grid-auto-flow: dense;
+    gap: 1.25rem;
+    margin: 0;
+    padding: 0;
   }
-  .facet {
-    font-size: 0.72rem;
-    color: var(--ink-soft);
-    background: var(--surface-sunk);
-    padding: 0.12rem 0.5rem;
-    border-radius: 999px;
-    white-space: nowrap;
-  }
-  .facet.topic {
-    color: var(--accent);
-    background: var(--accent-soft);
-    font-weight: 600;
-  }
-  .facet.tag {
-    color: var(--muted);
-    background: transparent;
-    padding: 0.12rem 0.35rem;
-  }
-  .facet.tag::before {
-    content: '#';
-    opacity: 0.6;
+  .featured-grid :global(.feature) {
+    grid-row: span 3;
   }
   @media (max-width: 640px) {
     .hero {
@@ -270,33 +242,15 @@ const coverSrc = (cover: unknown): string =>
       grid-template-columns: minmax(0, 1fr);
       gap: 0.9rem;
     }
-    .card {
-      border-radius: 8px;
+    .section-block {
+      margin-top: 1.8rem;
     }
-    .thumb {
-      aspect-ratio: 2 / 1;
+    .section-head.compact {
+      display: block;
     }
-    .body {
-      padding: 0.9rem 1rem 1rem;
-    }
-    .card h2 {
-      font-size: 1.08rem;
-      line-height: 1.38;
-    }
-    .desc {
-      margin-bottom: 0.75rem;
-      font-size: 0.85rem;
-      line-height: 1.55;
-      -webkit-line-clamp: 2;
-    }
-    .facets {
-      gap: 0.3rem;
-    }
-    .facet {
-      font-size: 0.67rem;
-    }
-    .facet.tag {
-      display: none;
+    .featured-grid {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0.9rem;
     }
   }
 </style>
