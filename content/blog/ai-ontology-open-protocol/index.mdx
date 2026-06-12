@@ -1,0 +1,145 @@
+---
+title: "AI Needs an Ontology — But It Should Be an Open Protocol, Not a Closed Platform"
+description: "Palantir proved that AI needs a governed semantic layer to enter the enterprise. But as AI writes the software and agents choose the stack, it's worth rethinking which layer should be open — and which layer is the business."
+author: ObjectStack Team
+date: 2026-06-12
+status: published
+topic: governance
+audience: business
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Ontology
+  - Palantir
+  - AI Governance
+  - Open Protocol
+  - Perspective
+---
+
+Let me start with a story you have probably watched happen.
+
+A company kicks off an "AI assistant" project. Week one, the demo is stunning: someone exports a copy of the customer data, feeds it to a model, and it really can answer "which accounts in the East region are at renewal risk?" Leadership sees it and immediately approves a bigger pilot.
+
+Month three, it's time to connect production data. The security team walks in and asks three questions:
+
+- What data can the AI see? If sales rep A asks for "company-wide performance rankings," will it read out everyone else's commissions?
+- It's going to take actions — change a discount, send a contract. Whose permissions apply? When something goes wrong, who is accountable?
+- When audit asks "who approved this discount," where is the record for the part the AI did?
+
+The project team has no answers. Not because they didn't try — because **the architecture has no layer capable of answering those questions**. The data is scattered across a dozen systems. Permissions live inside each application's code. The rule for "discount approval" exists mainly in one senior employee's head. The AI is staring at raw tables and raw endpoints, and no amount of intelligence can read a company's rules from a place where they were never written down.
+
+Month nine, the pilot quietly ends. The model didn't lose on capability. It lost because nobody was willing to sign off.
+
+The industry has a name for what was missing: an **ontology** — a structured, machine-readable semantic layer that explicitly defines what business objects exist, how they relate, who is allowed to do what to them, and where every action gets recorded.
+
+## Palantir turned this idea into a hundred-billion-dollar business
+
+The company that turned the ontology from a research concept into commercial fact is Palantir. It's worth looking honestly at why it succeeded — the fairer the look, the sharper the question that follows.
+
+Palantir Foundry does two core things. First, it **integrates an enterprise's scattered data into a unified ontology**: customers, equipment, and orders stop being dozens of tables and become typed business objects with relationships and properties. Second, it funnels every write operation through **governed Actions** — each one validated, permissioned, and fully audited. After 2023, AIP pointed this architecture squarely at large language models: **the LLM never touches the database; it can only call governed tools exposed by the ontology layer.** Models can be swapped. The boundary stays.
+
+Why is it expensive? Because the problem it solves is genuinely expensive. Untangling twenty years of accumulated legacy systems into one clean ontology takes Palantir's forward-deployed engineers working through those systems one at a time, reconciling concepts one at a time — labor-intensive engineering in the most literal sense. Its customers are governments, defense, banks, and energy companies, for whom "every AI step inside permissions, every step on the record" is a hard requirement with a budget to match. Contracts start in the millions, and customers renew — because it genuinely answers the three questions a CISO cares about most. The same three questions from the opening story.
+
+So Palantir's market cap is not proof of a sales machine. It's proof of an architectural judgment: **for AI to enter the enterprise, a governed business semantic layer has to exist first.** That judgment no longer needs defending.
+
+What needs rethinking is the next question: what *form* should this layer take? Because a few things are changing.
+
+## Software is increasingly written by AI
+
+The first change is the most visible: applications themselves are increasingly written by AI.
+
+"Build a custom expense-approval system for a 50-person team" used to be economically absurd — the development cost outweighed the pain. Today an AI agent delivers it in an afternoon. Custom business software is going from a scarce good to a commodity, and total demand is about to explode.
+
+Notice *where* it explodes: in the long tail. In teams that will never appear on any enterprise software vendor's prospect list — no procurement process, no implementation budget, no POC review meetings. They just tell an agent to "build something that works," and start using it the same day.
+
+A model that runs on forward-deployed engineers and million-dollar contracts structurally cannot reach this market. That's not a criticism; they are simply two different markets. But every system in this new market **will slam into the same three security questions from the opening** — except when it happens, there's no forward-deployed engineer standing nearby.
+
+## The next one making technology choices is an agent
+
+The second change is quieter but cuts deeper: the act of choosing technology is itself moving from humans to AI.
+
+Ask an agent today to "build a customer management system," and it will most likely reach for Next.js and Postgres. Why? Nobody bought ads in its head. Those technologies are **open, thoroughly documented, and massively present in its training data**. The agent has seen hundreds of thousands of uses and knows where every pothole is.
+
+This creates something that didn't exist before: **for developer-facing technology, public protocol text and open-source code are now the distribution channel itself.** The more open a protocol is — the more it gets discussed, the more code there is to learn from — the better the next generation of models understands it, and the more agents default to it. The loop feeds itself.
+
+A closed platform cannot enter this loop. Its ontology format, action semantics, and permission model sit behind documentation walls and contracts. Models can't learn it; agents can't self-serve their way into it. It can be selected by a procurement process, but it cannot be *chosen by an agent*. As more software gets written by agents, that stops being a marketing problem. It's **absence from the channel**.
+
+## Wait — haven't closed platforms won before?
+
+By now a smart objection should have surfaced: openness doesn't always win. The cloud era was won by AWS. Mobile was won by the iPhone. Both closed.
+
+The objection deserves a serious answer, because answering it exposes the actual pattern.
+
+Look at how AWS makes money: it hosts Linux, Kubernetes, Postgres — open standards, all the way down. The iPhone is closed, but every packet it sends rides on TCP/IP and HTTP. Go back further: database vendors fought each other to the death while SQL, the language itself, stayed public; the container-orchestration wars ended with everyone running the same open OCI image format.
+
+The pattern is remarkably consistent: **the "definition layer" that an entire ecosystem depends on tends to end up open — because nobody dares build their assets on a single vendor's grammar. The "runtime layer" can stay closed and charge money — because running things means ongoing operations, performance, and accountability, which are real, recurring costs.** AWS itself is the biggest proof: definitions belong to the community; running them is the business.
+
+A business semantic layer is a textbook definition layer. Your object model, permission rules, and approval flows will be depended on by your applications, your agents, and your audit systems. The more things depend on it, the less it should live inside one vendor's platform database — and the more it should be files in your own repository: readable, version-controlled, portable.
+
+Enterprises spent twenty years liberating their **data** from one closed system after another. They should not spend the AI era locking up something even more fundamental — **the definition of the business itself** — all over again.
+
+## What this "definition" actually looks like
+
+Enough abstraction. Here is a sales-opportunity object in the ObjectStack protocol, abridged from a real example:
+
+```ts
+export const Opportunity = ObjectSchema.create({
+  name: 'crm_opportunity',
+  label: 'Opportunity',
+  fields: {
+    name: Field.text({ label: 'Opportunity Name', required: true }),
+    account: Field.lookup('crm_account', { label: 'Account', required: true }),
+    amount: Field.currency({ label: 'Amount', min: 0 }),
+    probability: Field.percent({ label: 'Probability', defaultValue: 50 }),
+    expected_revenue: Field.formula({
+      label: 'Expected Revenue',
+      expression: cel`amount * probability / 100`,
+    }),
+    discount_percent: Field.percent({ label: 'Discount %', max: 100 }),
+  },
+});
+
+// Permissions are declared the same way: sales can read and write, never delete
+export const SalesUser: Security.PermissionSet = {
+  name: 'crm_sales_user',
+  objects: {
+    crm_opportunity: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: false },
+  },
+};
+```
+
+The point is not the syntax. The point is that **these few dozen lines are the system**. The runtime (ObjectOS) reads this definition and generates the database tables, the REST API, the admin UI — and the governed tools an AI agent can call directly. Discounts above 30% need finance approval? That's a flow definition attached to this object: equally declarative, equally in version control.
+
+![One metadata definition becomes the API, the UI, the AI tools, and the enforced permissions and audit](./one-definition-four-surfaces-en.svg)
+
+Three consequences follow directly:
+
+1. **The three security questions from the opening get structural answers.** What can the AI see — it's written in the permission set. Whose permissions apply when it acts — it acts as the signed-in user, enforced by the runtime, not pleaded for in a prompt. Where's the audit trail — humans and agents write to the same ledger: who, what, when, why. Compliance reads one log, not two.
+2. **Business change becomes code review.** The AI wants to add a renewal reminder? What it submits is a metadata diff — which fields changed, which permissions moved, all visible at a glance. And because definitions are versioned, mistakes roll back.
+3. **The whole system fits in one agent's context window.** A typical enterprise module collapses from tens of thousands of lines of CRUD and glue into a few hundred lines of declarations — small enough for an AI to read every dependency end to end, then safely refactor across data, API, UI, and permissions in a single change. That is the line between "AI as co-maintainer" and "AI as autocomplete."
+
+## The protocol belongs to the community; the runtime is the business
+
+Now the argument closes on itself.
+
+The ontology judgment is correct — Palantir proved it for the whole industry. But by the "open definitions, paid runtime" pattern, the healthy form of this layer in the AI era is: **the business semantic protocol belongs to the open ecosystem, like Linux — and a governed runtime executes it in your own environment.**
+
+That is exactly the division of labor between ObjectStack and ObjectOS:
+
+- **ObjectStack** is the open protocol for describing business applications (Apache 2.0): objects, relationships, permissions, flows, APIs, UI, and AI tools, defined once. It lives in your repository — diffable, portable, readable by any agent — and therefore lives on the public internet, inside the training data of every future model.
+- **ObjectOS** is the runtime for those definitions: it executes everything on your servers, against your database, enforcing permissions and writing the audit log at runtime. Governance isn't written in the prompt; it's written in the execution engine.
+
+On one side: a protocol any team or any agent can afford, understand, and walk away with — today. On the other: the things enterprises genuinely pay for — hosting, compliance, multi-environment publishing, someone on the hook for operations. The definitions are yours. The trouble of running them is our business.
+
+## Closing
+
+That AI pilot that died in month nine never lost to model capability. It lost to the absence of a semantic layer a security team could sign off on. The most expensive company in the industry spent a decade proving how much that layer is worth. The next job is making sure it stops being a luxury of the largest enterprises.
+
+If you want to test whether any of this is real:
+
+```bash
+npm i -g @objectstack/cli && os start
+```
+
+Five minutes from now, define your first business object — then watch it become a database table, an API, an admin UI, and a tool an AI can safely call. Every call carries permissions. Every call writes the ledger.
