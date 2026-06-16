@@ -1,0 +1,132 @@
+---
+title: "Une fois MCP installé sur dix mille serveurs : ce qui manque aux agents d'entreprise, ce n'est pas le protocole, c'est une couche d'outils gouvernée"
+description: "Emballer une base de données en outil MCP suffit pour qu'un agent se « branche » en un après-midi. Et il exportera de bon cœur le montant des contrats de tous les clients de l'entreprise dans un tableau — parce que cette couche d'emballage n'a pas d'identité. MCP s'est déployé sur des dizaines de milliers de serveurs en un an, la bataille de la connexion est gagnée ; ce qui est vraiment rare, c'est la couche d'outils derrière le protocole, qui impose les permissions, laisse une trace, et que vous n'avez pas à écrire à la main."
+author: ObjectStack Team
+date: 2026-06-16T14:00:00+08:00
+status: published
+topic: ai-agents
+audience: it
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - MCP
+  - A2A
+  - Interopérabilité des agents
+  - Couche d'outils
+  - Gouvernance de l'IA
+  - Perspective
+---
+
+Un ingénieur d'une entreprise a passé un après-midi à emballer la base de production dans une couche de serveur MCP, et son agent interne s'est « branché ». La démo s'est bien passée, le patron était satisfait.
+
+Le lendemain, un commercial demande négligemment à l'agent : « Exporte-moi le montant des contrats de tous les clients dans un tableau, je veux voir la situation d'ensemble. »
+
+L'agent s'est exécuté de bon cœur — pour toute l'entreprise, sans en omettre un seul, y compris les contrats d'autres régions et au nom d'autres personnes que ce commercial n'avait aucun droit de consulter. Il n'avait aucune malveillance, il était simplement **très serviable**. Le problème, c'est que cette couche d'emballage montée à la va-vite dans l'après-midi **n'avait aucune notion d'identité** : elle ne savait pas qui posait la question ni à quelles données cette personne avait normalement accès. Ce qu'elle exposait à l'agent, c'était tout ce que ce service pouvait toucher.
+
+Ce tableau a ensuite été transféré dans un groupe d'une cinquantaine de personnes. Le temps que quelqu'un se rende compte de l'anomalie et que l'équipe sécurité intervienne, le mal était fait — non pas le mal spectaculaire d'une cyberattaque, mais un mal plus difficile à rattraper : les niveaux de rémunération internes, les conditions commerciales des clients, les performances des collègues, divulgués d'un coup, au nom de la « serviabilité », à des gens qui n'auraient pas dû les voir. Après coup, personne n'a pu dire précisément qui avait vu quoi, car ces appels **n'étaient entrés dans aucun journal d'audit**.
+
+Si cela a pu arriver, c'est précisément parce que « se connecter » est désormais devenu trop facile.
+
+## La bataille de la connexion est en gros gagnée — et c'est là que réside le risque
+
+Reconnaissons d'abord l'événement majeur : MCP s'est déployé en un an sur **des dizaines de milliers de serveurs d'entreprise, avec 97 millions de téléchargements de SDK** ; Anthropic, OpenAI, Google, Microsoft, AWS s'y sont tous ralliés ; A2A a franchi 150 organisations et a rejoint la Linux Foundation. La manière dont un agent « se connecte aux outils et aux autres agents » est désormais standardisée.
+
+Mais le succès lui-même a fabriqué un piège. La connexion — qui représente à peu près 80 % de la charge d'ingénierie — se règle soudain en quelques heures. Du coup, les 20 % vraiment difficiles et vraiment importants (une fois connecté, a-t-il le droit de faire, et l'action est-elle consignée) sont d'autant plus facilement esquivés comme « à compléter plus tard ». L'après-midi du début, c'est exactement de là qu'il vient.
+
+Une analogie mérite ici d'être empruntée, mais une seule fois : MCP est comme TCP/IP, il standardise « comment livrer le paquet à l'autre bout ». Mais personne ne monte un système de production directement sur du TCP nu — il faut encore y faire pousser TLS, l'identité, le « qui peut faire quoi et quelle preuve laisser ». L'écosystème des agents en est précisément à l'instant « TCP/IP tout juste posé » : l'effervescence est réelle, mais la couche du dessus n'a pas encore poussé.
+
+## Nous ajouterons nous-mêmes l'authentification et n'exposerons que des outils sûrs — ça marche ?
+
+Une équipe responsable rétorquera : cet après-midi-là, c'était pour faire vite, nous ne ferions pas ça — nous ajouterions l'authentification à chaque serveur MCP et n'exposerions que des outils sûrs, dûment passés en revue.
+
+C'est vrai, mais cela sous-estime deux choses.
+
+Premièrement, **ça ne passe pas à l'échelle.** Un ou deux serveurs, vous pouvez y ajouter l'authentification avec soin ; mais l'entreprise se retrouve vite avec des dizaines de serveurs et des centaines d'outils, chacun nécessitant d'écrire à la main une vérification d'identité, un jugement de permissions, une consignation d'audit — ce qui constitue en soi un gros tas de code de glu que personne ne lit, exactement le genre de dette dont parlait l'article sur la « dette technique », sauf qu'elle pousse cette fois sur la couche d'outils.
+
+Deuxièmement, **« nous ferons attention » n'est pas une architecture.** C'est une promesse qui dépend de ce que les gens ne se trompent jamais, ne soient jamais sous pression, ne prennent jamais de raccourci. Et nous savons tous que, dès qu'arrive une deadline, la voie « se connecter d'abord, ajouter l'authentification après » est toujours la plus facile à emprunter. Une propriété de sécurité qui repose sur la vigilance de chacun, à chaque fois, finira tôt ou tard par céder — l'ingénieur de l'entreprise du début ne manquait pas de connaissances en sécurité, il manquait simplement de temps.
+
+La vraie solution n'est pas « écrire à la main avec plus de soin », mais faire de « avec identité, avec permissions, avec trace » la **forme par défaut** des outils — qu'on ne peut pas contourner, et qu'on n'a pas à réécrire à la main à chaque fois.
+
+## Emballer une interface nue en outil revient à délivrer un passe super-utilisateur
+
+Pourquoi les interfaces nues sont-elles si dangereuses pour un agent ? Parce que les interfaces emballées **ont été conçues à l'origine pour des services backend de confiance, pas pour un agent qui décide tout seul**. Elles supposent par défaut que l'appelant est déjà authentifié, et ne vérifient donc guère l'identité elles-mêmes. Une fois directement exposées en outils MCP :
+
+- ce que l'agent obtient est une interface **sans identité** — il ne « consulte pas sous l'identité de ce commercial », mais consulte tout sous les permissions du service ;
+- ses opérations d'écriture comptent selon **les permissions du service**, pas celles de l'initiateur ; en cas d'erreur, impossible d'attribuer la responsabilité ;
+- ces appels **n'entrent dans aucun journal d'audit métier**, et restent introuvables après coup (la fuite du début bute précisément là-dessus).
+
+En une phrase : emballer une interface nue en outil MCP revient à délivrer à l'agent un passe super-utilisateur.
+
+## La couche qui manque : à chaque appel, une identité, des permissions et une trace
+
+Ce qu'il faut vraiment ajouter par-dessus le protocole, c'est une couche d'outils gouvernée — l'agent appelle non pas des interfaces nues, mais un ensemble d'actions contrôlées qui franchissent, à chaque appel, exactement les mêmes barrières qu'un humain :
+
+![Le cycle de vie d'un appel d'outil gouverné : initié sous l'identité de l'utilisateur, permissions vérifiées par le runtime, exécution contrôlée, écriture dans l'audit](./tool-call-lifecycle-en.svg)
+
+L'approche par interface nue consiste à supprimer les trois étapes intermédiaires — et ce qui est supprimé, c'est précisément « a-t-il le droit de faire » et « est-ce consigné ». Ce qu'on néglige le plus facilement ici, c'est la première étape — la **propagation de l'identité** : l'agent doit appeler sous l'identité de l'initiateur (ce commercial), et non sous celle du service lui-même. Une fois l'identité correcte, « il ne peut voir que les contrats de sa région » devient un fait que le runtime peut imposer, et non un vœu pieux que le modèle veuille bien respecter.
+
+## Quand les agents se mettent à appeler d'autres agents : comment l'identité se transmet
+
+La propagation de l'identité devient encore plus critique — et la plus sujette aux failles — une fois A2A (un agent appelant un agent) généralisé.
+
+Imaginez : le commercial dit à l'« agent assistant commercial » : « Prépare-moi le dossier de renouvellement de ce client. » Cet agent ne s'en sort pas seul, alors il appelle l'« agent finance » pour tirer les échéances, et l'« agent contrats » pour récupérer les conditions historiques. Voici le problème — quand l'agent finance s'exécute, sous les permissions de **qui** agit-il ? Si, à un maillon quelconque de la chaîne, l'identité se perd et devient « sous les permissions du service agent finance lui-même », alors ce commercial, via un relais d'agents, a vu des données financières qu'il n'avait normalement pas le droit de voir. **Le dépassement de droits ne se produit pas au premier maillon, mais discrètement au deuxième, au troisième.**
+
+Dans une connexion par interface nue, cette « évaporation de l'identité au fil de la chaîne » est presque le résultat par défaut, et faute de journal d'audit unifié, impossible après coup de reconstituer qui, dans ce relais, a vu quoi. Ce qu'une couche d'outils gouvernée doit faire correctement, c'est faire **transiter l'identité de l'initiateur tout au long de la chaîne A2A**, chaque maillon étant vérifié et consigné sous les permissions de la personne initiale. Le protocole (A2A) se charge de raccorder les agents, mais « les permissions ne se perdent pas et la trace ne s'interrompt pas durant le relais » doit être garanti par la couche de gouvernance derrière le protocole.
+
+## La santé de votre couche d'outils se vérifie en cinq questions
+
+1. Quand l'agent appelle un outil, porte-t-il **l'identité de l'initiateur** ou celle du service ?
+2. Un appel en dépassement de droits est-il **intercepté sur-le-champ** par le runtime, ou bien repose-t-il sur le « bon vouloir » du modèle ?
+3. Chaque appel d'outil entre-t-il dans le **journal d'audit** ?
+4. Quand un agent appelle un agent, l'identité de la personne initiale **se transmet**-elle ?
+5. Modifier une permission prend-il effet **en un seul endroit**, ou faut-il le refaire dans chaque serveur ?
+
+## Les outils ne devraient pas être écrits un à un, mais pousser à partir des définitions
+
+Alors comment éviter à la fois l'écriture à la main et le défaut de sécurité ? La réponse : faire **pousser automatiquement** les outils à partir de la définition métier. Vous déclarez les objets et les permissions — par exemple un scénario de remboursement au service client :
+
+```ts
+export const Refund = ObjectSchema.create({
+  name: 'support_refund',
+  fields: { amount: Field.currency({ label: 'Montant du remboursement', min: 0 }) },
+});
+
+export const AgentRole: Security.PermissionSet = {
+  name: 'support_agent',
+  objects: {
+    support_refund: { allowRead: true, allowCreate: true, allowEdit: false, allowDelete: false },
+  },
+};
+```
+
+Le runtime (ObjectOS) le projette **automatiquement** en un ensemble d'outils gouvernés appelables par l'agent : interroger, créer un remboursement — chacun embarquant la vérification de la permission ci-dessus, s'exécutant sous l'identité de l'utilisateur connecté, et atterrissant dans le journal d'audit unifié ; « un remboursement supérieur au plafond passe en validation » est un processus rattaché à l'objet, et l'outil concerné met automatiquement en pause en attendant la signature — rien de tout cela n'est à écrire à la main dans le code de l'outil. Modifiez une permission, et tous les outils concernés prennent effet en un seul endroit.
+
+Comparez avec la version dangereuse, et la différence saute aux yeux :
+
+```json
+// Outil nu : remettre directement le risque au « bon vouloir » du modèle
+{ "name": "run_sql", "description": "exécute une requête SQL arbitraire", "params": { "sql": "string" } }
+```
+
+Vous n'écrivez pas de code de permissions pour chaque outil, vous déclarez seulement les permissions ; l'outil est la projection de la définition. MCP se charge du « comment se connecter », cette couche se charge du « une fois connecté, a-t-il le droit de faire, est-ce consigné » — et sans que vous ayez à l'écrire à la main.
+
+## D'abord une douche froide : elle gère le « peut-il », pas le « devrait-il »
+
+Il faut tracer une frontière nette ici, sinon il est facile de la diviniser.
+
+La couche d'outils gouvernée contraint le **rayon d'impact**, pas le **discernement**. Elle garantit que l'agent ne peut pas faire ce qu'il n'a pas le droit de faire — c'est important, la fuite du début aurait été interceptée sur-le-champ. Mais elle **n'empêche pas une action « dans le cadre des permissions, mais stupide »** : si un agent du service client a normalement le droit d'initier des remboursements, et qu'il accorde un remboursement qui n'aurait pas dû l'être, la couche d'outils le laissera passer comme d'habitude, car c'est dans le cadre des permissions.
+
+Autrement dit, elle résout le « dépassement de droits » et le « sans trace », pas le « la décision est-elle juste ». Ce dernier point relève encore de l'évaluation, du fait de réserver les actions à haut risque à une validation humaine, de la conception du processus. Quiconque vous dit « branchez une couche d'outils gouvernée et l'agent est absolument sûr » exagère. Elle est le socle nécessaire, pas tout l'édifice — mais sans ce socle, la fuite du début se reproduira encore et encore.
+
+## Conclusion
+
+Comparer MCP à TCP/IP n'est pas faux, mais n'oubliez pas que la partie qui fait la valeur d'internet n'est apparue qu'une fois poussée, au-dessus de TCP/IP, la couche d'identité et de responsabilité.
+
+L'écosystème des agents en est au même instant. La connexion est déjà standardisée, et cet « après-midi serviable » du début se multipliera — parce que se connecter est trop facile ; et quand A2A enchaînera les agents en relais, une connexion sans gouvernance ne fera qu'enfouir le dépassement de droits plus profondément. Ce qui sera vraiment rare et vraiment précieux dans un ou deux ans, ce n'est pas un énième protocole de connexion, mais cette couche d'outils derrière le protocole, qui impose les permissions, préserve l'identité tout au long de la chaîne, laisse une trace, et que vous n'avez pas à écrire à la main. Elle ne résout pas tout, mais sans elle, on n'ose mettre le reste en production.
+
+```bash
+npm i -g @objectstack/cli && os start
+```
+
+Déclarez un objet et ses permissions, faites qu'un agent tente, via un outil, de modifier en dépassement de droits une donnée qu'il n'a pas le droit de modifier — et regardez le runtime l'intercepter sur-le-champ, et consigner aussi cette tentative dans le journal.

@@ -1,0 +1,132 @@
+---
+title: "After MCP Lands on Ten Thousand Servers: What Enterprise Agents Lack Isn't a Protocol — It's a Governed Tool Layer"
+description: "Wrap a database as an MCP tool and you can have an agent 'connected' in an afternoon. Then it happily exports every customer's contract amounts into a table — because that wrapper has no identity. MCP reached tens of thousands of servers in a year; the connection war is over. What's truly scarce is the tool layer behind the protocol that enforces permissions, leaves a record, and that you don't hand-write."
+author: ObjectStack Team
+date: 2026-06-16T14:00:00+08:00
+status: published
+topic: ai-agents
+audience: it
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - MCP
+  - A2A
+  - Agent Interoperability
+  - Tool Layer
+  - AI Governance
+  - Perspective
+---
+
+An engineer at one company spent an afternoon wrapping the production database in an MCP server, getting the internal agent "connected." The demo went smoothly; the boss was pleased.
+
+The next day, a salesperson casually asked the agent, "Export all customers' contract amounts into a table for me — I want to see the big picture."
+
+The agent happily complied — the whole company's, not a single one left out, including contracts in other regions and under other people's names that this salesperson had no right to view. It had no malice; it was just **very helpful.** The problem was that the wrapper thrown together that afternoon **had no concept of identity**: it didn't know who was asking or what that person was allowed to see. What it exposed to the agent was everything the service could touch.
+
+This table was later forwarded into a group chat of a few dozen people. By the time someone noticed something was off and the security team stepped in, the damage was done — not the dramatic kind from a hacker attack, but the harder-to-clean-up kind: internal salary bands, customers' commercial terms, colleagues' performance numbers, leaked all at once, under the banner of "being helpful," to people who shouldn't see them. Afterward no one could say exactly who had seen what, because those calls **never entered any audit ledger at all.**
+
+This happened precisely because "connecting" is now too easy.
+
+## The Connection War Is Basically Over — And That's Exactly Where the Risk Is
+
+First, acknowledge the big thing: in one year, MCP reached **tens of thousands of enterprise servers and 97 million SDK downloads**, with Anthropic, OpenAI, Google, Microsoft, and AWS all on board; A2A crossed 150 organizations and went to the Linux Foundation. "How an agent connects to tools, how it connects to other agents," is now standardized.
+
+But the success itself created a trap. Connecting — roughly 80% of the total engineering effort — suddenly takes a few hours. So the genuinely hard and genuinely important 20% (once connected, is it allowed to do this, and is the doing recorded) becomes especially easy to skip past as a "do it later" item. That opening afternoon is exactly how it comes about.
+
+Here it's worth borrowing an analogy, but only once: MCP is like TCP/IP, standardizing "how a packet gets to the other side." But no one builds a production system directly on raw TCP — on top of it you still have to grow TLS, grow identity, grow "who can do what, and what evidence is left." The agent ecosystem is stalled right now at the "TCP/IP just got laid down" moment. The buzz is real, but the layer above hasn't grown yet.
+
+## We'll Add Our Own Auth and Only Expose Safe Tools — Will That Work?
+
+A responsible team will push back: that afternoon was cutting corners, we wouldn't do it that way — we'll add our own auth to each MCP server and only expose vetted, safe tools.
+
+That's correct, but it underestimates two things.
+
+First, **it doesn't scale.** You can carefully add auth to one or two servers, but an enterprise quickly has dozens of servers and hundreds of tools, each requiring its own hand-written identity verification, permission judgment, and audit recording — which is itself a big lump of unread glue code, exactly the kind of "technical debt" the other piece described, except this time it grows on the tool layer.
+
+Second, **"we'll be careful" isn't an architecture.** It's a promise that depends on people never erring, never rushing, never taking shortcuts. And we all know that the moment a deadline arrives, the "connect first, add auth later" path is always the easiest to walk. A security property that relies on everyone being conscientious every single time will eventually break — the engineer at that opening company wasn't ignorant of security either, he was just short on time.
+
+The real fix isn't "hand-write it more carefully" — it's making "carries identity, carries permissions, carries a record" the **default form** of a tool, unskippable and not hand-written each time.
+
+## Wrapping a Raw Interface as a Tool Is Like Issuing a Superuser Pass
+
+Why are raw interfaces so dangerous for agents? Because the interfaces being wrapped **were originally designed for trusted backend services, not for an agent that makes its own decisions.** They assume the caller has already been authorized, so they don't verify identity much themselves. Exposed directly as MCP tools:
+
+- What the agent gets is an interface **with no identity** — it doesn't "query as this salesperson," it queries everything with the service's permissions;
+- Its write operations are counted against the **service's permissions**, not the initiator's, so errors can't be attributed;
+- These calls **enter no business audit ledger**, so there's nothing to look up afterward (that opening leak is stuck exactly on this line).
+
+In one line: wrapping a raw interface as an MCP tool is like issuing the agent a superuser pass.
+
+## The Missing Layer: Identity, Permissions, and a Record on Every Call
+
+What truly needs adding above the protocol is a governed tool layer — where the agent doesn't call raw interfaces but a set of controlled actions, each of which goes through exactly the same gates a human would on every call:
+
+![The lifecycle of a governed tool call: initiated under the user's identity, permissions verified by the runtime, controlled execution, written to audit](./tool-call-lifecycle-en.svg)
+
+The raw-interface approach skips all three middle steps, and what gets skipped is precisely "is it allowed to do this" and "is the doing recorded." The step most easily overlooked here is the first — **identity propagation**: the agent must call under the initiator's (that salesperson's) identity, not under the service's own. Once identity is right, "he can only see his own region's contracts" becomes a fact the runtime can enforce, not a hope-the-model-obeys prompt.
+
+## When Agents Start Calling Other Agents: How Does Identity Get Passed Down
+
+Identity propagation becomes even more critical, and most prone to holes, once A2A (agent calling agent) becomes widespread.
+
+Picture this: a salesperson tells a "sales assistant agent," "help me prepare this customer's renewal materials." This agent can't do it alone, so it calls the "finance agent" to pull payment terms and the "contract agent" to fetch historical clauses. Now here's the problem — when the finance agent executes, **whose** permissions is it using? If any hop in the chain loses the identity and it becomes "query under the finance agent's own service permissions," then this salesperson, riding a relay of agents, sees financials he had no right to see. **The privilege escalation doesn't happen on the first hop — it happens quietly on the second and third.**
+
+In raw-interface-style connection, this "identity evaporating in the chain" is almost the default result, and because there's no unified audit ledger, you can't reconstruct afterward who in this relay saw what. What a governed tool layer must get right is letting the initiator's identity **propagate all the way down the entire A2A chain**, with each hop verified and recorded against the original person's permissions. The protocol (A2A) handles wiring the agents together, but "permissions not lost and the record not broken across the relay" must be guaranteed by the layer of governance behind the protocol.
+
+## Five Questions to Check Whether Your Tool Layer Is Healthy
+
+1. When the agent calls a tool, does it carry the **initiator's identity**, or the service's?
+2. Does a privilege-exceeding call get **stopped on the spot** by the runtime, or does it rely on the model "conscientiously not doing it"?
+3. Does every tool call enter the **audit ledger**?
+4. When an agent calls an agent, does the original person's identity **get passed down**?
+5. To change one permission, does it take effect **in one place**, or do you have to change it in every server?
+
+## Tools Shouldn't Be Hand-Written One by One — They Should Grow Out of Definitions
+
+So how do you avoid hand-writing while being secure by default? The answer: let tools **grow automatically** out of business definitions. You declare objects and permissions — say, a customer-service refund scenario:
+
+```ts
+export const Refund = ObjectSchema.create({
+  name: 'support_refund',
+  fields: { amount: Field.currency({ label: 'Refund Amount', min: 0 }) },
+});
+
+export const AgentRole: Security.PermissionSet = {
+  name: 'support_agent',
+  objects: {
+    support_refund: { allowRead: true, allowCreate: true, allowEdit: false, allowDelete: false },
+  },
+};
+```
+
+The runtime (ObjectOS) then **automatically** projects this into a set of governed tools the agent can call: query refunds, create refunds, each with that permission check built in, executing under the logged-in user's identity, and landing in a unified audit ledger; "over-limit refunds go through approval" is a process hung off the object, automatically pausing for a signature when the tool hits it — none of which has to be hand-written in tool code. Change one permission, and all related tools take effect in one place.
+
+Compare against the dangerous version and the difference is clear:
+
+```json
+// Raw tool: hands the risk straight to the model's "conscience"
+{ "name": "run_sql", "description": "Execute arbitrary SQL queries", "params": { "sql": "string" } }
+```
+
+You don't write permission code for each tool — you only declare permissions; the tools are a projection of the definition. MCP handles "how to connect," this layer handles "once connected, is it allowed to do this, and is the doing recorded" — and you don't hand-write it.
+
+## First, Some Cold Water: It Governs "Can," Not "Should"
+
+Here we have to draw a clear boundary, or it's easy to mythologize.
+
+The governed tool layer constrains the **blast radius**, not the **judgment.** It can guarantee the agent can't do things it has no right to do — which is important; that opening leak would have been stopped on the spot by it. But it **can't stop a "within-permission but dumb" action**: if a customer-service agent legitimately has the right to issue refunds, and it issues a refund that shouldn't have been issued, the tool layer will let it through as usual, because that's within permission.
+
+In other words, it solves "privilege escalation" and "no record," not "is the decision right." The latter still relies on evals, on leaving high-risk actions to human approval, on process design. Anyone who tells you "connect a governed tool layer and the agent is absolutely safe" is overstating. It's the necessary foundation, not the whole building — but without this foundation, that opening leak will keep happening.
+
+## Closing
+
+Comparing MCP to TCP/IP is fair, but don't forget that the valuable part of the internet only emerged after the layer of identity and accountability grew on top of TCP/IP.
+
+The agent ecosystem is at the same moment. Connection is standardized, and that "helpful afternoon" from the opening will become more and more common — because connecting is too easy; and once A2A strings agents into chains, ungoverned connection will only bury privilege escalation deeper. What will be truly scarce and truly valuable over the next year or two isn't another connection protocol, but the tool layer behind the protocol that enforces permissions, preserves identity along the chain, leaves a record, and that you don't hand-write. It doesn't solve everything, but without it, you won't dare ship any of the rest.
+
+```bash
+npm i -g @objectstack/cli && os start
+```
+
+Declare an object and its permissions, have an agent use a tool to try to exceed its permissions and change a record it has no right to change — watch the runtime stop it on the spot, and record the attempt to the ledger too.
