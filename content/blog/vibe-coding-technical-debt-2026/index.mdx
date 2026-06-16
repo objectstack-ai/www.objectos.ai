@@ -1,0 +1,134 @@
+---
+title: "2026 Is the Year of Technical Debt: Why No One Dares Touch the App You 'Vibe-Coded' Six Months Ago"
+description: "A team's AI-built expense system ran fine for most of a year — until the tax rules changed and no one dared touch its 12,000 lines of unread code. Even the AI that wrote it couldn't help. This is why AI-code debt is a special kind that almost never gets paid down, and why having AI generate definitions instead of code is the way out for enterprise apps."
+author: ObjectStack Team
+date: 2026-06-16T16:00:00+08:00
+status: published
+topic: app-building
+audience: it
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Vibe Coding
+  - Technical Debt
+  - Code Generation
+  - Metadata
+  - AI Governance
+  - Perspective
+---
+
+The story starts in month seven.
+
+Mingxiang — the name we'll give this retail chain — runs a few hundred stores. Last year, its finance team (fifty-some people), fed up with waiting for IT's queue, used AI to "vibe-code" an expense system. Forms, approvals, ledger integration — it was running in two days, and everyone cheered. For most of a year after, it worked just fine.
+
+In month seven, the tax rules changed: the deduction rate for a certain class of invoice was adjusted, and the expense logic had to change with it. A small thing.
+
+Then the team discovered that no one dared touch it. Behind that "one sentence" were the 12,000-plus lines of code the AI had generated, **not one of which anyone had read in full.** Which files held the deduction logic? Would changing it ripple into approvals and end-of-month reconciliation? No one could say. And more awkward still — even the AI that wrote the code couldn't help: it's stateless, and the judgments, trade-offs, and reasons-for-writing-it-this-way that were in its head during that generation left nothing behind. All you can do is feed the 12,000 lines back into a new session and have it "guess" at its former self.
+
+This small thing ended up taking three weeks. And the real cost was more than three weeks: in the pre-launch review, someone caught that the AI had casually altered a piece of reconciliation logic unrelated to deductions — nearly letting a batch of expenses post wrong amounts into the general ledger. This time it got caught, by luck. But it proved one thing: **this system no longer has anyone who can guarantee that changing A won't move B.**
+
+This is what the thing that many people pre-named "**the year of technical debt**" for 2026 looks like when it lands on an ordinary team.
+
+## A Special Kind of Debt: You Owe It, But There's No Creditor to Find
+
+Technical debt isn't a new term. But AI-generated code owes a kind of debt that didn't exist before.
+
+Code written by people also rots, also goes undocumented. But at least **the author is still around** — you can pull in the person who wrote it and ask, "Why was this handled this way?" However bad the code, there's always a human brain behind it that can explain it.
+
+AI-generated code pulls away even that last backstop. Its "author" is a stateless model that ceases to exist the moment generation ends. It didn't leave the reasoning behind because it has no "process" to leave. So what you're holding is a lump of an implementation that **runs, but no one can explain and no one is left to ask.** Mingxiang's 12,000 lines are exactly this debt — it's not owed on code quality, it's owed on "no one truly understands it anymore."
+
+The industry's numbers are precisely the macro projection of this mechanism: by early 2026, 85% of developers were already using AI to generate large blocks of code; Veracode, testing across a hundred-plus models, found **45% of generated code hit the OWASP Top 10**; multiple studies put the vulnerability rate at **about 2.74x that of hand-written code.** Some teams logged commit velocity tripling or quadrupling after adopting AI assistance, with monthly security alerts soaring from around 1,000 to over 10,000 in half a year. The speed is real, and the debt is real — it just doesn't settle on delivery day. It comes knocking in month seven.
+
+## But Isn't Code Generation Getting Better Fast?
+
+Here we have to seriously take on a rebuttal, or it's not fair: models keep getting stronger, the code they can read keeps getting longer, and there's AI code review and "self-healing" pipelines too — won't another year of this auto-repay these debts with even stronger tools?
+
+The expectation has its logic, but it bets wrong on where the bottleneck is.
+
+Progress in code generation solves "**writing faster.**" But Mingxiang's problem was never writing too slowly — quite the opposite, it was writing too fast: a system in two days, changes gushing out at three to four times human speed. The bottleneck is on the "**comprehend it, be accountable for it**" side, and that doesn't improve linearly with generation capability. Stronger models generate more code, faster, which **equals accumulating unread implementation faster** — that curve of alerts from 1,000 to 10,000 is exactly the rupture torn open when "generation speeds up while comprehension and review can't keep up." AI review can help with a scan, but the judgment of "what this business logic *should* be" — it can't give a definite answer to that, because right and wrong exist only in the business context, not in the code.
+
+In other words: pinning your hopes on "the model getting a bit stronger" is treating brake failure with the accelerator.
+
+## Compound Interest: Each Change Makes It a Little Less Comprehensible
+
+Why month seven, not month one? Because this debt **compounds.**
+
+The first change: the AI, without having comprehended the old code, "adds a block alongside it." The second change: it faces "old code + last time's uncomprehended new code," so it adds another block. Each layer stacks on top of an uncomprehended layer below, and comprehension cost rises exponentially. So the risk curve isn't a slowly rising straight line — it's an exponential curve, calm early and steepening in the middle, calm enough to make you think you're fine, until one utterly ordinary change ignites it.
+
+![How the difficulty of changing a system shifts over time: generated code rises exponentially, while generated metadata stays flat](./debt-curve-en.svg)
+
+There's a simple self-check that lets you see ahead of time which segment of the curve you're on. Three or more of the five below, and you're already accruing AI technical debt:
+
+1. There's a block of code in the system no one on the team can explain "why it's written this way."
+2. To change one thing, your first instinct is "will this break something else?" rather than just changing it.
+3. Security/alert counts climb every month, and most come from newly added code.
+4. Every time you need a change, you have to feed the whole block back to the AI to "re-read it."
+5. PRs keep getting bigger — too big for anyone to truly review line by line, so all you can check is "did the tests pass?"
+
+## Who Ends Up Paying This Bill
+
+The compound curve eventually becomes a concrete bill, split four ways:
+
+- **The business** pays in speed: Mingxiang's "small change" took three weeks. When every change risks breaking something else, iteration velocity visibly collapses — you thought AI made you faster, and half a year later you're slower.
+- **Risk** pays in incidents: that near-miss posting into the general ledger got caught, but the next one might not. A 2.74x vulnerability rate, a tenfold alert increase — sooner or later one won't get caught.
+- **The team** pays in people: no one wants to maintain a lump of a system they can't read and that shudders when touched, long-term. The moment the person who understands it best leaves, the system becomes a total black box — and AI code never had a "person who understands it best" to begin with.
+- **The company** pays in rewrites: when comprehension debt piles up to a certain point, "changing" is already more expensive and riskier than "rewriting," so the project gets torn down and started over. The bit of time saved on version one is repaid with interest.
+
+None of these four show up in the delight of "a whole system stood up in two days." They're all booked to the ledger after month seven.
+
+## First, to Be Clear: Switching to Metadata Isn't Free
+
+Here we have to honestly stop, or it becomes another miracle-cure pitch.
+
+Having AI generate definitions instead of code has trade-offs. Declarative metadata covers **the 90% that recurs over and over** in enterprise apps — objects, fields, relationships, views, permissions, processes, approvals. The controllability it buys comes at the cost of giving up some of the "write it however you want" freedom. If what you're building is a brand-new real-time collaboration engine or a unique graphics algorithm, that genuinely needs real code; metadata can't help you, and forcing it makes things worse — **ObjectStack solves the business systems rebuilt over and over in enterprises, not the next Figma.**
+
+And one more layer of honesty: choosing a metadata runtime means entrusting part of the implementation to that runtime — you're betting on its quality and long-term availability. That's a real dependency. It's just that, compared to betting on "12,000 lines of code no one reads," betting on a runtime that's repeatedly audited, versioned, and migratable is a far better wager.
+
+## Change What Gets Generated: Not the Implementation, the Definition
+
+Back to Mingxiang's expense system. Same requirement, but suppose the AI had originally generated not 12,000 lines of implementation, but a definition like this:
+
+```ts
+export const ExpenseReport = ObjectSchema.create({
+  name: 'fin_expense_report',
+  label: 'Expense Report',
+  fields: {
+    amount: Field.currency({ label: 'Amount', min: 0 }),
+    invoice_type: Field.select({ label: 'Invoice Type', options: ['General', 'Special VAT'] }),
+    deductible_rate: Field.percent({ label: 'Deductible Rate' }),
+  },
+});
+```
+
+These few dozen lines aren't "an interface you still have to go implement." **They are the system.** The runtime (ObjectOS) reads them and automatically derives the data tables, the APIs, the UI, and the governed tools an agent can call; permissions and approval flows are likewise declarations hung off it, not hand-written judgments.
+
+So what does that month-seven tax-rule change look like now? No longer an archaeology dig, but a single comprehensible change:
+
+```diff
+- deductible_rate: Field.percent({ label: 'Deductible Rate' }),
++ deductible_rate: Field.percent({ label: 'Deductible Rate', defaultValue: 70 }),
++ // Special VAT invoices now deduct 70% under the new rule; the rule sinks into the definition, approvals and reconciliation follow automatically
+```
+
+This is a diff you can review in five minutes and roll back with one command, not a 400-line PR no one dares hit "merge" on. Nor will there be any "casually broke reconciliation" incident, because the reconciliation logic isn't in this definition — it can't touch it at all. The difference isn't which is more "advanced," but **who, six months later, can still read it, change it, and trace an error.**
+
+## Why the Compounding Mechanism Gets Cut Off
+
+After switching to definitions, why does that curve flatten? Three points, all pointing straight at Mingxiang's story:
+
+1. **No "unread implementation."** The implementation belongs to the one repeatedly-audited runtime shared by all apps, not one copy generated per app. Your app holds only definitions, and definitions are written to be read by people.
+2. **No "no one to ask."** The definition is declarative — it wears its intent on its face: what `deductible_rate` is, who owns it, which processes are affected by changing it, all at a glance, with no need to ask that long-vanished generation session.
+3. **The attack surface collapses.** That 45%-hits-OWASP risk overwhelmingly comes from hand-written auth, query concatenation, and input handling. Once those are all carried by the unified runtime, the categories of vulnerability the app layer can introduce shrink by more than half.
+
+## Closing
+
+2026 will be the year of technical debt — not because AI writing code is wrong, but because too many teams took a tool for "rapidly generating prototypes" and used it directly as a way to "build long-term systems." A prototype can be a pile of code no one reads. A system you'll run for three years shouldn't be.
+
+Next time you want to use AI to build a business system you truly intend to run long-term, don't first ask "how fast does it generate?" Ask the question Mingxiang was forced to face only in month seven: **half a year from now, when a rule changes, will I still dare to change it, and can I trace it?** Having AI generate definitions instead of code is currently the only path that makes that answer "yes."
+
+```bash
+npm i -g @objectstack/cli && os start
+```
+
+Define an object, change a field once, and see how clean that change is in the `git diff` — that's a debt that won't compound.

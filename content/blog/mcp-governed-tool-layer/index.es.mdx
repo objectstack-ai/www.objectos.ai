@@ -1,0 +1,132 @@
+---
+title: "Después de instalar MCP en diez mil servidores: lo que le falta al agent empresarial no es el protocolo, es una capa de herramientas gobernada"
+description: "Envolver una base de datos como herramienta MCP basta para que un agent \"se conecte\" en una tarde. Y luego, encantado, exporta a una tabla los importes de los contratos de todos los clientes de la empresa, porque esa envoltura no tiene identidad. MCP llegó en un año a más de diez mil servidores; la batalla de la conexión ya está ganada. Lo verdaderamente escaso es la capa de herramientas que hay detrás del protocolo: la que fuerza permisos, deja rastro y no tienes que escribir a mano."
+author: ObjectStack Team
+date: 2026-06-16T14:00:00+08:00
+status: published
+topic: ai-agents
+audience: it
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - MCP
+  - A2A
+  - Interoperabilidad de agents
+  - Capa de herramientas
+  - Gobernanza de IA
+  - Perspectiva
+---
+
+El ingeniero de una empresa pasó una tarde envolviendo la base de datos de producción en una capa de servidor MCP y dejó que el agent interno "se conectara". La demo salió fluida, el jefe quedó satisfecho.
+
+Al día siguiente, un comercial le preguntó al agent de pasada: "Ayúdame a exportar a una tabla los importes de los contratos de todos los clientes, quiero ver el panorama general".
+
+El agent lo hizo encantado: los de toda la empresa, sin saltarse ni uno, incluidos los contratos de otras regiones y a nombre de otras personas que ese comercial no tenía ningún derecho a ver. No actuó con malicia, simplemente fue **muy servicial**. El problema es que aquella envoltura montada en una tarde **no tenía noción de identidad**: no sabía quién preguntaba ni qué datos podía ver originalmente esa persona. Lo que exponía al agent era todo lo que ese servicio podía tocar.
+
+Esa tabla acabó reenviada a un grupo de varias decenas de personas. Para cuando alguien se dio cuenta de que algo iba mal y el equipo de seguridad intervino, el daño ya estaba hecho: no la clase de daño dramático de un ataque de hackers, sino uno mucho más difícil de remediar: los niveles salariales internos, las condiciones comerciales de los clientes y los resultados de los compañeros se filtraron de golpe, en nombre de "ser servicial", a quien no debía verlos. Después, nadie pudo decir con claridad quién había visto qué exactamente, porque aquellas invocaciones **no entraron en ningún registro de auditoría**.
+
+Y esto ocurrió precisamente porque "conectar" es ahora demasiado fácil.
+
+## La batalla de la conexión está, en lo esencial, ganada, y ahí está el riesgo
+
+Reconozcamos primero lo grande: en un año, MCP llegó a **más de diez mil servidores empresariales y 97 millones de descargas de SDK**, con Anthropic, OpenAI, Google, Microsoft y AWS todos dentro; A2A superó las 150 organizaciones y pasó a la Linux Foundation. Cómo conecta un agent con las herramientas y con otros agents ya está estandarizado.
+
+Pero el propio éxito fabricó la trampa. La conexión —que viene a ser el 80% de todo el trabajo de ingeniería— de repente se resuelve en horas. Y así, ese 20% verdaderamente difícil y verdaderamente importante (una vez conectado, si está bien hecho hacerlo, y si se contabiliza una vez hecho) se salta con especial facilidad como un "ya lo añadiré luego". Aquella tarde del principio nació justo así.
+
+Aquí vale la pena tomar prestada una analogía, pero solo una vez: MCP es como TCP/IP, estandarizó "cómo entregar el paquete al otro lado". Pero nadie monta un sistema de producción directamente sobre TCP puro; encima todavía tiene que crecer TLS, crecer la identidad, crecer el "quién puede hacer qué y qué evidencia queda". El ecosistema de agents está justo ahora parado en ese instante de "acabamos de tender el TCP/IP": el bullicio es real, pero la capa de arriba aún no ha crecido.
+
+## "Nosotros añadiremos nuestra propia autenticación y solo expondremos herramientas seguras", ¿sirve?
+
+Un equipo responsable replicará: aquella tarde fue por ir a lo cómodo, nosotros no haríamos eso; le añadiremos a cada servidor MCP su propia autenticación y solo expondremos herramientas seguras, revisadas.
+
+Eso está bien, pero subestima dos cosas.
+
+Primero, **no escala.** A uno o dos servidores les puedes añadir la autenticación con cuidado, pero la empresa pronto tiene decenas de servidores y cientos de herramientas, y a cada uno hay que escribirle a mano la verificación de identidad, el juicio de permisos y la anotación de auditoría; eso es de por sí un mazacote de código pegamento que nadie lee, justo ese tipo de "deuda técnica" del que hablaba el otro artículo, solo que esta vez crece en la capa de herramientas.
+
+Segundo, **"vamos a tener cuidado" no es una arquitectura.** Es una promesa que depende de que las personas no se equivoquen nunca, no vayan con prisas, no tomen atajos. Y todos sabemos que, en cuanto llega un *deadline*, el camino de "primero conecto y la autenticación ya la añado luego" es siempre el más fácil de recorrer. Una propiedad de seguridad que depende de que todos sean responsables cada vez, tarde o temprano se rompe; el ingeniero de la empresa del principio tampoco era que no entendiera de seguridad, simplemente iba con prisas.
+
+La solución de verdad no es "escribirlo a mano con más cuidado", sino hacer que "con identidad, con permisos, con rastro" sea la **forma por defecto** de la herramienta: ineludible y sin tener que escribirla a mano cada vez.
+
+## Envolver una interfaz desnuda como herramienta equivale a expedir un pase de superusuario
+
+¿Por qué es tan peligrosa una interfaz desnuda para un agent? Porque las interfaces que se envuelven **se diseñaron en su día para servicios de *backend* de confianza, no para un agent que decide por su cuenta**. Dan por hecho que quien las invoca ya está autenticado, así que ellas mismas apenas verifican la identidad. Al exponerlas directamente como herramientas MCP:
+
+- el agent recibe una interfaz **sin identidad**: no consulta "con la identidad de este comercial", sino que consulta todo con los permisos del servicio;
+- sus operaciones de escritura se contabilizan con los **permisos del servicio**, no con los del solicitante, y si algo se tuerce no hay a quién atribuirlo;
+- esas invocaciones **no entran en ningún registro de auditoría de negocio**, y a posteriori no hay nada que consultar (aquella filtración del principio se atascó justo aquí).
+
+En una frase: envolver una interfaz desnuda como herramienta MCP equivale a expedirle al agent un pase de superusuario.
+
+## La capa que falta: cada invocación lleva identidad, permisos y rastro
+
+Lo que de verdad hay que añadir por encima del protocolo es una capa de herramientas gobernada: lo que el agent invoca no son interfaces desnudas, sino un conjunto de acciones controladas que en cada invocación pasan por exactamente los mismos controles que una persona.
+
+![Ciclo de vida de una invocación de herramienta gobernada: se dispara con la identidad del usuario, el runtime verifica los permisos, se ejecuta de forma controlada y se escribe en la auditoría](./tool-call-lifecycle-en.svg)
+
+La forma de la interfaz desnuda es saltarse los tres pasos del medio, y lo que se salta es justo el "si está bien hecho hacerlo" y el "si se contabiliza". Lo más fácil de pasar por alto aquí es el primer paso: la **propagación de identidad**. El agent tiene que invocar con la identidad del solicitante (aquel comercial), no con la identidad del propio servicio. Una vez que la identidad es la correcta, "solo puede ver los contratos de su propia región" pasa a ser un hecho que el runtime puede forzar, y no una sugerencia que ojalá el modelo respete.
+
+## Cuando un agent empieza a invocar a otro agent: cómo se transmite la identidad hacia abajo
+
+La propagación de identidad se vuelve aún más crítica, y es donde más fácilmente surgen los agujeros, una vez que se generaliza A2A (un agent invocando a otro agent).
+
+Imagina: el comercial le dice al "agent asistente comercial" que le prepare el material de renovación de cierto cliente. Este agent no se las apaña solo, así que invoca al "agent financiero" para sacar los plazos de cobro y al "agent de contratos" para obtener las condiciones históricas. Y aquí viene el problema: cuando el agent financiero se ejecuta, ¿con los permisos de **quién**? Si en cualquier salto intermedio de la cadena se pierde la identidad y pasa a consultar "con los permisos del propio servicio del agent financiero", entonces ese comercial, a través de un relevo de agents, ha visto un dato contable que originalmente no tenía derecho a ver. **El exceso de permisos no ocurre en el primer salto, sino que ocurre a hurtadillas en el segundo o el tercero.**
+
+En la conexión al estilo interfaz desnuda, esta "evaporación de la identidad en la cadena" es casi el resultado por defecto, y como no hay un registro de auditoría unificado, a posteriori es sencillamente imposible reconstruir quién vio qué en ese relevo. Lo que la capa de herramientas gobernada tiene que hacer bien es que la identidad del solicitante **se transmita a lo largo de toda la cadena A2A**, y que en cada salto se verifique y se contabilice con los permisos de aquella persona inicial. El protocolo (A2A) se encarga de conectar los agents, pero "que durante el relevo no se pierdan los permisos ni se corte el rastro" lo tiene que garantizar la capa de gobernanza que hay detrás del protocolo.
+
+## Si tu capa de herramientas está sana o no, lo dicen cinco preguntas
+
+1. Cuando el agent invoca una herramienta, ¿lleva la **identidad del solicitante** o la del servicio?
+2. Una invocación con exceso de permisos, ¿la **atrapa en el acto** el runtime, o depende de que el modelo "tenga la conciencia de no hacerlo"?
+3. Cada invocación de herramienta, ¿entra en el **registro de auditoría**?
+4. Cuando un agent invoca a otro agent, ¿se **transmite hacia abajo** la identidad de aquella persona inicial?
+5. Cambiar un permiso, ¿surte efecto en **un solo sitio**, o hay que ir a cambiarlo en cada servidor uno por uno?
+
+## Las herramientas no deberían escribirse una a una, sino crecer desde la definición
+
+Entonces, ¿cómo no escribirlas a mano y a la vez que sean seguras por defecto? La respuesta es: hacer que las herramientas **crezcan automáticamente** desde la definición de negocio. Tú declaras el objeto y los permisos; por ejemplo, un escenario de reembolso de atención al cliente:
+
+```ts
+export const Refund = ObjectSchema.create({
+  name: 'support_refund',
+  fields: { amount: Field.currency({ label: 'Importe del reembolso', min: 0 }) },
+});
+
+export const AgentRole: Security.PermissionSet = {
+  name: 'support_agent',
+  objects: {
+    support_refund: { allowRead: true, allowCreate: true, allowEdit: false, allowDelete: false },
+  },
+};
+```
+
+El runtime (ObjectOS) lo proyecta **automáticamente** en un conjunto de herramientas gobernadas invocables por el agent: consultar, crear reembolsos, cada una con la verificación de ese permiso de arriba incorporada, ejecutándose con la identidad del usuario conectado y entrando en el registro de auditoría unificado; "el reembolso por encima del importe pasa por aprobación" es un proceso colgado del objeto, y cuando la herramienta lo dispara, se pausa automáticamente a la espera de firma. Nada de esto hay que escribirlo a mano en el código de la herramienta. Cambia un permiso y todas las herramientas relacionadas surten efecto en un solo sitio.
+
+Contrasta con la versión peligrosa y la diferencia queda clara:
+
+```json
+// herramienta desnuda: entrega el riesgo directamente a la "conciencia" del modelo
+{ "name": "run_sql", "description": "ejecuta cualquier consulta SQL", "params": { "sql": "string" } }
+```
+
+No escribes código de permisos para cada herramienta, solo declaras los permisos; la herramienta es la proyección de la definición. MCP se encarga de "cómo conectar", esta capa se encarga de "una vez conectado, si está bien hecho hacerlo y si se contabiliza", y además sin que tengas que escribirla a mano.
+
+## Primero, un jarro de agua fría: gobierna el "poder", no el "deber"
+
+Aquí hay que trazar una frontera, o es fácil mitificarla.
+
+La capa de herramientas gobernada restringe el **radio de impacto**, no el **criterio**. Garantiza que el agent no puede hacer aquello para lo que no tiene permiso, y eso es muy importante: aquella filtración del principio la habría atrapado en el acto. Pero **no puede frenar una acción "dentro de los permisos pero estúpida"**: si un agent de atención al cliente tiene de por sí permiso para iniciar reembolsos y concede un reembolso que no debía, la capa de herramientas lo dejará pasar como siempre, porque está dentro de los permisos.
+
+Dicho de otro modo: resuelve el "exceso de permisos" y el "sin rastro", no resuelve el "si la decisión es correcta". Eso último todavía depende de la evaluación, de dejar las acciones de alto riesgo para la aprobación humana y del diseño del proceso. Si alguien te dice "conecta la capa de herramientas gobernada y el agent será absolutamente seguro", está exagerando. Es la cimentación necesaria, no el edificio entero; pero sin esa cimentación, la filtración del principio se repetirá una y otra vez.
+
+## Cierre
+
+Comparar MCP con TCP/IP no está mal, pero no olvides que la parte valiosa de internet llegó solo después de que sobre TCP/IP creciera esa capa de identidad y rendición de cuentas.
+
+El ecosistema de agents está justo en ese mismo instante. La conexión ya está estandarizada, aquellas "tardes serviciales" del principio serán cada vez más frecuentes, porque conectar es demasiado fácil; y cuando A2A encadene los agents, una conexión sin gobernanza solo esconderá el exceso de permisos más a fondo. Lo verdaderamente escaso, y verdaderamente valioso, en el próximo par de años no es otro protocolo de conexión, sino esa capa de herramientas que hay detrás del protocolo: la que fuerza los permisos, conserva la identidad a lo largo de la cadena, deja rastro, y además no tienes que escribir a mano. No lo resuelve todo, pero sin ella, todo lo demás da miedo de poner en producción.
+
+```bash
+npm i -g @objectstack/cli && os start
+```
+
+Declara un objeto y sus permisos, deja que un agent intente, a través de una herramienta, cambiar con exceso de permisos un dato que no tiene derecho a cambiar, y mira cómo el runtime lo atrapa en el acto y anota también ese intento en el registro.
