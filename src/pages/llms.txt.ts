@@ -32,9 +32,9 @@ export const GET: APIRoute = async ({ site }) => {
   const lines = [
     '# ObjectOS',
     '',
-    '> ObjectOS is an AI-native enterprise application platform for connecting existing data, applications, workflows, and AI agents through a governed business object layer.',
+    '> ObjectOS is the target format and runtime for AI-written enterprise software: an AI agent generates the application as governed metadata, a human reviews it as a small diff, and the runtime keeps every action inside permissions, approval, and audit.',
     '',
-    'ObjectOS helps teams model business objects, generate application structure, connect existing systems, and let AI agents operate inside enterprise permission boundaries.',
+    'Built for a world where AI writes the code. ObjectStack is the open protocol (Apache 2.0) that defines business objects, relations, permissions, flows, APIs, and AI tools as portable metadata in your own repository; ObjectOS is the self-hosted runtime that executes it and enforces governance. Teams model business objects, generate application structure from natural language, connect existing systems without migration, and let AI agents operate inside enterprise permission boundaries.',
     '',
     '## Primary Pages',
     '',
