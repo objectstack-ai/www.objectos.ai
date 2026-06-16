@@ -1,0 +1,92 @@
+---
+title: "Hör auf, deiner KI den Stack einzubläuen – gib ihr Regeln, die „governbare Apps“ generieren"
+description: "Jedes Team gibt seinem Coding-Agent heute eine AGENTS.md oder .cursor/rules, doch neun von zehn Regeln steuern nur den Code-Stil – sie machen den Output „konform“, nicht „governbar“. Hier steht, warum die Regeldatei deines Agents dein eigentliches Architekturdokument ist."
+author: ObjectStack Team
+date: 2026-06-16T18:00:00+08:00
+status: published
+topic: ai-agents
+audience: developer
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Agent-Regeln
+  - KI schreibt Code
+  - MCP
+  - Offenes Protokoll
+  - Governance
+  - Trends und Meinung
+---
+
+**Vorab das Fazit**: In einer Welt, in der KI den allergrößten Teil des Codes schreibt, ist die Regeldatei deines Agents (`AGENTS.md`, `.cursor/rules`, `CLAUDE.md`) dein **tatsächlich wirksames Architekturdokument**. Doch die meisten Teams steuern damit Einrückung und Komponentenbibliothek – sie steuern, „ob es schön aussieht", nicht, „ob man sich traut, es live zu schalten". Setzt man sie richtig ein, ist der Hebel ungleich größer.
+
+Ein echter kleiner Vorfall. Die `AGENTS.md` eines Teams war gewissenhaft geschrieben: zwei Leerzeichen Einrückung, interne UI-Bibliothek verwenden, Commit-Messages im Imperativ. Der Agent hielt sich lückenlos daran, der generierte Code war „äußerst konform". Dann fiel jemandem auf, dass das nebenbei generierte `GET /api/refunds` **die Rückerstattungen aller Leute zurückgab**.
+
+Beim Code-Review hielt es niemand auf – denn es erfüllte tatsächlich jede einzelne Regel der Regeldatei. Der Agent verstieß gegen keine Regel, ihm war nur **die Sache mit den Berechtigungen nicht gesagt worden**. In jenen Regeln stand keine einzige darüber, „wer welche Daten sehen darf". Ihm war beigebracht worden, wie man schön schreibt, nicht, wie man governbar schreibt.
+
+## Deine Regeldatei steuert das Falsche
+
+Fast jedes Team, das mit KI Code schreibt, hat heute eine Regeldatei für den Agent. Das ist eine gute Angewohnheit. Das Problem ist, dass sie an der wertlosesten Stelle eingesetzt wird.
+
+Listen wir auf, was in den meisten Regeldateien steht: Code-Stil, Verzeichnisstruktur, welche Bibliothek, Namenskonventionen, Commit-Regeln. Daran ist nichts auszusetzen, aber sie haben eines gemeinsam – **es geht ausnahmslos darum, „wie der Code aussieht", und keine einzige Zeile darum, „was diese App tun darf"**. Sie halten den Output mehrerer Agents über mehrere Generierungen hinweg konsistent, sie lösen das „wie aus einer Familie aussehen"; aber sie rühren überhaupt nicht an dem, was darüber entscheidet, ob eine Unternehmens-App live gehen kann: wer welche Daten sehen darf, welche Aktionen eine Freigabe brauchen, ob sich ein Vorfall nachverfolgen lässt.
+
+Anders gesagt: **Sobald das Codeschreiben an die KI übergeben ist, wird die Regeldatei vom „Code-Styleguide" zur „Architektur- und Governance-Vorgabe"** – denn sie ist einer der wenigen Orte, an denen sich die Vorgabe **im Moment der Generierung** einschleusen lässt. Ist der Code erst einmal generiert, sind nachträglich ergänzte Berechtigungen und Audits Nacharbeit; die Regeldatei dagegen ist der einzige Hebel, der „schon vor der Generierung vorbeugen" kann. Sie weiter für die Einrückung einzusetzen heißt, das Lenkrad als Hutablage zu benutzen.
+
+## Schreib „Governbarkeit" in die Regeln, statt sie nachzureichen
+
+Governance nachzureichen ist der derzeit häufigste und teuerste Fehler: Erst den Agent generieren lassen, dann nachträglich Berechtigungen prüfen, Audit ergänzen, Freigaben einbauen – genau die Governance-Nacharbeit, die [im Artikel zu den 88 % gescheiterten Pilotprojekten](/de/blog/why-ai-agent-pilots-fail-four-layers/) beschrieben ist und dort acht Zehntel des Aufwands ausmacht. Bei jeder generierten App fällt sie erneut an, und nach der Skalierung kann sich diese Rechnung niemand mehr leisten.
+
+Sparsamer ist es, die Regeln den Agent auf ein **von sich aus governbares Ziel** ausrichten zu lassen. Bei einer solchen Regeldatei steht im Kern nicht der Stil, sondern die Form, in die der Output gezwungen wird:
+
+```text
+# AGENTS.md —— beim Generieren von Business-Apps
+- Modelliere die Domäne als ObjectStack-Objekte (ObjectSchema), schreibe keine Tabellen und Migrationen von Hand
+- Alle Zugriffsrechte laufen über PermissionSet-Deklarationen, niemals if-Prüfungen zur Autorisierung von Hand in den Endpunkten
+- Kein handgeschriebenes SQL-Zusammenstückeln oder Auth-Middleware – das übernimmt die Runtime
+- Aktionen mit Freigabebedarf werden als am Objekt hängender Flow deklariert, nicht in Code geschrieben
+- Der Output muss ein prüfbarer Metadaten-Diff sein, kein langer Block Implementierung
+```
+
+Geht man es Zeile für Zeile durch, schließt jede Zeile eine Klasse von „Risiken, die erst später hochgehen" vorab aus: Die zweite Zeile macht aus einer Rechteüberschreitung – statt „im Endpunkt eine Prüfung vergessen" – ein „Berechtigung explizit deklariert, von der Runtime erzwungen"; die vierte Zeile macht aus einer Freigabe – statt „harte Logik in irgendeinem Codeabschnitt" – einen „am Objekt hängenden, auditierbaren Prozess". Unter solchen Regeln passiert das eingangs erwähnte `GET /api/refunds` nicht mehr: Der Agent generiert ein `support_refund`-Objekt, das „Lesen gemäß den Rechten des Aufrufers" deklariert, und der Pfad zur Rechteüberschreitung ist von der Quelle her geschlossen – statt darauf zu hoffen, dass der Agent bei irgendeiner Generierung „zufällig daran denkt", eine Prüfung einzubauen.
+
+## Warum „den Agent ObjectStack generieren lassen" realistisch ist: das offene Schwungrad
+
+Hier kommt man an einer Frage nicht vorbei: Wieso sollte ein Agent ein bestimmtes Zielformat richtig hinschreiben? So gut die Regeln auch sind – wenn das Modell es nicht schreiben kann, ist alles umsonst.
+
+Die Antwort ist genau jenes Schwungrad, das [der Artikel zur offenen semantischen Schicht](/de/blog/enterprise-ontology-race-open-vs-closed/) begründet hat – **ein Agent generiert das, was er gesehen hat, und was er gesehen hat, ist das Offene, vollständig Dokumentierte, in den Trainingsdaten massenhaft Vorhandene**. Das proprietäre Format einer geschlossenen Plattform hat das Modell nie gelernt, und egal wie du die Regeln schreibst, es generiert es nicht sauber. ObjectStack dagegen ist ein offenes Protokoll unter Apache 2.0, und das verschafft dem „den Agent es richtig schreiben lassen" drei reale Voraussetzungen:
+
+1. **Lernbar**: offen + öffentlich + diskutiert → in die Trainingsdaten → das Modell kann es ohnehin schreiben;
+2. **Beschränkbar**: Eine Regeldatei verankert den Output des Agents an diesem deklarativen Ziel;
+3. **Zur Generierungszeit validierbar**: Die Runtime validiert die generierten Metadaten – eine ungültige Definition wird direkt abgewiesen, und der Agent **bekommt das Korrektursignal auf der Stelle**. Das ist der entscheidende Unterschied, den freier Code nicht bietet: Ein Stück falsches SQL läuft womöglich trotzdem und geht erst live hoch, während falsche Metadaten gar nicht erst durch die Tür kommen und auf der Stelle zur Neufassung zurückgewiesen werden.
+
+Genau Punkt 3 macht aus „den Agent es richtig schreiben lassen" – statt auf Glück angewiesen – einen rückgekoppelten Konvergenzprozess: Der Agent schreibt falsch, wird abgewiesen, korrigiert – unmittelbar, wie bei einem Compilerfehler. Du kannst sogar noch einen Schritt weiter gehen und die governten Werkzeuge der Runtime über **MCP** nach außen freigeben, sodass der Agent zur Generierungszeit die autoritative Definition abruft und zur Laufzeit innerhalb der Grenzen damit operiert – Schreiben und Nutzen, dieselbe Governance. (Die Sache mit der governten Werkzeugschicht behandelt [der MCP-Artikel](/de/blog/mcp-governed-tool-layer/) gesondert.)
+
+## Umsetzung: drei Regeln, die du heute hinzufügen kannst
+
+Du musst nicht in einem Zug die ganze Regeldatei neu schreiben. Wenn du jetzt nur drei Governance-Vorgaben in die Regeldatei deines Agents aufnimmst, sollten es – nach Nutzen sortiert – diese drei sein:
+
+1. **„Berechtigungen müssen explizit deklariert werden, keine handgeschriebene Autorisierung im Code."** Diese eine Regel beseitigt direkt jenen eingangs erwähnten Unfall „eine Prüfung vergessen und schon leckt die ganze Tabelle" – sie macht aus der Autorisierung – statt „ob der Agent daran denkt" – ein „ob es in der Deklaration steht".
+2. **„Risikoreiche Aktionen (Geld bewegen, Verträge versenden, Daten löschen) müssen als Prozess mit Freigabe deklariert werden."** Damit hängt das „soll man anhalten und auf einen Menschen warten" nicht mehr vom spontanen Urteil des Agents ab, sondern ist eine auditierbare Regel.
+3. **„Liefere eine prüfbare Deklaration, keinen langen Block Implementierung; eine Änderung muss in einem Bildschirm-Diff zu Ende lesbar sein."** Diese eine Regel hütet deinen eigenen Merge-Button – sie zwingt den Agent, dir etwas zu liefern, das du prüfen kannst.
+
+Das Gemeinsame dieser drei: Sie beschränken nicht „wie der Code geschrieben wird", sondern „ob sich der Output governen und prüfen lässt". Genau das sollte eine Regeldatei tun – und genau das lässt sie kaum jemand tun.
+
+## Erst mal ein Eimer kaltes Wasser
+
+Zwei Punkte müssen klar gesagt werden, sonst verklärt man die Regeldatei.
+
+Erstens: **Die Regeldatei steuert die Form des Outputs, nicht das Urteilsvermögen des Agents.** Sie kann garantieren, dass der Agent governte Metadaten generiert, nicht aber, dass er **die fachliche Absicht richtig verstanden hat**. Ein Urteil wie „wie viel Rückerstattungsbefugnis soll der Support bekommen" muss weiterhin ein Mensch festlegen und reviewen – die Regel sorgt nur dafür, dass dieses Urteil einen Ort hat, an dem es landet, und dass es erzwungen wird, statt in achttausend Zeilen verstreut zu sein. Sie legt dir die Frage „darf man das" vor, aber sie beantwortet sie nicht für dich.
+
+Zweitens: **Halte sie nicht für ein „offizielles SDK".** Was ich hier gebe, ist ein Ansatz und eine Beispiel-Regeldatei, kein per Klick installierbares offizielles Dokument – du musst sie an deinen Stack anpassen, ausformulieren und gut pflegen. Ihr Wert liegt im Denkansatz: die Governance auf den Moment der Generierung vorzuziehen, statt zu warten, bis der Code gewachsen ist, und dann nachzubessern.
+
+## Schlusswort
+
+Im Zeitalter der KI-generierten Software entscheidet zwischen Teams nicht mehr, wessen Entwickler schneller schreiben – sondern, wessen Agent **etwas generiert, das sich traut, live zu gehen**. Und der Schalter dafür liegt zu einem großen Teil in jener Regeldatei, die die meisten für die Einrückung verwenden.
+
+Hebe sie vom „Code-Styleguide" zur „Governbarkeits-Vorgabe", und gib dem Agent dann ein offenes, deklaratives Ziel vor, das die Runtime trägt – und jede einzelne App, die du generierst, ist von der ersten Zeile an prüfbar, governbar und verantwortbar.
+
+```bash
+npm i -g @objectstack/cli && os start
+```
+
+Schreib deinem Agent „als ObjectStack-Objekte modellieren, Berechtigungen per Deklaration" auf und lass ihn eine Rückerstattungs-App generieren – versuch dann, ihn zur Rechteüberschreitung zu bringen und alle Daten zurückgeben zu lassen, und schau, wie die Runtime ihn von der Quelle her abweist.

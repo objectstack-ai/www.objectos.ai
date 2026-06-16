@@ -1,0 +1,92 @@
+---
+title: Stop Hand-Holding Your AI Through Your Stack — Give It Rules That Generate Governable Apps
+description: "Every team now hands its coding agent an AGENTS.md or .cursor/rules, but nine out of ten rules only police code style — they make output 'tidy,' not 'governable.' Here's why your agent's rules file is your real architecture doc, and how to use it plus an open, declarative target so every AI-generated app is reviewable and governed from day one."
+author: ObjectStack Team
+date: 2026-06-16T18:00:00+08:00
+status: published
+topic: ai-agents
+audience: developer
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Agent Rules
+  - AI-written code
+  - MCP
+  - Open Protocol
+  - Governance
+  - Perspective
+---
+
+**The bottom line first**: In a world where AI writes most of the code, your agent's rules file (`AGENTS.md`, `.cursor/rules`, `CLAUDE.md`) is your **architecture doc that's actually in force**. Yet most teams use it to police indentation and component libraries — governing "does it look nice," not "does it dare to ship." Use it right and the leverage is far greater.
+
+A small, true incident. One team wrote a very conscientious `AGENTS.md`: two-space indentation, use the internal UI library, imperative mood in commit messages. The agent followed every line to the letter, and the code it generated was "extremely tidy." Then someone noticed that the `GET /api/refunds` it had casually generated **returned everyone's refund records**.
+
+Code review caught nothing — because it genuinely complied with every line in the rules file. The agent didn't violate any rule; it simply **was never told about permissions**. Not one line in those rules was about "who can see which data." It had been taught how to write something that looks good — never how to write something that's governable.
+
+## Your rules file is policing the wrong thing
+
+Almost every team writing code with AI now has a rules file for its agent. That's a good habit. The problem is it's being spent on the least valuable thing.
+
+Take inventory of what most rules files contain: code style, directory structure, which library to use, naming conventions, commit format. Nothing wrong with any of it — but they share one trait: **all of it is about "what the code looks like," and none of it about "what this app is allowed to do."** They keep output consistent across many agents and many generations — solving "look like one family." They don't touch any of the things that decide whether an enterprise app can ship: who can see which data, which actions need approval, whether anything is traceable when things go wrong.
+
+In other words, **once writing code is handed to AI, the rules file gets upgraded from "code style guide" to "architecture and governance constraint"** — because it's one of the few places that can inject constraints at the **moment of generation**. The instant code is generated, bolting on permissions and audit afterward is rework; the rules file is the only lever that can "prevent the problem before generation." Keep using it to police indentation and you're using a steering wheel as a hat rack.
+
+## Write "governability" into the rules, instead of bolting it on later
+
+Bolting governance on after the fact is the most common — and most expensive — way to get this wrong: let the agent generate first, then circle back to review permissions, add audit, add approvals. That's exactly the governance rework, accounting for 80% of the effort, described in [the piece on why 88% of pilots fail](/en/blog/why-ai-agent-pilots-fail-four-layers/). Rework once per generated app, and at scale nobody can afford the bill.
+
+The cheaper move is to have the rules point the agent at a target that's **inherently governable**. A rules file like that isn't centered on style — it's centered on constraining the shape of the output:
+
+```text
+# AGENTS.md — when generating business apps
+- Model the domain as ObjectStack objects (ObjectSchema); don't hand-write tables or migrations
+- Route all access permissions through PermissionSet declarations; never hand-write if-checks for authorization in endpoints
+- Don't hand-write SQL string concatenation or auth middleware — the runtime handles these
+- Actions needing approval are declared as a flow attached to the object, not written into code
+- Output must be a reviewable metadata diff, not a wall of implementation
+```
+
+Go line by line, and each one shuts off a class of "risk that only blows up later," early: the second line turns over-broad access from "a missing check in an endpoint" into "permissions explicitly declared, runtime enforced"; the fourth turns approval from "hardcoded logic in some block of code" into "an auditable process attached to the object." Under rules like these, the opening `GET /api/refunds` won't happen again: what the agent generates is a `support_refund` object declared to "read scoped to the caller's permissions," and the path to over-broad access is shut off at the source — instead of hoping the agent "happens to remember" to add a check on some particular run.
+
+## Why "have the agent generate ObjectStack" is realistic: the open flywheel
+
+There's a question you can't dodge here: what makes you think the agent can write a specific target format correctly? However good the rules are, if the model can't write it, they're worthless.
+
+The answer is precisely the flywheel argued in [the piece on the open semantic layer](/en/blog/enterprise-ontology-race-open-vs-closed/) — **an agent generates what it has seen, and what it has seen is what's open, fully documented, and abundantly present in the training corpus.** A closed platform's proprietary format is something the model never learned; write all the rules you want and it still won't generate it fluently. ObjectStack, on the other hand, is an Apache 2.0 open protocol, and that gives "have the agent write it correctly" three realistic preconditions:
+
+1. **Learnable**: open + public + discussed → enters the training corpus → the model already knows how to write it;
+2. **Constrainable**: a rules file anchors the agent's output to this declarative target;
+3. **Validatable at generation time**: the runtime validates the generated metadata — an illegal definition is rejected outright, and the agent **gets a correction signal on the spot.** This is the key difference free-form code can't offer: a bad piece of SQL may run fine and only blow up in production, while a bad piece of metadata never gets in the door — it's bounced back to be rewritten right then.
+
+It's that third point that turns "have the agent write it correctly" from luck into a feedback-driven convergence — the agent writes it wrong, gets rejected, fixes it, as immediate as a compile error. Going further, you can also expose the runtime's governed tools via **MCP**, so the agent pulls the authoritative definitions at generation time and operates within the boundary at runtime — writing and using, one governance layer. (That governed tool layer is covered on its own in [the MCP piece](/en/blog/mcp-governed-tool-layer/).)
+
+## Putting it into practice: three lines you can add today
+
+You don't have to rewrite the whole rules file in one go. If you were to add just three governance constraints to your agent's rules file right now, ranked by payoff, these are the three:
+
+1. **"Permissions must be declared explicitly; no hand-writing authorization in code."** This one directly kills the opening incident — "miss one check and leak the whole table" — by turning authorization from "does the agent remember" into "is it written in the declaration."
+2. **"High-risk actions (moving money, issuing contracts, deleting data) must be declared as approval-gated flows."** This makes "should it stop and wait for a human" no longer depend on the agent's in-the-moment judgment, but on an auditable rule.
+3. **"Output reviewable declarations, not walls of implementation; changes must fit in a one-screen diff."** This one guards your own Merge button — it forces the agent to deliver something you can actually review.
+
+What these three have in common: none of them constrain "how the code is written," they constrain "whether the output can be governed and reviewed." This is exactly what a rules file should do, and what almost nobody asks it to do.
+
+## A bucket of cold water first
+
+Two things have to be said plainly, or you'll end up deifying the rules file.
+
+First, **the rules file governs the shape of the output, not the agent's judgment.** It can guarantee the agent generates governed metadata; it cannot guarantee it **understood the business intent correctly.** A judgment like "how much refund authority should support staff get" still has to be set and reviewed by a human — the rules only ensure that judgment has a place to land and will be enforced, instead of scattered across eight thousand lines. It puts the "should it?" question in front of you, but it doesn't answer it for you.
+
+Second, **don't treat it as an "official SDK."** What I've given here is an approach and a sample rules file — not some one-click-install official document. You'll need to make it concrete and maintain it for your own stack. The value is in the idea: push governance forward to the moment of generation, instead of waiting for the code to grow and patching it afterward.
+
+## Closing
+
+In the age of AI-written code, what separates teams is no longer whose engineers write fastest — it's whose agent **generates output that dares to ship.** And the switch for that lives, in large part, in the very rules file most people use to police indentation.
+
+Upgrade it from "code style guide" to "governability constraint," then point the agent at a target that's open, declarative, and backed by a runtime — and every app you generate is reviewable, governable, and accountable from its very first line.
+
+```bash
+npm i -g @objectstack/cli && os start
+```
+
+Tell your agent "model as ObjectStack objects, route permissions through declarations," have it generate a refund app — then try to make it return all the data over its authority, and watch the runtime refuse it at the source.

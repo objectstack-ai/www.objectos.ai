@@ -1,0 +1,92 @@
+---
+title: "Deja de enseñarle a la IA tu stack a mano: dale reglas que generen «apps gobernables»"
+description: "Hoy cada equipo le pone a su agent un AGENTS.md o un .cursor/rules, pero el 90 % de las reglas solo gobierna el estilo del código: hace que el resultado sea «correcto», no «gobernable». Tu archivo de reglas es tu verdadera documentación de arquitectura."
+author: ObjectStack Team
+date: 2026-06-16T18:00:00+08:00
+status: published
+topic: ai-agents
+audience: developer
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Reglas del agent
+  - IA escribiendo código
+  - MCP
+  - Protocolo abierto
+  - Gobernanza
+  - Opinión de tendencias
+---
+
+**Empecemos por la conclusión**: en un mundo donde la IA escribe la mayor parte del código, el archivo de reglas de tu agent (`AGENTS.md`, `.cursor/rules`, `CLAUDE.md`) es tu **verdadera documentación de arquitectura en vigor**. Pero la mayoría de los equipos lo usa para gobernar la sangría y la librería de componentes; gobierna «si queda bonito», no «si te atreves a desplegarlo». Bien usado, su palanca es mucho mayor.
+
+Un pequeño incidente real. El `AGENTS.md` de cierto equipo estaba escrito con esmero: sangría de dos espacios, usar la librería de UI interna, mensajes de commit en imperativo. El agent lo siguió punto por punto y el código que generó quedó «muy correcto». Y entonces alguien descubrió que, de paso, el `GET /api/refunds` que había generado **devolvía los reembolsos de todo el mundo**.
+
+En la revisión de código nadie lo atajó, porque de verdad cumplía cada una de las reglas del archivo. El agent no infringió ninguna regla; simplemente **nadie le habló de los permisos**. En aquel archivo de reglas no había ni una sola línea sobre «quién puede ver qué datos». Le habían enseñado a escribir bonito, no a escribir gobernable.
+
+## Tu archivo de reglas gobierna lo que no debe
+
+Casi todos los equipos que usan IA para escribir código tienen ya un archivo de reglas para el agent. Es un buen hábito. El problema es que se usa para lo menos valioso.
+
+Hagamos inventario de lo que suele haber en la mayoría de esos archivos: estilo de código, estructura de directorios, qué librería usar, convenciones de nombres, normas de commit. Nada que objetar, pero tienen un punto en común: **todo va sobre «qué pinta tiene el código», ni una sola línea sobre «qué se le permite hacer a esta app».** Mantienen coherente el resultado entre varios agents y varias generaciones, resuelven el «que parezca de la misma familia»; pero no rozan ni de lejos lo que decide si una app empresarial puede ponerse en producción: quién puede ver qué datos, qué acciones requieren aprobación, si hay rastro cuando algo se tuerce.
+
+Dicho de otro modo: **cuando escribir código pasa a manos de la IA, el archivo de reglas asciende de «guía de estilo» a «restricción de arquitectura y gobernanza»**, porque es uno de los pocos sitios donde puedes inyectar restricciones **en el mismo instante de la generación**. Una vez generado el código, salir a parchear los permisos y la auditoría es retrabajo a posteriori; y el archivo de reglas es la única palanca que puede «prevenir antes de generar». Seguir usándolo para gobernar la sangría es como coger el volante para colgar el sombrero.
+
+## Escribe la «gobernabilidad» en las reglas, no la parchees después
+
+Parchear la gobernanza a posteriori es el error más común de hoy y también el más caro: primero dejas que el agent genere y luego vuelves a revisar permisos, parchear auditoría, añadir aprobaciones; es decir, ese retrabajo de gobernanza que ocupa el 80 % del esfuerzo del que habla [el artículo del 88 % de pilotos fracasados](/es/blog/why-ai-agent-pilots-fail-four-layers/). Retrabajar una vez por cada app que generas: a escala, esa cuenta no la paga nadie.
+
+Lo más rentable es que las reglas apunten al agent hacia un objetivo **que ya sea gobernable de por sí**. Unas reglas así no tienen en su núcleo el estilo, sino restringir la forma del resultado:
+
+```text
+# AGENTS.md —— al generar apps de negocio
+- Modela el dominio como objetos de ObjectStack (ObjectSchema); no escribas tablas ni migraciones a mano
+- Todo permiso de acceso pasa por una declaración de PermissionSet; nunca escribas a mano un if de autorización en los endpoints
+- No escribas concatenación de SQL ni middleware de autorización a mano: de eso se encarga el runtime
+- Las acciones que requieran aprobación se declaran como un flow colgado del objeto, no escritas en el código
+- El resultado debe ser un diff de metadatos revisable, no grandes bloques de implementación
+```
+
+Línea por línea, cada una cierra de antemano un tipo de «riesgo que solo estalla a posteriori»: la segunda convierte la escalada de privilegios de «se olvidó una comprobación en el endpoint» en «el permiso está declarado de forma explícita y el runtime lo fuerza»; la cuarta convierte la aprobación de «lógica fija dentro de algún trozo de código» en «un proceso colgado del objeto y auditable». Bajo estas reglas, aquel `GET /api/refunds` del principio no vuelve a ocurrir: lo que genera el agent es un objeto `support_refund` que declara «lectura según los permisos de quien llama», y la vía de la escalada de privilegios queda cerrada desde el origen, en lugar de confiar en que el agent «se acuerde por casualidad» de añadir la comprobación en alguna generación.
+
+## Por qué «que el agent genere ObjectStack» es realista: el volante abierto
+
+Aquí hay una pregunta que no se puede esquivar: ¿por qué iba el agent a saber escribir bien un formato de objetivo concreto? Por muy buenas que sean las reglas, si el modelo no sabe escribirlo, no sirven de nada.
+
+La respuesta es justo ese volante que ya argumentó [el artículo sobre la capa semántica abierta](/es/blog/enterprise-ontology-race-open-vs-closed/): **el agent genera lo que ha visto, y lo que ha visto es lo que es abierto, está bien documentado y abunda en el corpus de entrenamiento.** El formato propietario de una plataforma cerrada el modelo no lo ha aprendido, así que por mucho que escribas reglas no lo generará con soltura. Y ObjectStack es un protocolo abierto bajo Apache 2.0, lo que hace que «conseguir que el agent lo escriba bien» cumpla tres premisas reales:
+
+1. **Se puede aprender**: abierto + público + comentado → entra en el corpus de entrenamiento → el modelo ya sabe escribirlo;
+2. **Se puede restringir**: un archivo de reglas ancla el resultado del agent a este objetivo declarativo;
+3. **Se puede validar en el momento de la generación**: el runtime valida los metadatos generados; una definición ilegal se rechaza de inmediato y el agent **recibe la señal de corrección en el acto**. Esta es la diferencia clave que el código de formato libre no puede dar: un trozo de SQL erróneo puede correr igualmente y solo estallar en producción, mientras que unos metadatos erróneos no pasan de la puerta y se devuelven al instante para reescribir.
+
+Es precisamente el punto 3 lo que convierte «conseguir que el agent escriba bien» de un asunto de suerte en un proceso de convergencia con realimentación: el agent escribe mal, es rechazado, corrige, igual de inmediato que un error de compilación. Y, yendo más allá, también puedes exponer las herramientas gobernadas del runtime mediante **MCP**, de modo que el agent obtenga las definiciones autoritativas en el momento de generar y, en tiempo de ejecución, pueda operarlas dentro de los límites: escribir y usar, una misma gobernanza. (Lo de la capa de herramientas gobernada lo cuenta aparte [el artículo sobre MCP](/es/blog/mcp-governed-tool-layer/).)
+
+## A la práctica: tres reglas que puedes añadir hoy mismo
+
+No hace falta reescribir el archivo de reglas entero de golpe. Si ahora mismo solo vas a añadir tres restricciones de gobernanza al archivo de reglas de tu agent, ordenadas por rentabilidad, deberían ser estas tres:
+
+1. **«Los permisos deben declararse de forma explícita; prohibido escribir autorización a mano en el código.»** Esta elimina directamente ese accidente del principio de «se olvida una comprobación y se filtra la tabla entera»: convierte la autorización de «si el agent se acuerda» en «si está escrito en la declaración».
+2. **«Las acciones de alto riesgo (mover dinero, emitir contratos, borrar datos) deben declararse como un proceso con aprobación.»** Hace que «si hay que parar y esperar a una persona» deje de depender del juicio improvisado del agent y pase a ser una regla auditable.
+3. **«Produce declaraciones revisables, no grandes bloques de implementación; los cambios deben caber en un diff de una pantalla.»** Esta protege tu propio botón de Merge: obliga al agent a entregarte algo que sí puedas revisar.
+
+El punto común de las tres: ninguna restringe «cómo se escribe el código», sino «si el resultado puede gobernarse y revisarse». Y eso es justo lo que el archivo de reglas debería hacer y casi nadie le deja hacer.
+
+## Primero, un jarro de agua fría
+
+Dos puntos hay que dejar claros, o acabaremos mitificando el archivo de reglas.
+
+Primero, **el archivo de reglas gobierna la forma del resultado, no el criterio del agent**. Puede garantizar que el agent genere metadatos gobernados, pero no puede garantizar que **haya entendido bien la intención de negocio**. Un juicio como «cuánto permiso de reembolso darle a soporte» sigue teniendo que decidirlo y revisarlo una persona; las reglas solo aseguran que ese juicio tenga dónde aterrizar y que se vaya a forzar, en vez de quedar disperso en ocho mil líneas. Te pone delante la pregunta del «debería o no debería», pero no la responde por ti.
+
+Segundo, **no lo tomes por un «SDK oficial»**. Lo que doy aquí es una jugada, un archivo de reglas de ejemplo, no un archivo oficial que se instala con un clic; tienes que concretarlo y mantenerlo según tu propio stack. Su valor está en el planteamiento: adelantar la gobernanza al instante mismo de la generación, en vez de esperar a que el código haya crecido para parchearlo.
+
+## Cierre
+
+En la era en que la IA escribe el código, lo que distancia a unos equipos de otros ya no es de quién son los ingenieros que escriben más rápido, sino de quién es el agent **cuyo resultado se atreve uno a desplegar**. Y el interruptor de ese asunto está, en buena medida, en ese archivo de reglas que la mayoría usa para gobernar la sangría.
+
+Asciéndelo de «guía de estilo» a «restricción de gobernabilidad», y luego apunta al agent hacia un objetivo abierto, declarativo y sostenido por el runtime: cada app que generes será, desde la primera línea, revisable, gobernable y de la que se puede responder.
+
+```bash
+npm i -g @objectstack/cli && os start
+```
+
+Escríbele a tu agent «modela como objetos de ObjectStack, los permisos por declaración», deja que genere una app de reembolsos y luego intenta que devuelva todos los datos saltándose los permisos, a ver cómo el runtime lo rechaza desde el origen.
