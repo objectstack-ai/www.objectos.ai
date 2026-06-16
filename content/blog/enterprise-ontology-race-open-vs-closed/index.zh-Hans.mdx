@@ -128,18 +128,16 @@ LSP 这个例子尤其值得玩味，因为它是微软**亲手**证明的一件
 
 说了这么多，看一眼实物，重点不在语法，在于它**在哪、能不能带走、能不能把分裂收回来**。
 
-假如远峰当初把"客户"建成一份中立定义，它可以用一份声明，把散在三个系统里的数据收成同一个对象：
+假如远峰当初把"客户"建成一份中立定义：把三个系统都接成数据源、各自建模为对象，再用统一口径（统一社会信用代码）对齐成同一个受治理的客户——一份你仓库里的声明，就是它的真源：
 
 ```ts
 export const Customer = ObjectSchema.create({
   name: 'crm_customer',
   label: '客户',
-  sources: [
-    Source.fabric('Account'),              // 订单与设备在这
-    Source.salesforce('Account'),          // 并购带来的销售记录在这
-    Source.database('eu.customers'),       // 合规隔离的欧盟数据在这
-  ],
-  identity: ['tax_id'],                    // 用统一口径判定"同一个客户"
+  fields: {
+    name: Field.text({ label: '客户名称', required: true }),
+    tax_id: Field.text({ label: '统一社会信用代码' }), // 跨系统对齐“同一个客户”的口径
+  },
 });
 ```
 
@@ -147,7 +145,7 @@ export const Customer = ObjectSchema.create({
 
 ```bash
 git add crm/*.ts          # 定义进了你的版本库，可审、可回滚
-os deploy --self-hosted   # 同一份定义，跑在你自己的基础设施上
+os start   # 同一份定义，跑在你自己的基础设施上
 # 然后把任意模型指向它——Claude、GPT、Gemini 都行，运行时不变
 ```
 

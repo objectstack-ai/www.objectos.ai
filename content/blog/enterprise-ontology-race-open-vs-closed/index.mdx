@@ -128,18 +128,16 @@ The LSP example is especially worth chewing on, because it's a thing Microsoft p
 
 After all this, take a look at the real thing. The point isn't the syntax — it's **where it lives, whether you can take it with you, and whether it can pull the fragmentation back in.**
 
-Suppose Yuanfeng had originally built "customer" as one neutral definition. With a single declaration, it could gather data scattered across three systems into the same object:
+Suppose Yuanfeng had originally built "customer" as one neutral definition: connect all three systems as datasources, model each as objects, then align them into one governed "customer" by a shared key (the tax ID) — a declaration in your own repo that is the single source of truth:
 
 ```ts
 export const Customer = ObjectSchema.create({
   name: 'crm_customer',
   label: 'Customer',
-  sources: [
-    Source.fabric('Account'),              // Orders and devices live here
-    Source.salesforce('Account'),          // Sales records from the acquisition live here
-    Source.database('eu.customers'),       // Compliance-isolated EU data lives here
-  ],
-  identity: ['tax_id'],                    // Use one rule to decide "the same customer"
+  fields: {
+    name: Field.text({ label: 'Customer name', required: true }),
+    tax_id: Field.text({ label: 'Tax ID' }), // a shared key to align "the same customer" across systems
+  },
 });
 ```
 
@@ -147,7 +145,7 @@ This definition lives in your Git repository: diffable, reviewable, migratable. 
 
 ```bash
 git add crm/*.ts          # The definition is in your version control: auditable, revertible
-os deploy --self-hosted   # The same definition, running on your own infrastructure
+os start   # The same definition, running on your own infrastructure
 # Then point any model at it — Claude, GPT, Gemini — the runtime doesn't change
 ```
 

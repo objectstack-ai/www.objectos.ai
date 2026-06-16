@@ -129,18 +129,16 @@ LSP 這個例子尤其值得玩味，因為它是微軟**親手**證明的一件
 
 說了這麼多，看一眼實物，重點不在語法，在於它**在哪、能不能帶走、能不能把分裂收回來**。
 
-假如遠峰當初把"客戶"建成一份中立定義，它可以用一份宣告，把散在三個系統裡的資料收成同一個物件：
+假如遠峰當初把"客戶"建成一份中立定義：把三個系統都接成資料來源、各自建模為物件，再用統一口徑（統一社會信用程式碼）對齊成同一個受治理的客戶——一份你倉庫裡的宣告，就是它的真源：
 
 ```ts
 export const Customer = ObjectSchema.create({
   name: 'crm_customer',
   label: '客戶',
-  sources: [
-    Source.fabric('Account'),              // 訂單與裝置在這
-    Source.salesforce('Account'),          // 併購帶來的銷售記錄在這
-    Source.database('eu.customers'),       // 合規隔離的歐盟資料在這
-  ],
-  identity: ['tax_id'],                    // 用統一口徑判定"同一個客戶"
+  fields: {
+    name: Field.text({ label: '客戶名稱', required: true }),
+    tax_id: Field.text({ label: '統一社會信用程式碼' }), // 跨系統對齊“同一個客戶”的口徑
+  },
 });
 ```
 
@@ -148,7 +146,7 @@ export const Customer = ObjectSchema.create({
 
 ```bash
 git add crm/*.ts          # 定義進了你的版本庫，可審、可回滾
-os deploy --self-hosted   # 同一份定義，跑在你自己的基礎設施上
+os start   # 同一份定義，跑在你自己的基礎設施上
 # 然後把任意模型指向它——Claude、GPT、Gemini 都行，執行時不變
 ```
 

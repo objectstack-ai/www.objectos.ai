@@ -128,18 +128,16 @@ Gerade das LSP-Beispiel ist bemerkenswert, denn es ist etwas, das Microsoft **ei
 
 Nach all dem ein Blick auf das konkrete Stück. Der Schwerpunkt liegt nicht auf der Syntax, sondern darauf, **wo es liegt, ob man es mitnehmen kann und ob man die Fragmentierung zurückholen kann**.
 
-Hätte Yuanfeng den „Kunden" damals als eine neutrale Definition gebaut, hätte das Unternehmen mit einer einzigen Deklaration die über drei Systeme verstreuten Daten zu ein und demselben Objekt zusammenführen können:
+Hätte Yuanfeng den „Kunden" damals als eine neutrale Definition gebaut, hätte das Unternehmen jedes der drei Systeme als Datenquelle anbinden, jeweils als Objekte modellieren und sie über einen gemeinsamen Schlüssel – die USt-IdNr. – zu einem einzigen, mit Berechtigungen und Audit versehenen „Kunden" zur Deckung bringen können:
 
 ```ts
 export const Customer = ObjectSchema.create({
   name: 'crm_customer',
   label: 'Kunde',
-  sources: [
-    Source.fabric('Account'),              // Aufträge und Anlagen liegen hier
-    Source.salesforce('Account'),          // die aus der Übernahme stammenden Vertriebsdaten liegen hier
-    Source.database('eu.customers'),       // die compliance-isolierten EU-Daten liegen hier
-  ],
-  identity: ['tax_id'],                    // bestimmt nach einheitlicher Definition „derselbe Kunde"
+  fields: {
+    name: Field.text({ label: 'Kundenname', required: true }),
+    tax_id: Field.text({ label: 'USt-IdNr.' }), // gemeinsamer Schlüssel, um systemübergreifend „denselben Kunden" zur Deckung zu bringen
+  },
 });
 ```
 
@@ -147,7 +145,7 @@ Diese Definition liegt in Ihrem Git-Repository, ist diffbar, prüfbar, migrierba
 
 ```bash
 git add crm/*.ts          # Die Definition liegt nun in Ihrem Versionsverzeichnis, prüfbar und zurückrollbar
-os deploy --self-hosted   # Dieselbe Definition läuft auf Ihrer eigenen Infrastruktur
+os start   # Dieselbe Definition läuft auf Ihrer eigenen Infrastruktur
 # Dann richten Sie ein beliebiges Modell darauf aus – Claude, GPT, Gemini, egal; die Runtime bleibt gleich
 ```
 

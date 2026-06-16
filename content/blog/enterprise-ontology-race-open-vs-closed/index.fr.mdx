@@ -128,18 +128,16 @@ Le cas du LSP est particulièrement savoureux, car c'est une chose que Microsoft
 
 Après tout cela, jetons un œil à l'objet concret ; l'essentiel n'est pas la syntaxe, mais **où elle réside, si on peut l'emporter, et si elle permet de récupérer la fragmentation**.
 
-Supposons que Yuanfeng ait d'emblée bâti son « client » en une définition neutre : il aurait pu, avec une seule déclaration, rassembler en un même objet les données dispersées dans trois systèmes :
+Supposons que Yuanfeng ait d'emblée bâti son « client » en une définition neutre : il aurait pu brancher chacun des trois systèmes comme source de données, les modéliser en objets, puis les aligner en un seul « client » gouverné grâce à une clé partagée — le numéro fiscal :
 
 ```ts
 export const Customer = ObjectSchema.create({
   name: 'crm_customer',
   label: 'Client',
-  sources: [
-    Source.fabric('Account'),              // les commandes et les équipements sont ici
-    Source.salesforce('Account'),          // les fiches commerciales issues de l'acquisition sont ici
-    Source.database('eu.customers'),       // les données européennes isolées pour la conformité sont ici
-  ],
-  identity: ['tax_id'],                    // une définition unifiée pour décider « même client »
+  fields: {
+    name: Field.text({ label: 'Nom du client', required: true }),
+    tax_id: Field.text({ label: 'N° SIREN' }), // une clé partagée pour aligner « le même client » entre les systèmes
+  },
 });
 ```
 
@@ -147,7 +145,7 @@ Cette définition réside dans votre dépôt Git : diffable, revisible, migrable
 
 ```bash
 git add crm/*.ts          # la définition entre dans votre dépôt : auditable, réversible
-os deploy --self-hosted   # la même définition tourne sur votre propre infrastructure
+os start   # la même définition tourne sur votre propre infrastructure
 # puis pointez-y n'importe quel modèle — Claude, GPT, Gemini, le runtime ne change pas
 ```
 

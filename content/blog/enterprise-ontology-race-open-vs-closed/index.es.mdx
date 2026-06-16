@@ -128,18 +128,16 @@ El ejemplo de LSP es especialmente jugoso, porque es algo que Microsoft demostr�
 
 Después de tanto hablar, echemos un vistazo al objeto real. Lo importante no es la sintaxis, sino **dónde está, si te la puedes llevar y si puede recoger la fragmentación**.
 
-Supongamos que Yuanfeng hubiera construido "cliente" como una definición neutral desde el principio: con una sola declaración podría recoger los datos dispersos en tres sistemas dentro del mismo objeto.
+Supongamos que Yuanfeng hubiera construido "cliente" como una definición neutral desde el principio: conectaría cada uno de los tres sistemas como una fuente de datos, modelaría cada uno como objetos y los alinearía en un único "cliente" gobernado mediante una clave compartida (el NIF).
 
 ```ts
 export const Customer = ObjectSchema.create({
   name: 'crm_customer',
   label: 'Cliente',
-  sources: [
-    Source.fabric('Account'),              // los pedidos y equipos están aquí
-    Source.salesforce('Account'),          // los registros comerciales de la adquisición están aquí
-    Source.database('eu.customers'),       // los datos europeos aislados por cumplimiento están aquí
-  ],
-  identity: ['tax_id'],                    // criterio unificado para determinar "el mismo cliente"
+  fields: {
+    name: Field.text({ label: 'Nombre del cliente', required: true }),
+    tax_id: Field.text({ label: 'NIF' }), // clave compartida para alinear "el mismo cliente" entre sistemas
+  },
 });
 ```
 
@@ -147,7 +145,7 @@ Esta definición vive en tu repositorio de Git: se puede *diff*-ear, revisar y m
 
 ```bash
 git add crm/*.ts          # la definición entra en tu control de versiones: auditable, reversible
-os deploy --self-hosted   # la misma definición, corriendo en tu propia infraestructura
+os start   # la misma definición, corriendo en tu propia infraestructura
 # y luego apunta cualquier modelo a ella: Claude, GPT, Gemini, da igual; el runtime no cambia
 ```
 
