@@ -128,18 +128,16 @@ LSP のこの例はとりわけ味わい深い。マイクロソフトが **自�
 
 ここまで長く語ってきたが、実物を一目見てみよう。重要なのは構文ではなく、それが **どこにあるか、持ち出せるか、分断を取り戻せるか** だ。
 
-仮にユアンフォンが最初から「顧客」を一つの中立的な定義として作っていたなら、一つの宣言で、三つのシステムに散らばったデータを同じ一つのオブジェクトに収めることができる。
+仮にユアンフォンが最初から「顧客」を一つの中立的な定義として作っていたなら、三つのシステムをそれぞれデータソースとして接続し、各々をオブジェクトとしてモデル化したうえで、共通のキー(法人番号)によって、権限と監査を備えた一つの「顧客」へと揃えられる。
 
 ```ts
 export const Customer = ObjectSchema.create({
   name: 'crm_customer',
   label: '顧客',
-  sources: [
-    Source.fabric('Account'),              // 注文と設備はここ
-    Source.salesforce('Account'),          // 買収でもたらされた営業レコードはここ
-    Source.database('eu.customers'),       // コンプライアンスで隔離された EU データはここ
-  ],
-  identity: ['tax_id'],                    // 統一された基準で「同一の顧客」を判定
+  fields: {
+    name: Field.text({ label: '顧客名', required: true }),
+    tax_id: Field.text({ label: '法人番号' }), // システムをまたいで「同一の顧客」を揃えるための共通キー
+  },
 });
 ```
 
@@ -147,7 +145,7 @@ export const Customer = ObjectSchema.create({
 
 ```bash
 git add crm/*.ts          # 定義があなたのバージョン管理に入り、監査でき、ロールバックできる
-os deploy --self-hosted   # 同じ定義を、あなた自身のインフラ上で動かす
+os start   # 同じ定義を、あなた自身のインフラ上で動かす
 # あとは任意のモデルをそこに向ければいい――Claude、GPT、Gemini、どれでも、ランタイムは変わらない
 ```
 

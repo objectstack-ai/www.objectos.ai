@@ -128,18 +128,16 @@ LSP라는 사례는 특히 음미할 가치가 있다. 그것은 마이크로소
 
 이만큼 말했으니 실물을 한번 보자. 핵심은 문법이 아니라 그것이 **어디 있는지, 들고 나갈 수 있는지, 파편화를 다시 거둬들일 수 있는지**다.
 
-위안펑이 애초에 '고객'을 한 벌의 중립적 정의로 구축했다면, 한 벌의 선언으로 세 시스템에 흩어진 데이터를 같은 객체로 거둬들일 수 있다.
+위안펑이 애초에 '고객'을 한 벌의 중립적 정의로 구축했다면, 세 시스템을 각각 **데이터소스**로 연결해 객체로 모델링하고, 공유 키(사업자번호)를 기준으로 하나의 **거버넌스가 적용된** '고객'으로 정렬할 수 있다.
 
 ```ts
 export const Customer = ObjectSchema.create({
   name: 'crm_customer',
   label: '고객',
-  sources: [
-    Source.fabric('Account'),              // 주문과 설비가 여기에 있음
-    Source.salesforce('Account'),          // 인수로 들어온 영업 기록이 여기에 있음
-    Source.database('eu.customers'),       // 컴플라이언스로 격리된 EU 데이터가 여기에 있음
-  ],
-  identity: ['tax_id'],                    // 통일된 기준으로 "같은 고객"을 판정
+  fields: {
+    name: Field.text({ label: '고객명', required: true }),
+    tax_id: Field.text({ label: '사업자번호' }), // 시스템 간 "같은 고객"을 맞추는 공유 키
+  },
 });
 ```
 
@@ -147,7 +145,7 @@ export const Customer = ObjectSchema.create({
 
 ```bash
 git add crm/*.ts          # 정의가 당신의 버전 관리에 들어가, 감사·롤백 가능
-os deploy --self-hosted   # 같은 정의가 당신 자신의 인프라 위에서 돌아감
+os start   # 같은 정의가 당신 자신의 인프라 위에서 돌아감
 # 그런 다음 어떤 모델이든 여기에 연결하라 — Claude, GPT, Gemini 모두 가능, 런타임은 그대로
 ```
 
