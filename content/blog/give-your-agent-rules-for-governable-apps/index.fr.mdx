@@ -1,0 +1,92 @@
+---
+title: "Arrêtez d'apprendre votre stack à l'IA pas à pas — donnez-lui des règles qui génèrent des « applis gouvernables »"
+description: "Chaque équipe configure désormais son agent de codage avec un AGENTS.md ou un .cursor/rules, mais neuf règles sur dix ne gèrent que le style du code — elles rendent le résultat « conforme », pas « gouvernable ». Voici pourquoi le fichier de règles de votre agent est votre vraie doc d'architecture."
+author: ObjectStack Team
+date: 2026-06-16T18:00:00+08:00
+status: published
+topic: ai-agents
+audience: developer
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Règles d'agent
+  - L'IA écrit du code
+  - MCP
+  - Protocole ouvert
+  - Gouvernance
+  - Point de vue prospectif
+---
+
+**La conclusion d'abord** : dans un monde où l'IA écrit l'immense majorité du code, le fichier de règles de votre agent (`AGENTS.md`, `.cursor/rules`, `CLAUDE.md`) est votre **vraie documentation d'architecture, celle qui fait effet**. Or la plupart des équipes s'en servent pour gérer l'indentation et la bibliothèque de composants — c'est-à-dire « le joli », pas « l'osable en production ». Bien utilisé, son levier est bien plus grand.
+
+Un petit incident réel. L'`AGENTS.md` d'une équipe était rédigé très sérieusement : indentation à deux espaces, utiliser la bibliothèque UI interne, messages de commit à l'impératif. L'agent a tout suivi à la lettre, et le code généré était « très conforme ». Puis quelqu'un a découvert que le `GET /api/refunds` qu'il avait généré au passage **renvoyait les remboursements de tout le monde**.
+
+Personne ne l'a arrêté à la revue de code — parce qu'il respectait effectivement chaque ligne du fichier de règles. L'agent n'a enfreint aucune règle ; il n'a simplement **jamais été informé de cette histoire de permissions**. Dans ces règles, pas une seule ligne ne portait sur « qui peut voir quelles données ». On lui avait appris à écrire joli, pas à écrire gouvernable.
+
+## Votre fichier de règles gère la mauvaise chose
+
+Presque chaque équipe qui écrit du code avec l'IA a aujourd'hui un fichier de règles pour son agent. C'est une bonne habitude. Le problème, c'est qu'on l'emploie là où il vaut le moins.
+
+Recensons ce que contiennent la plupart des fichiers de règles : style de code, structure de répertoires, quelle bibliothèque utiliser, conventions de nommage, normes de commit. Rien à redire, mais ils ont un point commun — **ils portent tous sur « à quoi ressemble le code », pas une seule ligne sur « ce que cette appli a le droit de faire »**. Ils maintiennent la cohérence entre plusieurs agents et plusieurs générations, ils résolvent le problème de « se ressembler en famille » ; ils ne touchent absolument pas à ce qui décide si une appli d'entreprise peut être mise en production : qui peut voir quelles données, quelles actions exigent une approbation, est-ce traçable en cas de problème.
+
+Autrement dit, **dès lors qu'écrire le code est confié à l'IA, le fichier de règles passe du statut de « norme de code » à celui de « contrainte d'architecture et de gouvernance »** — parce qu'il est l'un des rares endroits où l'on peut injecter la contrainte **à l'instant même de la génération**. Une fois le code généré, revenir y rajouter les permissions et l'audit, c'est de la reprise après coup ; or le fichier de règles est le seul levier qui permet de « prévenir avant la génération ». Continuer à s'en servir pour gérer l'indentation, c'est prendre le volant pour y accrocher son chapeau.
+
+## Écrivez la « gouvernabilité » dans les règles, ne la rajoutez pas après coup
+
+Rajouter la gouvernance après coup, c'est l'erreur la plus courante du moment, et aussi la plus chère : on laisse d'abord l'agent générer, puis on revient réviser les permissions, rajouter l'audit, ajouter les approbations — exactement cette reprise de gouvernance dont parlait [l'article sur les 88 % de pilotes qui échouent](/fr/blog/why-ai-agent-pilots-fail-four-layers/), qui représente huit dixièmes de la charge de travail. Une reprise par appli générée — passé à l'échelle, personne ne peut s'offrir cette facture.
+
+L'approche plus économique : que les règles pointent l'agent vers une **cible elle-même gouvernable**. Pour un tel fichier de règles, l'essentiel n'est pas le style, c'est de contraindre la forme du résultat :
+
+```text
+# AGENTS.md —— pour générer des applis métier
+- Modéliser le domaine comme des objets ObjectStack (ObjectSchema), ne pas écrire à la main les tables et les migrations
+- Tous les droits d'accès passent par une déclaration PermissionSet, jamais d'autorisation écrite à la main avec des if dans l'API
+- Ne pas écrire à la main de concaténation SQL ni de middleware d'autorisation — c'est le runtime qui s'en charge
+- Les actions nécessitant une approbation se déclarent comme un flow attaché à l'objet, et non écrites dans le code
+- Le résultat doit être un diff de métadonnées révisable, et non de longs blocs d'implémentation
+```
+
+Ligne par ligne, chacune ferme à l'avance une catégorie de « risque qui n'explose qu'après coup » : la deuxième ligne fait passer l'élévation de privilège de « un test oublié dans l'API » à « permission déclarée explicitement et imposée par le runtime » ; la quatrième fait passer l'approbation de « une logique en dur dans un bout de code » à « un processus attaché à l'objet et auditable ». Sous ces règles, le `GET /api/refunds` du début ne se reproduira pas : l'agent génère un objet `support_refund` qui déclare une « lecture selon les permissions de l'appelant », et la voie de l'élévation de privilège est fermée à la source — au lieu de compter sur l'agent pour « se souvenir par hasard » d'ajouter un test lors d'une génération.
+
+## Pourquoi « faire générer de l'ObjectStack par l'agent » est réaliste : le volant d'inertie ouvert
+
+Il y a là une question qu'on ne peut pas contourner : qu'est-ce qui garantit qu'un agent saura écrire correctement un format cible précis ? Aussi bien rédigées soient-elles, des règles ne servent à rien si le modèle ne sait pas écrire la cible.
+
+La réponse, c'est précisément ce volant d'inertie démontré dans [l'article sur la couche sémantique ouverte](/fr/blog/enterprise-ontology-race-open-vs-closed/) — **un agent génère ce qu'il a déjà vu, et ce qu'il a vu, c'est ce qui est ouvert, bien documenté et massivement présent dans les corpus d'entraînement**. Le format propriétaire d'une plateforme fermée, le modèle ne l'a pas appris ; vous aurez beau écrire des règles, il ne le générera pas correctement. Or ObjectStack est un protocole ouvert sous licence Apache 2.0, ce qui réunit trois conditions concrètes pour « faire écrire l'agent correctement » :
+
+1. **Apprenable** : ouvert + public + discuté → entre dans les corpus d'entraînement → le modèle sait déjà l'écrire ;
+2. **Contraignable** : un fichier de règles ancre le résultat de l'agent sur cette cible déclarative ;
+3. **Validable à la génération** : le runtime valide les métadonnées générées — une définition invalide est rejetée d'emblée, et l'agent **reçoit un signal de correction sur-le-champ**. C'est la différence clé que ne peut pas offrir du code en format libre : un bout de SQL erroné peut très bien tourner et n'exploser qu'en production, tandis qu'un fichier de métadonnées erroné ne passe pas la porte et est renvoyé pour réécriture immédiate.
+
+C'est justement ce point 3 qui transforme « faire écrire l'agent correctement » d'un coup de chance en un processus de convergence avec rétroaction — l'agent se trompe, est rejeté, corrige, aussi instantanément qu'une erreur de compilation. Mieux encore, vous pouvez exposer les outils gouvernés du runtime via **MCP**, pour que l'agent récupère les définitions faisant autorité au moment de la génération, et puisse ensuite les exploiter dans les limites fixées au moment de l'exécution — écrire et utiliser, une seule et même gouvernance. (Cette couche d'outils gouvernée, [l'article sur MCP](/fr/blog/mcp-governed-tool-layer/) en parle séparément.)
+
+## En pratique : trois règles à ajouter dès aujourd'hui
+
+Inutile de réécrire tout votre fichier de règles d'un coup. Si vous ne deviez ajouter que trois contraintes de gouvernance au fichier de règles de votre agent, classées par rendement, ce devrait être celles-ci :
+
+1. **« Les permissions doivent être déclarées explicitement ; interdiction d'écrire l'autorisation à la main dans le code. »** Cette règle élimine directement l'incident du début, « un test oublié et toute la table fuite » — elle fait passer l'autorisation de « l'agent s'en souvient-il » à « est-ce écrit dans la déclaration ».
+2. **« Les actions à haut risque (toucher à l'argent, émettre un contrat, supprimer des données) doivent être déclarées comme un processus avec approbation. »** Le « doit-on s'arrêter et attendre un humain » ne dépend plus du jugement à chaud de l'agent, mais d'une règle auditable.
+3. **« Produire une déclaration révisable, et non de longs blocs d'implémentation ; une modification doit se lire dans un diff tenant sur un écran. »** Cette règle protège votre propre bouton Merge — elle force l'agent à livrer quelque chose dont vous venez à bout à la révision.
+
+Le point commun de ces trois règles : ce qu'elles contraignent, ce n'est pas « comment écrire le code », mais « le résultat peut-il être gouverné, peut-il être révisé ». C'est précisément ce que le fichier de règles devrait faire, et que peu de gens lui font faire.
+
+## D'abord, une douche froide
+
+Deux points à clarifier, sans quoi on érigerait le fichier de règles en idole.
+
+Premièrement, **le fichier de règles gère la forme du résultat, pas le discernement de l'agent**. Il peut garantir que l'agent génère des métadonnées gouvernées, il ne peut pas garantir qu'il **a bien compris l'intention métier**. Un jugement comme « quel niveau de permission de remboursement accorder au support » doit encore être défini et revu par un humain — les règles ne font qu'assurer que ce jugement a un endroit où se poser et qu'il sera imposé, plutôt que d'être éparpillé dans huit mille lignes. Elles posent devant vous la question du « devrait-on ou non », mais elles n'y répondent pas à votre place.
+
+Deuxièmement, **ne le prenez pas pour un « SDK officiel »**. Ce que je donne ici, c'est une démarche, un exemple de règles, pas un fichier officiel installable en un clic — il vous faut l'adapter concrètement à votre propre stack et bien le maintenir. Sa valeur est dans l'idée : avancer la gouvernance à l'instant de la génération, au lieu d'attendre que le code ait poussé pour la rajouter.
+
+## Conclusion
+
+À l'ère où l'IA écrit le code, ce qui creuse l'écart entre les équipes, ce n'est plus de savoir quels ingénieurs écrivent le plus vite — c'est de savoir quel agent **génère quelque chose qui ose aller en production**. Et l'interrupteur de cette affaire se trouve, en grande partie, dans ce fichier de règles que la plupart des gens utilisent pour gérer l'indentation.
+
+Faites-le passer de « norme de code » à « contrainte de gouvernabilité », puis pointez l'agent vers une cible ouverte, déclarative et que le runtime peut soutenir — et chaque appli que vous générez sera, dès sa première ligne, révisable, gouvernable et assumable.
+
+```bash
+npm i -g @objectstack/cli && os start
+```
+
+Écrivez dans les règles de votre agent « modéliser comme des objets ObjectStack, les permissions passent par déclaration », faites-lui générer une appli de remboursement — puis essayez de lui faire renvoyer toutes les données en outrepassant ses droits, et regardez comment le runtime le refuse à la source.
