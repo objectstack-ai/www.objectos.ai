@@ -51,6 +51,10 @@ interface HomeCopy {
   closingTitle: string;
   closingCopy: string;
   closingCta: string;
+  compareKicker: string;
+  compareTitle: [string, string];
+  compareLink: string;
+  comparisons: { title: string; copy: string }[];
 }
 
 const zhHans: HomeCopy = {
@@ -121,6 +125,14 @@ const zhHans: HomeCopy = {
   closingTitle: '从你最熟悉的一套业务数据开始。',
   closingCopy: '连接一个现有系统，定义关键业务对象，让第一个 AI-native 应用真正运行起来。',
   closingCta: '了解如何连接现有系统',
+  compareKicker: '对比',
+  compareTitle: ['和你熟悉的工具', '不是一回事'],
+  compareLink: '阅读对比',
+  comparisons: [
+    { title: 'vs Airtable', copy: '真数据库 + 服务端逻辑 + 治理，不是带视图的电子表格。' },
+    { title: 'vs Retool', copy: '业务逻辑是 AI 可审计的受治理元数据，不是散落各屏的 JavaScript。' },
+    { title: 'vs Lovable & Bolt', copy: 'AI 建在有真 schema 和权限的受治理平台上，不是一次性代码。' },
+  ],
 };
 
 const en: HomeCopy = {
@@ -191,6 +203,14 @@ const en: HomeCopy = {
   closingTitle: 'Start with the business data you know best.',
   closingCopy: 'Connect one existing system, define its key business objects, and put the first AI-native application into real use.',
   closingCta: 'Learn how to connect existing systems',
+  compareKicker: 'How it compares',
+  compareTitle: ['Built different from', 'the tools you know'],
+  compareLink: 'Read the comparison',
+  comparisons: [
+    { title: 'vs Airtable', copy: 'A real database with server-side logic and governance — not a spreadsheet with views.' },
+    { title: 'vs Retool', copy: 'Logic is governed metadata an AI can audit — not JavaScript scattered across screens.' },
+    { title: 'vs Lovable & Bolt', copy: 'AI builds on a governed platform with real schema and permissions — not throwaway code.' },
+  ],
 };
 
 const ja: HomeCopy = {
@@ -262,6 +282,14 @@ const ja: HomeCopy = {
   closingTitle: '最もよく知る業務データから始めましょう。',
   closingCopy: '既存システムを一つ接続し、主要な業務オブジェクトを定義して、最初の AI-native アプリを実運用へ。',
   closingCta: '既存システムとの接続方法',
+  compareKicker: '比較',
+  compareTitle: ['よくあるツールとは', '別物です'],
+  compareLink: '比較を読む',
+  comparisons: [
+    { title: 'vs Airtable', copy: '本物のDBとサーバーサイドロジック、ガバナンス。ビューだけの表計算ではありません。' },
+    { title: 'vs Retool', copy: 'ロジックはAIが監査できる統制メタデータ。画面に散らばるJavaScriptではありません。' },
+    { title: 'vs Lovable & Bolt', copy: 'AIは本物のスキーマと権限を持つ統制プラットフォーム上で構築。使い捨てコードではありません。' },
+  ],
 };
 
 const de: HomeCopy = {
@@ -333,6 +361,14 @@ const de: HomeCopy = {
   closingTitle: 'Beginnen Sie mit den Geschäftsdaten, die Sie am besten kennen.',
   closingCopy: 'Verbinden Sie ein bestehendes System, definieren Sie zentrale Geschäftsobjekte und bringen Sie die erste AI-native Anwendung in Betrieb.',
   closingCta: 'Bestehende Systeme verbinden',
+  compareKicker: 'Im Vergleich',
+  compareTitle: ['Anders als die Tools,', 'die Sie kennen'],
+  compareLink: 'Vergleich lesen',
+  comparisons: [
+    { title: 'vs Airtable', copy: 'Eine echte Datenbank mit Server-Logik und Governance — keine Tabelle mit Views.' },
+    { title: 'vs Retool', copy: 'Logik ist kontrollierte Metadaten, die AI prüfen kann — kein über Screens verstreutes JavaScript.' },
+    { title: 'vs Lovable & Bolt', copy: 'AI baut auf einer kontrollierten Plattform mit echtem Schema und Rechten — kein Wegwerf-Code.' },
+  ],
 };
 
 const es: HomeCopy = {
@@ -404,6 +440,14 @@ const es: HomeCopy = {
   closingTitle: 'Empieza con los datos de negocio que mejor conoces.',
   closingCopy: 'Conecta un sistema existente, define sus objetos clave y pon en marcha la primera aplicación AI-native.',
   closingCta: 'Cómo conectar sistemas existentes',
+  compareKicker: 'Comparativa',
+  compareTitle: ['Distinto de las', 'herramientas que conoces'],
+  compareLink: 'Leer la comparación',
+  comparisons: [
+    { title: 'vs Airtable', copy: 'Una base de datos real con lógica de servidor y gobierno — no una hoja con vistas.' },
+    { title: 'vs Retool', copy: 'La lógica es metadato gobernado que la AI puede auditar — no JavaScript disperso por pantallas.' },
+    { title: 'vs Lovable & Bolt', copy: 'La AI construye sobre una plataforma gobernada con esquema y permisos reales — no código desechable.' },
+  ],
 };
 
 const fr: HomeCopy = {
@@ -475,6 +519,14 @@ const fr: HomeCopy = {
   closingTitle: 'Commencez par les données métier que vous connaissez le mieux.',
   closingCopy: 'Connectez un système existant, définissez ses objets clés et mettez en production votre première application AI-native.',
   closingCta: 'Connecter les systèmes existants',
+  compareKicker: 'Comparatif',
+  compareTitle: ['Différent des outils', 'que vous connaissez'],
+  compareLink: 'Lire le comparatif',
+  comparisons: [
+    { title: 'vs Airtable', copy: 'Une vraie base de données avec logique serveur et gouvernance — pas un tableur avec des vues.' },
+    { title: 'vs Retool', copy: 'La logique est une métadonnée gouvernée que l’AI peut auditer — pas du JavaScript éparpillé.' },
+    { title: 'vs Lovable & Bolt', copy: 'L’AI construit sur une plateforme gouvernée avec schéma et permissions réels — pas du code jetable.' },
+  ],
 };
 
 const ko: HomeCopy = {
@@ -546,6 +598,14 @@ const ko: HomeCopy = {
   closingTitle: '가장 잘 아는 비즈니스 데이터에서 시작하세요.',
   closingCopy: '기존 시스템 하나를 연결하고 핵심 비즈니스 객체를 정의해 첫 AI-native 애플리케이션을 실제로 운영하세요.',
   closingCta: '기존 시스템 연결 방법',
+  compareKicker: '비교',
+  compareTitle: ['익숙한 도구들과는', '다릅니다'],
+  compareLink: '비교 보기',
+  comparisons: [
+    { title: 'vs Airtable', copy: '뷰만 있는 스프레드시트가 아니라, 서버 로직과 거버넌스를 갖춘 진짜 데이터베이스.' },
+    { title: 'vs Retool', copy: '화면에 흩어진 JavaScript가 아니라, AI가 감사할 수 있는 거버넌스 메타데이터.' },
+    { title: 'vs Lovable & Bolt', copy: '일회용 코드가 아니라, 진짜 스키마와 권한을 갖춘 거버넌스 플랫폼 위에서 AI가 구축.' },
+  ],
 };
 
 const toHant = (value: unknown): unknown => {
