@@ -39,12 +39,12 @@ const CONTACT = 'mailto:support@objectstack.ai';
 const pricingEn: PricingCopy = {
   title: 'Pricing',
   description:
-    'Simple, per-seat pricing for ObjectOS — the AI-native platform for building governed business applications. Start free, upgrade when you are ready.',
+    'Simple, per-AI-seat pricing for ObjectOS — the AI-native platform for building governed business applications. Pay only for AI seats; everyone else is free.',
   intro:
-    'Start on the free plan and upgrade when you need more. Paid plans are billed per seat — you pay for the people who build. Every plan includes AI online development. Prefer to run it yourself? The open-source Community Edition is free, forever.',
+    'Start on the free plan and upgrade when you need more. Paid plans are billed per AI seat — you pay only for the people who use AI; viewers and non-AI users are free, with no per-user seat tax. Prefer to run it yourself? The open-source Community Edition is free, forever.',
   promo: 'Founding customer offer: 50% off your first year. Limited time.',
   billingNote:
-    'Prices are in USD, per seat. The headline price is billed annually (about two months free); monthly billing is also available. Cancel anytime. Exact quotas are shown in the app and at checkout.',
+    'Prices are in USD, per AI seat. The headline price is billed annually (about two months free); monthly billing is also available. Cancel anytime. Exact quotas are shown in the app and at checkout.',
   plans: [
     {
       name: 'Free',
@@ -63,7 +63,7 @@ const pricingEn: PricingCopy = {
     {
       name: 'Team',
       price: '$20',
-      cadence: 'per seat / month',
+      cadence: 'per AI seat / month',
       billedNote: 'billed annually',
       altPrice: '$24 billed monthly',
       tagline: 'For teams building and sharing apps together.',
@@ -80,7 +80,7 @@ const pricingEn: PricingCopy = {
     {
       name: 'Business',
       price: '$45',
-      cadence: 'per seat / month',
+      cadence: 'per AI seat / month',
       billedNote: 'billed annually',
       altPrice: '$54 billed monthly',
       tagline: 'For organizations that need SSO and scale.',
@@ -116,12 +116,12 @@ const pricingEn: PricingCopy = {
 const pricingZhHans: PricingCopy = {
   title: '定价',
   description:
-    'ObjectOS 按席位定价，简单透明——面向构建受治理业务应用的 AI-native 平台。免费起步，准备好再升级。',
+    'ObjectOS 按 AI 席位定价，简单透明——面向构建受治理业务应用的 AI-native 平台。只为 AI 席位付费，其余免费。',
   intro:
-    '从免费版开始，需要更多时再升级。付费套餐按席位计费——为真正参与搭建的人付费。每个套餐都包含 AI 在线开发。想自己部署？开源社区版永久免费。',
+    '从免费版开始，需要更多时再升级。付费套餐按 AI 席位计费——只为真正使用 AI 的人付费;查看者与非 AI 用户免费,没有人头税。想自己部署？开源社区版永久免费。',
   promo: '早鸟优惠：首年五折，限时开放。',
   billingNote:
-    '价格以美元计，按席位计费。标价为年付价（约省两个月）；也可选择月付。可随时取消。具体配额在应用内和结账时显示。',
+    '价格以美元计，按 AI 席位计费。标价为年付价（约省两个月）；也可选择月付。可随时取消。具体配额在应用内和结账时显示。',
   plans: [
     {
       name: '免费版',
@@ -140,7 +140,7 @@ const pricingZhHans: PricingCopy = {
     {
       name: '团队版',
       price: '$20',
-      cadence: '每席 / 月',
+      cadence: '每 AI 席 / 月',
       billedNote: '按年付',
       altPrice: '月付 $24',
       tagline: '面向共同搭建与共享应用的团队。',
@@ -157,7 +157,7 @@ const pricingZhHans: PricingCopy = {
     {
       name: '商业版',
       price: '$45',
-      cadence: '每席 / 月',
+      cadence: '每 AI 席 / 月',
       billedNote: '按年付',
       altPrice: '月付 $54',
       tagline: '面向需要 SSO 和规模化的组织。',
