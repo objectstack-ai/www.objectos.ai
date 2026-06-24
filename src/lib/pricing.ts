@@ -41,9 +41,9 @@ const pricingEn: PricingCopy = {
   description:
     'Simple, per-AI-seat pricing for ObjectOS — the AI-native platform for building governed business applications. Pay only for AI seats; everyone else is free.',
   intro:
-    'Start on the free plan and upgrade when you need more. Paid plans are billed per AI seat — you pay only for the people who use AI; viewers and non-AI users are free, with no per-user seat tax. Run it in our cloud or self-host it on your own infrastructure — same per-AI-seat price; the open-source Community Edition is free, forever.',
+    'Start on the free plan and upgrade when you need more. Paid plans are billed per AI seat — you pay only for the people who use AI; viewers and non-AI users are free, with no per-user seat tax. Prefer to self-host? The open-source Community Edition is free, forever (in-UI AI is available on Cloud or Enterprise).',
   billingNote:
-    'Prices are in USD, per AI seat. The headline price is billed annually (about two months free); monthly billing is also available. Cancel anytime. Exact quotas are shown in the app and at checkout. Self-host is the same per-AI-seat price as a license (bring your own model); offline payment available.',
+    'Prices are in USD, per AI seat. The headline price is billed annually (about two months free); monthly billing is also available. Cancel anytime. Exact quotas are shown in the app and at checkout. Private / self-host deployment is available on Enterprise (bring your own model; offline payment).',
   plans: [
     {
       name: 'Free',
@@ -51,10 +51,9 @@ const pricingEn: PricingCopy = {
       cadence: 'forever',
       tagline: 'For evaluating and small personal projects.',
       features: [
-        'Cloud or self-host (Community)',
         'Free viewers & non-AI users',
         'AI via MCP — bring your own model',
-        'In-UI AI: daily trial on Cloud',
+        'In-UI AI: daily trial',
         '7-day audit retention',
       ],
       cta: 'Get started',
@@ -68,10 +67,10 @@ const pricingEn: PricingCopy = {
       altPrice: '$24 billed monthly',
       tagline: 'For teams building and sharing apps together.',
       features: [
-        'Cloud or self-host (license)',
         'In-UI AI: build apps + ask your data',
-        'Bundled AI credits (Cloud) / BYO model (self-host)',
+        'Bundled AI credits',
         'Custom domains',
+        'Row & field-level permissions',
         '30-day audit retention',
       ],
       cta: 'Get started',
@@ -101,10 +100,10 @@ const pricingEn: PricingCopy = {
       cadence: 'contact sales',
       tagline: 'For larger orgs with custom security and contracts.',
       features: [
+        'Private / self-host deployment',
         'Volume AI-seat pricing',
         'SCIM + compliance (SOC 2 / ISO)',
         'Clustering / HA / multi-node',
-        'Air-gapped / data residency',
         'SLA + dedicated support',
       ],
       cta: 'Contact us',
@@ -121,9 +120,9 @@ const pricingZhHans: PricingCopy = {
   description:
     'ObjectOS 按 AI 席位定价，简单透明——面向构建受治理业务应用的 AI-native 平台。只为 AI 席位付费，其余免费。',
   intro:
-    '从免费版开始，需要更多时再升级。付费套餐按 AI 席位计费——只为真正使用 AI 的人付费;查看者与非 AI 用户免费,没有人头税。云端托管或在自己的基础设施上自托管——同样的 AI 席位价;开源社区版永久免费。',
+    '从免费版开始，需要更多时再升级。付费套餐按 AI 席位计费——只为真正使用 AI 的人付费;查看者与非 AI 用户免费,没有人头税。想自己部署？开源社区版永久免费(界面内 AI 在云端或企业版提供)。',
   billingNote:
-    '价格以美元计，按 AI 席位计费。标价为年付价（约省两个月）；也可选择月付。可随时取消。具体配额在应用内和结账时显示。自托管同为按 AI 席位的授权价(自带模型);支持线下付款。',
+    '价格以美元计，按 AI 席位计费。标价为年付价（约省两个月）；也可选择月付。可随时取消。具体配额在应用内和结账时显示。私有/自托管部署在企业版提供(自带模型;支持线下付款)。',
   plans: [
     {
       name: '免费版',
@@ -131,10 +130,9 @@ const pricingZhHans: PricingCopy = {
       cadence: '永久免费',
       tagline: '用于评估和小型个人项目。',
       features: [
-        '云端或自托管(社区版)',
         '查看者与非 AI 用户免费',
         'AI 经 MCP — 自带模型',
-        '界面内 AI:云端每日试用',
+        '界面内 AI:每日试用',
         '7 天审计留存',
       ],
       cta: '开始使用',
@@ -148,10 +146,10 @@ const pricingZhHans: PricingCopy = {
       altPrice: '月付 $24',
       tagline: '面向共同搭建与共享应用的团队。',
       features: [
-        '云端或自托管(授权)',
         '界面内 AI:搭建应用 + 数据问询',
-        'AI 额度(云端)/ 自带模型(自托管)',
+        'AI 额度',
         '自定义域名',
+        '行/字段级权限',
         '30 天审计留存',
       ],
       cta: '开始使用',
@@ -181,10 +179,10 @@ const pricingZhHans: PricingCopy = {
       cadence: '联系销售',
       tagline: '面向有定制安全与合同需求的大型组织。',
       features: [
+        '私有/自托管部署',
         'AI 席位批量定价',
         'SCIM + 合规(SOC 2 / ISO)',
         '集群 / HA / 多节点',
-        '气隙 / 数据驻留',
         'SLA + 专属支持',
       ],
       cta: '联系我们',
