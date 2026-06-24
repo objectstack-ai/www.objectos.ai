@@ -656,6 +656,149 @@ const privacyZhHans: LegalPageCopy = {
   ],
 };
 
+const refundsEn: LegalPageCopy = {
+  title: 'Refund and Cancellation Policy',
+  description:
+    'How refunds, cancellations, and billing disputes work for ObjectOS subscriptions and AI usage credits, processed through our Merchant of Record.',
+  updated: 'Effective and last updated: June 24, 2026',
+  intro:
+    'This Refund and Cancellation Policy explains when and how you can cancel an ObjectOS subscription and request a refund. It applies to paid Cloud Services purchased from ObjectStack AI LLC ("ObjectStack AI", "we", "us", or "our"). Our order process and payments are handled by our authorized reseller and Merchant of Record, Paddle.com, which appears on your receipt and statement.',
+  sections: [
+    {
+      heading: '1. Merchant of Record',
+      paragraphs: [
+        'Paddle.com acts as the reseller and Merchant of Record for purchases of our paid Cloud Services. Paddle handles checkout, payment processing, billing, invoicing, and applicable sales tax or VAT. Approved refunds are issued through Paddle to your original payment method.',
+      ],
+    },
+    {
+      heading: '2. Free plan first',
+      paragraphs: [
+        'Our free plan lets you evaluate the platform at no cost and with no payment, so you can confirm it fits your needs before purchasing. We encourage you to use it before subscribing to a paid plan.',
+      ],
+    },
+    {
+      heading: '3. 14-day money-back guarantee',
+      paragraphs: [
+        'If you are not satisfied with a new paid subscription, you may request a full refund within 14 days of the initial purchase. This applies to the first payment of a new subscription. To request it, contact support@objectstack.ai with your order or receipt details.',
+      ],
+    },
+    {
+      heading: '4. Subscription renewals',
+      paragraphs: [
+        'Paid subscriptions renew automatically at the end of each billing period until canceled. Renewal charges are generally non-refundable. To avoid a renewal charge, cancel before the renewal date. If a renewal is charged in error, or you cancel immediately after an unintended renewal, contact us and we will review the request in good faith.',
+      ],
+    },
+    {
+      heading: '5. AI usage credits and consumed usage',
+      paragraphs: [
+        'One-time AI usage credits (top-ups) and any usage already consumed are non-refundable once delivered or used, because they draw on third-party model costs we incur on your behalf. An unused, never-activated credit pack purchased in error may be refunded within 14 days at our discretion.',
+      ],
+    },
+    {
+      heading: '6. Cancellation',
+      paragraphs: [
+        'You can cancel a subscription at any time from your account or by contacting support@objectstack.ai. Cancellation stops future renewals. Your plan stays active until the end of the current paid period and then does not renew. We do not provide pro-rated refunds for the unused portion of a period except where required by law or expressly stated here.',
+      ],
+    },
+    {
+      heading: '7. How to request a refund',
+      paragraphs: [
+        'Email support@objectstack.ai from the address associated with your account, or reply to your Paddle receipt, including your order number and the reason for the request. We aim to respond within 5 business days. Approved refunds are returned to the original payment method through Paddle; the time to appear depends on your bank or card issuer.',
+      ],
+    },
+    {
+      heading: '8. Statutory consumer rights',
+      paragraphs: [
+        'Consumers in the EU, UK, and other regions may have a statutory right to withdraw from a purchase within a set period. For digital services and content, that right may end once performance begins with your prior consent and acknowledgement that you lose the right of withdrawal. Nothing in this policy limits non-waivable rights you have under applicable consumer law.',
+      ],
+    },
+    {
+      heading: '9. Billing problems and chargebacks',
+      paragraphs: [
+        'If you see an unexpected charge, please contact us first — most issues are resolved quickly. Initiating a chargeback or dispute without contacting us may result in suspension of the affected account while the dispute is investigated.',
+      ],
+    },
+    {
+      heading: '10. Changes and contact',
+      paragraphs: [
+        'We may update this policy; the effective date above reflects the latest version. Questions about refunds, cancellations, or billing can be sent to support@objectstack.ai.',
+        `${company}. Federal Employer Identification Number (EIN): 37-2224437.`,
+      ],
+    },
+  ],
+};
+
+const refundsZhHans: LegalPageCopy = {
+  title: '退款与取消政策',
+  description: 'ObjectOS 订阅与 AI 用量额度的退款、取消和账单争议如何处理（经由我们的 Merchant of Record 办理）。',
+  updated: '生效及最近更新：2026 年 6 月 24 日',
+  intro:
+    '本退款与取消政策说明你在何时、如何取消 ObjectOS 订阅并申请退款。本政策适用于向 ObjectStack AI LLC（以下简称“ObjectStack AI”或“我们”）购买的付费云服务。我们的下单流程与支付由我们授权的经销商及 Merchant of Record（销售记录商）Paddle.com 办理，其名称会出现在你的收据和账单上。',
+  sections: [
+    {
+      heading: '1. Merchant of Record（销售记录商）',
+      paragraphs: [
+        '对于我们付费云服务的购买，Paddle.com 作为经销商和 Merchant of Record。Paddle 负责结账、支付处理、计费、开具发票以及适用的销售税或增值税。已批准的退款将通过 Paddle 退回到你的原始支付方式。',
+      ],
+    },
+    {
+      heading: '2. 先用免费版',
+      paragraphs: [
+        '我们的免费版可让你零成本、无需付款地评估平台，在购买前确认它是否符合你的需求。建议你在订阅付费套餐前先行试用。',
+      ],
+    },
+    {
+      heading: '3. 14 天退款保证',
+      paragraphs: [
+        '如果你对新购买的付费订阅不满意，可在首次购买后的 14 天内申请全额退款。本条适用于新订阅的首笔付款。如需申请，请联系 support@objectstack.ai 并提供订单或收据信息。',
+      ],
+    },
+    {
+      heading: '4. 订阅续期',
+      paragraphs: [
+        '付费订阅会在每个计费周期结束时自动续期，直至取消。续期费用通常不予退还。如需避免续期扣费，请在续期日期前取消。如续期为误扣，或你在非本意的续期后立即取消，请联系我们，我们会本着善意审核你的申请。',
+      ],
+    },
+    {
+      heading: '5. AI 用量额度与已消耗用量',
+      paragraphs: [
+        '一次性的 AI 用量额度（充值包）以及任何已消耗的用量，在交付或使用后不予退还，因为它们对应我们代你向第三方模型支付的成本。对于误购、从未激活的额度包，我们可酌情在 14 天内退款。',
+      ],
+    },
+    {
+      heading: '6. 取消',
+      paragraphs: [
+        '你可以随时在账户中取消订阅，或联系 support@objectstack.ai 取消。取消会停止后续续期。你的套餐在当前已付费周期结束前保持有效，之后不再续期。除法律要求或本政策明确说明外，我们不对周期内未使用部分按比例退款。',
+      ],
+    },
+    {
+      heading: '7. 如何申请退款',
+      paragraphs: [
+        '请使用与账户关联的邮箱发送邮件至 support@objectstack.ai，或直接回复你的 Paddle 收据，注明订单号和申请原因。我们力争在 5 个工作日内回复。已批准的退款将通过 Paddle 退回原始支付方式；到账时间取决于你的银行或发卡机构。',
+      ],
+    },
+    {
+      heading: '8. 法定消费者权利',
+      paragraphs: [
+        '欧盟、英国及其他地区的消费者可能享有在一定期限内撤销购买的法定权利。对于数字服务和内容，一旦在你事先同意并确认放弃撤销权后开始履约，该权利可能终止。本政策不限制你依适用消费者法律享有的不可放弃权利。',
+      ],
+    },
+    {
+      heading: '9. 账单问题与拒付',
+      paragraphs: [
+        '如发现意外扣费，请先联系我们——多数问题都能很快解决。在未联系我们的情况下发起拒付或争议，可能导致相关账户在争议调查期间被暂停。',
+      ],
+    },
+    {
+      heading: '10. 变更与联系方式',
+      paragraphs: [
+        '我们可能更新本政策；上方生效日期反映最新版本。有关退款、取消或账单的问题可发送至 support@objectstack.ai。',
+        'ObjectStack AI LLC，30 N Gould St, Ste R, Sheridan, Wyoming 82801, United States。联邦雇主识别号（EIN）：37-2224437。',
+      ],
+    },
+  ],
+};
+
 const toHant = (page: LegalPageCopy): LegalPageCopy => ({
   title: s2t(page.title),
   description: s2t(page.description),
@@ -688,4 +831,15 @@ export const privacyCopy: Record<Locale, LegalPageCopy> = {
   es: privacyEn,
   fr: privacyEn,
   ko: privacyEn,
+};
+
+export const refundsCopy: Record<Locale, LegalPageCopy> = {
+  en: refundsEn,
+  'zh-Hans': refundsZhHans,
+  'zh-Hant': toHant(refundsZhHans),
+  ja: refundsEn,
+  de: refundsEn,
+  es: refundsEn,
+  fr: refundsEn,
+  ko: refundsEn,
 };
