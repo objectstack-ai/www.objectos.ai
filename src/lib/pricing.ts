@@ -42,7 +42,6 @@ const pricingEn: PricingCopy = {
     'Simple, per-AI-seat pricing for ObjectOS — the AI-native platform for building governed business applications. Pay only for AI seats; everyone else is free.',
   intro:
     'Start on the free plan and upgrade when you need more. Paid plans are billed per AI seat — you pay only for the people who use AI; viewers and non-AI users are free, with no per-user seat tax. Prefer to run it yourself? The open-source Community Edition is free, forever.',
-  promo: 'Founding customer offer: 50% off your first year. Limited time.',
   billingNote:
     'Prices are in USD, per AI seat. The headline price is billed annually (about two months free); monthly billing is also available. Cancel anytime. Exact quotas are shown in the app and at checkout.',
   plans: [
@@ -119,7 +118,6 @@ const pricingZhHans: PricingCopy = {
     'ObjectOS 按 AI 席位定价，简单透明——面向构建受治理业务应用的 AI-native 平台。只为 AI 席位付费，其余免费。',
   intro:
     '从免费版开始，需要更多时再升级。付费套餐按 AI 席位计费——只为真正使用 AI 的人付费;查看者与非 AI 用户免费,没有人头税。想自己部署？开源社区版永久免费。',
-  promo: '早鸟优惠：首年五折，限时开放。',
   billingNote:
     '价格以美元计，按 AI 席位计费。标价为年付价（约省两个月）；也可选择月付。可随时取消。具体配额在应用内和结账时显示。',
   plans: [
