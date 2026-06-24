@@ -33,14 +33,15 @@ const CONTACT = 'mailto:support@objectstack.ai';
 
 // Prices/quotas mirror the product's source of truth:
 // cloud `packages/service-cloud/src/plan-entitlements.ts` (PLAN_PRICING +
-// PLAN_MATRIX) and the in-app SDUI pricing page. Per-seat, Airtable-aligned:
+// PLAN_MATRIX) and the in-app SDUI pricing page; see ADR-0023. Per-seat,
+// Airtable-aligned:
 // the headline is the annual-billed price; monthly is shown as the alt price.
 const pricingEn: PricingCopy = {
   title: 'Pricing',
   description:
     'Simple, per-seat pricing for ObjectOS — the AI-native platform for building governed business applications. Start free, upgrade when you are ready.',
   intro:
-    'Start on the free plan and upgrade when you need more. Paid plans are billed per seat — you pay for the people who build. Every plan includes AI online development.',
+    'Start on the free plan and upgrade when you need more. Paid plans are billed per seat — you pay for the people who build. Every plan includes AI online development. Prefer to run it yourself? The open-source Community Edition is free, forever.',
   promo: 'Founding customer offer: 50% off your first year. Limited time.',
   billingNote:
     'Prices are in USD, per seat. The headline price is billed annually (about two months free); monthly billing is also available. Cancel anytime. Exact quotas are shown in the app and at checkout.',
@@ -51,6 +52,7 @@ const pricingEn: PricingCopy = {
       cadence: 'forever',
       tagline: 'For evaluating and small personal projects.',
       features: [
+        '1 environment',
         '3 users',
         'AI online development',
         '7-day audit retention',
@@ -66,6 +68,7 @@ const pricingEn: PricingCopy = {
       altPrice: '$24 billed monthly',
       tagline: 'For teams building and sharing apps together.',
       features: [
+        '2 environments',
         'Custom domains',
         'AI app building + data Q&A',
         '30-day audit retention',
@@ -82,6 +85,7 @@ const pricingEn: PricingCopy = {
       altPrice: '$54 billed monthly',
       tagline: 'For organizations that need SSO and scale.',
       features: [
+        '4 environments',
         'SSO / SAML',
         'Custom domains',
         '1-year audit retention',
@@ -114,7 +118,7 @@ const pricingZhHans: PricingCopy = {
   description:
     'ObjectOS 按席位定价，简单透明——面向构建受治理业务应用的 AI-native 平台。免费起步，准备好再升级。',
   intro:
-    '从免费版开始，需要更多时再升级。付费套餐按席位计费——为真正参与搭建的人付费。每个套餐都包含 AI 在线开发。',
+    '从免费版开始，需要更多时再升级。付费套餐按席位计费——为真正参与搭建的人付费。每个套餐都包含 AI 在线开发。想自己部署？开源社区版永久免费。',
   promo: '早鸟优惠：首年五折，限时开放。',
   billingNote:
     '价格以美元计，按席位计费。标价为年付价（约省两个月）；也可选择月付。可随时取消。具体配额在应用内和结账时显示。',
@@ -125,6 +129,7 @@ const pricingZhHans: PricingCopy = {
       cadence: '永久免费',
       tagline: '用于评估和小型个人项目。',
       features: [
+        '1 个环境',
         '3 个用户',
         'AI 在线开发',
         '7 天审计留存',
@@ -140,6 +145,7 @@ const pricingZhHans: PricingCopy = {
       altPrice: '月付 $24',
       tagline: '面向共同搭建与共享应用的团队。',
       features: [
+        '2 个环境',
         '自定义域名',
         'AI 搭建 + 数据问询',
         '30 天审计留存',
@@ -156,6 +162,7 @@ const pricingZhHans: PricingCopy = {
       altPrice: '月付 $54',
       tagline: '面向需要 SSO 和规模化的组织。',
       features: [
+        '4 个环境',
         'SSO / SAML',
         '自定义域名',
         '1 年审计留存',
