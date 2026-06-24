@@ -1,0 +1,79 @@
+---
+title: "Power Platform's Lock-In: Azure-Only, No Self-Host, and Your Data Hostage in Dataverse"
+description: "Power Platform's gravity is real — it's already in your tenant. But you can't self-host it, a solution export carries the metadata and not your data, and AI-built apps become opaque managed config. For sovereignty buyers, that decides it."
+author: ObjectStack Team
+date: 2026-06-24
+status: published
+topic: governance
+audience: it
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Power Platform
+  - Power Apps
+  - Dataverse
+  - Self-Hosting
+  - Data Sovereignty
+---
+
+**TL;DR:** Power Platform's advantage is gravity — it's already in your Microsoft tenant, on one identity and one invoice. Two structural facts decide the hard cases anyway. First, the cost is a **success tax**: every line item (per-user, per-GB of Dataverse, per-AI-message) scales with adoption, so the bill grows fastest exactly when the app is working. A realistic 500-user deployment with one grounded agent models to **~$216k/year at list**, and climbs with use. Second, there's an **exit asymmetry**: it's frictionless to enter because everything's already there, and expensive to leave because a solution export carries the app's *shape* but not your *data*, and the runtime can't leave Azure at all. For a sovereignty or cost-at-scale buyer, those two facts decide the platform before any feature comparison.
+
+The honest starting point is that the gravity is real and rational. Power Platform reports ~56 million monthly active users; Microsoft says 80%+ of the Fortune 500 have built agents with Copilot Studio. If your company runs on Microsoft 365, the platform is *right there* — one Entra identity, native hooks into Teams, SharePoint, and Dynamics, one invoice, one support relationship. For a Microsoft-standardized shop, choosing it is often the correct call, and this article is not going to pretend otherwise.
+
+It's going to do two things the demo never does: put a number on what "it's basically free, it's already in the tenant" becomes at scale, and show what happens the day you try to leave.
+
+## The success tax: a worked model
+
+Here is a concrete deployment, with every assumption stated so you can re-run it with your own. Five hundred users, a handful of apps, and one customer-facing agent. List prices, no enterprise discount:
+
+| Line item | Assumption | Annual cost (list) |
+| --- | --- | --- |
+| Power Apps Premium | 500 users × $20/user/mo | $120,000 |
+| Dataverse storage | 50 GB beyond included × ~$40/GB/mo | $24,000 |
+| Copilot Studio agent | 2,000 grounded msgs/day × ~10 credits × $0.01 | ~$72,000 |
+| **Total** | | **~$216,000 / yr** |
+
+Now read the *shape* of that table, which matters more than the total. Every line is **per-unit and scales with success**: more people using the apps (per-user), more records accumulating (per-GB), more questions asked of the agent (per-message, and RAG grounding is ~10 credits each, the expensive kind). Double the adoption and you roughly double the bill. The platform that was cheap as a pilot gets most expensive precisely when it's working — that's the **success tax**, and it's structural, not a pricing tier you can opt out of.
+
+Two caveats in both directions. Your real number will be lower per-unit (volume and Enterprise Agreement discounts are real) — and also higher in ways the table omits (premium-connector scenarios, additional capacity, Power Automate flows, the $5 per-app plan that **retired for new customers on January 2, 2026**, pushing them to the $20 tier or pay-as-you-go). The point isn't the exact dollar figure; it's that a self-hosted runtime's marginal cost for one more user, one more GB, or one more agent call is *your own infrastructure* — roughly flat — while Power Platform's is a meter that ticks with every unit of success.
+
+## The exit asymmetry
+
+The second fact is the one that turns a cost problem into a trap. Power Platform "solutions" export, which sounds like portability. Read precisely what crosses the boundary:
+
+> A solution export carries your **metadata** — tables, forms, flows, app definitions — but **not the data in your tables.**
+
+So you can take the *shape* of your apps and must leave the *contents* behind. Your business data lives in **Dataverse**; you migrated it in to begin, and you pay ongoing storage to keep it there. And the runtime itself — the thing that executes the apps — is **Azure-only, with no self-hosting option, which Microsoft has stated it won't offer.** Leaving is therefore not a download; it's a re-platforming project: rebuild the app logic somewhere that can run it, export and reload every Dataverse table, and reconstruct the integrations.
+
+![What you can and can't take out of Power Platform](./diagram-en.svg)
+
+That's the asymmetry, stated plainly: **easy in, because everything is already there; hard out, because everything is now in there.** The same gravity that makes adoption frictionless is what makes exit a project — and you don't feel it until the day you have a reason to leave, by which point the app is the system 200 people use.
+
+## The trigger that has no workaround: sovereignty
+
+For one class of buyer the cost model and the exit asymmetry are beside the point, because a single fact ends the evaluation: **there is no self-hosted, on-prem, or air-gapped Power Platform.** If you're a bank under residency rules, a defense or government workload that must be air-gapped, or a healthcare system with sovereignty requirements, you cannot put the *runtime* where your regulators require it — not for a price, not on a roadmap. Everything else in this article is a trade-off; this one is a wall.
+
+## The rebuttal, met honestly: "the gravity is worth it"
+
+The strongest case for Power Platform is real and you should state it at full strength: *it's already in our tenant, it shares our identity and our invoice, it integrates natively with the Microsoft tools our people already live in, and consolidating on one vendor is worth a lot.* For a great many organizations that is simply true, and the lock-in is a trade they're rational to accept.
+
+That case fails only on three triggers — and the discipline is to check whether any apply to *you*, not to argue the general case:
+
+1. **Sovereignty** — you must self-host. No workaround exists; this alone decides it.
+2. **Cost at scale** — your usage is large or growing fast enough that the success tax compounds past what owning a runtime would cost.
+3. **Governing AI changes** — you need the changes Copilot makes to your apps to be reviewable diffs on a runtime you control, not opaque managed-solution config you can only inspect after the fact.
+
+If none of the three apply, Microsoft's gravity is hard to beat and you should probably let it win. If even one applies, no amount of in-tenant convenience addresses it, because each is a property of *where the runtime lives and what it costs to grow*, not a feature Power Platform can ship.
+
+## Where Power Platform is the right call — and the cost of the alternative
+
+To keep this honest: if you're all-in on Microsoft, your data already lives in the Microsoft cloud, you have no sovereignty requirement, and you value one-throat-to-choke consolidation, Power Platform is an excellent, rational choice, and the lock-in may never cost you anything you care about. Plenty of internal apps never need to leave the tenant.
+
+And the alternative isn't free. Self-hosting a runtime means *you* run it — patching, scaling, backups, the operational weight Microsoft otherwise carries for you. That's a real cost, and for a small team with no sovereignty need it can outweigh the success tax entirely. We won't pretend owning the runtime is strictly better; it's better *for the buyer who has one of the three triggers*, and overhead for the one who has none.
+
+## ObjectStack's position
+
+ObjectStack is built for the buyer with a trigger. It is **self-hostable** — the runtime lives where your data and regulators require, which is the one thing Power Platform structurally cannot offer. It **connects to the CRM/ERP/DB you already run** instead of making you migrate your business into Dataverse and rent it back by the gigabyte, so there's no hostage and no re-platforming project to leave. The app core is **open, readable metadata**, so a Copilot-style AI change is a **reviewable diff a human approves before it ships**, not opaque managed config. And because you own the runtime, AI productivity stops being a per-message meter — the marginal cost of more success is your infrastructure, not a tax.
+
+We won't match Microsoft's in-tenant convenience for a shop that's already all-in; that gravity is real and we'd be lying to wave it away. The claim is narrow and only for the buyer it fits: when sovereignty, cost-at-scale, or governing what the AI changed is on the line, your apps, your data, and the runtime that enforces their rules should be things you *own and can read* — not things you rent and can't take with you.

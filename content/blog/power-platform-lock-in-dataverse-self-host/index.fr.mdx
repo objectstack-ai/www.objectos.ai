@@ -1,0 +1,79 @@
+---
+title: "Le verrouillage de Power Platform : Azure seul, pas d'auto-hébergement, vos données otages"
+description: "La gravité de Power Platform est réelle : elle est déjà dans votre tenant. Mais impossible de l'auto-héberger, un export emporte les métadonnées et non vos données, et les apps créées par l'IA deviennent de la config gérée opaque."
+author: ObjectStack Team
+date: 2026-06-24
+status: published
+topic: governance
+audience: it
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Power Platform
+  - Power Apps
+  - Dataverse
+  - Auto-hébergement
+  - Souveraineté des données
+---
+
+**TL;DR :** L'atout de Power Platform, c'est la gravité : elle est déjà dans votre tenant Microsoft, sur une seule identité et une seule facture. Deux faits structurels tranchent de toute façon les cas difficiles. D'abord, le coût est une **taxe au succès** : chaque poste (par utilisateur, par Go de Dataverse, par message d'IA) évolue avec l'adoption, si bien que la facture grimpe le plus vite précisément quand l'app fonctionne. Un déploiement réaliste de 500 utilisateurs avec un agent ancré se modélise à **~216 000 $/an au tarif public**, et grimpe avec l'usage. Ensuite, il y a une **asymétrie de sortie** : entrer est sans friction parce que tout est déjà là, et sortir est coûteux parce qu'un export emporte la *forme* de l'app mais pas vos *données*, et le runtime ne peut pas du tout quitter Azure. Pour un acheteur souveraineté ou coût à l'échelle, ces deux faits tranchent la plateforme avant toute comparaison de fonctionnalités.
+
+Le point de départ honnête, c'est que la gravité est réelle et rationnelle. Power Platform revendique ~56 millions d'utilisateurs actifs mensuels ; Microsoft affirme que plus de 80 % des Fortune 500 ont créé des agents avec Copilot Studio. Si votre entreprise tourne sur Microsoft 365, la plateforme est *juste là* : une identité Entra, des accroches natives vers Teams, SharePoint et Dynamics, une facture, une relation de support. Pour une entreprise standardisée sur Microsoft, la choisir est souvent le bon choix, et cet article ne va pas prétendre le contraire.
+
+Il va faire deux choses que la démo ne fait jamais : mettre un chiffre sur ce que « c'est quasi gratuit, c'est déjà dans le tenant » devient à l'échelle, et montrer ce qui se passe le jour où vous tentez de partir.
+
+## La taxe au succès : un modèle chiffré
+
+Voici un déploiement concret, avec chaque hypothèse énoncée pour que vous puissiez le rejouer avec les vôtres. Cinq cents utilisateurs, une poignée d'apps et un agent face client. Tarifs publics, sans remise entreprise :
+
+| Poste | Hypothèse | Coût annuel (tarif public) |
+| --- | --- | --- |
+| Power Apps Premium | 500 utilisateurs × $20/user/mo | $120,000 |
+| Stockage Dataverse | 50 Go au-delà de l'inclus × ~$40/GB/mo | $24,000 |
+| Agent Copilot Studio | 2 000 msgs ancrés/jour × ~10 credits × $0.01 | ~$72,000 |
+| **Total** | | **~$216,000 / an** |
+
+Lisez maintenant la *forme* de ce tableau, qui compte plus que le total. Chaque ligne est **à l'unité et évolue avec le succès** : plus de gens qui utilisent les apps (par utilisateur), plus d'enregistrements qui s'accumulent (par Go), plus de questions posées à l'agent (par message, et l'ancrage RAG coûte ~10 crédits chacun, le type cher). Doublez l'adoption et vous doublez à peu près la facture. La plateforme qui était bon marché en pilote devient la plus chère précisément quand elle fonctionne — c'est la **taxe au succès**, et elle est structurelle, pas un palier tarifaire dont on peut se désinscrire.
+
+Deux nuances dans les deux sens. Votre chiffre réel sera plus bas à l'unité (les remises de volume et d'Enterprise Agreement sont réelles) — et aussi plus élevé sur des points que le tableau omet (scénarios de connecteurs premium, capacité supplémentaire, flux Power Automate, le plan à $5 par app qui a été **retiré pour les nouveaux clients le 2 janvier 2026**, les poussant vers le palier à $20 ou le paiement à l'usage). Le point n'est pas le chiffre exact en dollars ; c'est que le coût marginal d'un runtime auto-hébergé pour un utilisateur de plus, un Go de plus ou un appel d'agent de plus est *votre propre infrastructure* — à peu près plat — alors que celui de Power Platform est un compteur qui tourne à chaque unité de succès.
+
+## L'asymétrie de sortie
+
+Le second fait est celui qui transforme un problème de coût en piège. Les « solutions » Power Platform s'exportent, ce qui sonne comme de la portabilité. Lisez précisément ce qui franchit la frontière :
+
+> Un export de solution emporte vos **métadonnées** — tables, formulaires, flux, définitions d'app — mais **pas les données de vos tables.**
+
+Vous pouvez donc emporter la *forme* de vos apps et devez laisser le *contenu* derrière. Vos données métier vivent dans **Dataverse** ; vous les y avez migrées au départ, et vous payez du stockage en continu pour les y maintenir. Et le runtime lui-même — la chose qui exécute les apps — est **Azure uniquement, sans option d'auto-hébergement, que Microsoft a déclaré ne pas vouloir offrir.** Partir n'est donc pas un téléchargement ; c'est un projet de re-plateformisation : reconstruire la logique de l'app quelque part qui peut l'exécuter, exporter et recharger chaque table Dataverse et reconstruire les intégrations.
+
+![Ce que vous pouvez et ne pouvez pas sortir de Power Platform](./diagram-en.svg)
+
+Voilà l'asymétrie, dite clairement : **facile d'entrer, parce que tout est déjà là ; difficile de sortir, parce que tout est désormais dedans.** La même gravité qui rend l'adoption sans friction est celle qui fait de la sortie un projet — et vous ne la sentez pas avant le jour où vous avez une raison de partir, moment où l'app est le système qu'utilisent 200 personnes.
+
+## Le déclencheur sans contournement : la souveraineté
+
+Pour une catégorie d'acheteur, le modèle de coût et l'asymétrie de sortie sont accessoires, parce qu'un seul fait clôt l'évaluation : **il n'existe pas de Power Platform auto-hébergé, on-prem ou air-gapped.** Si vous êtes une banque soumise à des règles de résidence, une charge de défense ou gouvernementale qui doit être air-gapped, ou un système de santé avec des exigences de souveraineté, vous ne pouvez pas placer le *runtime* là où vos régulateurs l'exigent — ni pour un prix, ni sur une roadmap. Tout le reste de cet article est un compromis ; ceci est un mur.
+
+## L'objection, traitée honnêtement : « la gravité en vaut la peine »
+
+L'argument le plus fort en faveur de Power Platform est réel et vous devriez l'énoncer dans toute sa force : *elle est déjà dans notre tenant, elle partage notre identité et notre facture, elle s'intègre nativement aux outils Microsoft dans lesquels nos gens vivent déjà, et consolider sur un seul fournisseur vaut beaucoup.* Pour un très grand nombre d'organisations, c'est tout simplement vrai, et le verrouillage est un échange qu'il est rationnel d'accepter.
+
+Cet argument ne tombe que sur trois déclencheurs — et la discipline consiste à vérifier si l'un s'applique à *vous*, pas à débattre du cas général :
+
+1. **Souveraineté** — vous devez auto-héberger. Aucun contournement n'existe ; cela seul tranche.
+2. **Coût à l'échelle** — votre usage est assez grand ou croît assez vite pour que la taxe au succès s'accumule au-delà de ce que coûterait posséder un runtime.
+3. **Gouverner les changements de l'IA** — vous avez besoin que les changements que Copilot apporte à vos apps soient des diffs vérifiables sur un runtime que vous contrôlez, pas de la config de solution gérée opaque que vous ne pouvez inspecter qu'après coup.
+
+Si aucun des trois ne s'applique, la gravité de Microsoft est difficile à battre et vous devriez probablement la laisser gagner. Si même un seul s'applique, aucune quantité de confort in-tenant ne le règle, car chacun est une propriété de *où vit le runtime et de ce qu'il coûte de grandir*, pas une fonctionnalité que Power Platform peut livrer.
+
+## Là où Power Platform est le bon choix — et le coût de l'alternative
+
+Pour rester honnête : si vous êtes all-in sur Microsoft, que vos données vivent déjà dans le cloud Microsoft, que vous n'avez aucune exigence de souveraineté et que vous valorisez la consolidation chez un seul fournisseur responsable, Power Platform est un excellent choix rationnel, et le verrouillage ne vous coûtera peut-être jamais rien qui vous importe. Beaucoup d'apps internes n'ont jamais besoin de quitter le tenant.
+
+Et l'alternative n'est pas gratuite. Auto-héberger un runtime signifie que *c'est vous* qui l'exploitez — correctifs, mise à l'échelle, sauvegardes, le poids opérationnel que Microsoft porte autrement pour vous. C'est un coût réel, et pour une petite équipe sans besoin de souveraineté il peut l'emporter entièrement sur la taxe au succès. Nous ne prétendrons pas que posséder le runtime est strictement mieux ; c'est mieux *pour l'acheteur qui a l'un des trois déclencheurs*, et un surcoût pour celui qui n'en a aucun.
+
+## La position d'ObjectStack
+
+ObjectStack est conçu pour l'acheteur qui a un déclencheur. Il est **auto-hébergeable** — le runtime vit là où vos données et vos régulateurs l'exigent, ce qui est la seule chose que Power Platform ne peut structurellement pas offrir. Il **se connecte au CRM/ERP/BD que vous exploitez déjà** au lieu de vous obliger à migrer votre métier vers Dataverse et à vous le relouer au gigaoctet, de sorte qu'il n'y a ni otage ni projet de re-plateformisation pour partir. Le cœur de l'app est constitué de **métadonnées ouvertes et lisibles**, si bien qu'un changement d'IA façon Copilot est un **diff vérifiable qu'un humain approuve avant qu'il ne soit livré**, pas de la config gérée opaque. Et parce que vous possédez le runtime, la productivité de l'IA cesse d'être un compteur par message — le coût marginal de plus de succès, c'est votre infrastructure, pas une taxe.
+
+Nous n'égalerons pas le confort in-tenant de Microsoft pour une entreprise déjà all-in ; cette gravité est réelle et nous mentirions en la balayant. L'affirmation est étroite et seulement pour l'acheteur à qui elle correspond : quand la souveraineté, le coût à l'échelle ou la gouvernance de ce que l'IA a changé sont en jeu, vos apps, vos données et le runtime qui en applique les règles devraient être des choses que vous *possédez et pouvez lire* — pas des choses que vous louez et ne pouvez pas emporter avec vous.

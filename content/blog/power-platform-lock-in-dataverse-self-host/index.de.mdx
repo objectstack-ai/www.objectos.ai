@@ -1,0 +1,79 @@
+---
+title: "Der Lock-in von Power Platform: nur Azure, kein Self-Hosting, Daten als Geisel in Dataverse"
+description: "Die Schwerkraft von Power Platform ist real — es steckt schon in Ihrem Tenant. Aber Self-Hosting geht nicht, ein Export nimmt die Metadaten mit, nicht Ihre Daten, und KI-Apps werden zu undurchsichtiger Managed Config."
+author: ObjectStack Team
+date: 2026-06-24
+status: published
+topic: governance
+audience: it
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Power Platform
+  - Power Apps
+  - Dataverse
+  - Self-Hosting
+  - Datensouveränität
+---
+
+**TL;DR:** Der Vorteil von Power Platform ist Schwerkraft — es steckt bereits in Ihrem Microsoft-Tenant, auf einer Identität und einer Rechnung. Zwei strukturelle Fakten entscheiden die harten Fälle ohnehin. Erstens sind die Kosten eine **Erfolgssteuer**: jeder Posten (pro Nutzer, pro GB Dataverse, pro KI-Nachricht) skaliert mit der Adoption, sodass die Rechnung genau dann am schnellsten wächst, wenn die App funktioniert. Eine realistische Bereitstellung mit 500 Nutzern und einem geerdeten Agenten modelliert sich auf **~216.000 $/Jahr zum Listenpreis** und steigt mit der Nutzung. Zweitens gibt es eine **Exit-Asymmetrie**: der Eintritt ist reibungslos, weil alles schon da ist, und der Austritt ist teuer, weil ein Solution-Export die *Form* der App trägt, aber nicht Ihre *Daten*, und die Laufzeitumgebung Azure gar nicht verlassen kann. Für einen Käufer mit Fokus auf Souveränität oder Kosten bei Skalierung entscheiden diese beiden Fakten die Plattform, bevor ein einziger Funktionsvergleich stattfindet.
+
+Der ehrliche Ausgangspunkt ist, dass die Schwerkraft real und rational ist. Power Platform meldet ~56 Millionen monatlich aktive Nutzer; Microsoft sagt, dass über 80 % der Fortune 500 Agenten mit Copilot Studio gebaut haben. Wenn Ihr Unternehmen auf Microsoft 365 läuft, ist die Plattform *direkt da* — eine Entra-Identität, native Anbindungen an Teams, SharePoint und Dynamics, eine Rechnung, eine Support-Beziehung. Für einen Microsoft-standardisierten Betrieb ist die Wahl oft die richtige, und dieser Artikel wird nicht so tun, als wäre es anders.
+
+Er wird zwei Dinge tun, die die Demo nie tut: eine Zahl darauf setzen, was "es ist quasi kostenlos, es ist ja schon im Tenant" bei Skalierung wird, und zeigen, was an dem Tag passiert, an dem Sie versuchen zu gehen.
+
+## Die Erfolgssteuer: ein durchgerechnetes Modell
+
+Hier ist eine konkrete Bereitstellung, mit jeder ausgesprochenen Annahme, damit Sie sie mit Ihren eigenen Zahlen nachrechnen können. Fünfhundert Nutzer, eine Handvoll Apps und ein kundenorientierter Agent. Listenpreise, kein Enterprise-Rabatt:
+
+| Posten | Annahme | Jahreskosten (Liste) |
+| --- | --- | --- |
+| Power Apps Premium | 500 Nutzer × $20/user/mo | $120,000 |
+| Dataverse-Speicher | 50 GB über dem Inklusivvolumen × ~$40/GB/mo | $24,000 |
+| Copilot Studio Agent | 2.000 geerdete Nachr./Tag × ~10 credits × $0.01 | ~$72,000 |
+| **Gesamt** | | **~$216,000 / Jahr** |
+
+Lesen Sie nun die *Form* dieser Tabelle, die mehr zählt als die Gesamtsumme. Jede Zeile ist **pro Einheit und skaliert mit dem Erfolg**: mehr Menschen, die die Apps nutzen (pro Nutzer), mehr akkumulierende Datensätze (pro GB), mehr Fragen an den Agenten (pro Nachricht, und RAG-Grounding kostet jeweils ~10 Credits, die teure Sorte). Verdoppeln Sie die Adoption und Sie verdoppeln ungefähr die Rechnung. Die Plattform, die als Pilot günstig war, wird genau dann am teuersten, wenn sie funktioniert — das ist die **Erfolgssteuer**, und sie ist strukturell, keine Preisstufe, die man abwählen kann.
+
+Zwei Einschränkungen in beide Richtungen. Ihre reale Zahl wird pro Einheit niedriger sein (Mengen- und Enterprise-Agreement-Rabatte sind real) — und auch höher in Punkten, die die Tabelle auslässt (Premium-Connector-Szenarien, zusätzliche Kapazität, Power-Automate-Flows, der $5-Plan pro App, der **am 2. Januar 2026 für Neukunden eingestellt wurde** und sie auf die $20-Stufe oder Pay-as-you-go drängt). Der Punkt ist nicht die exakte Dollarzahl; es ist, dass die Grenzkosten einer selbst gehosteten Laufzeitumgebung für einen weiteren Nutzer, ein weiteres GB oder einen weiteren Agentenaufruf *Ihre eigene Infrastruktur* sind — grob konstant — während die von Power Platform ein Zähler ist, der mit jeder Erfolgseinheit tickt.
+
+## Die Exit-Asymmetrie
+
+Der zweite Fakt ist derjenige, der ein Kostenproblem in eine Falle verwandelt. Power-Platform-"Solutions" lassen sich exportieren, was nach Portabilität klingt. Lesen Sie genau, was die Grenze überschreitet:
+
+> Ein Solution-Export trägt Ihre **Metadaten** — Tabellen, Formulare, Flows, App-Definitionen — aber **nicht die Daten in Ihren Tabellen.**
+
+Sie können also die *Form* Ihrer Apps mitnehmen und müssen die *Inhalte* zurücklassen. Ihre Geschäftsdaten liegen in **Dataverse**; Sie haben sie zu Beginn dorthin migriert, und Sie zahlen laufende Speicherkosten, um sie dort zu halten. Und die Laufzeitumgebung selbst — das, was die Apps ausführt — ist **Azure-only, ohne Self-Hosting-Option, von der Microsoft erklärt hat, dass es sie nicht anbieten wird.** Das Gehen ist daher kein Download; es ist ein Re-Plattformierungsprojekt: die App-Logik irgendwo neu aufbauen, wo sie laufen kann, jede Dataverse-Tabelle exportieren und neu laden und die Integrationen rekonstruieren.
+
+![Was Sie aus Power Platform herausnehmen können und was nicht](./diagram-en.svg)
+
+Das ist die Asymmetrie, klar ausgesprochen: **leicht hinein, weil alles schon da ist; schwer hinaus, weil jetzt alles darin ist.** Dieselbe Schwerkraft, die die Adoption reibungslos macht, macht den Austritt zum Projekt — und Sie spüren es nicht bis zu dem Tag, an dem Sie einen Grund zu gehen haben, zu welchem Zeitpunkt die App das System ist, das 200 Menschen nutzen.
+
+## Der Auslöser ohne Umweg: Souveränität
+
+Für eine Klasse von Käufern sind das Kostenmodell und die Exit-Asymmetrie nebensächlich, weil ein einziger Fakt die Evaluierung beendet: **es gibt kein selbst gehostetes, On-Prem- oder air-gapped Power Platform.** Wenn Sie eine Bank unter Residenz-Regeln sind, eine Verteidigungs- oder Behörden-Workload, die air-gapped sein muss, oder ein Gesundheitssystem mit Souveränitätsanforderungen, können Sie die *Laufzeitumgebung* nicht dort platzieren, wo Ihre Regulierer es verlangen — nicht für einen Preis, nicht auf einer Roadmap. Alles andere in diesem Artikel ist ein Kompromiss; dies ist eine Wand.
+
+## Der Einwand, ehrlich beantwortet: "die Schwerkraft ist es wert"
+
+Das stärkste Argument für Power Platform ist real, und Sie sollten es in voller Stärke aussprechen: *es ist schon in unserem Tenant, es teilt unsere Identität und unsere Rechnung, es integriert sich nativ mit den Microsoft-Tools, in denen unsere Leute ohnehin leben, und die Konsolidierung auf einen Anbieter ist viel wert.* Für sehr viele Organisationen ist das schlicht wahr, und der Lock-in ist ein Handel, den anzunehmen sie rational sind.
+
+Dieses Argument scheitert nur an drei Auslösern — und die Disziplin besteht darin zu prüfen, ob einer auf *Sie* zutrifft, nicht den allgemeinen Fall zu diskutieren:
+
+1. **Souveränität** — Sie müssen selbst hosten. Es existiert kein Umweg; dies allein entscheidet es.
+2. **Kosten bei Skalierung** — Ihre Nutzung ist groß genug oder wächst schnell genug, dass die Erfolgssteuer über das hinaus kumuliert, was der Besitz einer Laufzeitumgebung kosten würde.
+3. **KI-Änderungen steuern** — Sie brauchen, dass die Änderungen, die Copilot an Ihren Apps vornimmt, überprüfbare Diffs auf einer von Ihnen kontrollierten Laufzeitumgebung sind, nicht undurchsichtige Managed-Solution-Config, die Sie nur im Nachhinein inspizieren können.
+
+Wenn keiner der drei zutrifft, ist Microsofts Schwerkraft schwer zu schlagen und Sie sollten sie wahrscheinlich gewinnen lassen. Wenn auch nur einer zutrifft, adressiert kein Maß an In-Tenant-Komfort ihn, denn jeder ist eine Eigenschaft davon, *wo die Laufzeitumgebung lebt und was es kostet, zu wachsen*, keine Funktion, die Power Platform ausliefern kann.
+
+## Wo Power Platform die richtige Wahl ist — und die Kosten der Alternative
+
+Um ehrlich zu bleiben: wenn Sie voll auf Microsoft setzen, Ihre Daten bereits in der Microsoft-Cloud liegen, Sie keine Souveränitätsanforderung haben und Sie die "one-throat-to-choke"-Konsolidierung schätzen, ist Power Platform eine ausgezeichnete, rationale Wahl, und der Lock-in kostet Sie vielleicht nie etwas, das Ihnen wichtig ist. Viele interne Apps müssen den Tenant nie verlassen.
+
+Und die Alternative ist nicht kostenlos. Eine Laufzeitumgebung selbst zu hosten bedeutet, dass *Sie* sie betreiben — Patching, Skalierung, Backups, das operative Gewicht, das Microsoft sonst für Sie trägt. Das ist ein realer Aufwand, und für ein kleines Team ohne Souveränitätsbedarf kann er die Erfolgssteuer komplett überwiegen. Wir tun nicht so, als wäre der Besitz der Laufzeitumgebung strikt besser; er ist besser *für den Käufer, der einen der drei Auslöser hat*, und Mehraufwand für den, der keinen hat.
+
+## ObjectStacks Position
+
+ObjectStack ist für den Käufer mit einem Auslöser gebaut. Es ist **selbst hostbar** — die Laufzeitumgebung lebt dort, wo Ihre Daten und Regulierer es verlangen, was das Eine ist, das Power Platform strukturell nicht bieten kann. Es **verbindet sich mit dem CRM/ERP/der DB, die Sie bereits betreiben**, statt Sie zu zwingen, Ihr Geschäft nach Dataverse zu migrieren und es pro Gigabyte zurückzumieten, sodass es keine Geisel und kein Re-Plattformierungsprojekt zum Gehen gibt. Der App-Kern ist **offene, lesbare Metadaten**, sodass eine Copilot-artige KI-Änderung ein **überprüfbarer Diff ist, den ein Mensch genehmigt, bevor er ausgeliefert wird**, keine undurchsichtige Managed Config. Und weil Sie die Laufzeitumgebung besitzen, hört KI-Produktivität auf, ein Zähler pro Nachricht zu sein — die Grenzkosten von mehr Erfolg sind Ihre Infrastruktur, keine Steuer.
+
+Wir werden Microsofts In-Tenant-Komfort für einen Betrieb, der bereits voll dabei ist, nicht erreichen; diese Schwerkraft ist real und wir würden lügen, sie wegzuwinken. Die Behauptung ist eng und nur für den Käufer, zu dem sie passt: wenn Souveränität, Kosten bei Skalierung oder das Steuern dessen, was die KI geändert hat, auf dem Spiel stehen, sollten Ihre Apps, Ihre Daten und die Laufzeitumgebung, die ihre Regeln durchsetzt, Dinge sein, die Sie *besitzen und lesen können* — nicht Dinge, die Sie mieten und nicht mitnehmen können.
