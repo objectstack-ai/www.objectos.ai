@@ -1,0 +1,97 @@
+---
+title: "Retool vs. plateforme native IA : gouverne qui ouvre l'appli, pas ce que fait la logique"
+description: "Retool offre la meilleure gouvernance d'accès du low-code : RBAC, audit, SSO, auto-hébergement. Mais la logique métier est du JavaScript éparpillé qu'aucun humain ne relit en diff et qu'aucune IA n'audite. Voilà la faille."
+author: ObjectStack Team
+date: 2026-06-24
+status: published
+topic: app-building
+audience: developer
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Retool
+  - Low-Code
+  - Outils internes
+  - Gouvernance
+  - Natif IA
+---
+
+**TL;DR :** La gouvernance d'accès de Retool est la meilleure du low-code — RBAC jusqu'à la requête, sécurité au niveau des lignes, journaux d'audit, SSO, auto-hébergement en Enterprise. Rien de tout cela n'est le problème, et il ne faut pas faire semblant que ça l'est. Le problème, c'est la *couche* qu'elle gouverne. Le RBAC contrôle quelles ressources un rôle peut atteindre ; l'**autorité** métier réelle — cette personne peut-elle émettre un remboursement de 12 000 $ ? — vit dans du JavaScript écrit à la main, éparpillé entre la propriété `Hidden` d'un bouton, le binding `disabled` d'un champ et le transformer d'une requête. Rien ne garantit que deux d'entre eux concordent, un non-ingénieur n'en lit aucun, et une IA qui écrit ces expressions produit des décisions d'autorité plus vite qu'aucune pull request ne peut les relire. La faille n'est pas la sécurité. C'est que l'autorité est du *code*, et non un fait déclaré et relisible.
+
+Imaginez l'appli Retool la plus banale du monde : une console de remboursement. Un ingénieur la construit en un après-midi — une table de commandes, un bouton « Rembourser », quelques requêtes. Le support s'en sert. C'est formidable. C'est Retool au sommet de son art, et Retool est vraiment le meilleur de la catégorie là-dessus.
+
+Six mois plus tard. L'ingénieur qui l'a construite a changé d'équipe. La sécurité mène une revue d'accès et pose au nouveau responsable une question d'une ligne : **« Quels rôles peuvent émettre un remboursement de plus de 10 000 $, et où exactement est-ce appliqué ? »**
+
+Regardez ce que le nouveau responsable doit faire pour répondre. Il n'y a pas un seul endroit où regarder. Il ouvre l'appli et se met à lire du JavaScript.
+
+## Le test du grep
+
+Voici ce à quoi ressemble réellement « où est-ce appliqué » dans une vraie appli Retool. L'autorité d'émettre un gros remboursement est répartie sur au moins trois expressions indépendantes, chacune écrite à la main, chacune d'une forme différente :
+
+```js
+// 1. refundButton → propriété "Hidden"
+{{ currentUser.groups.includes('admin') ||
+   (currentUser.groups.includes('support_lead') && refundAmount.value <= 10000) }}
+
+// 2. refundAmount input → propriété "disabled"
+{{ !currentUser.groups.includes('support_lead') }}
+
+// 3. issueRefund query → transformer (c'est la partie qui écrit réellement)
+if (refundAmount.value > 10000 && !currentUser.groups.includes('finance')) {
+  throw new Error('Refunds over $10k require finance');
+}
+```
+
+Trois endroits. Trois conditions subtilement différentes. Le bouton se cache pour certains utilisateurs ; le champ se désactive pour d'autres ; la requête lève une erreur pour un troisième ensemble. Elles sont *censées* s'additionner en une règle cohérente — « les support leads jusqu'à 10 000 $, finance au-dessus » — mais rien ne garantit que c'est le cas. Cachez un bouton et la requête sous-jacente s'exécute quand même si quelqu'un l'atteint autrement. Ajoutez un deuxième chemin d'écriture le trimestre prochain en oubliant le contrôle `finance`, et vous avez une faille qu'aucun écran ne révèle.
+
+Appelez ça **le test du grep** : pour répondre à « qui peut faire X », lisez-vous *une règle déclarée*, ou devez-vous faire un `grep` sur l'appli ? Si c'est grep, l'appli n'est pas gouvernée au niveau de l'autorité — elle est simplement *codée*, et la gouvernance d'accès (que Retool maîtrise parfaitement) se situe une couche au-dessus de ce qui peut réellement vous faire du mal.
+
+Par contraste, voici la même autorité sous forme de fait déclaré — une règle que le runtime applique sur *chaque* chemin, peu importe par quel bouton ou quelle requête vous êtes arrivé :
+
+```yaml
+action: issue_refund
+  who_can_run:
+    - role: SupportLead   when: amount <= 10000
+    - role: Finance       when: amount  > 10000
+  requires_approval:      when: amount > 10000      # une barrière préventive, pas une erreur levée
+  audit: always
+```
+
+Un seul endroit à lire. Un seul endroit à modifier. Une seule chose sur laquelle un relecteur — ou une IA — doit raisonner. La différence entre trois expressions entretenues à la main et une règle déclarée, c'est toute la différence entre « l'appli est codée » et « l'autorité de l'appli est gouvernée ».
+
+## Pourquoi le contrôle de version ne comble pas cette faille
+
+L'objection de l'ingénieur Retool averti est juste, et il faut y répondre précisément : *« Nous avons un contrôle de version adossé à Git, des journaux d'audit et du RBAC. Les changements sont relus en PR. L'accès est gouverné. Que manque-t-il ? »*
+
+Trois choses, précisément.
+
+Premièrement, une PR sur une appli Retool est une revue de **JavaScript et de bindings éparpillés entre les composants** — vous faites de la relecture de code, ce qui signifie que (a) cela exige un ingénieur, et (b) il n'existe aucune représentation structurée de *« ce changement a modifié qui peut émettre un gros remboursement. »* Le relecteur doit *remarquer* qu'un ajustement à une expression `Hidden` trois composants plus loin a déplacé une frontière d'autorité. Les diffs de logique éparpillée cachent précisément ce que vous avez le plus besoin de voir.
+
+Deuxièmement, le contrôle de version relit **du code, pas l'autorité comme un fait.** « Cette PR a-t-elle changé qui peut rembourser plus de 10 000 $ ? » n'est pas une question à laquelle un diff Git répond directement ; c'est une question à laquelle vous répondez en traçant le code dans votre tête. La règle déclarée ci-dessus rend ce diff trivial : `who_can_run` a changé, ou non.
+
+Troisièmement — et c'est ce qui compte le plus pour la direction que prend l'industrie — toute la prémisse du low-code, c'est que **les non-ingénieurs et l'IA** modifient l'appli, souvent dans l'éditeur visuel, souvent sans aucune PR. La gouvernance sur laquelle vous comptez (la relecture de PR) n'existe pas pour les changements *pour lesquels* le low-code est fait. Les journaux d'audit vous diront qu'une propriété `Hidden` a changé, après coup — détective, pas préventif — mais personne n'a relu *quelle autorité elle accordait* avant la mise en production.
+
+## L'IA ne casse pas ça. Elle le multiplie.
+
+Pendant des années, le test du grep était survivable parce qu'un humain écrivait le JavaScript et qu'un autre humain portait la connaissance de l'endroit où vivait chaque règle. La logique éparpillée est navigable si une personne l'a construite et s'en souvient.
+
+Pointez une IA sur la même appli et l'économie s'inverse dans les deux sens. L'IA peut générer cinquante bindings et une douzaine de transformers en une minute — elle produit des *décisions d'autorité* plus vite qu'aucun relecteur ne peut les tracer. Et pour relire ce qu'elle a produit, vous revoilà à lire du JavaScript à travers les écrans, parce qu'il n'existe toujours aucune représentation structurée unique de l'autorité à comparer en diff. « Retool AI » et les Agents (2025) sont réels et utiles, mais ils automatisent *par-dessus le même substrat bâti à la main* : l'agent est gouverné (Retool peut cadrer ce qu'il appelle), mais l'**appli que l'agent modifie ne l'est pas** — pas gouvernée en autorité sous une forme qu'une IA — ou un humain — puisse relire comme un fait plutôt que comme du code.
+
+Ce que l'IA produit le plus vite est précisément ce que Retool rend le plus difficile à relire.
+
+## Là où Retool est le bon choix — et là où le modèle de métadonnées vous coûte
+
+Soyez honnête dans les deux sens, car un texte à sens unique ne vaut rien pour quelqu'un qui décide réellement.
+
+La gouvernance d'accès de Retool est vraiment de premier ordre, et pour un large ensemble d'applis le test du grep ne mord jamais : un outil interne opéré par du personnel de confiance, derrière SSO, maintenu par les mêmes ingénieurs qui l'ont écrit, où « les support leads peuvent rembourser jusqu'à 10 000 $ » est appliqué à trois endroits qui se trouvent concorder et changent rarement. Pour cela — et pour la liberté de plonger dans du SQL et du JavaScript arbitraire dès qu'un besoin est tordu — Retool est excellent, et nous n'allons pas battre « câbler un outil en un après-midi ».
+
+Et le modèle de métadonnées déclarées a un coût réel dans l'autre sens : vous échangez de la flexibilité brute contre de la lisibilité. Vous ne pouvez pas simplement coller du JavaScript arbitraire dans une propriété quand le modèle n'a pas de place pour ça ; exprimer une logique vraiment inhabituelle sous forme de règles déclarées est plus contraint que `{{ }}` n'importe où. Pour un outil jetable, cette contrainte est du pur surcoût. Le modèle ne s'amortit que lorsque « qui peut faire quoi » est quelque chose dont on vous *demandera la preuve* — par un auditeur, un régulateur ou le prochain responsable — et lorsque c'est une IA, et non l'auteur d'origine, qui fait les changements.
+
+C'est ça, la ligne. En dessous, Retool gagne au mérite. Au-dessus, le test du grep est ce que vous échouez, six mois plus tard, devant quelqu'un muni d'un porte-bloc.
+
+## La position d'ObjectStack
+
+ObjectStack conserve ce que Retool réussit — un contrôle d'accès solide, l'auto-hébergement, votre propre infrastructure — et fait descendre l'*autorité* dans cette même couche gouvernée. La logique de l'appli est **des métadonnées ouvertes et lisibles** : une action comme `issue_refund` porte son propre `who_can_run`, sa propre barrière d'approbation, sa propre exigence d'audit, déclarés une fois et appliqués par le runtime sur chaque chemin. Un changement d'IA est un **diff par rapport à cette autorité déclarée** — « ce changement permet à SupportLead de rembourser jusqu'à 25 000 $ » est une ligne qu'un non-ingénieur peut lire et approuver avant la mise en production — pas une expression `Hidden` que vous découvrez plus tard en faisant un grep.
+
+Nous n'allons pas surpasser Retool sur « plonger dans le JavaScript et livrer un outil avant midi ». La revendication est plus étroite et ne compte qu'au-dessus de la ligne : quand c'est l'IA qui écrit votre logiciel interne, *qui-peut-faire-quoi* devrait être un fait que vous pouvez lire en un seul endroit et relire comme un diff — pas une propriété émergente de trois expressions qui doivent concorder, et concordent généralement, jusqu'au trimestre où ce n'est plus le cas.
