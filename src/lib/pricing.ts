@@ -41,7 +41,7 @@ const pricingEn: PricingCopy = {
   description:
     'Simple, per-AI-seat pricing for ObjectOS — the AI-native platform for building governed business applications. Pay only for AI seats; everyone else is free.',
   intro:
-    'Start on the free plan and upgrade when you need more. Paid plans are billed per AI seat — you pay only for the people who use AI; viewers and non-AI users are free, with no per-user seat tax. Prefer to self-host? The open-source Community Edition is free, forever (in-UI AI is available on Cloud or Enterprise).',
+    'Start on the free plan and upgrade when you need more. Paid plans are billed per AI seat — you pay only for the people who use AI; viewers and non-AI users are free, with no per-user seat tax. Prefer to self-host? The open-source Community Edition is free forever — bring-your-own-AI via MCP, with metadata authored in source-code mode. The in-app AI Build and Ask assistants run on Cloud and Enterprise.',
   billingNote:
     'Prices are in USD, per AI seat. The headline price is billed annually (about two months free); monthly billing is also available. Cancel anytime. Exact quotas are shown in the app and at checkout. Private / self-host deployment is available on Enterprise (bring your own model; offline payment).',
   plans: [
@@ -120,7 +120,7 @@ const pricingZhHans: PricingCopy = {
   description:
     'ObjectOS 按 AI 席位定价，简单透明——面向构建受治理业务应用的 AI-native 平台。只为 AI 席位付费，其余免费。',
   intro:
-    '从免费版开始，需要更多时再升级。付费套餐按 AI 席位计费——只为真正使用 AI 的人付费;查看者与非 AI 用户免费,没有人头税。想自己部署？开源社区版永久免费(界面内 AI 在云端或企业版提供)。',
+    '从免费版开始，需要更多时再升级。付费套餐按 AI 席位计费——只为真正使用 AI 的人付费;查看者与非 AI 用户免费,没有人头税。想自己部署？开源社区版永久免费——自带 AI、经 MCP 接入，元数据以源码方式编写;界面内的 AI 搭建（Build）与问询（Ask）在云端与企业版提供。',
   billingNote:
     '价格以美元计，按 AI 席位计费。标价为年付价（约省两个月）；也可选择月付。可随时取消。具体配额在应用内和结账时显示。私有/自托管部署在企业版提供(自带模型;支持线下付款)。',
   plans: [

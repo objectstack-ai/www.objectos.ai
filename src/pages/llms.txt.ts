@@ -34,7 +34,7 @@ export const GET: APIRoute = async ({ site }) => {
     '',
     '> ObjectOS is the target format and runtime for AI-written enterprise software: an AI agent generates the application as governed metadata, a human reviews it as a small diff, and the runtime keeps every action inside permissions, approval, and audit.',
     '',
-    'Built for a world where AI writes the code. ObjectStack is the open protocol (Apache 2.0) that defines business objects, relations, permissions, flows, APIs, and AI tools as portable metadata in your own repository; ObjectOS is the self-hosted runtime that executes it and enforces governance. Teams model business objects, generate application structure from natural language, connect existing systems without migration, and let AI agents operate inside enterprise permission boundaries.',
+    'Built for a world where AI writes the code. ObjectStack is the open protocol (Apache 2.0) that defines business objects, relations, permissions, flows, APIs, and AI tools as portable metadata in your own repository; ObjectOS is the self-hosted runtime that executes it and enforces governance. Teams model business objects, generate application structure from natural language, connect existing systems without migration, and let AI agents operate inside enterprise permission boundaries. The open-source edition is bring-your-own-AI: it exposes objects, queries, and business actions through MCP for any AI client (Claude, Cursor, a local model), and metadata is authored in source-code mode and reviewed as a diff. The in-app AI Build (Studio) and Ask (data console) assistants ship in the Cloud and Enterprise editions.',
     '',
     '## Primary Pages',
     '',
