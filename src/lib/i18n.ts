@@ -65,6 +65,7 @@ type StatusKey = 'published' | 'archived';
 interface Strings {
   siteName: string;
   siteNav: { platform: string; ai: string; security: string; resources: string; docs: string };
+  getStarted: string;
   footer: { terms: string; privacy: string; pricing: string; refunds: string };
   all: string;
   audience: string;
@@ -82,6 +83,7 @@ interface Strings {
 const en: Strings = {
   siteName: 'ObjectOS',
   siteNav: { platform: 'Platform', ai: 'AI', security: 'Security', resources: 'Resources', docs: 'Docs' },
+  getStarted: 'Get started',
   footer: { terms: 'Terms & License', privacy: 'Privacy', pricing: 'Pricing', refunds: 'Refunds' },
   all: 'Home',
   audience: 'Audience',
@@ -99,6 +101,7 @@ const en: Strings = {
 const zhHans: Strings = {
   siteName: 'ObjectOS',
   siteNav: { platform: '平台', ai: 'AI', security: '安全', resources: '资源', docs: '文档' },
+  getStarted: '开始使用',
   footer: { terms: '许可协议', privacy: '隐私政策', pricing: '定价', refunds: '退款政策' },
   all: '首页',
   audience: '受众',
@@ -116,6 +119,7 @@ const zhHans: Strings = {
 const ja: Strings = {
   siteName: 'ObjectOS',
   siteNav: { platform: 'プラットフォーム', ai: 'AI', security: 'セキュリティ', resources: 'リソース', docs: 'ドキュメント' },
+  getStarted: 'はじめる',
   footer: { terms: '利用規約・ライセンス', privacy: 'プライバシー', pricing: '料金', refunds: '返金' },
   all: 'ホーム',
   audience: '読者',
@@ -133,6 +137,7 @@ const ja: Strings = {
 const de: Strings = {
   siteName: 'ObjectOS',
   siteNav: { platform: 'Plattform', ai: 'AI', security: 'Sicherheit', resources: 'Ressourcen', docs: 'Dokumentation' },
+  getStarted: 'Loslegen',
   footer: { terms: 'Bedingungen & Lizenz', privacy: 'Datenschutz', pricing: 'Preise', refunds: 'Rückerstattung' },
   all: 'Start',
   audience: 'Zielgruppe',
@@ -150,6 +155,7 @@ const de: Strings = {
 const es: Strings = {
   siteName: 'ObjectOS',
   siteNav: { platform: 'Plataforma', ai: 'AI', security: 'Seguridad', resources: 'Recursos', docs: 'Documentación' },
+  getStarted: 'Empezar',
   footer: { terms: 'Términos y licencia', privacy: 'Privacidad', pricing: 'Precios', refunds: 'Reembolsos' },
   all: 'Inicio',
   audience: 'Audiencia',
@@ -167,6 +173,7 @@ const es: Strings = {
 const fr: Strings = {
   siteName: 'ObjectOS',
   siteNav: { platform: 'Plateforme', ai: 'AI', security: 'Sécurité', resources: 'Ressources', docs: 'Documentation' },
+  getStarted: 'Commencer',
   footer: { terms: 'Conditions et licence', privacy: 'Confidentialité', pricing: 'Tarifs', refunds: 'Remboursements' },
   all: 'Accueil',
   audience: 'Audience',
@@ -184,6 +191,7 @@ const fr: Strings = {
 const ko: Strings = {
   siteName: 'ObjectOS',
   siteNav: { platform: '플랫폼', ai: 'AI', security: '보안', resources: '리소스', docs: '문서' },
+  getStarted: '시작하기',
   footer: { terms: '약관 및 라이선스', privacy: '개인정보 보호', pricing: '가격', refunds: '환불' },
   all: '홈',
   audience: '대상',
@@ -208,6 +216,7 @@ const toHant = (s: Strings): Strings => ({
     resources: s2t(s.siteNav.resources),
     docs: s2t(s.siteNav.docs),
   },
+  getStarted: s2t(s.getStarted),
   footer: {
     terms: s2t(s.footer.terms),
     privacy: s2t(s.footer.privacy),
