@@ -39,11 +39,11 @@ const CONTACT = 'mailto:support@objectstack.ai';
 const pricingEn: PricingCopy = {
   title: 'Pricing',
   description:
-    'Simple, per-AI-seat pricing for ObjectOS — the AI-native platform for building governed business applications. Pay only for AI seats; everyone else is free.',
+    'Straightforward pricing for ObjectOS, the governed runtime for AI-written business applications. Pay for AI seats only; viewers and non-AI users are free.',
   intro:
-    'Start on the free plan and upgrade when you need more. Paid plans are billed per AI seat — you pay only for the people who use AI; viewers and non-AI users are free, with no per-user seat tax. Prefer to self-host? The open-source Community Edition is free forever — bring-your-own-AI via MCP, with metadata authored in source-code mode. The in-app AI Build and Ask assistants run on Cloud and Enterprise.',
+    'Start on the free plan and upgrade when you need more. Paid plans are billed per AI seat: you pay for the people who use AI, while viewers and non-AI users stay free. Prefer to self-host? The open-source Community Edition is free forever. Bring your own AI through MCP, author metadata as source files, and review changes as diffs. The in-app AI Build and Ask assistants run on Cloud and Enterprise.',
   billingNote:
-    'Prices are in USD, per AI seat. The headline price is billed annually (about two months free); monthly billing is also available. Cancel anytime. Exact quotas are shown in the app and at checkout. Private / self-host deployment is available on Enterprise (bring your own model; offline payment).',
+    'Prices are in USD per AI seat. The headline price is billed annually (about two months free); monthly billing is also available. Cancel anytime. Exact quotas are shown in the app and at checkout. Private and self-hosted deployment are available on Enterprise, including bring-your-own-model and offline payment options.',
   plans: [
     {
       name: 'Free',
@@ -51,9 +51,9 @@ const pricingEn: PricingCopy = {
       cadence: 'forever',
       tagline: 'For evaluating and small personal projects.',
       features: [
-        'Free viewers & non-AI users',
-        'AI via MCP — bring your own model',
-        'In-UI AI: daily trial',
+        'Free viewers and non-AI users',
+        'AI through MCP — bring your own model',
+        'Daily in-app AI trial',
         '7-day audit retention',
       ],
       cta: 'Get started',
@@ -67,10 +67,10 @@ const pricingEn: PricingCopy = {
       altPrice: '$24 billed monthly',
       tagline: 'For teams building and sharing apps together.',
       features: [
-        'In-UI AI: build apps + ask your data',
+        'In-app AI Builder and Ask',
         'Bundled AI credits',
         'Custom domains',
-        'Row & field-level permissions',
+        'Row and field-level permissions',
         '30-day audit retention',
       ],
       cta: 'Get started',
@@ -87,8 +87,8 @@ const pricingEn: PricingCopy = {
       features: [
         'Everything in Team, plus:',
         'SSO / SAML',
-        'Advanced permissions & governance',
-        'Higher AI credit allowance',
+        'Advanced permissions and governance',
+        'More included AI credits',
         '1-year audit retention',
       ],
       cta: 'Get started',
@@ -98,9 +98,9 @@ const pricingEn: PricingCopy = {
       name: 'Enterprise',
       price: 'Custom',
       cadence: 'contact sales',
-      tagline: 'For larger orgs with custom security and contracts.',
+      tagline: 'For larger organizations with custom security, deployment, and contracting needs.',
       features: [
-        'Private / self-host deployment',
+        'Private or self-hosted deployment',
         'Volume AI-seat pricing',
         'SCIM + compliance (SOC 2 / ISO)',
         'Clustering / HA / multi-node',

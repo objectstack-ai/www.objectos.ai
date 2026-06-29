@@ -30,9 +30,9 @@ export const CLUSTERS: Cluster[] = [
       'Learn what an AI-native app platform is, how it differs from low-code, and how ObjectOS connects business objects, permissions, workflows, APIs, and AI agents.',
     eyebrow: 'Pillar guide',
     lead:
-      'An AI-native app platform is built around business objects, permissions, workflows, APIs, and agent tools from the start. It is not only a faster page builder; it is a governed runtime for AI to understand and operate business software.',
+      'An AI-native app platform is built around business objects, permissions, workflows, APIs, and agent tools from the start. It is not a page builder with a chat box; it is a governed runtime for AI-written business software.',
     definition:
-      'An AI-native app platform turns requirements into structured application metadata: objects, fields, relationships, views, permissions, workflows, actions, APIs, and tools that agents can call safely. The platform gives AI a model of the business system instead of asking it to generate disconnected code.',
+      'An AI-native app platform turns requirements into structured application metadata: objects, fields, relationships, views, permissions, workflows, actions, APIs, and tools that agents can call. The platform gives AI a model of the business system instead of asking it to generate disconnected code.',
     whyNow: [
       'Enterprise AI needs access to real business records, not exported snapshots.',
       'Generated apps need permissions, audit trails, and lifecycle control after the first version ships.',
@@ -58,7 +58,7 @@ export const CLUSTERS: Cluster[] = [
       {
         question: 'How is an AI-native app platform different from low-code?',
         answer:
-          'Low-code usually accelerates forms, pages, and workflows. An AI-native app platform focuses on the deeper operating layer: business objects, governance, integrations, generated APIs, agent tools, and long-term change.',
+          'Low-code usually accelerates forms, pages, and workflows. An AI-native app platform focuses on the operating layer underneath them: business objects, governance, integrations, generated APIs, agent tools, and long-term change.',
       },
       {
         question: 'Does AI-native mean the AI writes all the code?',
@@ -83,7 +83,7 @@ export const CLUSTERS: Cluster[] = [
       'A practical guide to modernizing legacy business systems with AI by connecting existing databases, modeling business objects, and avoiding risky migrations.',
     eyebrow: 'Modernization cluster',
     lead:
-      'Legacy modernization does not always start with a rebuild. For many teams, the safer path is to connect existing systems, model the records that matter, and add AI-native workflows on top.',
+      'Legacy modernization does not always start with a rebuild. For many teams, the lower-risk path is to connect existing systems, model the records that matter, and add AI-native workflows on top.',
     definition:
       'AI-assisted modernization keeps the system of record in place while creating a governed object layer for AI, APIs, workflows, dashboards, and new applications. The old system remains operational; the new layer makes its data and processes understandable.',
     whyNow: [
@@ -99,7 +99,7 @@ export const CLUSTERS: Cluster[] = [
     ],
     useCases: [
       'Add AI search and analysis over CRM, ERP, ticket, or order data.',
-      'Build a modern workflow around a legacy system without rewriting the whole application.',
+      'Build a modern workflow around a legacy system without rewriting the entire application.',
       'Create a gradual replacement path by modeling one domain at a time.',
     ],
     faq: [
@@ -135,7 +135,7 @@ export const CLUSTERS: Cluster[] = [
       'Understand when enterprise AI should be self-hosted, which runtime components matter most, and how permissions, approvals, tools, and audit logs stay under control.',
     eyebrow: 'Governance cluster',
     lead:
-      'Self-hosted AI is not only about where the model runs. Once AI reads business data and calls tools, the application runtime that controls objects, permissions, approvals, and audit evidence becomes the critical boundary.',
+      'Self-hosted AI is not only about where the model runs. Once AI reads business data and calls tools, the application runtime that controls objects, permissions, approvals, and audit evidence becomes the critical control point.',
     definition:
       'A self-hosted AI application platform lets enterprises run the governed business runtime in their own infrastructure. The model can be local or external, but data access, tools, workflow execution, and audit policy stay under enterprise control.',
     whyNow: [
@@ -186,13 +186,13 @@ export const CLUSTERS: Cluster[] = [
       'See how AI can understand customers, opportunities, cases, and service workflows when CRM and case management data are modeled as governed business objects.',
     eyebrow: 'Solution cluster',
     lead:
-      'CRM and case management are natural starting points for enterprise AI because they sit close to revenue, service quality, and customer trust. The useful first step is not autonomous selling; it is governed understanding.',
+      'CRM and case management are natural starting points for enterprise AI because they are close to revenue, service quality, and customer trust. The useful first step is not autonomous selling; it is governed understanding.',
     definition:
       'AI for CRM and case management works best when accounts, contacts, opportunities, activities, cases, tasks, and approvals are represented as business objects. Agents can then answer questions, suggest actions, and operate workflows inside user permissions.',
     whyNow: [
       'Customer and case data is often scattered across CRM, support, contracts, notes, and spreadsheets.',
       'Managers need better visibility without exporting data into one-off reports.',
-      'Teams want AI assistance without letting automation contact customers or change cases unsafely.',
+      'Teams want AI assistance without allowing automation to contact customers or change cases outside approved boundaries.',
     ],
     capabilities: [
       'Model customers, opportunities, cases, activities, ownership, and status transitions.',
@@ -214,7 +214,7 @@ export const CLUSTERS: Cluster[] = [
       {
         question: 'Should AI automatically contact customers?',
         answer:
-          'Usually not as a first step. A safer starting point is internal understanding, summaries, risk detection, and manager review before automating outbound communication.',
+          'Usually not as a first step. A better starting point is internal understanding, summaries, risk detection, and manager review before automating outbound communication.',
       },
       {
         question: 'How does case management change with AI?',

@@ -109,9 +109,9 @@ export function termDescription(term: Term, locale: Locale): string {
   const label = term.label[locale];
   const descriptions: Record<Locale, Record<TermGroup, string>> = {
     en: {
-      topic: `Articles about ${label}, with practical notes on AI-native enterprise software, governed data, application development, and agent workflows.`,
-      solution: `Practical thinking on ${label} scenarios, including data models, workflows, permissions, integrations, and AI agent patterns for enterprise teams.`,
-      role: `Articles for ${label} on building, operating, and governing AI-native business applications with ObjectOS.`,
+      topic: `Articles about ${label}, with practical notes on AI-written enterprise software, governed data, application development, and agent workflows.`,
+      solution: `Practical guidance for ${label} scenarios, including data models, workflows, permissions, integrations, and AI agent patterns for enterprise teams.`,
+      role: `Articles for ${label} on building, operating, and governing AI-written business applications with ObjectOS.`,
       industry: `Articles for ${label} teams on connecting existing systems, business data, workflows, and AI agents without replacing core platforms.`,
     },
     'zh-Hans': {

@@ -88,7 +88,7 @@ const en: Strings = {
   all: 'Home',
   audience: 'Audience',
   articlesTitle: 'Articles',
-  articlesLead: (n) => `${n} ${n === 1 ? 'piece' : 'pieces'} on building AI-native software.`,
+  articlesLead: (n) => `${n} ${n === 1 ? 'article' : 'articles'} on AI-written enterprise software, runtime governance, and agent-ready applications.`,
   backToList: 'All articles',
   alsoOn: 'Also published on',
   references: 'References',

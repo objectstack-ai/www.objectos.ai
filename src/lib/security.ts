@@ -94,10 +94,10 @@ const zhHans: SecurityCopy = {
 
 const en: SecurityCopy = {
   title: 'Security and Governance · ObjectOS',
-  description: 'Learn how ObjectOS lets AI agents safely work with business data while protecting permissions, approvals, and audit evidence in self-hosted environments.',
+  description: 'Learn how ObjectOS gives AI agents governed access to business data while protecting permissions, approvals, and audit evidence in self-hosted environments.',
   eyebrow: 'Security and governance',
-  hero: ['Let AI agents safely touch', 'real business data.'],
-  lead: 'ObjectOS security is not about keeping AI away from business systems. It is about letting agents read, analyze, and move work forward inside explicit identity, permission, tool, approval, and audit boundaries. Data stays on your infrastructure, and every AI step is constrained by the runtime.',
+  hero: ['Give AI agents governed access', 'to real business data.'],
+  lead: 'ObjectOS does not keep AI outside the business. It lets agents read, analyze, and move work forward inside explicit boundaries for identity, permissions, tools, approvals, and audit. Data stays on your infrastructure, and every AI action is constrained by the runtime.',
   metrics: [
     { value: 'Agent', label: 'inherits user identity' },
     { value: 'Tool', label: 'governed access path' },
@@ -105,7 +105,7 @@ const en: SecurityCopy = {
   ],
   residencyTitle: 'Data residency',
   residencyLead: 'ObjectOS does not require moving business data into our cloud. The runtime connects to your databases, storage, and identity systems, so residency follows your deployment boundary.',
-  residencyColumns: ['Data', 'Location', 'Leaves?'],
+  residencyColumns: ['Data', 'Location', 'Leaves boundary?'],
   residencyRows: [
     { data: 'Business records', location: 'Your database', leaves: 'No' },
     { data: 'Users, sessions, OAuth tokens', location: 'Your database', leaves: 'No' },
@@ -115,10 +115,10 @@ const en: SecurityCopy = {
     { data: 'AI request context', location: 'Your chosen model provider or local model', leaves: 'Only if you configure an external model' },
   ],
   aiTitle: 'AI agent safety model',
-  aiLead: 'ObjectOS does not treat the model as an administrator. AI first works through business objects, then uses declarative tools to query, analyze, or trigger actions. Tool input is validated, mutating work goes through approval, and every call is constrained by the same permission system.',
+  aiLead: 'ObjectOS does not treat the model as an administrator. Agents work through business objects and use declarative tools to query, analyze, or trigger actions. Tool input is validated, mutating work goes through approval, and every call is checked against the same permission system.',
   aiSteps: [
     { title: 'Acts as a user', copy: 'An agent represents a signed-in user, not an unrestricted service account. If the user cannot see a record, the agent cannot see it either.' },
-    { title: 'Uses governed tools', copy: 'Agents call structured query, action, and metadata tools instead of owning a raw database connection or dumping whole tables into prompts.' },
+    { title: 'Uses governed tools', copy: 'Agents call structured query, action, and metadata tools instead of holding raw database credentials or dumping whole tables into prompts.' },
     { title: 'Queues changes', copy: 'Tools that modify metadata or sensitive state enter a pending-action queue so reviewers can inspect the diff before applying it.' },
     { title: 'Leaves evidence', copy: 'Conversations, tool calls, reads, writes, approvals, rejections, and permission changes can be written to audit logs.' },
   ],
@@ -141,15 +141,15 @@ const en: SecurityCopy = {
   ],
   faqTitle: 'Security review FAQ',
   faqs: [
-    { question: 'Does ObjectOS phone home?', answer: 'No. Unless you explicitly configure integrations such as OIDC, email, AI providers, webhooks, or external storage, ObjectOS does not phone home, check a license server, or collect telemetry.' },
+    { question: 'Does ObjectOS send telemetry?', answer: 'No. Unless you explicitly configure integrations such as OIDC, email, AI providers, webhooks, or external storage, ObjectOS does not send telemetry, contact a license server, or transmit data back to ObjectStack.' },
     { question: 'What goes to a model provider?', answer: 'Only the context required for the model task: conversation context, tool definitions, and necessary tool output. You can use an external model or configure a local model endpoint.' },
     { question: 'How do we limit agent writes?', answer: 'Use read-only data sources, object permissions, field permissions, action permissions, and approval queues. Agents cannot bypass runtime permissions or silently apply structural changes.' },
     { question: 'Who owns TLS, database encryption, and secrets?', answer: 'Those are deployment responsibilities. ObjectOS provides runtime authorization, audit, API key hashing, and settings encryption; your infrastructure owns TLS, at-rest database encryption, backups, and secret injection.' },
     { question: 'Is it suitable for regulated environments?', answer: 'ObjectOS provides the technical primitives: access control, audit, data residency, and isolated deployment. Certification depends on your running deployment, not a binary alone.' },
   ],
   ctaKicker: 'Next step',
-  ctaTitle: 'Bring AI close to the business without letting it cross the line.',
-  ctaCopy: 'Confirm how agents identify users, access objects, trigger actions, enter approval, and leave audit evidence before connecting them to real business data.',
+  ctaTitle: 'Let agents work with business data without crossing the boundary.',
+  ctaCopy: 'Confirm how agents identify users, access objects, trigger actions, enter approval, and leave audit evidence before connecting them to production data.',
   ctaPrimary: 'Read the security docs',
   ctaSecondary: 'Read how to connect existing systems',
 };
