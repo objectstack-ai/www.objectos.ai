@@ -1,6 +1,6 @@
 ---
-title: "Power Platform Lock-In: Dataverse, Azure, and the No Self-Host Tradeoff"
-description: "Power Platform is already inside the Microsoft tenant, but self-hosting, export, Dataverse, and AI configuration limits matter for sovereignty buyers and long-running systems."
+title: "Power Platform Lock-In: Dataverse, Azure, and the Self-Host Tradeoff"
+description: "Power Platform is already inside the Microsoft tenant, but self-hosting, Dataverse export, AI usage pricing, and sovereignty requirements matter for long-running systems."
 author: ObjectStack Team
 date: 2026-06-24
 status: published
@@ -17,15 +17,15 @@ tags:
   - Data Sovereignty
 ---
 
-**TL;DR:** Power Platform's advantage is gravity — it's already in your Microsoft tenant, on one identity and one invoice. Two structural facts decide the hard cases anyway. First, the cost is a **success tax**: every line item (per-user, per-GB of Dataverse, per-AI-message) scales with adoption, so the bill grows fastest exactly when the app is working. A realistic 500-user deployment with one grounded agent models to **~$216k/year at list**, and climbs with use. Second, there's an **exit asymmetry**: it's frictionless to enter because everything's already there, and expensive to leave because a solution export carries the app's *shape* but not your *data*, and the runtime can't leave Azure at all. For a sovereignty or cost-at-scale buyer, those two facts decide the platform before any feature comparison.
+**TL;DR:** Power Platform's advantage is gravity: it is already in your Microsoft tenant, on one identity and one invoice. Two structural facts decide the hard cases anyway. First, cost can become a **success tax** because per-user, storage, and AI usage line items scale with adoption. Second, there is an **exit asymmetry**: it is easy to enter because everything is already there, and expensive to leave because a solution export carries the app's *shape* but not the full operational system, while the runtime remains Microsoft's cloud runtime. For a sovereignty or cost-at-scale buyer, those facts can decide the platform before any feature comparison.
 
-The honest starting point is that the gravity is real and rational. Power Platform reports ~56 million monthly active users; Microsoft says 80%+ of the Fortune 500 have built agents with Copilot Studio. If your company runs on Microsoft 365, the platform is *right there* — one Entra identity, native hooks into Teams, SharePoint, and Dynamics, one invoice, one support relationship. For a Microsoft-standardized shop, choosing it is often the correct call, and this article is not going to pretend otherwise.
+The honest starting point is that the gravity is real and rational. If your company runs on Microsoft 365, the platform is *right there*: one Entra identity, native hooks into Teams, SharePoint, and Dynamics, one invoice, one support relationship. For a Microsoft-standardized organization, choosing it is often the correct call, and this article is not going to pretend otherwise.
 
-It's going to do two things the demo never does: put a number on what "it's basically free, it's already in the tenant" becomes at scale, and show what happens the day you try to leave.
+It is going to do two things the demo rarely does: put a number on what "it is basically free, it is already in the tenant" becomes at scale, and show what happens the day you try to leave.
 
-## The success tax: a worked model
+## The Success Tax: a Worked Model
 
-Here is a concrete deployment, with every assumption stated so you can re-run it with your own. Five hundred users, a handful of apps, and one customer-facing agent. List prices, no enterprise discount:
+Here is a concrete deployment, with every assumption stated so you can rerun it with your own. Five hundred users, a handful of apps, and one customer-facing agent. List prices, no enterprise discount:
 
 | Line item | Assumption | Annual cost (list) |
 | --- | --- | --- |
@@ -34,29 +34,29 @@ Here is a concrete deployment, with every assumption stated so you can re-run it
 | Copilot Studio agent | 2,000 grounded msgs/day × ~10 credits × $0.01 | ~$72,000 |
 | **Total** | | **~$216,000 / yr** |
 
-Now read the *shape* of that table, which matters more than the total. Every line is **per-unit and scales with success**: more people using the apps (per-user), more records accumulating (per-GB), more questions asked of the agent (per-message, and RAG grounding is ~10 credits each, the expensive kind). Double the adoption and you roughly double the bill. The platform that was cheap as a pilot gets most expensive precisely when it's working — that's the **success tax**, and it's structural, not a pricing tier you can opt out of.
+Now read the *shape* of that table, which matters more than the exact total. Every line is **per-unit and scales with success**: more people using the apps, more records accumulating, more questions asked of the agent. Double the adoption and you roughly double the bill. The platform that was cheap as a pilot can become most expensive precisely when it is working. That is the **success tax**, and it is structural.
 
-Two caveats in both directions. Your real number will be lower per-unit (volume and Enterprise Agreement discounts are real) — and also higher in ways the table omits (premium-connector scenarios, additional capacity, Power Automate flows, the $5 per-app plan that **retired for new customers on January 2, 2026**, pushing them to the $20 tier or pay-as-you-go). The point isn't the exact dollar figure; it's that a self-hosted runtime's marginal cost for one more user, one more GB, or one more agent call is *your own infrastructure* — roughly flat — while Power Platform's is a meter that ticks with every unit of success.
+Two caveats in both directions. Your real number may be lower per unit because volume and Enterprise Agreement discounts are real. It may also be higher in ways the table omits: premium-connector scenarios, additional capacity, Power Automate flows, and AI usage above the assumed volume. The point is not the exact dollar figure; it is that a self-hosted runtime's marginal cost for one more user, one more GB, or one more agent call is *your own infrastructure*, while Power Platform pricing is metered across several dimensions.
 
-## The exit asymmetry
+## The Exit Asymmetry
 
-The second fact is the one that turns a cost problem into a trap. Power Platform "solutions" export, which sounds like portability. Read precisely what crosses the boundary:
+The second fact is the one that turns a cost problem into a migration problem. Power Platform "solutions" export, which sounds like portability. Read precisely what crosses the boundary:
 
 > A solution export carries your **metadata** — tables, forms, flows, app definitions — but **not the data in your tables.**
 
-So you can take the *shape* of your apps and must leave the *contents* behind. Your business data lives in **Dataverse**; you migrated it in to begin, and you pay ongoing storage to keep it there. And the runtime itself — the thing that executes the apps — is **Azure-only, with no self-hosting option, which Microsoft has stated it won't offer.** Leaving is therefore not a download; it's a re-platforming project: rebuild the app logic somewhere that can run it, export and reload every Dataverse table, and reconstruct the integrations.
+So you can take much of the *shape* of your apps, but the *contents* are a separate data migration. Your business data lives in **Dataverse** if you adopted Dataverse as the system of record, and you pay ongoing storage to keep it there. The runtime itself, the thing that executes the apps, is a Microsoft cloud runtime rather than a self-hosted runtime you can move into your own environment. Leaving is therefore not a download; it is a re-platforming project: rebuild the app logic somewhere that can run it, export and reload Dataverse data, and reconstruct the integrations.
 
-![What you can and can't take out of Power Platform](./diagram-en.svg)
+![What you can and cannot take out of Power Platform](./diagram-en.svg)
 
-That's the asymmetry, stated plainly: **easy in, because everything is already there; hard out, because everything is now in there.** The same gravity that makes adoption frictionless is what makes exit a project — and you don't feel it until the day you have a reason to leave, by which point the app is the system 200 people use.
+That is the asymmetry, stated plainly: **easy in, because everything is already there; hard out, because everything is now in there.** The same gravity that makes adoption frictionless is what makes exit a project, and you do not feel it until the day you have a reason to leave.
 
-## The trigger that has no workaround: sovereignty
+## The Trigger With No Easy Workaround: Sovereignty
 
-For one class of buyer the cost model and the exit asymmetry are beside the point, because a single fact ends the evaluation: **there is no self-hosted, on-prem, or air-gapped Power Platform.** If you're a bank under residency rules, a defense or government workload that must be air-gapped, or a healthcare system with sovereignty requirements, you cannot put the *runtime* where your regulators require it — not for a price, not on a roadmap. Everything else in this article is a trade-off; this one is a wall.
+For one class of buyer, the cost model and the exit asymmetry are beside the point, because deployment requirements decide the evaluation: **Power Platform is a Microsoft cloud platform, not a self-hosted runtime you can run anywhere.** If you are a bank under residency rules, a defense or government workload that must be air-gapped, or a healthcare system with sovereignty requirements, you may not be able to put the *runtime* where your regulators require it. Everything else in this article is a trade-off; this one may be a hard requirement.
 
-## The rebuttal, met honestly: "the gravity is worth it"
+## The Rebuttal, Met Honestly: "The Gravity Is Worth It"
 
-The strongest case for Power Platform is real and you should state it at full strength: *it's already in our tenant, it shares our identity and our invoice, it integrates natively with the Microsoft tools our people already live in, and consolidating on one vendor is worth a lot.* For a great many organizations that is simply true, and the lock-in is a trade they're rational to accept.
+The strongest case for Power Platform is real and should be stated at full strength: *it is already in our tenant, it shares our identity and our invoice, it integrates natively with the Microsoft tools our people already live in, and consolidating on one vendor is worth a lot.* For many organizations that is simply true, and the lock-in is a trade they are rational to accept.
 
 That case fails only on three triggers — and the discipline is to check whether any apply to *you*, not to argue the general case:
 
@@ -66,14 +66,14 @@ That case fails only on three triggers — and the discipline is to check whethe
 
 If none of the three apply, Microsoft's gravity is hard to beat and you should probably let it win. If even one applies, no amount of in-tenant convenience addresses it, because each is a property of *where the runtime lives and what it costs to grow*, not a feature Power Platform can ship.
 
-## Where Power Platform is the right call — and the cost of the alternative
+## Where Power Platform Is the Right Call
 
-To keep this honest: if you're all-in on Microsoft, your data already lives in the Microsoft cloud, you have no sovereignty requirement, and you value one-throat-to-choke consolidation, Power Platform is an excellent, rational choice, and the lock-in may never cost you anything you care about. Plenty of internal apps never need to leave the tenant.
+To keep this honest: if you are all-in on Microsoft, your data already lives in the Microsoft cloud, you have no sovereignty requirement, and you value vendor consolidation, Power Platform is an excellent, rational choice. The lock-in may never cost you anything you care about. Plenty of internal apps never need to leave the tenant.
 
-And the alternative isn't free. Self-hosting a runtime means *you* run it — patching, scaling, backups, the operational weight Microsoft otherwise carries for you. That's a real cost, and for a small team with no sovereignty need it can outweigh the success tax entirely. We won't pretend owning the runtime is strictly better; it's better *for the buyer who has one of the three triggers*, and overhead for the one who has none.
+And the alternative is not free. Self-hosting a runtime means *you* run it: patching, scaling, backups, and the operational weight Microsoft otherwise carries for you. That is a real cost, and for a small team with no sovereignty need it can outweigh the success tax entirely. We will not pretend owning the runtime is strictly better. It is better *for the buyer who has one of the three triggers*, and overhead for the one who has none.
 
-## ObjectStack's position
+## ObjectStack's Position
 
-ObjectStack is built for the buyer with a trigger. It is **self-hostable** — the runtime lives where your data and regulators require, which is the one thing Power Platform structurally cannot offer. It **connects to the CRM/ERP/DB you already run** instead of making you migrate your business into Dataverse and rent it back by the gigabyte, so leaving does not become a re-platforming project. The app core is **open, readable metadata**, so a Copilot-style AI change is a **reviewable diff a human approves before it ships**, not opaque managed config. And because you own the runtime, AI productivity stops being a per-message meter — the marginal cost of more success is your infrastructure, not a tax.
+ObjectStack is built for the buyer with a trigger. It is **self-hostable**, so the runtime can live where your data and regulators require. It **connects to the CRM, ERP, and databases you already run** instead of making you migrate your business into Dataverse first. The app core is **open, readable metadata**, so a Copilot-style AI change is a **reviewable diff a human approves before it ships**, not opaque managed configuration. And because you own the runtime, AI productivity is tied to your infrastructure rather than only to a per-message meter.
 
-We won't match Microsoft's in-tenant convenience for a shop that's already all-in; that gravity is real and we'd be lying to wave it away. The claim is narrow and only for the buyer it fits: when sovereignty, cost-at-scale, or governing what the AI changed is on the line, your apps, your data, and the runtime that enforces their rules should be things you *own and can read* — not things you rent and can't take with you.
+We will not match Microsoft's in-tenant convenience for an organization that is already all-in; that gravity is real. The claim is narrow and only for the buyer it fits: when sovereignty, cost at scale, or governing what the AI changed is on the line, your apps, your data, and the runtime that enforces their rules should be things you *own and can read*, not things you rent and cannot take with you.
