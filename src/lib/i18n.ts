@@ -36,6 +36,14 @@ export const postPath = (l: Locale, slug: string): string =>
 /** BCP-47 lang attribute (the locale codes are already valid). */
 export const htmlLang = (l: Locale): string => l;
 
+/** Human-readable date in the active locale; keep ISO dates in `datetime`. */
+export const formatDate = (locale: Locale, date: Date): string =>
+  new Intl.DateTimeFormat(htmlLang(locale), {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  }).format(date);
+
 /** Short label for the language toggle. */
 export const LANG_LABEL: Record<Locale, string> = {
   en: 'EN',
@@ -73,6 +81,7 @@ interface Strings {
     docs: string;
   };
   getStarted: string;
+  skipToContent: string;
   footer: { terms: string; privacy: string; pricing: string; refunds: string };
   all: string;
   audience: string;
@@ -98,6 +107,7 @@ const en: Strings = {
     docs: 'Docs',
   },
   getStarted: 'Get started',
+  skipToContent: 'Skip to content',
   footer: { terms: 'Terms & License', privacy: 'Privacy', pricing: 'Pricing', refunds: 'Refunds' },
   all: 'Home',
   audience: 'Audience',
@@ -123,6 +133,7 @@ const zhHans: Strings = {
     docs: '文档',
   },
   getStarted: '开始使用',
+  skipToContent: '跳到正文',
   footer: { terms: '许可协议', privacy: '隐私政策', pricing: '定价', refunds: '退款政策' },
   all: '首页',
   audience: '受众',
@@ -148,6 +159,7 @@ const ja: Strings = {
     docs: 'Docs',
   },
   getStarted: 'はじめる',
+  skipToContent: '本文へ移動',
   footer: { terms: '利用規約・ライセンス', privacy: 'プライバシー', pricing: '料金', refunds: '返金' },
   all: 'ホーム',
   audience: '読者',
@@ -173,6 +185,7 @@ const de: Strings = {
     docs: 'Docs',
   },
   getStarted: 'Loslegen',
+  skipToContent: 'Zum Inhalt springen',
   footer: { terms: 'Bedingungen & Lizenz', privacy: 'Datenschutz', pricing: 'Preise', refunds: 'Rückerstattung' },
   all: 'Start',
   audience: 'Zielgruppe',
@@ -198,6 +211,7 @@ const es: Strings = {
     docs: 'Docs',
   },
   getStarted: 'Empezar',
+  skipToContent: 'Saltar al contenido',
   footer: { terms: 'Términos y licencia', privacy: 'Privacidad', pricing: 'Precios', refunds: 'Reembolsos' },
   all: 'Inicio',
   audience: 'Audiencia',
@@ -223,6 +237,7 @@ const fr: Strings = {
     docs: 'Docs',
   },
   getStarted: 'Commencer',
+  skipToContent: 'Aller au contenu',
   footer: { terms: 'Conditions et licence', privacy: 'Confidentialité', pricing: 'Tarifs', refunds: 'Remboursements' },
   all: 'Accueil',
   audience: 'Audience',
@@ -248,6 +263,7 @@ const ko: Strings = {
     docs: '문서',
   },
   getStarted: '시작하기',
+  skipToContent: '본문으로 건너뛰기',
   footer: { terms: '약관 및 라이선스', privacy: '개인정보 보호', pricing: '가격', refunds: '환불' },
   all: '홈',
   audience: '대상',
@@ -274,6 +290,7 @@ const toHant = (s: Strings): Strings => ({
     docs: s2t(s.siteNav.docs),
   },
   getStarted: s2t(s.getStarted),
+  skipToContent: s2t(s.skipToContent),
   footer: {
     terms: s2t(s.footer.terms),
     privacy: s2t(s.footer.privacy),

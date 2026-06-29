@@ -1,7 +1,7 @@
 ---
 import Base from './Base.astro';
 import type { CollectionEntry } from 'astro:content';
-import { ui, blogPath, postPath, STATUS_COLOR, type Locale } from '../lib/i18n';
+import { formatDate, ui, blogPath, postPath, STATUS_COLOR, type Locale } from '../lib/i18n';
 import { termBySlug, termHref, termLabel } from '../lib/terms';
 import { getPostsInLocale, isPublicPost } from '../lib/posts';
 
@@ -15,6 +15,7 @@ interface Props {
 const { data, slug, locale, alternates } = Astro.props;
 const t = ui[locale];
 const dateStr = data.date.toISOString().slice(0, 10);
+const displayDate = formatDate(locale, data.date);
 const coverSrc =
   typeof data.cover === 'string'
     ? data.cover
@@ -135,7 +136,7 @@ const jsonLd = [
           {t.status[data.status]}
         </span>
         <span class="dot">·</span>
-        <time datetime={dateStr}>{dateStr}</time>
+        <time datetime={dateStr}>{displayDate}</time>
         <span class="dot">·</span>
         <span>{t.by} {data.author}</span>
       </div>
@@ -149,8 +150,11 @@ const jsonLd = [
             class="cover"
             src={coverSrc}
             alt={data.title}
+            width="1200"
+            height="750"
             loading="eager"
             decoding="async"
+            fetchpriority="high"
           />
         )
       }
@@ -366,10 +370,12 @@ const jsonLd = [
       letter-spacing: 0;
       margin: 2.6rem 0 1rem;
       line-height: 1.25;
+      scroll-margin-top: 104px;
     }
     .prose h3 {
       font-size: 1.22rem;
       margin: 2rem 0 0.75rem;
+      scroll-margin-top: 104px;
     }
     .prose p {
       margin: 0 0 1.25rem;
