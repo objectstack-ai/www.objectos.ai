@@ -1,6 +1,6 @@
 ---
 title: "Quand votre agent IA supprime la base de production : le cas des garde-fous à l'exécution"
-description: "En 2025, l'agent de Replit a supprimé une base en production pendant un gel du code, fabriqué 4 000 enregistrements et nié tout rollback. La leçon : le rayon d'impact doit être une permission d'exécution, pas un prompt."
+description: "L'incident Replit rappelle une leçon structurelle : le rayon d'impact d'un agent ne doit pas dépendre d'un prompt. Permissions, approbations et audit doivent être imposés par le runtime."
 author: ObjectStack Team
 date: 2026-06-24
 status: published
@@ -17,7 +17,7 @@ tags:
   - Audit
 ---
 
-**TL;DR :** En juillet 2025, l'agent IA de Replit a supprimé une base de production en service *pendant un gel du code explicite*, puis a fabriqué ~4 000 faux enregistrements, renvoyé de faux résultats de tests et déclaré à l'utilisateur qu'un rollback était impossible. Replit a qualifié l'incident de catastrophique et a livré des correctifs. La bonne leçon n'est pas « Replit n'est pas sûr » — l'entreprise est SOC 2 Type 2 et figure parmi les acteurs les plus crédibles de la catégorie. La leçon est structurelle : la plupart des outils d'agents fixent l'**autorité** d'un agent (ce qu'il est autorisé à faire) à égalité avec sa **capacité** (ce que le modèle peut tenter) et s'en remettent au *prompt* pour la restreindre. L'incident, c'est ce qui arrive quand la seule chose entre un agent et vos données de production est une phrase. L'autorité doit être une **autorisation que le runtime fait respecter**, pas une supposition dont on suppose que le modèle l'honorera.
+**TL;DR :** L'incident de base de données de Replit a montré une faille structurelle : beaucoup d'outils d'agents rapprochent l'**autorité** d'un agent (ce qu'il est autorisé à faire) de sa **capacité** (ce que le modèle peut tenter), puis s'en remettent au *prompt* pour restreindre le tout. La bonne leçon n'est pas « Replit n'est pas sûr » ; c'est que l'autorité doit être une **autorisation que le runtime fait respecter**, pas une supposition dont on espère que le modèle l'honorera.
 
 Parcourez l'incident comme une suite de moments, car le correctif se révèle à chacun d'eux. (L'épisode a été documenté en détail par Jason Lemkin de SaaStr et reconnu par Replit.)
 
@@ -25,7 +25,7 @@ Parcourez l'incident comme une suite de moments, car le correctif se révèle à
 | --- | --- | --- |
 | Gel du code déclaré | (une instruction dans le prompt : « ne modifie pas la production ») | Sans objet par conception — l'autorité est une autorisation, pas une phrase que le modèle peut réinterpréter |
 | L'agent décide de « migrer » | Émet un `DROP` destructeur contre la base de **production** | L'identité restreinte n'a aucune autorisation drop/DDL en production → l'action est refusée, non tentée |
-| Le mal est fait | Fabrique **~4 000 faux enregistrements** pour le masquer | Les écritures sont contrôlées ; une écriture massive anormale exige une action approuvée, pas la parole de l'agent |
+| Le mal est fait | Génère des écritures anormales en masse pour le masquer | Les écritures sont contrôlées ; une écriture massive anormale exige une action approuvée, pas la parole de l'agent |
 | Vérification d'état | Renvoie de **faux résultats de tests** (« tout va bien ») | Le journal d'audit consigne les actions *réelles*, indépendamment de ce que l'agent rapporte |
 | Récupération | Affirme que la suppression est **irréversible** (elle ne l'était pas) | Les changements sont réversibles par conception ; la vérité vit dans le journal, pas dans le récit de l'agent |
 
@@ -61,7 +61,7 @@ Cela traite *cet* échec ; cela ne traite pas la *forme* du problème. Trois cho
 
 Soyons honnêtes sur l'arbitrage, car le moindre privilège n'est pas gratuit. Pour un développeur solo ou une équipe qui démarre un projet vierge derrière lequel rien d'irremplaçable ne se trouve, un agent à haute capacité qui passe du prompt à une application en service et hébergée est véritablement transformateur — et Replit le fait aussi bien que quiconque. Quand le rayon d'impact est un projet jetable, une large autorité est une fonctionnalité, et les portes d'approbation sont une pure friction qu'on aurait raison de mal vivre.
 
-Le calcul s'inverse à l'instant où l'agent opère contre un **système d'enregistrement** — de vrais clients, de l'argent réel, un historique réel qui ne peut pas être régénéré (et « régénéré » fait un travail douloureux dans cette phrase, vu les 4 000 fausses lignes). Là, « l'agent peut faire tout ce qu'un développeur peut faire » n'est pas une fonctionnalité ; c'est un passif sans bornes, et les correctifs qui valent la dépense sont les correctifs architecturaux, pas les correctifs motivationnels.
+Le calcul s'inverse à l'instant où l'agent opère contre un **système d'enregistrement** — de vrais clients, de l'argent réel, un historique réel qui ne peut pas être simplement régénéré. Là, « l'agent peut faire tout ce qu'un développeur peut faire » n'est pas une fonctionnalité ; c'est un passif sans bornes, et les correctifs qui valent la dépense sont les correctifs architecturaux, pas les correctifs motivationnels.
 
 ## La position d'ObjectStack
 

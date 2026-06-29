@@ -1,6 +1,6 @@
 ---
 title: "Airtable Omni vs. una plataforma de apps con IA gobernada: necesitas un diff, no deshacer"
-description: "Airtable Omni crea una app real desde una frase, pero despliega cambios tras un botón de deshacer, no un diff revisado, y nunca podrás autoalojarlo. Para un sistema de registro, esas brechas deciden la plataforma."
+description: "Airtable Omni une lenguaje natural y apps tabulares con fuerza. En un sistema de registro importa si la IA muestra un diff revisable antes de cambiar permisos, campos y flujos."
 author: ObjectStack Team
 date: 2026-06-24
 status: published
@@ -17,7 +17,7 @@ tags:
   - Auditoría
 ---
 
-**TL;DR:** El relanzamiento de Airtable como plataforma nativa de IA es real: Omni ensambla apps a partir de componentes probados en producción, no de código desechable. La brecha no es la capacidad; son los controles. Omni despliega cambios en tu app en producción con un *botón de deshacer* y un registro de auditoría *detectivo* (te enteras de que un control cambió *después* de que cambiara), donde un sistema de registro regulado necesita uno *preventivo*: un diff revisado que se aprueba *antes* de desplegarse, con permisos que el runtime aplica sobre objetos, campos y acciones, no sobre vistas. Súmale el "nunca autoalojamiento" y, para un sistema de registro, la decisión está tomada antes de comparar una sola función.
+**TL;DR:** El relanzamiento de Airtable como plataforma nativa de IA es real: Omni ensambla apps a partir de componentes probados en producción, no de código desechable. La brecha no es la capacidad; son los controles. Omni despliega cambios en tu app en producción con un *botón de deshacer* y un registro de auditoría *detectivo* (te enteras de que un control cambió *después* de que cambiara), donde un sistema de registro regulado necesita uno *preventivo*: un diff revisado que se aprueba *antes* de desplegarse, con permisos que el runtime aplica sobre objetos, campos y acciones, no sobre vistas. Si además entran requisitos de despliegue y soberanía de datos, la evaluación ya no se resuelve solo comparando funciones.
 
 Empieza por un martes, porque ahí es donde esto muerde de verdad, no en la demo.
 
@@ -25,7 +25,7 @@ Una responsable de revenue ops abre Omni y escribe: *"Añade un campo de riesgo 
 
 Seis semanas después, un auditor de SOC 2 sentado junto a tu equipo de seguridad hace una sola pregunta: *"El ARR de cliente es confidencial. Esta vista expone al rol CSM un campo derivado del ARR. ¿Quién lo aprobó, y cuándo?"*
 
-Y la respuesta honesta es: nadie lo aprobó, porque nunca hubo un paso de aprobación. Una IA tomó una decisión de control de acceso un martes, entró en producción al instante, y el único registro de que algo ocurrió es una entrada de actividad a posteriori, si a alguien se le ocurre mirar. Ese es todo el artículo. Todo lo que sigue explica por qué esa brecha es estructural, no una función ausente que Airtable lanzará el próximo trimestre.
+Y la respuesta honesta es: nadie lo aprobó, porque no hubo un paso de aprobación. Una IA tomó una decisión de control de acceso un martes, entró en producción al instante, y el registro principal de que algo ocurrió es una entrada de actividad a posteriori, si a alguien se le ocurre mirar. Ese es todo el artículo. Todo lo que sigue explica por qué esa brecha es estructural, no una casilla de verificación pendiente.
 
 ## La distinción que tu auditor ya usa: preventivo vs. detectivo
 
@@ -79,7 +79,7 @@ Esa es la diferencia entre "la IA puede construirlo" y "el cambio de la IA es go
 
 Aquí tienes una cifra que puedes calcular para tu propia organización, porque vuelve concreto lo abstracto. Llámala **tiempo medio hasta la exposición no autorizada (MTUE)**: desde el momento en que un cambio de IA cruza una línea que no debería, ¿cuánto tarda en dejar de estar en producción?
 
-- Con una compuerta **preventiva**, el MTUE es **cero por construcción.** El cambio que cruza la línea nunca entra en producción; espera en el paso de aprobación. No hay ventana de exposición.
+- Con una compuerta **preventiva**, el MTUE se acerca a **cero por construcción.** El cambio que cruza la línea no entra en producción sin aprobación; espera en el paso de aprobación. La ventana de exposición se cierra por diseño.
 - Con **deshacer + un registro detectivo**, el MTUE es el *tiempo hasta la detección*, y deberías ponerle precio con honestidad. En el mejor caso, un compañero se da cuenta esa tarde. En el caso realista, es cuando alguien audita la vista, o se ejecuta la revisión trimestral de accesos, o —como en el escenario— el auditor externo lo encuentra primero. Para datos que se sincronizan a otros sistemas (el valor por defecto de HyperDB de Airtable es una sincronización cada 24 horas), la exposición puede propagarse antes de que ningún humano mire.
 
 Sustituye tu propia cadencia de revisión de accesos. Si revisas los permisos sensibles cada trimestre, tu MTUE basado en deshacer para una mala configuración silenciosa se mide en *semanas a un trimestre*. El modelo preventivo lleva ese número a cero no por ser más listo, sino por mover el punto de control a antes del cambio en lugar de después. No puedes llegar a MTUE = 0 a fuerza de prompts; es una propiedad arquitectónica de *cuándo* el humano está en el bucle.

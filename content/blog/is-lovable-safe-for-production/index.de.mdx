@@ -1,6 +1,6 @@
 ---
-title: "Ist Lovable produktionsreif? Das Problem der unsichtbaren Zugriffskontrolle"
-description: "Lovable lässt einen Nicht-Entwickler aus einem Satz eine Full-Stack-App ausliefern — doch die Zugriffskontrolle landet vergraben in generiertem Code, den er nicht lesen kann. Ein Scan von 4.000+ Apps fand 170+, die Live-PII leaken. „Es läuft“ heißt nicht „es ist sicher“."
+title: "Ist Lovable produktionsreif? Das Problem prüfbarer Zugriffskontrolle"
+description: "Lovable ist stark für schnelle Prototypen. In Produktionssystemen zählt aber nicht nur, ob die App läuft, sondern wer die Zugriffskontrolle prüfen kann. RLS, Frontend-Filter und Security-Scans müssen sauber getrennt werden."
 author: ObjectStack Team
 date: 2026-06-24
 status: published
@@ -17,7 +17,7 @@ tags:
   - AI-Native
 ---
 
-**TL;DR:** Lovable ist der schnellste Weg für einen Nicht-Entwickler, eine echte, monetarisierbare Full-Stack-App auszuliefern. Die Gefahr ist konkret und nachweisbar: Die Zugriffskontrolle, die entscheidet, wer die Daten deiner Nutzer lesen darf, wird als Supabase-Row-Level-Security-SQL generiert — von einer KI, für jemanden, der per Definition kein SQL lesen kann — und das häufigste generierte Muster, `using (true)`, *sieht aus* wie eine Sicherheitsrichtlinie, schützt aber nichts. Ein Frontend-Filter `.eq('owner', user.id)`, der die Demo korrekt verhalten lässt, ist eine **Bequemlichkeit der Anfrage, keine Sicherheitsgrenze**. Ein Scan von 4.000+ Lovable-Apps fand 2.000+ Schwachstellen, 400+ exponierte Secrets und **175, die Live-PII leaken**; CVE-2025-48757 exponierte 170+ Apps durch exakt diese Fehlerklasse. „Es läuft“ und „es ist sicher“ sind verschiedene Behauptungen, und die Person, die ausliefert, kann sie nicht auseinanderhalten.
+**TL;DR:** Lovable ist einer der schnellsten Wege für einen Nicht-Entwickler, eine echte, monetarisierbare Full-Stack-App auszuliefern. Die Gefahr lässt sich konkret erklären: Die Zugriffskontrolle, die entscheidet, wer die Daten deiner Nutzer lesen darf, wird als Supabase-Row-Level-Security-SQL generiert — von einer KI, für jemanden, der per Definition kein SQL lesen kann — und Muster wie `using (true)` *sehen aus* wie eine Sicherheitsrichtlinie, schützen aber nichts. Ein Frontend-Filter `.eq('owner', user.id)`, der die Demo korrekt verhalten lässt, ist eine **Bequemlichkeit der Anfrage, keine Sicherheitsgrenze**. „Es läuft“ und „es ist sicher“ sind verschiedene Behauptungen, und die Person, die ausliefert, kann sie nicht auseinanderhalten.
 
 Ich zeige dir die exakte Gestalt des Versagens, denn „Vibe Coding ist riskant“ ist nutzlos und die Details sind alles.
 
@@ -42,7 +42,7 @@ create policy "Enable read access for all users"
   using (true);          -- ← ergibt true für jede Zeile, jeden Aufrufer
 ```
 
-`using (true)` bedeutet: *Jeder authentifizierte Aufrufer darf jede Zeile lesen.* Die Richtlinie **existiert**. Sie ist **aktiv**. Und sie schützt **nichts**. Die App ist in genau einer Konfiguration sicher — der, die das Frontend zufällig anfragt — und sperrangelweit offen in dem Moment, in dem jemand anders fragt. Das ist nicht hypothetisch; es ist der Mechanismus hinter CVE-2025-48757 und den 170+ Apps, die echte personenbezogene Daten leakten.
+`using (true)` bedeutet: *Jeder authentifizierte Aufrufer darf jede Zeile lesen.* Die Richtlinie **existiert**. Sie ist **aktiv**. Und sie schützt **nichts**. Die App ist in genau einer Konfiguration sicher — der, die das Frontend zufällig anfragt — und sperrangelweit offen in dem Moment, in dem jemand anders fragt. Fälle wie CVE-2025-48757 zeigen, dass dieser Fehler keine abstrakte Sorge ist, sondern bei generierten Apps tatsächlich auftreten kann.
 
 ## Ein Filter ist keine Grenze
 
@@ -58,14 +58,14 @@ Sieh dir an, was der Scanner prüfen kann und was nicht. Laut berichtetem Verhal
 
 Und die Enterprise-Kontrollen — SSO, Org-Audit-Logs — regeln, *wie sich Menschen bei Lovable anmelden*, nicht, *welches RLS die KI in deine App geschrieben hat*. Sie sind echt und gut und orthogonal. Die Lücke ist nicht Lovables Enterprise-Haltung. Sie liegt darin, dass die App-spezifische Zugriffslogik, die die KI generiert, für die eine Person, die dafür verantwortlich ist, unlesbar ist.
 
-## Die Zahl, die 170 Leaks erklärt: die Verifikations-Asymmetrie
+## Die Zahl dahinter: die Verifikations-Asymmetrie
 
 Hier ist die Kennzahl, die das Muster unvermeidlich statt unglücklich macht. Vergleiche zwei Kosten:
 
 - **Kosten, die App zu bauen**: ein Satz. Effektiv null, per Design — das ist der gesamte Pitch.
 - **Kosten, zu verifizieren**, dass sie sicher ist: das generierte RLS für jede Tabelle lesen, über jeden API-Pfad nachdenken, Filter von Grenzen unterscheiden. Experten-Stunden, und eine Fähigkeit, die der Erbauer nicht hat.
 
-Wenn die Baukosten auf null kollabieren, die Verifikationskosten aber bei Experten-Stunden bleiben, ist das rationale Verhalten eines Nicht-Experten, **die Verifikation zu überspringen** — weil er sie nicht durchführen kann und die App fertig *aussieht*. Multipliziere das über eine Population und du bekommst nicht ein paar unglückliche Leaks; du bekommst 175 Apps, die in einem einzigen Scan Live-PII leaken. Die Zahl 170+ ist kein Lovable-Qualitätsproblem. Sie ist das, was die Verifikations-Asymmetrie im großen Maßstab produziert, mit jedem Tool, das Nicht-Experten Zugriffskontrolle generieren lässt, die sie nicht lesen können.
+Wenn die Baukosten auf null kollabieren, die Verifikationskosten aber bei Experten-Stunden bleiben, ist das rationale Verhalten eines Nicht-Experten, **die Verifikation zu überspringen** — weil er sie nicht durchführen kann und die App fertig *aussieht*. Multipliziere das über eine Population und Leaks sind kein einzelner Ausrutscher mehr, sondern ein wiederkehrender Fehlermodus. Diese Verifikations-Asymmetrie entsteht bei jedem Tool, das Nicht-Experten Zugriffskontrolle generieren lässt, die sie nicht lesen können.
 
 ## Wo Lovable genau richtig liegt — und der ehrliche Vorbehalt
 
@@ -87,4 +87,4 @@ Wenn er diesen Test nicht durchführen kann, ihn nicht versteht oder die Antwort
 
 ObjectStack kehrt die Trennung um, die die Leaks verursacht. Zugriffskontrolle ist kein generiertes SQL, das der Erbauer nicht lesen kann; sie sind **deklarierte, lesbare Metadaten** — `read: owner == current_user` als Eigenschaft des Objekts — und sie sind eine **Grenze, die die Runtime serverseitig durchsetzt**, sodass das Entfernen eines Frontend-Filters nichts ändert. Wenn die KI eine Änderung daran vorschlägt, wer-was-lesen-kann, erscheint das als ein **Diff, das ein Nicht-Experte tatsächlich freigeben kann** („das macht `customers` für alle lesbar — bestätigen?“), niemals als ein stilles `using (true)`, das du hättest SQL lesen müssen, um es zu erwischen. Und weil es **selbst hostbar** ist und auf Systemen sitzt, die du ohnehin betreibst, landen sensible Daten nicht leise irgendwo, wo du sie nicht inspizieren kannst.
 
-Wir werden Lovable nicht bei der Zeit bis zur ersten Demo schlagen, und für Prototypen würden wir es nicht versuchen. Die Behauptung ist die, die in dem Augenblick zählt, in dem echte Daten im Spiel sind: Die Sicherheit einer KI-gebauten App muss *für die Person sichtbar sein, die dafür verantwortlich ist* — denn eine App, deren Grenze du nicht sehen kannst, ist nicht sicher, sie ist nur öffentlich ungetestet, und 170 Teams haben diesen Test bereits auf die harte Tour durchgeführt.
+Wir werden Lovable nicht bei der Zeit bis zur ersten Demo schlagen, und für Prototypen würden wir es nicht versuchen. Die Behauptung ist die, die in dem Augenblick zählt, in dem echte Daten im Spiel sind: Die Sicherheit einer KI-gebauten App muss *für die Person sichtbar sein, die dafür verantwortlich ist* — denn eine App, deren Grenze du nicht sehen kannst, ist nicht sicher, sondern nur noch nicht hart genug getestet.

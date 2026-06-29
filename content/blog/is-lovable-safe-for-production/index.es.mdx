@@ -1,6 +1,6 @@
 ---
-title: "¿Es Lovable seguro para producción? El problema del control de acceso invisible"
-description: "Lovable permite que un no programador publique una app full-stack desde una frase, pero el control de acceso acaba enterrado en código generado que no sabe leer. Un escaneo de 4.000+ apps halló 170+ filtrando PII real. 'Funciona' no es 'es seguro'."
+title: "¿Lovable es seguro para producción? El problema de revisar el control de acceso"
+description: "Lovable es fuerte para prototipos rápidos. En producción no basta con que la app funcione: alguien debe poder revisar el control de acceso. RLS, filtros de frontend y escáneres de seguridad no son lo mismo."
 author: ObjectStack Team
 date: 2026-06-24
 status: published
@@ -17,7 +17,7 @@ tags:
   - AI-Native
 ---
 
-**TL;DR:** Lovable es la forma más rápida de que un no programador publique una app full-stack real y monetizable. El peligro es concreto y demostrable: el control de acceso que decide quién puede leer los datos de tus usuarios se genera como SQL de seguridad a nivel de fila (RLS) de Supabase —por una IA, para alguien que por definición no sabe leer SQL— y el patrón generado más común, `using (true)`, *parece* una política de seguridad mientras no protege nada. Un filtro de frontend `.eq('owner', user.id)` que hace que la demo se comporte bien es una **comodidad de la petición, no un límite de seguridad**. Un escaneo de 4.000+ apps de Lovable halló 2.000+ vulnerabilidades, 400+ secretos expuestos y **175 filtrando PII real**; CVE-2025-48757 expuso 170+ apps a través de exactamente esta clase de error. "Funciona" y "es seguro" son afirmaciones distintas, y quien publica no sabe distinguirlas.
+**TL;DR:** Lovable es una de las formas más rápidas de que un no programador publique una app full-stack real y monetizable. El peligro se puede explicar con precisión: el control de acceso que decide quién puede leer los datos de tus usuarios se genera como SQL de seguridad a nivel de fila (RLS) de Supabase —por una IA, para alguien que por definición no sabe leer SQL— y patrones como `using (true)` *parecen* una política de seguridad mientras no protegen nada. Un filtro de frontend `.eq('owner', user.id)` que hace que la demo se comporte bien es una **comodidad de la petición, no un límite de seguridad**. "Funciona" y "es seguro" son afirmaciones distintas, y quien publica no sabe distinguirlas.
 
 Déjame mostrarte la forma exacta del fallo, porque "el vibe coding es arriesgado" es inútil y los detalles lo son todo.
 
@@ -42,7 +42,7 @@ create policy "Enable read access for all users"
   using (true);          -- ← se evalúa como true para cada fila, cada invocador
 ```
 
-`using (true)` significa: *todo invocador autenticado puede leer todas las filas.* La política **existe**. Está **activada**. Y no protege **nada**. La app es segura en exactamente una configuración —la que el frontend resulta pedir— y queda abierta de par en par en el momento en que alguien pide algo distinto. Esto no es hipotético; es el mecanismo detrás de CVE-2025-48757 y de las 170+ apps que filtraron datos personales reales.
+`using (true)` significa: *todo invocador autenticado puede leer todas las filas.* La política **existe**. Está **activada**. Y no protege **nada**. La app es segura en exactamente una configuración —la que el frontend resulta pedir— y queda abierta de par en par en el momento en que alguien pide algo distinto. Casos como CVE-2025-48757 muestran que este fallo no es una preocupación abstracta: puede aparecer en controles de acceso generados.
 
 ## Un filtro no es un límite
 
@@ -58,14 +58,14 @@ Mira lo que el escáner puede y no puede comprobar. Según el comportamiento rep
 
 Y los controles enterprise —SSO, registros de auditoría de la organización— gobiernan *cómo inicia sesión la gente en Lovable*, no *qué RLS escribió la IA en tu app*. Son reales y buenos y ortogonales. La brecha no es la postura enterprise de Lovable. Es que la lógica de acceso por app que la IA genera es ilegible para la única persona responsable de ella.
 
-## El número que explica 170 filtraciones: la asimetría de la verificación
+## La asimetría de la verificación
 
 Aquí está la cifra que hace que el patrón sea inevitable en lugar de mala suerte. Compara dos costes:
 
 - **Coste de construir** la app: una frase. Efectivamente cero, por diseño —ese es todo el argumento de venta—.
 - **Coste de verificar** que es segura: leer el RLS generado de cada tabla, razonar sobre cada ruta de API, distinguir filtros de límites. Horas de experto, y una habilidad que el constructor no tiene.
 
-Cuando el coste de construir se desploma a cero pero el coste de verificar se queda en horas de experto, el comportamiento racional de un no experto es **saltarse la verificación** —porque no puede hacerla y la app *parece* terminada—. Multiplica eso por toda una población y no obtienes unas cuantas filtraciones desafortunadas; obtienes 175 apps filtrando PII real en un solo escaneo. El número 170+ no es un problema de calidad de Lovable. Es lo que la asimetría de la verificación produce a escala, con cualquier herramienta que deje a los no expertos generar un control de acceso que no saben leer.
+Cuando el coste de construir se desploma a cero pero el coste de verificar se queda en horas de experto, el comportamiento racional de un no experto es **saltarse la verificación** —porque no puede hacerla y la app *parece* terminada—. Multiplica eso por toda una población y las filtraciones dejan de ser accidentes aislados: se convierten en un modo de fallo repetible. Es lo que la asimetría de la verificación produce a escala, con cualquier herramienta que deje a los no expertos generar un control de acceso que no saben leer.
 
 ## Donde Lovable acierta exactamente — y la salvedad honesta
 
@@ -87,4 +87,4 @@ Si no puede hacer esa prueba, o no la entiende, o la respuesta es "las de todos"
 
 ObjectStack invierte la separación que causa las filtraciones. El control de acceso no es SQL generado que el constructor no sabe leer; son **metadatos declarados y legibles** —`read: owner == current_user` como propiedad del objeto— y son un **límite que el runtime aplica del lado del servidor**, de modo que quitar un filtro de frontend no cambia nada. Cuando la IA propone un cambio sobre quién-puede-leer-qué, aparece como un **diff que un no experto sí puede aprobar** ("esto hace que `customers` sea legible por todos —¿confirmas?"), nunca como un silencioso `using (true)` que habrías tenido que leer SQL para detectar. Y como es **autoalojable** y se asienta sobre sistemas que ya ejecutas, los datos sensibles no acaban silenciosamente en algún lugar que no puedes inspeccionar.
 
-No vamos a ganarle a Lovable en tiempo-hasta-la-primera-demo, y para prototipos no lo intentaríamos. La afirmación es la que importa en el instante en que hay datos reales en juego: la seguridad de una app construida por IA tiene que ser *visible para la persona responsable de ella* —porque una app cuyo límite no puedes ver no es segura, solo está sin probar en público, y 170 equipos ya han hecho esa prueba por las malas—.
+No vamos a ganarle a Lovable en tiempo-hasta-la-primera-demo, y para prototipos no lo intentaríamos. La afirmación es la que importa en el instante en que hay datos reales en juego: la seguridad de una app construida por IA tiene que ser *visible para la persona responsable de ella* —porque una app cuyo límite no puedes ver no es segura, solo no ha sido probada con suficiente dureza—.
