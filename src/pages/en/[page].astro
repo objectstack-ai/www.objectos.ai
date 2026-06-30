@@ -1,0 +1,78 @@
+---
+import EnglishEvidencePage from '../../components/EnglishEvidencePage.astro';
+import Base from '../../layouts/Base.astro';
+import { ENGLISH_PAGES, englishPagePath, getEnglishPage, type EnglishPage } from '../../lib/english-pages';
+
+export function getStaticPaths() {
+  return ENGLISH_PAGES.map((page) => ({
+    params: { page: page.slug },
+    props: { page },
+  }));
+}
+
+const page = (Astro.props as { page?: EnglishPage }).page ?? getEnglishPage(Astro.params.page!);
+
+if (!page) {
+  throw new Error(`Unknown English page: ${Astro.params.page}`);
+}
+
+const site = Astro.site?.toString().replace(/\/$/, '') ?? '';
+const absoluteUrl = (href: string): string =>
+  site ? new URL(href, `${site}/`).toString() : new URL(href, Astro.url).toString();
+const path = englishPagePath(page.slug);
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: page.title,
+    description: page.description,
+    url: absoluteUrl(path),
+    inLanguage: 'en',
+    isPartOf: {
+      '@type': 'WebSite',
+      name: 'ObjectOS',
+      url: absoluteUrl('/en/'),
+    },
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'ObjectOS',
+        item: absoluteUrl('/en/'),
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: page.navLabel,
+        item: absoluteUrl(path),
+      },
+    ],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: page.faqs.map((faq) => ({
+      '@type': 'Question',
+      name: faq.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.answer,
+      },
+    })),
+  },
+];
+---
+
+<Base
+  title={`${page.title} · ObjectOS`}
+  description={page.description}
+  locale="en"
+  canonical={path}
+  alternates={{ en: path }}
+  jsonLd={jsonLd}>
+  <EnglishEvidencePage {page} />
+</Base>

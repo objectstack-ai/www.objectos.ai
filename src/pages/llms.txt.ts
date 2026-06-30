@@ -13,6 +13,7 @@ import {
 } from '../lib/i18n';
 import { CLUSTERS, clusterPath } from '../lib/clusters';
 import { clusterCopy } from '../lib/cluster-i18n';
+import { ENGLISH_PAGES, englishPagePath } from '../lib/english-pages';
 
 const absoluteUrl = (site: URL | string | undefined, path: string): string => {
   const base = site ? site.toString() : 'https://www.objectos.ai/';
@@ -40,6 +41,9 @@ export const GET: APIRoute = async ({ site }) => {
     '## Primary Pages',
     '',
     `- [Home](${absoluteUrl(site, homePath('en'))}): Governed runtime for AI-written business applications.`,
+    ...ENGLISH_PAGES.map(
+      (page) => `- [${page.navLabel}](${absoluteUrl(site, englishPagePath(page.slug))}): ${page.description}`
+    ),
     `- [Security](${absoluteUrl(site, securityPath('en'))}): Data residency, permissions, approvals, audit logs, and self-hosted deployment boundaries.`,
     `- [Pricing](${absoluteUrl(site, pricingPath('en'))}): Plans for open-source, cloud, and enterprise ObjectOS adoption.`,
     `- [Articles](${absoluteUrl(site, blogPath('en'))}): Practical writing on AI-native software, enterprise AI agents, integration, modernization, and governance.`,

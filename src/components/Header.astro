@@ -24,11 +24,18 @@ const t = ui[locale];
 const pathname = Astro.url.pathname;
 const homeHref = homePath(locale);
 const blogHref = blogPath(locale);
-const securityHref = securityPath(locale);
+const productHref = locale === 'en' ? '/en/product-tour/' : `${homeHref}#capabilities`;
+const aiHref = locale === 'en' ? '/en/agent-developer/' : `${homeHref}#ai`;
+const solutionsHref = locale === 'en' ? '/en/templates/' : `${homeHref}#templates`;
+const securityHref = locale === 'en' ? '/en/trust-center/' : securityPath(locale);
 const pricingHref = pricingPath(locale);
 const onBlogHome = pathname === blogHref;
 const inBlog = pathname.startsWith(`/${locale}/blog`);
-const inSecurity = pathname === securityHref;
+const inProduct = locale === 'en' && pathname === productHref;
+const inAi = locale === 'en' && pathname === aiHref;
+const inSolutions = locale === 'en' && pathname === solutionsHref;
+const inSecurity =
+  pathname === securityHref || (locale === 'en' && pathname === securityPath(locale));
 const inPricing = pathname === pricingHref;
 
 // One dropdown per axis (only terms that have content in THIS locale).
@@ -54,9 +61,9 @@ const menus = (
     </a>
 
     <nav class="site-nav" aria-label="Primary">
-      <a href={`${homeHref}#capabilities`}>{t.siteNav.platform}</a>
-      <a href={`${homeHref}#ai`}>{t.siteNav.ai}</a>
-      <a href={`${homeHref}#templates`}>{t.siteNav.solutions}</a>
+      <a class:list={{ active: inProduct }} href={productHref} aria-current={inProduct ? 'page' : undefined}>{t.siteNav.platform}</a>
+      <a class:list={{ active: inAi }} href={aiHref} aria-current={inAi ? 'page' : undefined}>{t.siteNav.ai}</a>
+      <a class:list={{ active: inSolutions }} href={solutionsHref} aria-current={inSolutions ? 'page' : undefined}>{t.siteNav.solutions}</a>
       <a class:list={{ active: inSecurity }} href={securityHref} aria-current={inSecurity ? 'page' : undefined}>{t.siteNav.security}</a>
       <a class:list={{ active: inBlog }} href={blogHref} aria-current={inBlog ? 'page' : undefined}>{t.siteNav.articles}</a>
       <a
@@ -488,6 +495,8 @@ const menus = (
       min-height: 58px;
       flex-wrap: wrap;
       gap: 0.35rem 0.5rem;
+      padding-right: 1rem;
+      padding-left: 1rem;
       padding-top: 0.65rem;
       padding-bottom: 0.55rem;
     }
@@ -543,10 +552,10 @@ const menus = (
       display: none;
     }
     .lang-cur.short {
-      display: inline;
+      display: none;
     }
     .cta {
-      min-height: 40px;
+      display: none;
     }
     .menu-item {
       min-height: 44px;
@@ -597,14 +606,7 @@ const menus = (
     }
   }
   @media (max-width: 360px) {
-    .bar {
-      padding-right: 1rem;
-      padding-left: 1rem;
-    }
     .lang-cur.native {
-      display: none;
-    }
-    .lang-cur.short {
       display: none;
     }
     .lang-trigger {
