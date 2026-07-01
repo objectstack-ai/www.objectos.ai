@@ -4,9 +4,7 @@ import {
   blogPath,
   homePath,
   pricingPath,
-  securityPath,
   LOCALES,
-  LANG_LABEL,
   LANG_NATIVE,
   type Locale,
 } from '../lib/i18n';
@@ -23,30 +21,77 @@ interface Props {
 const { locale, alternates = {} } = Astro.props;
 const t = ui[locale];
 const pathname = Astro.url.pathname;
+
 const homeHref = homePath(locale);
 const blogHref = blogPath(locale);
-const productHref = marketingPagePath(locale, 'product-tour');
-const aiHref = marketingPagePath(locale, 'agent-developer');
-const solutionsHref = marketingPagePath(locale, 'templates');
-const securityHref = marketingPagePath(locale, 'trust-center');
 const pricingHref = pricingPath(locale);
-const onBlogHome = pathname === blogHref;
+const productTourHref = marketingPagePath(locale, 'product-tour');
+const trustCenterHref = marketingPagePath(locale, 'trust-center');
+const agentGuideHref = marketingPagePath(locale, 'agent-developer');
+const templatesHref = marketingPagePath(locale, 'templates');
+const storiesHref = marketingPagePath(locale, 'customer-stories');
+
+const DOCS_URL = 'https://docs.objectos.ai';
+const GITHUB_URL = 'https://github.com/objectstack-ai/framework';
+
 const inBlog = pathname.startsWith(`/${locale}/blog`);
-const inProduct = pathname === productHref;
-const inAi = pathname === aiHref;
-const inSolutions = pathname === solutionsHref;
-const inSecurity = pathname === securityHref || pathname === securityPath(locale);
+const onBlogHome = pathname === blogHref;
 const inPricing = pathname === pricingHref;
 
-// One dropdown per axis (only terms that have content in THIS locale).
-const AXES: TermGroup[] = ['topic', 'solution', 'role', 'industry'];
+// Topic terms feed the Resources menu (only those with content in this locale).
+const topicTerms = (await getUsedTerms('topic', locale)).filter((term) => !term.parent);
+const onTopic = (href: string) => pathname.startsWith(href);
+
+// Primary nav model — one source of truth for both the desktop dropdowns and
+// the mobile drawer, so they can never drift apart.
+type NavItem = { label: string; href: string; external?: boolean; active: boolean };
+type NavGroup = { id: string; label: string; active: boolean; items: NavItem[] };
+
+const groups: NavGroup[] = [
+  {
+    id: 'product',
+    label: t.siteNav.product,
+    active: pathname === productTourHref || pathname === trustCenterHref,
+    items: [
+      { label: t.siteNav.productTour, href: productTourHref, active: pathname === productTourHref },
+      { label: t.siteNav.trustCenter, href: trustCenterHref, active: pathname === trustCenterHref },
+      { label: t.siteNav.toolsMcp, href: DOCS_URL, external: true, active: false },
+    ],
+  },
+  {
+    id: 'developers',
+    label: t.siteNav.developers,
+    active: pathname === agentGuideHref || pathname === templatesHref,
+    items: [
+      { label: t.siteNav.agentGuide, href: agentGuideHref, active: pathname === agentGuideHref },
+      { label: t.siteNav.docs, href: DOCS_URL, external: true, active: false },
+      { label: 'GitHub', href: GITHUB_URL, external: true, active: false },
+      { label: t.siteNav.templates, href: templatesHref, active: pathname === templatesHref },
+    ],
+  },
+  {
+    id: 'resources',
+    label: t.siteNav.resources,
+    active: inBlog || pathname === storiesHref,
+    items: [
+      { label: t.backToList, href: blogHref, active: onBlogHome },
+      ...topicTerms.map((term) => {
+        const href = termHref(locale, term);
+        return { label: term.label[locale], href, active: onTopic(href) };
+      }),
+      { label: t.siteNav.referenceStories, href: storiesHref, active: pathname === storiesHref },
+    ],
+  },
+];
+
+// Blog browse axes (in-page filter, blog context only). Solution axis is
+// intentionally omitted — that area is not ready to surface in navigation.
+const AXES: TermGroup[] = ['topic', 'role', 'industry'];
 const menus = (
   await Promise.all(
     AXES.map(async (group) => {
       const terms = (await getUsedTerms(group, locale)).filter((term) => !term.parent);
-      const active = terms.some((term) =>
-        pathname.startsWith(termHref(locale, term))
-      );
+      const active = terms.some((term) => pathname.startsWith(termHref(locale, term)));
       return { group, terms, active };
     })
   )
@@ -61,23 +106,55 @@ const menus = (
     </a>
 
     <nav class="site-nav" aria-label="Primary">
-      <a class:list={{ active: inProduct }} href={productHref} aria-current={inProduct ? 'page' : undefined}>{t.siteNav.platform}</a>
-      <a class:list={{ active: inAi }} href={aiHref} aria-current={inAi ? 'page' : undefined}>{t.siteNav.ai}</a>
-      <a class:list={{ active: inSolutions }} href={solutionsHref} aria-current={inSolutions ? 'page' : undefined}>{t.siteNav.solutions}</a>
-      <a class:list={{ active: inSecurity }} href={securityHref} aria-current={inSecurity ? 'page' : undefined}>{t.siteNav.security}</a>
-      <a class:list={{ active: inBlog }} href={blogHref} aria-current={inBlog ? 'page' : undefined}>{t.siteNav.articles}</a>
-      <a
-        href="https://docs.objectos.ai"
-        target="_blank"
-        rel="noopener">
-        {t.siteNav.docs}
+      {
+        groups.map((g) => (
+          <div class="menu" data-menu>
+            <button
+              type="button"
+              class:list={['menu-trigger', { active: g.active }]}
+              aria-expanded="false"
+              aria-haspopup="true"
+              data-menu-trigger>
+              {g.label}
+              <span class="caret" aria-hidden="true">▾</span>
+            </button>
+            <div class="menu-panel" role="menu">
+              {g.items.map((it) => (
+                <a
+                  class:list={['menu-item', { active: it.active }]}
+                  href={it.href}
+                  role="menuitem"
+                  target={it.external ? '_blank' : undefined}
+                  rel={it.external ? 'noopener' : undefined}>
+                  {it.label}
+                  {it.external && <span class="ext" aria-hidden="true">↗</span>}
+                </a>
+              ))}
+            </div>
+          </div>
+        ))
+      }
+      <a class:list={['navlink', { active: inPricing }]} href={pricingHref} aria-current={inPricing ? 'page' : undefined}>
+        {t.footer.pricing}
       </a>
     </nav>
 
     <div class="bar-right">
+      <a
+        class="iconbtn bar-desktop"
+        href={GITHUB_URL}
+        target="_blank"
+        rel="noopener"
+        aria-label="GitHub"
+        title="GitHub">
+        <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="currentColor">
+          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z" />
+        </svg>
+      </a>
+
       <button
         type="button"
-        class="iconbtn"
+        class="iconbtn bar-desktop"
         data-theme-toggle
         aria-label="Toggle dark mode"
         title="Toggle dark mode">
@@ -85,7 +162,7 @@ const menus = (
         <span class="sun" aria-hidden="true">☀</span>
       </button>
 
-      <div class="menu langmenu" data-menu>
+      <div class="menu langmenu bar-desktop" data-menu>
         <button
           type="button"
           class="lang-trigger"
@@ -96,7 +173,6 @@ const menus = (
           data-menu-trigger>
           <span class="globe" aria-hidden="true">🌐</span>
           <span class="lang-cur native">{LANG_NATIVE[locale]}</span>
-          <span class="lang-cur short">{LANG_LABEL[locale]}</span>
           <span class="caret" aria-hidden="true">▾</span>
         </button>
         <div class="menu-panel lang-panel" role="menu">
@@ -113,8 +189,22 @@ const menus = (
           }
         </div>
       </div>
-      <a class:list={['top-link', { active: inPricing }]} href={pricingHref} aria-current={inPricing ? 'page' : undefined}>{t.footer.pricing}</a>
+
       <a class="cta" href={pricingHref}>{t.getStarted}</a>
+
+      <button
+        type="button"
+        class="iconbtn hamburger"
+        aria-label={t.siteNav.menu}
+        aria-expanded="false"
+        aria-controls="site-drawer"
+        data-drawer-open>
+        <svg viewBox="0 0 20 20" width="19" height="19" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+          <line x1="3" y1="6" x2="17" y2="6" />
+          <line x1="3" y1="10" x2="17" y2="10" />
+          <line x1="3" y1="14" x2="17" y2="14" />
+        </svg>
+      </button>
     </div>
   </div>
 
@@ -160,6 +250,79 @@ const menus = (
   }
 </header>
 
+<!-- Mobile drawer: every destination lives here, so nothing is unreachable on
+     small screens (including the primary sections from a blog article). -->
+<div class="drawer" id="site-drawer" data-drawer aria-hidden="true">
+  <div class="drawer-backdrop" data-drawer-close></div>
+  <div class="drawer-panel" role="dialog" aria-modal="true" aria-label={t.siteNav.menu}>
+    <div class="drawer-head">
+      <span class="drawer-title">{t.siteNav.menu}</span>
+      <button type="button" class="iconbtn" aria-label="Close" data-drawer-close>
+        <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+          <line x1="5" y1="5" x2="15" y2="15" />
+          <line x1="15" y1="5" x2="5" y2="15" />
+        </svg>
+      </button>
+    </div>
+
+    <nav class="drawer-nav" aria-label="Mobile">
+      {
+        groups.map((g) => (
+          <details class="drawer-group" open={g.active}>
+            <summary>
+              {g.label}
+              <span class="caret" aria-hidden="true">▾</span>
+            </summary>
+            <div class="drawer-links">
+              {g.items.map((it) => (
+                <a
+                  class:list={['drawer-link', { active: it.active }]}
+                  href={it.href}
+                  target={it.external ? '_blank' : undefined}
+                  rel={it.external ? 'noopener' : undefined}>
+                  {it.label}
+                  {it.external && <span class="ext" aria-hidden="true">↗</span>}
+                </a>
+              ))}
+            </div>
+          </details>
+        ))
+      }
+      <a class:list={['drawer-flat', { active: inPricing }]} href={pricingHref}>{t.footer.pricing}</a>
+    </nav>
+
+    <a class="drawer-cta" href={pricingHref}>{t.getStarted}</a>
+
+    <div class="drawer-foot">
+      <div class="drawer-langs">
+        {
+          LOCALES.map((l) => (
+            <a
+              class:list={['drawer-lang', { active: l === locale }]}
+              href={alternates[l] ?? homePath(l)}
+              data-lang={l}>
+              {LANG_NATIVE[l]}
+            </a>
+          ))
+        }
+      </div>
+      <div class="drawer-utils">
+        <a class="drawer-util" href={GITHUB_URL} target="_blank" rel="noopener">
+          <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="currentColor">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z" />
+          </svg>
+          GitHub
+        </a>
+        <button type="button" class="drawer-util" data-theme-toggle>
+          <span class="moon" aria-hidden="true">☾</span>
+          <span class="sun" aria-hidden="true">☀</span>
+          <span class="theme-label">Theme</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   // Remember the reader's language choice so `/` redirects there next time.
   document.querySelectorAll<HTMLAnchorElement>('[data-lang]').forEach((a) => {
@@ -173,19 +336,22 @@ const menus = (
   });
 
   // Dark-mode toggle (persisted; default comes from the inline head script).
-  document.querySelector('[data-theme-toggle]')?.addEventListener('click', () => {
-    const root = document.documentElement;
-    const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
-    root.dataset.theme = next;
-    try {
-      localStorage.setItem('theme', next);
-    } catch {
-      /* ignore */
-    }
+  // querySelectorAll: there is a toggle in the bar and one in the drawer.
+  document.querySelectorAll('[data-theme-toggle]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const root = document.documentElement;
+      const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
+      root.dataset.theme = next;
+      try {
+        localStorage.setItem('theme', next);
+      } catch {
+        /* ignore */
+      }
+    });
   });
 
-  // Dropdown menus (axes + language): click to open, single-open, close on
-  // outside-click / Escape.
+  // Dropdown menus (nav groups + axes + language): click to open, single-open,
+  // close on outside-click / Escape.
   const menus = document.querySelectorAll<HTMLElement>('[data-menu]');
   function closeAll(except?: HTMLElement) {
     menus.forEach((m) => {
@@ -204,8 +370,31 @@ const menus = (
     });
   });
   document.addEventListener('click', () => closeAll());
+
+  // Mobile drawer.
+  const drawer = document.querySelector<HTMLElement>('[data-drawer]');
+  const openBtn = document.querySelector<HTMLElement>('[data-drawer-open]');
+  function setDrawer(open: boolean) {
+    if (!drawer) return;
+    drawer.classList.toggle('open', open);
+    drawer.setAttribute('aria-hidden', open ? 'false' : 'true');
+    openBtn?.setAttribute('aria-expanded', open ? 'true' : 'false');
+    document.documentElement.style.overflow = open ? 'hidden' : '';
+  }
+  openBtn?.addEventListener('click', () => setDrawer(true));
+  document.querySelectorAll('[data-drawer-close]').forEach((el) =>
+    el.addEventListener('click', () => setDrawer(false))
+  );
+  // Navigating away should close the sheet.
+  drawer?.querySelectorAll('a').forEach((a) =>
+    a.addEventListener('click', () => setDrawer(false))
+  );
+
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeAll();
+    if (e.key === 'Escape') {
+      closeAll();
+      setDrawer(false);
+    }
   });
 </script>
 
@@ -249,27 +438,30 @@ const menus = (
     font-weight: 760;
     letter-spacing: 0;
   }
+
+  /* Primary desktop nav */
   .site-nav {
     display: flex;
     align-items: center;
-    gap: 0.2rem;
+    gap: 0.15rem;
     margin-right: auto;
-    margin-left: 2.25rem;
+    margin-left: 2rem;
   }
-  .site-nav a {
+  .navlink {
     color: var(--ink-soft);
     font-size: 0.84rem;
     font-weight: 650;
     text-decoration: none;
     padding: 0.43rem 0.72rem;
     border-radius: 6px;
+    white-space: nowrap;
     transition:
       color 0.16s ease,
       background 0.16s ease,
       box-shadow 0.16s ease;
   }
-  .site-nav a:hover,
-  .site-nav a.active {
+  .navlink:hover,
+  .navlink.active {
     color: var(--ink);
     background: var(--surface-sunk);
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--line) 70%, transparent);
@@ -279,26 +471,6 @@ const menus = (
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-  }
-
-  .top-link {
-    color: var(--ink-soft);
-    font-size: 0.82rem;
-    font-weight: 650;
-    text-decoration: none;
-    padding: 0.43rem 0.5rem;
-    border-radius: 6px;
-    white-space: nowrap;
-    transition:
-      color 0.16s ease,
-      background 0.16s ease,
-      box-shadow 0.16s ease;
-  }
-  .top-link:hover,
-  .top-link.active {
-    color: var(--ink);
-    background: var(--surface-sunk);
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--line) 70%, transparent);
   }
 
   .iconbtn {
@@ -314,6 +486,7 @@ const menus = (
     cursor: pointer;
     font-size: 0.95rem;
     line-height: 1;
+    text-decoration: none;
     transition:
       color 0.15s,
       background 0.15s,
@@ -323,6 +496,9 @@ const menus = (
     color: var(--ink);
     background: var(--surface);
     transform: translateY(-1px);
+  }
+  .hamburger {
+    display: none;
   }
 
   /* Language dropdown */
@@ -355,15 +531,12 @@ const menus = (
   .lang-trigger .globe {
     font-size: 0.85rem;
   }
-  .lang-cur.short {
-    display: none;
-  }
   .lang-panel {
     left: auto;
     right: 0;
   }
 
-  /* Primary CTA — pinned in the bar so it never scrolls away */
+  /* Primary CTA — pinned in the bar at every width so it never scrolls away */
   .cta {
     display: inline-flex;
     align-items: center;
@@ -388,7 +561,87 @@ const menus = (
     opacity: 0.95;
   }
 
-  /* Grouped mega-menu (one dropdown per axis) */
+  /* Dropdown menus (shared by nav groups, blog axes, language) */
+  .menu {
+    position: relative;
+  }
+  .menu-trigger {
+    font-family: inherit;
+    font-size: 0.84rem;
+    font-weight: 650;
+    color: var(--ink-soft);
+    background: none;
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.28rem;
+    padding: 0.43rem 0.72rem;
+    border-radius: 6px;
+    transition:
+      color 0.15s,
+      background 0.15s,
+      box-shadow 0.16s ease;
+  }
+  .menu-trigger:hover,
+  .menu-trigger.active {
+    color: var(--ink);
+    background: var(--surface-sunk);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--line) 70%, transparent);
+  }
+  .caret {
+    font-size: 0.6rem;
+    opacity: 0.55;
+    transition: transform 0.15s;
+  }
+  .menu.open .caret {
+    transform: rotate(180deg);
+  }
+  .menu-panel {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    min-width: 190px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: 0 18px 42px -22px rgba(var(--shadow), 0.45);
+    padding: 0.45rem;
+    display: none;
+    flex-direction: column;
+    gap: 1px;
+    z-index: 20;
+  }
+  .menu.open .menu-panel {
+    display: flex;
+  }
+  .menu-item {
+    font-size: 0.86rem;
+    color: var(--ink-soft);
+    text-decoration: none;
+    padding: 0.48rem 0.68rem;
+    border-radius: 6px;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .menu-item:hover {
+    background: var(--surface-sunk);
+    color: var(--ink);
+  }
+  .menu-item.active {
+    color: var(--accent);
+    background: var(--accent-soft);
+    font-weight: 600;
+  }
+  .ext {
+    font-size: 0.72rem;
+    opacity: 0.5;
+  }
+
+  /* Blog browse row (in-page filter) */
   .blognav {
     border-top: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
   }
@@ -402,182 +655,243 @@ const menus = (
     flex-wrap: wrap;
     gap: 0.15rem;
   }
-  .nav-link,
-  .menu-trigger {
+  .nav-link {
     font-family: inherit;
     font-size: 0.88rem;
     color: var(--ink-soft);
     text-decoration: none;
     padding: 0.4rem 0.65rem;
     border-radius: 8px;
-    background: none;
-    border: none;
-    cursor: pointer;
     white-space: nowrap;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
     transition:
       color 0.15s,
       background 0.15s;
   }
-  .nav-link:hover,
-  .menu-trigger:hover {
+  .nav-link:hover {
     color: var(--ink);
     background: var(--surface-sunk);
   }
-  .nav-link.active,
-  .menu-trigger.active {
+  .nav-link.active {
     color: var(--ink);
     font-weight: 600;
   }
-  .caret {
-    font-size: 0.6rem;
-    opacity: 0.55;
-    transition: transform 0.15s;
+
+  /* Mobile drawer */
+  .drawer {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: none;
   }
-  .menu {
-    position: relative;
+  .drawer.open {
+    display: block;
   }
-  .menu.open .caret {
+  .drawer-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.42);
+    backdrop-filter: blur(2px);
+  }
+  .drawer-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: min(86vw, 360px);
+    background: var(--surface);
+    border-left: 1px solid var(--line);
+    box-shadow: -24px 0 60px -30px rgba(var(--shadow), 0.6);
+    padding: 0.9rem 1rem 1.4rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  .drawer-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.35rem;
+  }
+  .drawer-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .drawer-nav {
+    display: flex;
+    flex-direction: column;
+  }
+  .drawer-group {
+    border-bottom: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
+  }
+  .drawer-group > summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.85rem 0.25rem;
+    font-size: 0.98rem;
+    font-weight: 650;
+    color: var(--ink);
+    min-height: 44px;
+  }
+  .drawer-group > summary::-webkit-details-marker {
+    display: none;
+  }
+  .drawer-group[open] > summary .caret {
     transform: rotate(180deg);
   }
-  .menu-panel {
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    min-width: 180px;
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    box-shadow: 0 18px 42px -22px rgba(var(--shadow), 0.45);
-    padding: 0.45rem;
-    display: none;
-    flex-direction: column;
-    gap: 1px;
-    z-index: 20;
-  }
-  .menu.open .menu-panel {
+  .drawer-links {
     display: flex;
+    flex-direction: column;
+    padding: 0 0 0.5rem 0.25rem;
   }
-  .menu-item {
-    font-size: 0.88rem;
+  .drawer-link {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.6rem 0.5rem;
+    min-height: 40px;
+    font-size: 0.9rem;
     color: var(--ink-soft);
     text-decoration: none;
-    padding: 0.48rem 0.68rem;
-    border-radius: 6px;
-    white-space: nowrap;
+    border-radius: 8px;
   }
-  .menu-item:hover {
+  .drawer-link:hover,
+  .drawer-link.active {
     background: var(--surface-sunk);
     color: var(--ink);
   }
-  .menu-item.active {
+  .drawer-link.active {
     color: var(--accent);
+    font-weight: 600;
+  }
+  .drawer-flat {
+    display: flex;
+    align-items: center;
+    padding: 0.85rem 0.25rem;
+    min-height: 44px;
+    font-size: 0.98rem;
+    font-weight: 650;
+    color: var(--ink);
+    text-decoration: none;
+    border-bottom: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
+  }
+  .drawer-flat.active {
+    color: var(--accent);
+  }
+  .drawer-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 0.9rem;
+    padding: 0.8rem 1rem;
+    font-size: 0.92rem;
+    font-weight: 680;
+    color: var(--surface);
+    background: var(--ink);
+    border-radius: 999px;
+    text-decoration: none;
+  }
+  .drawer-foot {
+    margin-top: 1rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+  .drawer-langs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+  .drawer-lang {
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+    text-decoration: none;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+  }
+  .drawer-lang.active {
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
     background: var(--accent-soft);
     font-weight: 600;
   }
-  @media (max-width: 980px) {
-    .site-nav {
-      margin-left: 1rem;
-    }
-    .site-nav a {
-      padding-right: 0.55rem;
-      padding-left: 0.55rem;
-    }
-    .top-link {
+  .drawer-utils {
+    display: flex;
+    gap: 0.5rem;
+  }
+  .drawer-util {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.6rem;
+    font-family: inherit;
+    font-size: 0.84rem;
+    color: var(--ink-soft);
+    background: none;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .drawer-util:hover {
+    color: var(--ink);
+    background: var(--surface-sunk);
+  }
+
+  /* Theme glyphs: show the icon for the mode you'd switch TO. */
+  .sun {
+    display: none;
+  }
+  :global(html[data-theme='dark']) .moon {
+    display: none;
+  }
+  :global(html[data-theme='dark']) .sun {
+    display: inline;
+  }
+
+  /* Switch to the hamburger drawer before the desktop bar gets crowded. */
+  @media (max-width: 900px) {
+    .site-nav,
+    .bar-desktop {
       display: none;
     }
+    .hamburger {
+      display: inline-flex;
+    }
   }
+
   @media (max-width: 720px) {
     .bar {
-      height: auto;
-      min-height: 58px;
-      flex-wrap: wrap;
-      gap: 0.35rem 0.5rem;
+      height: 58px;
       padding-right: 1rem;
       padding-left: 1rem;
-      padding-top: 0.65rem;
-      padding-bottom: 0.55rem;
-    }
-    .site-nav {
-      order: 3;
-      width: 100%;
-      margin: 0;
-      gap: 0.05rem;
-      overflow-x: auto;
-      scrollbar-width: none;
-    }
-    .site-nav a {
-      min-height: 40px;
-      display: inline-flex;
-      align-items: center;
-      padding-left: 0.1rem;
-      padding-right: 0.45rem;
-      font-size: 0.78rem;
-      white-space: nowrap;
-    }
-    .bar-right {
-      margin-left: auto;
     }
     .mainnav-inner {
       flex-wrap: nowrap;
       overflow-x: auto;
       scrollbar-width: none;
       overscroll-behavior-x: contain;
-      scroll-snap-type: x proximity;
     }
-    .mainnav-inner > * {
-      scroll-snap-align: start;
+    .mainnav-inner::-webkit-scrollbar {
+      display: none;
     }
     .nav-link,
     .menu-trigger {
       min-height: 40px;
-      padding: 0.34rem 0.5rem;
-      font-size: 0.78rem;
     }
-    .iconbtn {
-      width: 40px;
-      height: 40px;
-    }
-    .lang-trigger {
-      min-width: 44px;
-      min-height: 40px;
-      padding-right: 0.58rem;
-      padding-left: 0.58rem;
-      gap: 0.26rem;
-    }
-    .lang-cur.native,
-    .lang-trigger .caret {
-      display: none;
-    }
-    .lang-cur.short {
-      display: none;
-    }
-    .cta {
-      display: none;
-    }
-    .menu-item {
-      min-height: 44px;
-      display: flex;
-      align-items: center;
-    }
-    .site-nav::-webkit-scrollbar,
-    .mainnav-inner::-webkit-scrollbar {
-      display: none;
-    }
-    .blog-context .site-nav {
-      display: none;
-    }
+    /* Blog axis dropdowns escape the horizontal-scroll container on mobile. */
     .blognav .menu-panel {
-      position: fixed;
-      top: 105px;
-      right: 1rem;
-      left: 1rem;
-      max-height: calc(100vh - 121px);
-      overflow-y: auto;
-    }
-    .lang-panel {
       position: fixed;
       top: 104px;
       right: 1rem;
@@ -585,40 +899,14 @@ const menus = (
       max-height: calc(100vh - 120px);
       overflow-y: auto;
     }
-    .blog-context .lang-panel {
-      top: 58px;
-      max-height: calc(100vh - 74px);
-    }
   }
+
   @media (max-width: 420px) {
-    .mainnav-inner {
-      padding-right: 0.75rem;
-      padding-left: 0.75rem;
-      gap: 0.04rem;
+    .cta {
+      padding: 0.46rem 0.8rem;
     }
-    .nav-link,
-    .menu-trigger {
-      min-height: 38px;
-      padding-right: 0.34rem;
-      padding-left: 0.34rem;
-      gap: 0.18rem;
-      font-size: 0.72rem;
-    }
-  }
-  @media (max-width: 360px) {
-    .lang-cur.native {
-      display: none;
-    }
-    .lang-trigger {
-      width: 40px;
-      min-width: 40px;
-      padding-right: 0;
-      padding-left: 0;
-      justify-content: center;
-    }
-    .site-nav a {
-      padding-right: 0.35rem;
-      font-size: 0.76rem;
+    .wordmark .name {
+      font-size: 0.9rem;
     }
   }
 </style>

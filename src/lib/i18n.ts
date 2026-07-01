@@ -73,12 +73,17 @@ type StatusKey = 'published' | 'archived';
 interface Strings {
   siteName: string;
   siteNav: {
-    platform: string;
-    ai: string;
-    solutions: string;
-    security: string;
-    articles: string;
+    product: string;
+    developers: string;
+    resources: string;
     docs: string;
+    menu: string;
+    productTour: string;
+    trustCenter: string;
+    toolsMcp: string;
+    agentGuide: string;
+    templates: string;
+    referenceStories: string;
   };
   getStarted: string;
   skipToContent: string;
@@ -99,12 +104,17 @@ interface Strings {
 const en: Strings = {
   siteName: 'ObjectOS',
   siteNav: {
-    platform: 'Product',
-    ai: 'AI',
-    solutions: 'Solutions',
-    security: 'Security',
-    articles: 'Articles',
+    product: 'Product',
+    developers: 'Developers',
+    resources: 'Resources',
     docs: 'Docs',
+    menu: 'Menu',
+    productTour: 'Product tour',
+    trustCenter: 'Trust center',
+    toolsMcp: 'Tools & MCP',
+    agentGuide: 'Agent guide',
+    templates: 'Templates',
+    referenceStories: 'Reference stories',
   },
   getStarted: 'Get started',
   skipToContent: 'Skip to content',
@@ -125,12 +135,17 @@ const en: Strings = {
 const zhHans: Strings = {
   siteName: 'ObjectOS',
   siteNav: {
-    platform: '产品',
-    ai: 'AI',
-    solutions: '解决方案',
-    security: '安全',
-    articles: '文章',
+    product: '产品',
+    developers: '开发者',
+    resources: '资源',
     docs: '文档',
+    menu: '菜单',
+    productTour: '产品导览',
+    trustCenter: '信任中心',
+    toolsMcp: '工具与 MCP',
+    agentGuide: 'Agent 开发指南',
+    templates: '模板',
+    referenceStories: '参考案例',
   },
   getStarted: '开始使用',
   skipToContent: '跳到正文',
@@ -151,12 +166,17 @@ const zhHans: Strings = {
 const ja: Strings = {
   siteName: 'ObjectOS',
   siteNav: {
-    platform: '製品',
-    ai: 'AI',
-    solutions: 'ソリューション',
-    security: 'セキュリティ',
-    articles: '記事',
+    product: '製品',
+    developers: '開発者',
+    resources: 'リソース',
     docs: 'Docs',
+    menu: 'メニュー',
+    productTour: 'プロダクトツアー',
+    trustCenter: 'トラストセンター',
+    toolsMcp: 'ツールと MCP',
+    agentGuide: 'エージェント開発ガイド',
+    templates: 'テンプレート',
+    referenceStories: '導入事例',
   },
   getStarted: 'はじめる',
   skipToContent: '本文へ移動',
@@ -177,12 +197,17 @@ const ja: Strings = {
 const de: Strings = {
   siteName: 'ObjectOS',
   siteNav: {
-    platform: 'Produkt',
-    ai: 'AI',
-    solutions: 'Lösungen',
-    security: 'Sicherheit',
-    articles: 'Artikel',
+    product: 'Produkt',
+    developers: 'Entwickler',
+    resources: 'Ressourcen',
     docs: 'Docs',
+    menu: 'Menü',
+    productTour: 'Produkt-Tour',
+    trustCenter: 'Trust Center',
+    toolsMcp: 'Tools & MCP',
+    agentGuide: 'Agent-Leitfaden',
+    templates: 'Vorlagen',
+    referenceStories: 'Referenzberichte',
   },
   getStarted: 'Loslegen',
   skipToContent: 'Zum Inhalt springen',
@@ -203,12 +228,17 @@ const de: Strings = {
 const es: Strings = {
   siteName: 'ObjectOS',
   siteNav: {
-    platform: 'Producto',
-    ai: 'AI',
-    solutions: 'Soluciones',
-    security: 'Seguridad',
-    articles: 'Artículos',
+    product: 'Producto',
+    developers: 'Desarrolladores',
+    resources: 'Recursos',
     docs: 'Docs',
+    menu: 'Menú',
+    productTour: 'Recorrido del producto',
+    trustCenter: 'Centro de confianza',
+    toolsMcp: 'Herramientas y MCP',
+    agentGuide: 'Guía para agentes',
+    templates: 'Plantillas',
+    referenceStories: 'Casos de referencia',
   },
   getStarted: 'Empezar',
   skipToContent: 'Saltar al contenido',
@@ -229,12 +259,17 @@ const es: Strings = {
 const fr: Strings = {
   siteName: 'ObjectOS',
   siteNav: {
-    platform: 'Produit',
-    ai: 'AI',
-    solutions: 'Solutions',
-    security: 'Sécurité',
-    articles: 'Articles',
+    product: 'Produit',
+    developers: 'Développeurs',
+    resources: 'Ressources',
     docs: 'Docs',
+    menu: 'Menu',
+    productTour: 'Visite du produit',
+    trustCenter: 'Centre de confiance',
+    toolsMcp: 'Outils et MCP',
+    agentGuide: 'Guide agent',
+    templates: 'Modèles',
+    referenceStories: 'Cas de référence',
   },
   getStarted: 'Commencer',
   skipToContent: 'Aller au contenu',
@@ -255,12 +290,17 @@ const fr: Strings = {
 const ko: Strings = {
   siteName: 'ObjectOS',
   siteNav: {
-    platform: '제품',
-    ai: 'AI',
-    solutions: '솔루션',
-    security: '보안',
-    articles: '글',
+    product: '제품',
+    developers: '개발자',
+    resources: '리소스',
     docs: '문서',
+    menu: '메뉴',
+    productTour: '제품 둘러보기',
+    trustCenter: '트러스트 센터',
+    toolsMcp: '도구 및 MCP',
+    agentGuide: '에이전트 가이드',
+    templates: '템플릿',
+    referenceStories: '레퍼런스 사례',
   },
   getStarted: '시작하기',
   skipToContent: '본문으로 건너뛰기',
@@ -282,12 +322,17 @@ const ko: Strings = {
 const toHant = (s: Strings): Strings => ({
   siteName: s2t(s.siteName),
   siteNav: {
-    platform: s2t(s.siteNav.platform),
-    ai: s2t(s.siteNav.ai),
-    solutions: s2t(s.siteNav.solutions),
-    security: s2t(s.siteNav.security),
-    articles: s2t(s.siteNav.articles),
+    product: s2t(s.siteNav.product),
+    developers: s2t(s.siteNav.developers),
+    resources: s2t(s.siteNav.resources),
     docs: s2t(s.siteNav.docs),
+    menu: s2t(s.siteNav.menu),
+    productTour: s2t(s.siteNav.productTour),
+    trustCenter: s2t(s.siteNav.trustCenter),
+    toolsMcp: s2t(s.siteNav.toolsMcp),
+    agentGuide: s2t(s.siteNav.agentGuide),
+    templates: s2t(s.siteNav.templates),
+    referenceStories: s2t(s.siteNav.referenceStories),
   },
   getStarted: s2t(s.getStarted),
   skipToContent: s2t(s.skipToContent),
