@@ -1,20 +1,36 @@
 ---
-import { ENGLISH_PAGES, englishPagePath, type EnglishPage } from '../lib/english-pages';
+import { getMarketingPages, marketingPagePath } from '../content-pages/registry';
+import type { MarketingPage } from '../content-pages/types';
+import { marketingPageUi } from '../content-pages/ui';
+import { pricingPath, securityPath, type Locale } from '../lib/i18n';
 
 interface Props {
-  page: EnglishPage;
+  page: MarketingPage;
+  locale: Locale;
 }
 
-const { page } = Astro.props;
-const relatedPages = ENGLISH_PAGES.filter((item) => item.slug !== page.slug);
+const { page, locale } = Astro.props;
+const pages = getMarketingPages(locale);
+const ui = marketingPageUi(locale);
+const relatedPages = pages.filter((item) => item.slug !== page.slug);
+const marketingSlugs = new Set(pages.map((item) => item.slug));
+const localizeHref = (href: string): string => {
+  const match = href.match(/^\/en\/([^/#]+)\/?(#.*)?$/);
+  if (!match) return href;
+  const [, slug, hash = ''] = match;
+  if (marketingSlugs.has(slug)) return `${marketingPagePath(locale, slug)}${hash}`;
+  if (slug === 'security') return securityPath(locale);
+  if (slug === 'pricing') return pricingPath(locale);
+  return href;
+};
 ---
 
 <article class="evidence-page">
-  <nav class="page-rail" aria-label="English product pages">
-    {ENGLISH_PAGES.map((item) => (
+  <nav class="page-rail" aria-label={ui.pageRailLabel}>
+    {pages.map((item) => (
       <a
         class:list={{ active: item.slug === page.slug }}
-        href={englishPagePath(item.slug)}
+        href={marketingPagePath(locale, item.slug)}
         aria-current={item.slug === page.slug ? 'page' : undefined}>
         {item.navLabel}
       </a>
@@ -27,11 +43,11 @@ const relatedPages = ENGLISH_PAGES.filter((item) => item.slug !== page.slug);
       <h1>{page.heroTitle}</h1>
       <p class="lead">{page.lead}</p>
       <div class="actions">
-        <a class="button primary" href={page.primary.href}>{page.primary.label}</a>
-        <a class="button secondary" href={page.secondary.href}>{page.secondary.label}</a>
+        <a class="button primary" href={localizeHref(page.primary.href)}>{page.primary.label}</a>
+        <a class="button secondary" href={localizeHref(page.secondary.href)}>{page.secondary.label}</a>
       </div>
     </div>
-    <div class="hero-panel" aria-label="ObjectOS review loop">
+    <div class="hero-panel" aria-label={ui.loopLabel}>
       <img
         class="hero-snapshot"
         src="/images/objectos-home-hero.png"
@@ -42,21 +58,21 @@ const relatedPages = ENGLISH_PAGES.filter((item) => item.slug !== page.slug);
         decoding="async"
       />
       <div class="loop-step write">
-        <span>AI</span>
-        <strong>Writes metadata</strong>
-        <small>Objects, permissions, workflows, tools</small>
+        <span>{ui.loop.writer.eyebrow}</span>
+        <strong>{ui.loop.writer.title}</strong>
+        <small>{ui.loop.writer.body}</small>
       </div>
       <div class="loop-line"></div>
       <div class="loop-step review">
-        <span>Human</span>
-        <strong>Reviews diff</strong>
-        <small>Business authority, data access, approvals</small>
+        <span>{ui.loop.reviewer.eyebrow}</span>
+        <strong>{ui.loop.reviewer.title}</strong>
+        <small>{ui.loop.reviewer.body}</small>
       </div>
       <div class="loop-line"></div>
       <div class="loop-step runtime">
-        <span>Runtime</span>
-        <strong>Enforces policy</strong>
-        <small>UI, APIs, audit, MCP, actions</small>
+        <span>{ui.loop.runtime.eyebrow}</span>
+        <strong>{ui.loop.runtime.title}</strong>
+        <small>{ui.loop.runtime.body}</small>
       </div>
     </div>
   </section>
@@ -110,8 +126,8 @@ const relatedPages = ENGLISH_PAGES.filter((item) => item.slug !== page.slug);
     page.table && (
       <section class="table-section" aria-labelledby="table-title">
         <div class="section-head compact">
-          <p class="eyebrow">Decision surface</p>
-          <h2 id="table-title">What changes, who reviews it, what runs</h2>
+          <p class="eyebrow">{ui.decisionEyebrow}</p>
+          <h2 id="table-title">{ui.decisionTitle}</h2>
         </div>
         <div class="table-wrap">
           <table>
@@ -137,7 +153,7 @@ const relatedPages = ENGLISH_PAGES.filter((item) => item.slug !== page.slug);
     page.checklist && (
       <section class="checklist" aria-labelledby="checklist-title">
         <div>
-          <p class="eyebrow">Review checklist</p>
+          <p class="eyebrow">{ui.checklistEyebrow}</p>
           <h2 id="checklist-title">{page.checklistTitle}</h2>
         </div>
         <ul>
@@ -149,8 +165,8 @@ const relatedPages = ENGLISH_PAGES.filter((item) => item.slug !== page.slug);
 
   <section class="faq" aria-labelledby="faq-title">
     <div class="section-head compact">
-      <p class="eyebrow">FAQ</p>
-      <h2 id="faq-title">Questions this page should answer</h2>
+      <p class="eyebrow">{ui.faqEyebrow}</p>
+      <h2 id="faq-title">{ui.faqTitle}</h2>
     </div>
     <div class="faq-list">
       {page.faqs.map((faq) => (
@@ -164,12 +180,12 @@ const relatedPages = ENGLISH_PAGES.filter((item) => item.slug !== page.slug);
 
   <section class="next">
     <div>
-      <p class="eyebrow">Next pages</p>
-      <h2>Keep building the evaluation packet.</h2>
+      <p class="eyebrow">{ui.nextEyebrow}</p>
+      <h2>{ui.nextTitle}</h2>
     </div>
     <div class="next-links">
       {relatedPages.slice(0, 4).map((item) => (
-        <a href={englishPagePath(item.slug)}>
+        <a href={marketingPagePath(locale, item.slug)}>
           <strong>{item.navLabel}</strong>
           <span>{item.description}</span>
         </a>
@@ -594,16 +610,16 @@ const relatedPages = ENGLISH_PAGES.filter((item) => item.slug !== page.slug);
     .page-rail {
       margin-top: -0.5rem;
       max-width: 100%;
-      flex-wrap: nowrap;
-      overflow-x: auto;
-      scrollbar-width: none;
-    }
-    .page-rail::-webkit-scrollbar {
-      display: none;
+      flex-wrap: wrap;
+      overflow-x: visible;
     }
     .page-rail a {
-      flex: 0 0 auto;
+      flex: 1 1 calc(50% - 0.35rem);
       min-height: 40px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
     }
     .hero {
       padding-top: 0.5rem;
