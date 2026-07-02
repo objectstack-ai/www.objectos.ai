@@ -83,6 +83,8 @@ interface Strings {
     aiBuildAsk: string;
     whyObjectOs: string;
     dataModeling: string;
+    appInterfaces: string;
+    analytics: string;
     automation: string;
     approvals: string;
     permissionsSecurity: string;
@@ -123,6 +125,8 @@ const en: Strings = {
     aiBuildAsk: 'AI Build & Ask',
     whyObjectOs: 'Why ObjectOS',
     dataModeling: 'Data modeling',
+    appInterfaces: 'App interfaces',
+    analytics: 'Analytics & reporting',
     automation: 'Process automation',
     approvals: 'Approvals',
     permissionsSecurity: 'Permissions & security',
@@ -163,6 +167,8 @@ const zhHans: Strings = {
     aiBuildAsk: 'AI Build & Ask',
     whyObjectOs: '为什么选 ObjectOS',
     dataModeling: '数据建模',
+    appInterfaces: '应用界面',
+    analytics: '报表与分析',
     automation: '流程自动化',
     approvals: '审批',
     permissionsSecurity: '权限与安全',
@@ -203,6 +209,8 @@ const ja: Strings = {
     aiBuildAsk: 'AI Build & Ask',
     whyObjectOs: 'ObjectOS を選ぶ理由',
     dataModeling: 'データモデリング',
+    appInterfaces: 'アプリ画面',
+    analytics: 'レポートと分析',
     automation: 'プロセス自動化',
     approvals: '承認',
     permissionsSecurity: '権限とセキュリティ',
@@ -243,6 +251,8 @@ const de: Strings = {
     aiBuildAsk: 'AI Build & Ask',
     whyObjectOs: 'Warum ObjectOS',
     dataModeling: 'Datenmodellierung',
+    appInterfaces: 'App-Oberflächen',
+    analytics: 'Analysen & Berichte',
     automation: 'Prozessautomatisierung',
     approvals: 'Freigaben',
     permissionsSecurity: 'Berechtigungen & Sicherheit',
@@ -283,6 +293,8 @@ const es: Strings = {
     aiBuildAsk: 'AI Build & Ask',
     whyObjectOs: 'Por qué ObjectOS',
     dataModeling: 'Modelado de datos',
+    appInterfaces: 'Interfaces de la app',
+    analytics: 'Analítica e informes',
     automation: 'Automatización de procesos',
     approvals: 'Aprobaciones',
     permissionsSecurity: 'Permisos y seguridad',
@@ -323,6 +335,8 @@ const fr: Strings = {
     aiBuildAsk: 'AI Build & Ask',
     whyObjectOs: 'Pourquoi ObjectOS',
     dataModeling: 'Modélisation des données',
+    appInterfaces: 'Interfaces applicatives',
+    analytics: 'Analytique et rapports',
     automation: 'Automatisation des processus',
     approvals: 'Approbations',
     permissionsSecurity: 'Permissions et sécurité',
@@ -363,6 +377,8 @@ const ko: Strings = {
     aiBuildAsk: 'AI Build & Ask',
     whyObjectOs: 'ObjectOS를 선택하는 이유',
     dataModeling: '데이터 모델링',
+    appInterfaces: '앱 화면',
+    analytics: '분석과 리포트',
     automation: '프로세스 자동화',
     approvals: '승인',
     permissionsSecurity: '권한과 보안',
@@ -404,6 +420,8 @@ const toHant = (s: Strings): Strings => ({
     aiBuildAsk: s2t(s.siteNav.aiBuildAsk),
     whyObjectOs: s2t(s.siteNav.whyObjectOs),
     dataModeling: s2t(s.siteNav.dataModeling),
+    appInterfaces: s2t(s.siteNav.appInterfaces),
+    analytics: s2t(s.siteNav.analytics),
     automation: s2t(s.siteNav.automation),
     approvals: s2t(s.siteNav.approvals),
     permissionsSecurity: s2t(s.siteNav.permissionsSecurity),
