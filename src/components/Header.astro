@@ -29,6 +29,10 @@ const productTourHref = marketingPagePath(locale, 'product-tour');
 const platformHref = marketingPagePath(locale, 'platform');
 const aiHref = marketingPagePath(locale, 'ai');
 const mcpHref = marketingPagePath(locale, 'mcp');
+const dataModelingHref = marketingPagePath(locale, 'data-modeling');
+const automationHref = marketingPagePath(locale, 'automation');
+const approvalsHref = marketingPagePath(locale, 'approvals');
+const permissionsHref = marketingPagePath(locale, 'permissions');
 const trustCenterHref = marketingPagePath(locale, 'trust-center');
 const agentGuideHref = marketingPagePath(locale, 'agent-developer');
 const templatesHref = marketingPagePath(locale, 'templates');
@@ -46,9 +50,21 @@ const topicTerms = (await getUsedTerms('topic', locale)).filter((term) => !term.
 const onTopic = (href: string) => pathname.startsWith(href);
 
 // Primary nav model — one source of truth for both the desktop dropdowns and
-// the mobile drawer, so they can never drift apart.
+// the mobile drawer, so they can never drift apart. A group with more than one
+// section renders as a multi-column mega panel on desktop and as labeled
+// subsections inside the drawer accordion.
 type NavItem = { label: string; href: string; external?: boolean; active: boolean };
-type NavGroup = { id: string; label: string; active: boolean; items: NavItem[] };
+type NavSection = { label?: string; items: NavItem[] };
+type NavGroup = { id: string; label: string; active: boolean; sections: NavSection[] };
+
+const capabilityItems: NavItem[] = [
+  { label: t.siteNav.dataModeling, href: dataModelingHref, active: pathname === dataModelingHref },
+  { label: t.siteNav.automation, href: automationHref, active: pathname === automationHref },
+  { label: t.siteNav.approvals, href: approvalsHref, active: pathname === approvalsHref },
+  { label: t.siteNav.permissionsSecurity, href: permissionsHref, active: pathname === permissionsHref },
+  { label: t.siteNav.aiBuildAsk, href: aiHref, active: pathname === aiHref },
+  { label: t.siteNav.toolsMcp, href: mcpHref, active: pathname === mcpHref },
+];
 
 const groups: NavGroup[] = [
   {
@@ -57,40 +73,51 @@ const groups: NavGroup[] = [
     active:
       pathname === productTourHref ||
       pathname === platformHref ||
-      pathname === aiHref ||
-      pathname === mcpHref ||
-      pathname === trustCenterHref,
-    items: [
-      { label: t.siteNav.productTour, href: productTourHref, active: pathname === productTourHref },
-      { label: t.siteNav.platform, href: platformHref, active: pathname === platformHref },
-      { label: t.siteNav.aiBuildAsk, href: aiHref, active: pathname === aiHref },
-      { label: t.siteNav.toolsMcp, href: mcpHref, active: pathname === mcpHref },
-      { label: t.siteNav.whyObjectOs, href: `${homeHref}#compare`, active: false },
-      { label: t.siteNav.trustCenter, href: trustCenterHref, active: pathname === trustCenterHref },
+      pathname === trustCenterHref ||
+      capabilityItems.some((it) => it.active),
+    sections: [
+      {
+        label: t.siteNav.groupEvaluate,
+        items: [
+          { label: t.siteNav.productTour, href: productTourHref, active: pathname === productTourHref },
+          { label: t.siteNav.platform, href: platformHref, active: pathname === platformHref },
+          { label: t.siteNav.whyObjectOs, href: `${homeHref}#compare`, active: false },
+          { label: t.siteNav.trustCenter, href: trustCenterHref, active: pathname === trustCenterHref },
+        ],
+      },
+      { label: t.siteNav.groupCapabilities, items: capabilityItems },
     ],
   },
   {
     id: 'developers',
     label: t.siteNav.developers,
     active: pathname === agentGuideHref || pathname === templatesHref,
-    items: [
-      { label: t.siteNav.agentGuide, href: agentGuideHref, active: pathname === agentGuideHref },
-      { label: t.siteNav.docs, href: DOCS_URL, external: true, active: false },
-      { label: 'GitHub', href: GITHUB_URL, external: true, active: false },
-      { label: t.siteNav.templates, href: templatesHref, active: pathname === templatesHref },
+    sections: [
+      {
+        items: [
+          { label: t.siteNav.agentGuide, href: agentGuideHref, active: pathname === agentGuideHref },
+          { label: t.siteNav.docs, href: DOCS_URL, external: true, active: false },
+          { label: 'GitHub', href: GITHUB_URL, external: true, active: false },
+          { label: t.siteNav.templates, href: templatesHref, active: pathname === templatesHref },
+        ],
+      },
     ],
   },
   {
     id: 'resources',
     label: t.siteNav.resources,
     active: inBlog || pathname === storiesHref,
-    items: [
-      { label: t.backToList, href: blogHref, active: onBlogHome },
-      ...topicTerms.map((term) => {
-        const href = termHref(locale, term);
-        return { label: term.label[locale], href, active: onTopic(href) };
-      }),
-      { label: t.siteNav.referenceStories, href: storiesHref, active: pathname === storiesHref },
+    sections: [
+      {
+        items: [
+          { label: t.backToList, href: blogHref, active: onBlogHome },
+          ...topicTerms.map((term) => {
+            const href = termHref(locale, term);
+            return { label: term.label[locale], href, active: onTopic(href) };
+          }),
+          { label: t.siteNav.referenceStories, href: storiesHref, active: pathname === storiesHref },
+        ],
+      },
     ],
   },
 ];
@@ -129,17 +156,22 @@ const menus = (
               {g.label}
               <span class="caret" aria-hidden="true">▾</span>
             </button>
-            <div class="menu-panel" role="menu">
-              {g.items.map((it) => (
-                <a
-                  class:list={['menu-item', { active: it.active }]}
-                  href={it.href}
-                  role="menuitem"
-                  target={it.external ? '_blank' : undefined}
-                  rel={it.external ? 'noopener' : undefined}>
-                  {it.label}
-                  {it.external && <span class="ext" aria-hidden="true">↗</span>}
-                </a>
+            <div class:list={['menu-panel', { mega: g.sections.length > 1 }]} role="menu">
+              {g.sections.map((s) => (
+                <div class="menu-col">
+                  {s.label && <span class="menu-col-label" role="presentation">{s.label}</span>}
+                  {s.items.map((it) => (
+                    <a
+                      class:list={['menu-item', { active: it.active }]}
+                      href={it.href}
+                      role="menuitem"
+                      target={it.external ? '_blank' : undefined}
+                      rel={it.external ? 'noopener' : undefined}>
+                      {it.label}
+                      {it.external && <span class="ext" aria-hidden="true">↗</span>}
+                    </a>
+                  ))}
+                </div>
               ))}
             </div>
           </div>
@@ -285,15 +317,20 @@ const menus = (
               <span class="caret" aria-hidden="true">▾</span>
             </summary>
             <div class="drawer-links">
-              {g.items.map((it) => (
-                <a
-                  class:list={['drawer-link', { active: it.active }]}
-                  href={it.href}
-                  target={it.external ? '_blank' : undefined}
-                  rel={it.external ? 'noopener' : undefined}>
-                  {it.label}
-                  {it.external && <span class="ext" aria-hidden="true">↗</span>}
-                </a>
+              {g.sections.map((s) => (
+                <>
+                  {s.label && <span class="drawer-sec-label">{s.label}</span>}
+                  {s.items.map((it) => (
+                    <a
+                      class:list={['drawer-link', { active: it.active }]}
+                      href={it.href}
+                      target={it.external ? '_blank' : undefined}
+                      rel={it.external ? 'noopener' : undefined}>
+                      {it.label}
+                      {it.external && <span class="ext" aria-hidden="true">↗</span>}
+                    </a>
+                  ))}
+                </>
               ))}
             </div>
           </details>
@@ -652,6 +689,32 @@ const menus = (
     opacity: 0.5;
   }
 
+  /* Multi-section groups become a two-column mega panel on desktop. */
+  .menu-col {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 185px;
+  }
+  .menu-panel.mega {
+    flex-direction: row;
+    gap: 1rem;
+    padding: 0.7rem;
+  }
+  .menu-panel.mega .menu-col + .menu-col {
+    border-left: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
+    padding-left: 1rem;
+  }
+  .menu-col-label {
+    font-size: 0.66rem;
+    font-weight: 760;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0.25rem 0.68rem 0.4rem;
+    white-space: nowrap;
+  }
+
   /* Blog browse row (in-page filter) */
   .blognav {
     border-top: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
@@ -760,6 +823,17 @@ const menus = (
     display: flex;
     flex-direction: column;
     padding: 0 0 0.5rem 0.25rem;
+  }
+  .drawer-sec-label {
+    font-size: 0.68rem;
+    font-weight: 760;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0.65rem 0.5rem 0.2rem;
+  }
+  .drawer-sec-label:first-child {
+    padding-top: 0.15rem;
   }
   .drawer-link {
     display: flex;
