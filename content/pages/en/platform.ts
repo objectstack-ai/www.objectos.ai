@@ -56,7 +56,8 @@ const page = {
           {
             title: 'App interfaces',
             body: 'Forms, views, and dashboards render straight from metadata, and every user sees exactly what their permissions allow — no hand-built frontend.',
-            meta: 'Guide coming soon',
+            meta: 'Guide',
+            href: '/en/app-ui/',
           },
           {
             title: 'Process automation',
@@ -79,7 +80,8 @@ const page = {
           {
             title: 'Analytics & reporting',
             body: 'Aggregations, time series, funnels, and dashboards over the same governed objects — no separate BI stack to wire up.',
-            meta: 'Guide coming soon',
+            meta: 'Guide',
+            href: '/en/analytics/',
           },
         ],
       },
