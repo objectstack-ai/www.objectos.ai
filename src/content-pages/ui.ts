@@ -1,7 +1,6 @@
 import type { Locale } from '../lib/i18n';
 
 interface MarketingPageUi {
-  pageRailLabel: string;
   loopLabel: string;
   loop: {
     writer: { eyebrow: string; title: string; body: string };
@@ -18,7 +17,6 @@ interface MarketingPageUi {
 }
 
 const EN_UI: MarketingPageUi = {
-  pageRailLabel: 'Product pages',
   loopLabel: 'ObjectOS review loop',
   loop: {
     writer: {
