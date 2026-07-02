@@ -7,6 +7,23 @@ const ROOT = cwd();
 const DIST = path.join(ROOT, 'dist');
 const SITE = 'https://www.objectos.ai';
 const LOCALES = ['en', 'zh-Hans', 'zh-Hant', 'ja', 'de', 'es', 'fr', 'ko'];
+
+// Marketing pages rendered from fallback content are intentionally
+// canonicalized to the source locale and noindexed (see [cluster].astro),
+// so the expectations below are derived from which locales actually have
+// a content file per slug under content/pages/.
+const CONTENT_PAGES = path.join(ROOT, 'content', 'pages');
+const FALLBACK_LOCALE = 'en';
+const marketingContentLocales = new Map();
+for (const dirent of await readdir(CONTENT_PAGES, { withFileTypes: true })) {
+  if (!dirent.isDirectory()) continue;
+  for (const entry of await readdir(path.join(CONTENT_PAGES, dirent.name))) {
+    if (!entry.endsWith('.ts')) continue;
+    const slug = entry.replace(/\.ts$/, '');
+    if (!marketingContentLocales.has(slug)) marketingContentLocales.set(slug, new Set());
+    marketingContentLocales.get(slug).add(dirent.name);
+  }
+}
 const CLUSTER_SLUGS = [
   'ai-native-app-platform',
   'legacy-system-modernization',
@@ -96,9 +113,26 @@ const htmlFiles = (await walk(DIST))
 for (const file of htmlFiles) {
   const html = await readDist(file);
   const expectedPath = `/${file.replace(/index\.html$/, '')}`;
-  const canonical = `${SITE}${expectedPath}`;
+  const marketingMatch = file.match(/^([^/]+)\/([^/]+)\/index\.html$/);
+  const contentLocales =
+    marketingMatch && LOCALES.includes(marketingMatch[1])
+      ? marketingContentLocales.get(marketingMatch[2])
+      : undefined;
+  const isFallbackMarketing = Boolean(contentLocales && !contentLocales.has(marketingMatch[1]));
+  const canonicalPath = isFallbackMarketing
+    ? `/${FALLBACK_LOCALE}/${marketingMatch[2]}/`
+    : expectedPath;
+  const canonical = `${SITE}${canonicalPath}`;
   requireContains(file, html, `<link rel="canonical" href="${canonical}">`, 'missing expected canonical URL');
   requireContains(file, html, `<meta property="og:url" content="${canonical}">`, 'missing expected Open Graph URL');
+  if (isFallbackMarketing) {
+    requireContains(
+      file,
+      html,
+      '<meta name="robots" content="noindex, nofollow">',
+      'fallback-content page must be noindexed'
+    );
+  }
   requireContains(file, html, 'type="application/ld+json"', 'missing JSON-LD structured data');
 
   const locale = LOCALES.find((candidate) => file.startsWith(`${candidate}/`));
