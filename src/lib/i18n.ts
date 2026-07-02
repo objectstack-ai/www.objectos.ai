@@ -79,6 +79,9 @@ interface Strings {
     docs: string;
     menu: string;
     productTour: string;
+    platform: string;
+    aiBuildAsk: string;
+    whyObjectOs: string;
     trustCenter: string;
     toolsMcp: string;
     agentGuide: string;
@@ -110,6 +113,9 @@ const en: Strings = {
     docs: 'Docs',
     menu: 'Menu',
     productTour: 'Product tour',
+    platform: 'Platform',
+    aiBuildAsk: 'AI Build & Ask',
+    whyObjectOs: 'Why ObjectOS',
     trustCenter: 'Trust center',
     toolsMcp: 'Tools & MCP',
     agentGuide: 'Agent guide',
@@ -141,6 +147,9 @@ const zhHans: Strings = {
     docs: '文档',
     menu: '菜单',
     productTour: '产品导览',
+    platform: '平台能力',
+    aiBuildAsk: 'AI Build & Ask',
+    whyObjectOs: '为什么选 ObjectOS',
     trustCenter: '信任中心',
     toolsMcp: '工具与 MCP',
     agentGuide: 'Agent 开发指南',
@@ -172,6 +181,9 @@ const ja: Strings = {
     docs: 'Docs',
     menu: 'メニュー',
     productTour: 'プロダクトツアー',
+    platform: 'プラットフォーム',
+    aiBuildAsk: 'AI Build & Ask',
+    whyObjectOs: 'ObjectOS を選ぶ理由',
     trustCenter: 'トラストセンター',
     toolsMcp: 'ツールと MCP',
     agentGuide: 'エージェント開発ガイド',
@@ -203,6 +215,9 @@ const de: Strings = {
     docs: 'Docs',
     menu: 'Menü',
     productTour: 'Produkt-Tour',
+    platform: 'Plattform',
+    aiBuildAsk: 'AI Build & Ask',
+    whyObjectOs: 'Warum ObjectOS',
     trustCenter: 'Trust Center',
     toolsMcp: 'Tools & MCP',
     agentGuide: 'Agent-Leitfaden',
@@ -234,6 +249,9 @@ const es: Strings = {
     docs: 'Docs',
     menu: 'Menú',
     productTour: 'Recorrido del producto',
+    platform: 'Plataforma',
+    aiBuildAsk: 'AI Build & Ask',
+    whyObjectOs: 'Por qué ObjectOS',
     trustCenter: 'Centro de confianza',
     toolsMcp: 'Herramientas y MCP',
     agentGuide: 'Guía para agentes',
@@ -265,6 +283,9 @@ const fr: Strings = {
     docs: 'Docs',
     menu: 'Menu',
     productTour: 'Visite du produit',
+    platform: 'Plateforme',
+    aiBuildAsk: 'AI Build & Ask',
+    whyObjectOs: 'Pourquoi ObjectOS',
     trustCenter: 'Centre de confiance',
     toolsMcp: 'Outils et MCP',
     agentGuide: 'Guide agent',
@@ -296,6 +317,9 @@ const ko: Strings = {
     docs: '문서',
     menu: '메뉴',
     productTour: '제품 둘러보기',
+    platform: '플랫폼',
+    aiBuildAsk: 'AI Build & Ask',
+    whyObjectOs: 'ObjectOS를 선택하는 이유',
     trustCenter: '트러스트 센터',
     toolsMcp: '도구 및 MCP',
     agentGuide: '에이전트 가이드',
@@ -328,6 +352,9 @@ const toHant = (s: Strings): Strings => ({
     docs: s2t(s.siteNav.docs),
     menu: s2t(s.siteNav.menu),
     productTour: s2t(s.siteNav.productTour),
+    platform: s2t(s.siteNav.platform),
+    aiBuildAsk: s2t(s.siteNav.aiBuildAsk),
+    whyObjectOs: s2t(s.siteNav.whyObjectOs),
     trustCenter: s2t(s.siteNav.trustCenter),
     toolsMcp: s2t(s.siteNav.toolsMcp),
     agentGuide: s2t(s.siteNav.agentGuide),

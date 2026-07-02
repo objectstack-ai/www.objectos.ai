@@ -3,6 +3,10 @@ import type { MarketingPage } from './types';
 
 const PAGE_ORDER = [
   'product-tour',
+  'platform',
+  'ai',
+  'mcp',
+  'permissions',
   'trust-center',
   'templates',
   'agent-developer',

@@ -12,6 +12,8 @@ export interface MarketingPageItem {
   title: string;
   body: string;
   meta?: string;
+  /** Optional link target; written as /en/<slug>/ and localized at render time. */
+  href?: string;
 }
 
 export interface MarketingPageSection {
