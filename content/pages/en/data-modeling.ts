@@ -2,11 +2,11 @@ import type { MarketingPage } from '../../../src/content-pages/types';
 
 const page = {
     slug: 'data-modeling',
-    navLabel: 'Data modeling & APIs',
+    navLabel: 'Data modeling',
     title: 'ObjectOS Data Modeling: From Business Objects to Database and APIs',
     description:
       'Objects, relationships, validations, and formulas become tables, migrations, a query language, and REST APIs — on Postgres, MySQL, SQLite, MongoDB, and more, with existing databases federated in place.',
-    eyebrow: 'Data modeling & APIs',
+    eyebrow: 'Data modeling',
     heroTitle: 'Describe the business objects. The database and APIs follow.',
     lead:
       'Every business system starts with the same question: what are we keeping track of? In ObjectOS the answer is a compact object definition — and the tables, migrations, query engine, and REST endpoints are supplied by the runtime instead of written by hand.',

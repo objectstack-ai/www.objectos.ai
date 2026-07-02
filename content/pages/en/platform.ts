@@ -48,7 +48,7 @@ const page = {
           'The same capabilities you would expect from a mature business platform — except your AI writes the definition and the runtime does the assembly.',
         items: [
           {
-            title: 'Data modeling & APIs',
+            title: 'Data modeling',
             body: 'Objects, relationships, and validations become tables, migrations, a query language, and REST APIs — on Postgres, MySQL, SQLite, MongoDB, and more.',
             meta: 'Guide',
             href: '/en/data-modeling/',
