@@ -50,7 +50,8 @@ const page = {
           {
             title: 'Data modeling & APIs',
             body: 'Objects, relationships, and validations become tables, migrations, a query language, and REST APIs — on Postgres, MySQL, SQLite, MongoDB, and more.',
-            meta: 'Guide coming soon',
+            meta: 'Guide',
+            href: '/en/data-modeling/',
           },
           {
             title: 'App interfaces',
@@ -60,12 +61,14 @@ const page = {
           {
             title: 'Process automation',
             body: 'Flows with durable pause and resume, record-change, scheduled, and API triggers, background jobs, and reliable webhook delivery.',
-            meta: 'Guide coming soon',
+            meta: 'Guide',
+            href: '/en/automation/',
           },
           {
             title: 'Approvals',
             body: 'Multi-step approvals with user, role, team, and hierarchy resolution, escalation, and record locking while a decision is pending.',
-            meta: 'Guide coming soon',
+            meta: 'Guide',
+            href: '/en/approvals/',
           },
           {
             title: 'Permissions & security',
