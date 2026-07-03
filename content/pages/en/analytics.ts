@@ -90,8 +90,8 @@ export const MrrByPlan = defineReport({
             body: 'A regional manager’s dashboard aggregates only their region’s rows; masked fields never leak into a chart or an export.',
           },
           {
-            title: 'One definition for AI and people',
-            body: 'AI Ask resolves questions against the same datasets and permissions, so a chat answer matches the dashboard.',
+            title: 'Same rules for AI and people',
+            body: 'AI Ask answers inside the same permissions as every dashboard, so a chat answer never shows more than the screen would.',
           },
           {
             title: 'No export drift',

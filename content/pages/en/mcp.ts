@@ -13,7 +13,7 @@ const page = {
     primary: { label: 'Compare editions and pricing', href: '/en/pricing/' },
     secondary: { label: 'Read the docs', href: 'https://docs.objectos.ai' },
     metrics: [
-      { value: 'Declared', label: 'Tools are compact metadata definitions — no handwritten glue to drift' },
+      { value: 'Auto-wired', label: 'Query, schema, and action tools register themselves from your objects' },
       { value: 'Any client', label: 'Claude, Cursor, local models, or your own agent runtime' },
       { value: 'User-scoped', label: 'Row and field rules enforced on every tool call' },
     ],
@@ -41,7 +41,7 @@ const page = {
         eyebrow: 'What the AI gets',
         title: 'Tools that already know your business',
         copy:
-          'Because tools are declared in the same metadata that defines the application, the AI sees real objects, real relationships, and real actions — not a raw database dump.',
+          'Because tools derive from the same metadata that defines the application, the AI sees real objects, real relationships, and real actions — not a raw database dump.',
         items: [
           {
             title: 'Query business objects',
@@ -97,7 +97,7 @@ const page = {
       {
         question: 'Do we have to expose everything to the AI?',
         answer:
-          'No. Tool exposure is explicit in metadata: you choose which objects and actions become tools, and permissions still filter what each user’s session can reach.',
+          'No. Business objects are bridged automatically while system objects stay excluded by default, actions become tools only when metadata exposes them, and every call is still filtered by the caller’s row- and field-level permissions.',
       },
     ],
   } satisfies MarketingPage;
