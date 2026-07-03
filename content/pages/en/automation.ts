@@ -5,15 +5,15 @@ const page = {
     navLabel: 'Process automation',
     title: 'ObjectOS Automation: Flows, Triggers, Jobs, and Webhooks for Business Processes',
     description:
-      'Multi-step flows with durable pause and resume, record-change, scheduled, and API triggers, background jobs, and reliable webhook delivery — defined as metadata an AI agent can write and a person can review.',
+      'Multi-step flows with durable pause and resume, a visual flow canvas with 16+ node types, run history with test triggers, three trigger types, background jobs, and outbox-backed webhook delivery.',
     eyebrow: 'Process automation',
     heroTitle: 'Processes that run themselves — and wait for people when they must.',
     lead:
-      'Real business processes are not straight lines: they branch, wait for a decision, retry a failed step, and pick up where they left off. ObjectOS flows are built for that shape — durable, multi-step, and defined in metadata your agent can write and your team can read.',
+      'Take one real process: an order books above ¥100k, finance must sign off, the ERP needs the result, and the owner wants to know. That is a branch, a human wait, an outbound call, and a notification — exactly the shape ObjectOS flows are built for: durable, multi-step, written as metadata by your agent or drawn on a canvas by your team.',
     primary: { label: 'Compare editions and pricing', href: '/en/pricing/' },
     secondary: { label: 'See approvals', href: '/en/approvals/' },
     metrics: [
-      { value: '3', label: 'Trigger types: record change, schedule, and API' },
+      { value: '16+', label: 'Typed nodes on the visual canvas — decision, wait, approval, script, subflow' },
       { value: 'Durable', label: 'Flows pause for people and resume without losing state' },
       { value: 'Outbox', label: 'Webhook delivery backed by a durable, retrying queue' },
     ],
@@ -21,7 +21,7 @@ const page = {
       eyebrow: 'A process you can read',
       title: 'The escalation policy is the diff.',
       body:
-        'A flow is a sequence of typed steps — conditions, updates, human tasks, and calls out. When the process changes, the change is a few readable lines, not a rewrite of a worker service.',
+        'This is a complete, running policy: when a case breaches SLA, raise its priority and tell the owner in their inbox. Your agent writes it as a few readable lines — and the same flow opens as a diagram in the visual designer.',
       code: `import { defineFlow } from '@objectstack/spec';
 
 export const EscalateBreachedCases = defineFlow({
@@ -75,25 +75,58 @@ export const EscalateBreachedCases = defineFlow({
       {
         id: 'flows',
         eyebrow: 'Build the process',
-        title: 'Flows that survive contact with the real world',
+        title: 'Follow the ¥100k order through the flow',
         copy:
-          'Steps compose into processes that handle branching, waiting, and failure — the parts that usually turn into unmaintainable worker code.',
+          'Each step below is a typed node in the same definition — the parts that usually turn into unmaintainable worker code stay declarative and reviewable.',
         items: [
           {
-            title: 'Multi-step flows',
-            body: 'Conditions, loops, updates, and calls compose as a graph of typed steps, so complex processes stay inspectable.',
+            title: 'Branch on business conditions',
+            body: 'A decision node routes the order: under ¥100k goes straight to fulfillment; above it takes the approval path. Conditions are expressions on real fields, not code in a worker.',
           },
           {
-            title: 'Durable pause & resume',
-            body: 'A flow can wait hours or weeks for a person or an event. State is persisted — a restart or deploy never loses a running process.',
+            title: 'Wait for finance — durably',
+            body: 'The approval node parks the flow. If sign-off takes two weeks, state persists through every deploy and restart, then resumes at exactly this node.',
           },
           {
-            title: 'Human-in-the-loop steps',
-            body: 'Screen flows and approval steps put a person inside the process, with the pending work visible in their queue.',
+            title: 'Update, notify, call out',
+            body: 'On approval: an update_record node flips the status, a notify node reaches the owner’s inbox, and an http_request node posts the order to the ERP.',
           },
           {
-            title: 'Failure handling',
-            body: 'Retries and error paths are part of the definition, so the unhappy path gets reviewed like everything else.',
+            title: 'Handle the unhappy path',
+            body: 'The ERP timing out is part of the definition — retries and error edges are drawn in the flow, so the failure path gets reviewed like everything else.',
+          },
+          {
+            title: 'Put people inside the process',
+            body: 'Screen-flow nodes collect input mid-process — a rejection reason, a substitute vendor — with the pending step visible in the assignee’s queue.',
+          },
+        ],
+      },
+      {
+        id: 'designer',
+        eyebrow: 'The flow designer',
+        title: 'Drawn on a canvas, run from a queue, debugged from history',
+        copy:
+          'Every flow opens in a visual designer in the open-source console — the same definition your agent writes, as a diagram your operations team can own.',
+        items: [
+          {
+            title: 'A palette of 16+ typed nodes',
+            body: 'Drag start, decision, wait, approval, create/update record, http_request, script, loop, parallel, and subflow nodes onto the canvas; drop a node onto an edge to insert it mid-path.',
+          },
+          {
+            title: 'Branches you can label',
+            body: 'Edges carry conditions and labels — approve, reject, over-threshold — and validation flags broken paths as clickable badges before anything runs.',
+          },
+          {
+            title: 'Simulate before you ship',
+            body: 'Step through the flow on the canvas: visited nodes and traversed edges highlight, so you see the path a record would take without touching data.',
+          },
+          {
+            title: 'Test runs & run history',
+            body: 'Fire a test with typed inputs, then read the run table — status badges, duration, per-run output — and open any run to see exactly what each step did.',
+          },
+          {
+            title: 'Schedules with a preview',
+            body: 'Cron expressions show their next five fire times as you type, so “every last Friday” is verified before the job ever runs.',
           },
         ],
       },
@@ -106,7 +139,7 @@ export const EscalateBreachedCases = defineFlow({
         items: [
           {
             title: 'Record-change triggers',
-            body: 'React to creates, updates, and deletes with conditions — when a discount crosses 15%, when a case reopens.',
+            body: 'React to creates, updates, and deletes with conditions — when a discount crosses 15%, when a case reopens, when a stage changes hands.',
           },
           {
             title: 'Scheduled runs',
@@ -130,10 +163,10 @@ export const EscalateBreachedCases = defineFlow({
     table: {
       columns: ['Business need', 'AI writes', 'Runtime supplies'],
       rows: [
-        ['Escalate overdue cases', 'A scheduled flow with conditions', 'Execution, retries, and run history'],
-        ['Pause a deal until finance signs off', 'An approval step inside the flow', 'Durable waiting, queues, and resumption'],
-        ['Sync new orders to the ERP', 'A record-change trigger and a webhook', 'Durable outbox, retries, delivery records'],
-        ['Nightly usage rollups', 'A cron schedule and an update step', 'Job scheduling and background execution'],
+        ['Orders over ¥100k wait for finance', 'A decision node and an approval node', 'Durable waiting, queues, locking, resumption'],
+        ['Escalate overdue cases nightly', 'A scheduled flow with conditions', 'Execution, retries, and run history'],
+        ['Sync approved orders to the ERP', 'An http_request node behind the approval', 'Durable outbox, retries, delivery records'],
+        ['Ops tunes the flow without a deploy', 'Nothing — the canvas edits the same metadata', 'The visual designer, validation, simulation'],
       ],
     },
     checklistTitle: 'An automation review should confirm',
@@ -141,7 +174,7 @@ export const EscalateBreachedCases = defineFlow({
       'Every flow has a named owner and a readable purpose.',
       'Waiting states have timeouts and escalation paths.',
       'External calls go through the webhook outbox, not ad-hoc fetches.',
-      'Failure paths are defined, not implied.',
+      'Failure paths are drawn in the flow, not implied.',
       'Flow changes arrive as diffs with an approval trail.',
     ],
     faqs: [
@@ -151,9 +184,9 @@ export const EscalateBreachedCases = defineFlow({
           'Flow state is durable. A process waiting on a person or a timer resumes exactly where it paused — restarts and deploys do not lose or duplicate work.',
       },
       {
-        question: 'Is automation in the open-source edition?',
+        question: 'Is the visual designer in the open-source edition?',
         answer:
-          'Yes. Flows, all three trigger types, scheduling, background queues, and webhook delivery are part of the open-source runtime.',
+          'Yes. The flow canvas, node palette, validation, simulation, run history, and schedule previews ship in the open-source console — alongside flows, all three trigger types, background queues, and webhook delivery.',
       },
     ],
   } satisfies MarketingPage;
