@@ -22,13 +22,37 @@ const page = {
       title: 'The view is part of the reviewable definition.',
       body:
         'Views, forms, and dashboards are declared next to the objects they present. When an agent adds a field or a status, the affected screens are part of the same small diff — not a separate frontend ticket.',
-      code: `defineView('OpenCases', {
-  object: 'Case',
-  type: 'table',
-  columns: ['subject', 'customer', 'priority', 'slaDue', 'owner'],
-  filters: where('status = "open"'),
-  rowActions: ['assign', 'escalate'],
-  visibleWhen: 'user.team in ["support", "ops"]',
+      code: `import { defineView } from '@objectstack/spec';
+
+const data = { provider: 'object' as const, object: 'support_case' };
+
+export const CaseViews = defineView({
+  list: {
+    label: 'All Cases',
+    type: 'grid',
+    data,
+    columns: [
+      { field: 'subject' },
+      { field: 'customer' },
+      { field: 'priority' },
+      { field: 'status' },
+      { field: 'due_date' },
+    ],
+    appearance: {
+      allowedVisualizations: ['grid', 'kanban', 'calendar'],
+    },
+    kanban: { groupByField: 'status', columns: ['subject', 'customer', 'priority'] },
+    calendar: { startDateField: 'due_date', titleField: 'subject', colorField: 'status' },
+  },
+  listViews: {
+    open: {
+      label: 'Open Cases',
+      type: 'grid',
+      data,
+      columns: [{ field: 'subject' }, { field: 'customer' }, { field: 'priority' }],
+      filter: [{ field: 'status', operator: 'equals', value: 'open' }],
+    },
+  },
 });`,
     },
     sections: [

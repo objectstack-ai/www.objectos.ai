@@ -22,16 +22,34 @@ const page = {
       title: 'One object definition. Schema, rules, and API included.',
       body:
         'Fields, relationships, validation, and computed values live in one reviewable definition. The runtime turns it into tables and migrations, enforces the rules on every write, and serves the API — the same definition an AI agent can read and extend.',
-      code: `defineObject('Subscription', {
+      code: `import { ObjectSchema, Field } from '@objectstack/spec/data';
+
+export const Subscription = ObjectSchema.create({
+  name: 'billing_subscription',
+  label: 'Subscription',
+  searchableFields: ['plan', 'status'],
   fields: {
-    customer: relation('Customer', { required: true }),
-    plan: picklist(['starter', 'team', 'business']),
-    seats: integer({ min: 1 }),
-    mrr: formula('seats * plan.pricePerSeat'),
-    renewsAt: date(),
-  },
-  validate: {
-    seatLimit: rule('seats <= plan.maxSeats', 'Too many seats for this plan'),
+    customer: Field.lookup('crm_account', { label: 'Customer', required: true }),
+    plan: Field.select({
+      label: 'Plan',
+      options: [
+        { label: 'Starter', value: 'starter', default: true },
+        { label: 'Team', value: 'team' },
+        { label: 'Business', value: 'business' },
+      ],
+    }),
+    seats: Field.number({ label: 'Seats', min: 1 }),
+    mrr: Field.currency({ label: 'MRR', scale: 2, min: 0 }),
+    renews_at: Field.date({ label: 'Renews at' }),
+    status: Field.select({
+      label: 'Status',
+      trackHistory: true,
+      options: [
+        { label: 'Active', value: 'active', default: true, color: '#10B981' },
+        { label: 'Past due', value: 'past_due', color: '#F59E0B' },
+        { label: 'Churned', value: 'churned', color: '#EF4444' },
+      ],
+    }),
   },
 });`,
     },

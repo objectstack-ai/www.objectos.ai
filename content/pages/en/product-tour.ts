@@ -22,16 +22,32 @@ const page = {
       title: 'The diff is the product boundary.',
       body:
         'Instead of asking a reviewer to audit a generated application codebase, ObjectStack asks the agent to change the business definition layer: objects, fields, views, permissions, workflows, actions, APIs, and tools.',
-      code: `defineObject('Case', {
+      code: `import { ObjectSchema, Field } from '@objectstack/spec/data';
+
+export const Case = ObjectSchema.create({
+  name: 'support_case',
+  label: 'Case',
   fields: {
-    customer: relation('Customer'),
-    priority: picklist(['low', 'normal', 'urgent']),
-    summary: text({ ai: 'summarize customer issue' }),
-    status: picklist(['new', 'triage', 'waiting', 'resolved']),
-  },
-  permissions: {
-    support: can(['read', 'update']),
-    aiAgent: can(['read', 'suggest'], { approval: 'write' }),
+    subject: Field.text({ label: 'Subject', required: true, searchable: true }),
+    customer: Field.lookup('crm_account', { label: 'Customer' }),
+    priority: Field.select({
+      label: 'Priority',
+      options: [
+        { label: 'Low', value: 'low', default: true },
+        { label: 'Normal', value: 'normal' },
+        { label: 'Urgent', value: 'urgent', color: '#EF4444' },
+      ],
+    }),
+    status: Field.select({
+      label: 'Status',
+      trackHistory: true,
+      options: [
+        { label: 'New', value: 'new', default: true },
+        { label: 'Triage', value: 'triage' },
+        { label: 'Waiting', value: 'waiting' },
+        { label: 'Resolved', value: 'resolved' },
+      ],
+    }),
   },
 });`,
     },

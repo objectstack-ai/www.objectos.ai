@@ -22,15 +22,52 @@ const page = {
       title: 'The escalation policy is the diff.',
       body:
         'A flow is a sequence of typed steps — conditions, updates, human tasks, and calls out. When the process changes, the change is a few readable lines, not a rewrite of a worker service.',
-      code: `defineFlow('escalateOverdueCases', {
-  trigger: schedule('every 30m'),
-  steps: [
-    query('Case', where('status = "open" AND slaDue < now()')),
-    forEach('case', [
-      update({ priority: 'high' }),
-      notify('case.owner.manager', template('sla-breach')),
-      waitFor(approval('support-lead'), { timeout: '4h', escalate: 'director' }),
-    ]),
+      code: `import { defineFlow } from '@objectstack/spec';
+
+export const EscalateBreachedCases = defineFlow({
+  name: 'support_escalate_breached',
+  label: 'Escalate SLA Breaches',
+  type: 'autolaunched',
+  nodes: [
+    {
+      id: 'start',
+      type: 'start',
+      label: 'On SLA Breach',
+      config: {
+        objectName: 'support_case',
+        triggerType: 'record-after-update',
+        condition: 'sla_breached == true && previous.sla_breached != true',
+      },
+    },
+    {
+      id: 'raise',
+      type: 'update_record',
+      label: 'Raise Priority',
+      config: {
+        objectName: 'support_case',
+        filter: { id: '{record.id}' },
+        fields: { priority: 'urgent' },
+      },
+    },
+    {
+      id: 'notify',
+      type: 'notify',
+      label: 'Notify Case Owner',
+      config: {
+        topic: 'case.sla_breach',
+        recipients: ['{record.owner}'],
+        channels: ['inbox'],
+        severity: 'warning',
+        title: 'SLA breached: {record.subject}',
+        actionUrl: '/support_case/{record.id}',
+      },
+    },
+    { id: 'end', type: 'end', label: 'End' },
+  ],
+  edges: [
+    { id: 'e1', source: 'start', target: 'raise' },
+    { id: 'e2', source: 'raise', target: 'notify' },
+    { id: 'e3', source: 'notify', target: 'end' },
   ],
 });`,
     },

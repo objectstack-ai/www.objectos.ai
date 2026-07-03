@@ -22,17 +22,53 @@ const page = {
       title: 'The approval policy fits in one review.',
       body:
         'Approval steps live inside flows as durable pauses: the process stops, the right people get the request, the record locks, and everything that happens is written down. The policy itself is a compact definition anyone can read.',
-      code: `defineFlow('discountApproval', {
-  trigger: onChange('Order.discount', { above: 15 }),
-  steps: [
-    lock('order'),
-    approval({
-      route: role('finance'),
-      then: hierarchy('requester.manager', { levels: 1 }),
-      timeout: '48h',
-      onTimeout: escalate(role('sales-director')),
-    }),
-    update({ status: 'approved' }),
+      code: `import { defineFlow } from '@objectstack/spec';
+
+export const DiscountApproval = defineFlow({
+  name: 'sales_discount_approval',
+  label: 'Discount Approval',
+  type: 'autolaunched',
+  nodes: [
+    {
+      id: 'start',
+      type: 'start',
+      label: 'On Large Discount',
+      config: {
+        objectName: 'sales_order',
+        triggerType: 'record-after-update',
+        condition: 'discount > 15 && discount != previous.discount',
+      },
+    },
+    {
+      id: 'finance_review',
+      type: 'approval',
+      label: 'Finance Review',
+      config: {
+        approvers: [{ type: 'role', value: 'finance' }],
+        behavior: 'first_response',
+        lockRecord: true,
+        maxRevisions: 2,
+      },
+    },
+    {
+      id: 'exec_review',
+      type: 'approval',
+      label: 'Executive Review',
+      config: {
+        approvers: [{ type: 'role', value: 'exec' }],
+        behavior: 'unanimous',
+        lockRecord: true,
+      },
+    },
+    { id: 'approved', type: 'end', label: 'Approved' },
+    { id: 'rejected', type: 'end', label: 'Rejected' },
+  ],
+  edges: [
+    { id: 'e1', source: 'start', target: 'finance_review' },
+    { id: 'e2', source: 'finance_review', target: 'exec_review', label: 'approve' },
+    { id: 'e3', source: 'finance_review', target: 'rejected', label: 'reject' },
+    { id: 'e4', source: 'exec_review', target: 'approved', label: 'approve' },
+    { id: 'e5', source: 'exec_review', target: 'rejected', label: 'reject' },
   ],
 });`,
     },

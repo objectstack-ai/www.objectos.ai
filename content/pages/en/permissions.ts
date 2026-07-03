@@ -22,18 +22,32 @@ const page = {
       title: 'Permissions a reviewer can actually read.',
       body:
         'Instead of authorization logic scattered across controllers and screens, authority is a compact definition: who, over which rows, down to which fields. The runtime enforces it everywhere — UI, API, and AI tools.',
-      code: `definePermissionSet('support', {
+      code: `export const SupportPermissionSet = {
+  name: 'support_agent',
+  label: 'Support Agent',
   objects: {
-    Case: {
-      actions: ['read', 'update'],
-      rows: where('team = $user.team'),
-      fields: {
-        ssn: masked(),
-        payout: readOnly({ except: 'finance' }),
-      },
-    },
+    support_case: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: false },
+    crm_account: { allowRead: true, allowCreate: false, allowEdit: false, allowDelete: false },
   },
-});`,
+  // Field-level security
+  fields: {
+    payout: { readable: true, editable: false },
+    ssn: { readable: false, editable: false },
+  },
+  // Row-level security — CEL predicates enforced on every query
+  rowLevelSecurity: [
+    {
+      name: 'case_own_team',
+      label: 'Own Team Cases Only',
+      object: 'support_case',
+      operation: 'select' as const,
+      using: 'team == current_user.team',
+      roles: ['support'],
+      enabled: true,
+      priority: 10,
+    },
+  ],
+};`,
     },
     sections: [
       {

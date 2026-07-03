@@ -21,22 +21,27 @@ const page = {
       eyebrow: 'The 1% your agent writes',
       title: 'One definition. A whole application behind it.',
       body:
-        'This is the entire "code" for a governed order object: schema, validation, permissions, an approval rule, and an AI tool. Tables, APIs, screens, queues, and audit come from the runtime.',
-      code: `defineObject('Order', {
+        'This is the shape of a governed order object. Permission sets, approval flows, views, and AI tools are sibling definitions in the same reviewable stack — while tables, APIs, screens, queues, and audit come from the runtime.',
+      code: `import { ObjectSchema, Field } from '@objectstack/spec/data';
+
+export const Order = ObjectSchema.create({
+  name: 'sales_order',
+  label: 'Order',
   fields: {
-    customer: relation('Customer'),
-    total: currency({ min: 0 }),
-    discount: percent({ max: 30 }),
-    status: picklist(['draft', 'submitted', 'approved', 'fulfilled']),
+    customer: Field.lookup('crm_account', { label: 'Customer', required: true }),
+    total: Field.currency({ label: 'Total', min: 0 }),
+    discount: Field.percent({ label: 'Discount', max: 30 }),
+    status: Field.select({
+      label: 'Status',
+      trackHistory: true,
+      options: [
+        { label: 'Draft', value: 'draft', default: true },
+        { label: 'Submitted', value: 'submitted' },
+        { label: 'Approved', value: 'approved' },
+        { label: 'Fulfilled', value: 'fulfilled' },
+      ],
+    }),
   },
-  permissions: {
-    sales: can(['read', 'create', 'update']),
-    finance: can(['read', 'approve']),
-  },
-  flows: {
-    discountApproval: onChange('discount', { above: 15, require: 'finance' }),
-  },
-  tools: expose(['query', 'summarize'], { as: 'user' }),
 });`,
     },
     sections: [
@@ -100,7 +105,7 @@ const page = {
           },
           {
             title: 'Tools & MCP',
-            body: 'Objects, queries, and actions become policy-checked tools for Claude, Cursor, or any MCP client — generated from metadata, never handwritten.',
+            body: 'Objects, queries, and actions become policy-checked tools for Claude, Cursor, or any MCP client — declared as metadata, never handwritten glue.',
             meta: 'Guide',
             href: '/en/mcp/',
           },

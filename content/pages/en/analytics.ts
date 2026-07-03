@@ -21,18 +21,31 @@ const page = {
       eyebrow: 'Metrics as metadata',
       title: 'Define the measure once. Reuse it everywhere.',
       body:
-        'A semantic cube names the measures and dimensions a business cares about. Dashboards, reports, and AI questions all resolve against the same definition, so "monthly recurring revenue" means one thing.',
-      code: `defineCube('Revenue', {
-  object: 'Subscription',
-  measures: {
-    mrr: sum('mrr'),
-    activeCustomers: countDistinct('customer'),
-  },
-  dimensions: {
-    plan: field('plan'),
-    month: time('renewsAt', 'month'),
-    region: field('customer.region'),
-  },
+        'A dataset names the measures and dimensions a business cares about. Dashboards, reports, and AI questions all resolve against the same definition, so "monthly recurring revenue" means one thing.',
+      code: `import { defineDataset, defineReport } from '@objectstack/spec/ui';
+
+export const RevenueDataset = defineDataset({
+  name: 'billing_revenue',
+  label: 'Revenue',
+  object: 'billing_subscription',
+  dimensions: [
+    { name: 'plan', label: 'Plan', field: 'plan', type: 'string' },
+    { name: 'month', label: 'Month', field: 'renews_at', type: 'date', dateGranularity: 'month' },
+  ],
+  measures: [
+    { name: 'mrr', label: 'MRR', aggregate: 'sum', field: 'mrr', format: '0.0' },
+    { name: 'active_subs', label: 'Active Subscriptions', aggregate: 'count' },
+  ],
+});
+
+export const MrrByPlan = defineReport({
+  name: 'billing_mrr_by_plan',
+  label: 'MRR by Plan',
+  type: 'summary',
+  drilldown: true,
+  dataset: 'billing_revenue',
+  rows: ['plan'],
+  values: ['mrr'],
 });`,
     },
     sections: [
@@ -60,7 +73,7 @@ const page = {
             body: 'Charts and counters compose into shareable dashboards that live next to the records they summarize.',
           },
           {
-            title: 'Semantic cubes',
+            title: 'Semantic datasets',
             body: 'Named measures and dimensions keep every team — and every AI answer — computing the same numbers.',
           },
         ],
@@ -78,7 +91,7 @@ const page = {
           },
           {
             title: 'One definition for AI and people',
-            body: 'AI Ask resolves questions against the same cubes and permissions, so a chat answer matches the dashboard.',
+            body: 'AI Ask resolves questions against the same datasets and permissions, so a chat answer matches the dashboard.',
           },
           {
             title: 'No export drift',
@@ -90,15 +103,15 @@ const page = {
     table: {
       columns: ['Business need', 'AI writes', 'Runtime supplies'],
       rows: [
-        ['MRR by plan and month', 'A cube with measures and dimensions', 'Compiled queries, charts, and caching'],
+        ['MRR by plan and month', 'A dataset with measures and dimensions', 'Compiled queries, charts, and caching'],
         ['A support SLA dashboard', 'Dashboard and widget definitions', 'Live rendering with permission-filtered rows'],
-        ['Pipeline conversion by stage', 'A funnel over the status field', 'Stage-to-stage computation and trends'],
-        ['Ask AI "how did Q3 close?"', 'Nothing new — the cube is enough', 'The same governed numbers, in chat'],
+        ['Pipeline conversion by stage', 'A summary report over the stage field', 'Stage-to-stage computation and trends'],
+        ['Ask AI "how did Q3 close?"', 'Nothing new — the dataset is enough', 'The same governed numbers, in chat'],
       ],
     },
     checklistTitle: 'An analytics review should confirm',
     checklist: [
-      'Key measures are defined once, in cubes, not per chart.',
+      'Key measures are defined once, in datasets, not per chart.',
       'Dashboards inherit row and field permissions.',
       'Time series use consistent time zones and calendars.',
       'AI answers resolve against the same definitions as reports.',
@@ -113,7 +126,7 @@ const page = {
       {
         question: 'Is analytics in the open-source edition?',
         answer:
-          'Yes. Aggregations, time series, funnels, dashboards, and semantic cubes are part of the open-source runtime, with the same permission enforcement as the rest of the platform.',
+          'Yes. Aggregations, time series, funnels, dashboards, and semantic datasets are part of the open-source runtime, with the same permission enforcement as the rest of the platform.',
       },
     ],
   } satisfies MarketingPage;
