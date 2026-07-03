@@ -74,7 +74,7 @@ const page = {
           },
           {
             title: 'Every call audited',
-            body: 'Tool invocations land in the audit log with who, what, and when — reviewable next to human activity.',
+            body: 'Tool invocations land in the audit log with who, what, and when — appearing in the audit viewer beside human activity, with the same filters and the same old → new diffs.',
           },
         ],
       },

@@ -5,11 +5,11 @@ const page = {
     navLabel: 'Permissions & security',
     title: 'ObjectOS Permissions: Role, Row, and Field-Level Control for AI-Written Apps',
     description:
-      'Role-based, row-level, and field-level access control with record sharing, tenant isolation, and an immutable audit trail — enforced on people and AI agents alike.',
+      'Role-based, row-level, and field-level access control with a permission matrix editor and an audit log viewer, record sharing, and tenant isolation — enforced on people and AI agents alike.',
     eyebrow: 'Permissions & security',
     heroTitle: 'Who sees what, who changes what — enforced at runtime.',
     lead:
-      'Business software lives or dies on authority: which team reads a record, which fields stay masked, which changes need sign-off. ObjectOS makes that authority part of the reviewable definition and enforces it on every query, API call, and AI tool call.',
+      'Take a sales organization: reps see only their team’s accounts, the cost field is masked for them, managers see the whole region, and audit wants to know who changed that discount. In ObjectOS that boundary is one reviewable definition — enforced on every query, API call, and AI tool call.',
     primary: { label: 'Compare editions and pricing', href: '/en/pricing/' },
     secondary: { label: 'Review the trust model', href: '/en/trust-center/' },
     metrics: [
@@ -21,7 +21,7 @@ const page = {
       eyebrow: 'Authority as metadata',
       title: 'Permissions a reviewer can actually read.',
       body:
-        'Instead of authorization logic scattered across controllers and screens, authority is a compact definition: who, over which rows, down to which fields. The runtime enforces it everywhere — UI, API, and AI tools.',
+        'This is that sales scenario: cases readable and creatable, accounts read-only, payout read-only and SSN invisible, and a row rule that scopes reps to their own team. The runtime enforces it everywhere — UI, API, and AI tools.',
       code: `export const SupportPermissionSet = {
   name: 'support_agent',
   label: 'Support Agent',
@@ -53,29 +53,54 @@ const page = {
       {
         id: 'layers',
         eyebrow: 'Access model',
-        title: 'Control that matches how organizations actually work',
+        title: 'Lay the sales org’s boundaries down layer by layer',
         copy:
           'One model covers the whole spectrum — from broad role grants to a single shared record — so exceptions do not turn into custom code.',
         items: [
           {
             title: 'Roles & permission sets',
-            body: 'Grant object-level rights by role or permission set, with a secure-by-default posture: nothing is readable until a definition says so.',
+            body: '“Sales rep” is a permission set: accounts readable and creatable, orders editable, quotes never deletable. Secure by default — nothing is readable until a definition says so.',
           },
           {
             title: 'Row-level rules',
-            body: 'Scope records by owner, team, or organization hierarchy — a rep sees their accounts, a manager sees the region, and the rule is one line of metadata.',
+            body: 'One expression — team == current_user.team — and reps see only their team; switch it to the manager hierarchy and a manager sees the region. Filtering happens inside the query engine, so there is nothing to bypass.',
           },
           {
             title: 'Field-level security',
-            body: 'Mask or hide sensitive fields per role. A masked field stays masked in the UI, the API, exports, and every AI response.',
+            body: 'Cost is read-only for reps, SSN invisible entirely — a masked field stays masked in the UI, the API, exports, and every AI response.',
           },
           {
             title: 'Record sharing',
-            body: 'Grant case-by-case access to a single record without widening a role — the exception is stored, visible, and revocable.',
+            body: 'Two teams collaborating on one big account? Share that single record with the collaborator instead of widening a whole role — the exception is stored, visible, and revocable.',
           },
           {
             title: 'Tenant isolation',
             body: 'Organizations and workspaces stay isolated at the runtime layer, so multi-team and multi-client deployments share nothing by accident.',
+          },
+        ],
+      },
+      {
+        id: 'admin',
+        eyebrow: 'The admin surfaces',
+        title: 'Checked off in a matrix, answered from a log',
+        copy:
+          'The permission definition your agent writes opens as a familiar matrix in the open-source console — and when something looks wrong, the audit viewer answers it line by line.',
+        items: [
+          {
+            title: 'The permission matrix editor',
+            body: 'A Salesforce-style layout: object-level create/read/edit/delete and View All / Modify All checkboxes on top; click an object and the lower half switches to its field-level read/write matrix.',
+          },
+          {
+            title: 'Assignments in plain sight',
+            body: 'Every permission set page lists who it is assigned to — reviewing authority never means cross-referencing another screen.',
+          },
+          {
+            title: 'The audit log viewer',
+            body: 'Filter by action, object, actor, and date; open any entry and a side drawer shows the full event with old → new value diffs — “who changed that discount” is three clicks to an answer.',
+          },
+          {
+            title: 'AI calls, side by side',
+            body: 'AI tool calls appear in the same log as human activity — same filters, same diffs — so reviewing the AI is the same job as reviewing people.',
           },
         ],
       },
@@ -88,7 +113,7 @@ const page = {
         items: [
           {
             title: 'User-scoped execution',
-            body: 'An agent answering a question or running an action sees exactly the rows and fields its user could see — nothing more.',
+            body: 'A rep asks the AI “which of my accounts are likely to renew” — the AI sees that rep’s team’s accounts, with cost still masked. Nothing more.',
           },
           {
             title: 'Approval-gated writes',
@@ -106,8 +131,8 @@ const page = {
       rows: [
         ['Who can read this object?', 'Roles and permission sets in metadata', 'Checks on every query, API call, and tool call'],
         ['Which rows can a rep see?', 'A row rule scoped by owner or team', 'Filters applied inside the query engine'],
-        ['Can AI see salary fields?', 'Field rules with masking', 'Masked fields in UI, API, exports, and AI answers'],
-        ['Who approved this change?', 'Approval requirements on actions', 'Queues, sign-off records, immutable audit entries'],
+        ['Can AI see the cost field?', 'Field rules with masking', 'Masked fields in UI, API, exports, and AI answers'],
+        ['Who changed that discount?', 'Nothing — audit ships with the runtime', 'Old → new diffs, entry by entry, in the audit viewer'],
       ],
     },
     checklistTitle: 'A security review should confirm',
@@ -125,9 +150,9 @@ const page = {
           'No. Agents act as the signed-in user and inherit that user’s object, row, and field permissions. There is no privileged AI identity to leak or misuse.',
       },
       {
-        question: 'Is this in the open-source edition?',
+        question: 'Are the permission matrix and audit viewer in the open-source edition?',
         answer:
-          'Yes. The permission model — roles, row rules, field security, sharing, tenant isolation, and audit logging — is part of the open-source runtime, and it applies equally to MCP tool access.',
+          'Yes. The permission matrix editor and the audit log viewer ship in the open-source console — alongside roles, row rules, field security, sharing, tenant isolation, and the audit log itself, all of which apply equally to MCP tool access.',
       },
     ],
   } satisfies MarketingPage;
