@@ -5,11 +5,11 @@ const page = {
     navLabel: 'Analytics & reporting',
     title: 'ObjectOS Analytics: Dashboards and Reports over Governed Objects',
     description:
-      'Aggregations, time series, funnels, and dashboards over the same governed objects the app runs on — permission-aware by construction, with no separate BI stack to wire up.',
+      'Aggregations, time series, funnels, and dashboards over the same governed objects the app runs on — with a widget-based dashboard designer and a band-based report designer, permission-aware by construction.',
     eyebrow: 'Analytics & reporting',
     heroTitle: 'Answers from the system of record — not a second data stack.',
     lead:
-      'Operational reporting usually means exporting data into a BI tool, where permissions, definitions, and freshness quietly drift. ObjectOS runs analytics over the governed objects themselves, so the numbers, the rules, and the data are the same ones the application uses.',
+      'Finance wants MRR by plan, month over month. Ops wants an SLA dashboard. The usual answer is exporting into a BI tool where permissions, definitions, and freshness quietly drift. ObjectOS runs the same questions over the governed objects themselves — defined once as a dataset, rendered in dashboards, and assembled in a designer.',
     primary: { label: 'Compare editions and pricing', href: '/en/pricing/' },
     secondary: { label: 'See data modeling', href: '/en/data-modeling/' },
     metrics: [
@@ -52,29 +52,54 @@ export const MrrByPlan = defineReport({
       {
         id: 'primitives',
         eyebrow: 'Reporting primitives',
-        title: 'From a quick count to a funnel, without leaving the platform',
+        title: 'Answer finance’s question, then keep going',
         copy:
           'The analytics service compiles questions to the right strategy — pushed down to SQL where it can, computed in the runtime where it must.',
         items: [
           {
             title: 'Aggregations & grouping',
-            body: 'Sums, counts, averages, and breakdowns over any object, with relations traversed by the query engine.',
+            body: '“MRR by plan” is the dataset’s sum over one dimension — sums, counts, averages, and breakdowns traverse relations through the query engine.',
           },
           {
             title: 'Time series',
-            body: 'Trends by day, week, or month with time-zone-aware bucketing — renewal curves, ticket volume, pipeline over time.',
+            body: 'The renewal curve by month, ticket volume by week — time-zone-aware bucketing by day, week, or month on any date dimension.',
           },
           {
             title: 'Funnels',
-            body: 'Stage-to-stage conversion across status fields and processes: lead → qualified → won, request → approved → fulfilled.',
+            body: 'Trial → paid, request → approved → fulfilled — stage-to-stage conversion across status fields and processes.',
           },
           {
             title: 'Dashboards',
-            body: 'Charts and counters compose into shareable dashboards that live next to the records they summarize.',
+            body: 'The MRR chart, the active-subscriptions counter, and the churn table compose into one shareable dashboard next to the records they summarize.',
           },
           {
             title: 'Semantic datasets',
             body: 'Named measures and dimensions keep every team — and every AI answer — computing the same numbers.',
+          },
+        ],
+      },
+      {
+        id: 'designer',
+        eyebrow: 'The dashboard & report designers',
+        title: 'Assembled by clicking, saved as metadata',
+        copy:
+          'Dashboards and reports open in designers in the open-source console — what you click together is stored as the same reviewable definitions an agent writes.',
+        items: [
+          {
+            title: 'The dashboard designer',
+            body: 'Click a widget on the grid canvas and an inspector opens for its title, chart type, and data binding; add new widgets from a picker of 10+ types — charts render live data while you design.',
+          },
+          {
+            title: 'The report designer',
+            body: 'Band-based layout — report header, detail, group and page footers — with text, field, chart, and table elements placed on the canvas and a preview toggle to check the output.',
+          },
+          {
+            title: 'Drill down to the records',
+            body: 'Reports built with drilldown enabled let a reviewer click the MRR number and land on the exact subscriptions behind it — permissions applied on the way down.',
+          },
+          {
+            title: 'One dataset feeds them all',
+            body: 'The designer binds widgets to datasets, not raw tables — so the dashboard, the report, and an AI answer stay on the same definition of “revenue”.',
           },
         ],
       },
@@ -104,7 +129,7 @@ export const MrrByPlan = defineReport({
       columns: ['Business need', 'AI writes', 'Runtime supplies'],
       rows: [
         ['MRR by plan and month', 'A dataset with measures and dimensions', 'Compiled queries, charts, and caching'],
-        ['A support SLA dashboard', 'Dashboard and widget definitions', 'Live rendering with permission-filtered rows'],
+        ['A new KPI card on the ops dashboard', 'Nothing — click it together in the designer', 'The widget inspector, live data, saved as metadata'],
         ['Pipeline conversion by stage', 'A summary report over the stage field', 'Stage-to-stage computation and trends'],
         ['Ask AI "how did Q3 close?"', 'Nothing new — the dataset is enough', 'The same governed numbers, in chat'],
       ],
@@ -124,9 +149,9 @@ export const MrrByPlan = defineReport({
           'For operational reporting on business objects, you will not need a separate stack: dashboards, funnels, and time series run in the platform. For cross-system warehousing, ObjectOS coexists — federation and APIs make governed objects easy to consume.',
       },
       {
-        question: 'Is analytics in the open-source edition?',
+        question: 'Are the dashboard and report designers in the open-source edition?',
         answer:
-          'Yes. Aggregations, time series, funnels, dashboards, and semantic datasets are part of the open-source runtime, with the same permission enforcement as the rest of the platform.',
+          'Yes. The widget-based dashboard designer, the band-based report designer, drilldown, aggregations, time series, funnels, and semantic datasets are all part of the open-source runtime, with the same permission enforcement as the rest of the platform.',
       },
     ],
   } satisfies MarketingPage;

@@ -110,6 +110,10 @@ export const Order = ObjectSchema.create({
             href: '/en/mcp/',
           },
           {
+            title: '设计器与控制台',
+            body: '16+ 个开源管理界面——对象设计器、流程画布、审批收件箱、权限矩阵、审计查看器——AI 起草的一切，人都能微调。',
+          },
+          {
             title: '审阅闭环',
             body: '结构性变更以紧凑 diff 的形式进入审批队列，人签核之后运行时才会发布任何东西。',
             meta: '指南',
