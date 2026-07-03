@@ -18,6 +18,20 @@ const productTourHref = marketingPagePath(locale, 'product-tour');
 const templatesHref = `${marketingPagePath(locale, 'templates')}#catalog`;
 const agentDeveloperHref = marketingPagePath(locale, 'agent-developer');
 const trustCenterHref = marketingPagePath(locale, 'trust-center');
+
+// Capability and AI cards deep-link into the capability pages. Index-based:
+// every locale translates the same arrays in the same order.
+const capabilityCardHrefs = [
+  marketingPagePath(locale, 'data-modeling'),
+  marketingPagePath(locale, 'data-modeling'),
+  productTourHref,
+  marketingPagePath(locale, 'permissions'),
+];
+const aiCardHrefs = [
+  marketingPagePath(locale, 'ai'),
+  marketingPagePath(locale, 'ai'),
+  marketingPagePath(locale, 'mcp'),
+];
 const posts = (await getPostsInLocale(locale))
   .filter((post) => post.entry.data.status !== 'archived')
   .slice(0, 3);
@@ -110,7 +124,11 @@ const coverSrc = (cover: unknown): string =>
       {copy.capabilities.map((item, index) => (
         <li>
           <span class="cap-index">{String(index + 1).padStart(2, '0')}</span>
-          <h3>{item.title}</h3>
+          <h3>
+            <a href={capabilityCardHrefs[index] ?? productTourHref}>
+              {item.title} <span class="card-arrow" aria-hidden="true">→</span>
+            </a>
+          </h3>
           <p>{item.copy}</p>
         </li>
       ))}
@@ -128,7 +146,11 @@ const coverSrc = (cover: unknown): string =>
       {copy.aiItems.map((item, index) => (
         <div class:list={['ai-card', `tone-${index + 1}`]}>
           <span>{String(index + 1).padStart(2, '0')}</span>
-          <h3>{item.title}</h3>
+          <h3>
+            <a href={aiCardHrefs[index] ?? productTourHref}>
+              {item.title} <span class="card-arrow" aria-hidden="true">→</span>
+            </a>
+          </h3>
           <p>{item.copy}</p>
         </div>
       ))}
@@ -566,6 +588,19 @@ const coverSrc = (cover: unknown): string =>
     font-size: 1.12rem;
     line-height: 1.45;
     margin-bottom: 0.55rem;
+  }
+  .capability-list h3 a,
+  .ai-card h3 a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .capability-list h3 a:hover,
+  .ai-card h3 a:hover {
+    text-decoration: underline;
+  }
+  .card-arrow {
+    color: var(--accent);
+    font-size: 0.85em;
   }
   .capability-list p {
     color: var(--ink-soft);
