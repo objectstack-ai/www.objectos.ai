@@ -48,7 +48,7 @@ const page = {
           },
           {
             title: 'Visual designers to fine-tune',
-            body: 'Every metadata type also has a visual designer, so developers and admins adjust what the AI drafted without touching files.',
+            body: 'Objects, views, flows, and dashboards each have a designer — drag-to-reorder fields, a flow canvas, kanban column config — and review mode diffs the draft against the published version, so tuning what the AI drafted never touches a file.',
           },
           {
             title: 'Approval before structure changes',

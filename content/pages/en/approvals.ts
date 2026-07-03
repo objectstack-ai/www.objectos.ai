@@ -5,11 +5,11 @@ const page = {
     navLabel: 'Approvals',
     title: 'ObjectOS Approvals: Multi-Step Sign-Off for Business Changes and AI Actions',
     description:
-      'Multi-step approvals with user, role, team, and hierarchy resolution, escalation, and record locking — the same queue that gates AI-written structural changes before they ship.',
+      'Multi-step approvals with user, role, team, and hierarchy resolution, a three-tab approvals inbox, escalation, and record locking — the same queue that gates AI-written structural changes before they ship.',
     eyebrow: 'Approvals',
     heroTitle: 'Every consequential change waits for a yes.',
     lead:
-      'Discounts above a threshold, contract terms, refunds, schema changes an AI just proposed — some changes should not ship on anyone’s say-so alone. ObjectOS turns sign-off into a first-class runtime capability: requested, routed, escalated, and recorded.',
+      'What does a 15%+ discount actually look like getting approved? The flow parks, the order locks, and finance sees the request in the approvals inbox — record snapshot, who did what when, all in one panel. Approve to release it, reject with a comment to send it back, and a stalled request escalates on its own. The schema change an AI just proposed rides the exact same queue.',
     primary: { label: 'Compare editions and pricing', href: '/en/pricing/' },
     secondary: { label: 'See permissions & security', href: '/en/permissions/' },
     metrics: [
@@ -21,7 +21,7 @@ const page = {
       eyebrow: 'Sign-off as metadata',
       title: 'The approval policy fits in one review.',
       body:
-        'Approval steps live inside flows as durable pauses: the process stops, the right people get the request, the record locks, and everything that happens is written down. The policy itself is a compact definition anyone can read.',
+        'This is that discount chain: finance reviews first (any one responder), executives confirm (unanimous), the record stays locked throughout, and at most two revision round-trips. The policy itself is a compact definition anyone can read.',
       code: `import { defineFlow } from '@objectstack/spec';
 
 export const DiscountApproval = defineFlow({
@@ -76,29 +76,54 @@ export const DiscountApproval = defineFlow({
       {
         id: 'model',
         eyebrow: 'The approval model',
-        title: 'Routing that matches the org chart, not a hardcoded list',
+        title: 'Follow the discount through both sign-offs',
         copy:
-          'Approvals resolve against the same identity model as permissions, so reorganizations do not break sign-off chains.',
+          'Approvers resolve against the same identity model as permissions, so reorganizations do not break sign-off chains — and every step below lives in one definition.',
         items: [
           {
-            title: 'Multi-step chains',
-            body: 'Sequence approvals across roles and levels — finance first, then the requester’s manager — as steps in one definition.',
+            title: 'A two-step chain',
+            body: 'Finance reviews first, executives confirm, sequenced in one flow — finance is “first response wins”, executives are “must be unanimous”, and each step sets its own behavior.',
           },
           {
-            title: 'Approver resolution',
-            body: 'Route to a specific user, a role, a team, or up the manager hierarchy, resolved at request time against live identity.',
+            title: 'Approvers resolved from the org',
+            body: 'Route to the finance role, a team, or up the requester’s manager hierarchy — resolved against live identity at request time, so personnel changes never mean editing flows.',
           },
           {
-            title: 'Escalation & timeouts',
-            body: 'A request that sits too long escalates automatically, so processes do not stall on one inbox.',
+            title: 'Stalls escalate themselves',
+            body: 'Finance hasn’t touched it in three days? The request escalates and reminds automatically — processes stop dying in one inbox.',
           },
           {
-            title: 'Record locking',
-            body: 'While a decision is pending, the record holds still — no edits racing past the reviewer.',
+            title: 'Locking and send-back',
+            body: 'While the decision is pending the order holds still — nobody edits past the reviewer. Finance can also return it for revision: sales fixes the discount and resubmits, at most twice (maxRevisions: 2).',
           },
           {
-            title: 'Decision records',
-            body: 'Who was asked, who answered, what they saw, and when — every approval leaves a complete, immutable trail.',
+            title: 'Every decision on the record',
+            body: 'Who was asked, who answered, which snapshot they saw, and when — a complete, immutable trail behind every approval, ready for audit.',
+          },
+        ],
+      },
+      {
+        id: 'inbox',
+        eyebrow: 'The approvals inbox',
+        title: 'The screen approvers actually work in',
+        copy:
+          'The open-source console ships an approvals inbox — not a link in an email, but a workbench with context where decisions actually happen.',
+        items: [
+          {
+            title: 'Three tabs',
+            body: '“My pending” (waiting on me), “Submitted by me” (where are mine), and “All” (paginated overview) — each row shows the process, record, submitter, status, and time.',
+          },
+          {
+            title: 'Decide with context, in a side panel',
+            body: 'Open any row: the record snapshot, the step-by-step action timeline, approve/reject buttons, and a comment box — no hunting through other screens for context.',
+          },
+          {
+            title: 'Recall and return for revision',
+            body: 'Submitters can recall their own requests; reviewers can return for revision instead of a flat reject — with status colors for pending, approved, rejected, recalled, and returned.',
+          },
+          {
+            title: 'Built for high-volume approvers',
+            body: 'j/k to move, Enter to open, a/r to approve or reject — clearing a queue of requests never touches the mouse.',
           },
         ],
       },
@@ -111,7 +136,7 @@ export const DiscountApproval = defineFlow({
         items: [
           {
             title: 'Structural changes queue',
-            body: 'When an agent proposes new objects, fields, flows, or permission changes, the change lands in an approval queue as a compact diff.',
+            body: 'When an agent proposes new objects, fields, flows, or permission changes, the change lands in the same approvals inbox as a compact diff.',
           },
           {
             title: 'The diff is the request',
@@ -127,8 +152,8 @@ export const DiscountApproval = defineFlow({
     table: {
       columns: ['Business need', 'AI writes', 'Runtime supplies'],
       rows: [
-        ['Discounts above 15% need finance', 'An approval step on the change', 'Routing, queues, locking, decision records'],
-        ['Big refunds need two approvals', 'A multi-step chain', 'Sequenced sign-off with escalation'],
+        ['Discounts above 15% need finance', 'An approval step on the change', 'Routing, the inbox, locking, decision records'],
+        ['Big refunds need two approvals', 'A multi-step chain', 'Sequenced sign-off with escalation and send-back'],
         ['Nothing stalls in one inbox', 'A timeout and an escalation path', 'Automatic escalation and reminders'],
         ['AI schema changes get reviewed', 'The proposed diff itself', 'The approval queue in front of deployment'],
       ],
@@ -148,9 +173,9 @@ export const DiscountApproval = defineFlow({
           'No — an approval is a durable step inside a flow. That keeps one execution model for the whole process: the flow pauses, people decide, the flow resumes.',
       },
       {
-        question: 'Are approvals in the open-source edition?',
+        question: 'Is the approvals inbox in the open-source edition?',
         answer:
-          'Yes. Multi-step approvals, approver resolution, escalation, record locking, and the audit trail are part of the open-source runtime — including the queue that gates structural changes.',
+          'Yes. The three-tab inbox, side-panel timeline, comments, recall and return-for-revision, and keyboard shortcuts ship in the open-source console — alongside multi-step approvals, approver resolution, escalation, record locking, and the audit trail.',
       },
     ],
   } satisfies MarketingPage;
