@@ -110,6 +110,10 @@ export const Order = ObjectSchema.create({
             href: '/en/mcp/',
           },
           {
+            title: 'Designers & console',
+            body: '16+ open-source admin surfaces — the object designer, flow canvas, approvals inbox, permission matrix, and audit viewer — so people fine-tune everything the AI drafts.',
+          },
+          {
             title: 'The review loop',
             body: 'Structural changes land as compact diffs in an approval queue, so a person signs off before the runtime ships anything.',
             meta: 'Guide',

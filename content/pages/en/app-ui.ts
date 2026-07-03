@@ -5,11 +5,11 @@ const page = {
     navLabel: 'App interfaces',
     title: 'ObjectOS App Interfaces: Permission-Aware Screens Rendered from Metadata',
     description:
-      'Forms, views, and dashboards render straight from metadata — shaped by each user’s permissions, updated in real time, and localized — with no hand-built frontend for the CRUD surfaces.',
+      'Forms, views, and dashboards render straight from metadata — shaped by each user’s permissions, updated in real time, and fine-tuned in a live-preview view designer with column inspectors and filter builders.',
     eyebrow: 'App interfaces',
     heroTitle: 'Screens nobody hand-builds. Views everyone trusts.',
     lead:
-      'Most business-app effort goes into screens that restate the data model: a list, a form, a dashboard, again and again. ObjectOS renders those surfaces from the definition itself — and every user sees exactly what their permissions allow, nothing more.',
+      'Take a support workbench: reps work a grid of open cases, the team lead drags a kanban grouped by status, and everyone checks the due-date calendar. In ObjectOS that is one view definition — rendered per user, live as records change, and adjustable in the view designer without touching a file.',
     primary: { label: 'Compare editions and pricing', href: '/en/pricing/' },
     secondary: { label: 'See analytics & reporting', href: '/en/analytics/' },
     metrics: [
@@ -21,7 +21,7 @@ const page = {
       eyebrow: 'A screen as metadata',
       title: 'The view is part of the reviewable definition.',
       body:
-        'Views, forms, and dashboards are declared next to the objects they present. When an agent adds a field or a status, the affected screens are part of the same small diff — not a separate frontend ticket.',
+        'This is that workbench: a grid with columns, a kanban grouped by status, a calendar on due dates, and a saved “Open Cases” list — one definition. When an agent adds a field, the affected screens are part of the same small diff, not a frontend ticket.',
       code: `import { defineView } from '@objectstack/spec';
 
 const data = { provider: 'object' as const, object: 'support_case' };
@@ -59,29 +59,54 @@ export const CaseViews = defineView({
       {
         id: 'surfaces',
         eyebrow: 'Rendered from metadata',
-        title: 'The surfaces every business app needs, supplied',
+        title: 'The workbench, surface by surface',
         copy:
-          'Typed fields carry their own widgets and formatting, so generated screens look and behave consistently without a design system project.',
+          'Typed fields carry their own widgets and formatting, so generated screens look and behave consistently without a design-system project.',
         items: [
           {
             title: 'Views & lists',
-            body: 'Tables, kanbans, and filtered lists with sorting, saved filters, and bulk actions — declared, not built.',
+            body: 'The same cases render as a grid, a kanban, or a calendar — with sorting, saved filters like “Open Cases”, and bulk actions — declared, not built.',
           },
           {
             title: 'Forms & detail pages',
-            body: 'Create and edit forms follow the field types and validations, so the UI can never drift from the rules.',
+            body: 'The case form follows the field types and validations: priority renders as its colored picklist, required means required. The UI can never drift from the rules.',
           },
           {
             title: 'Dashboards',
-            body: 'Charts and counters over live data sit next to the records they summarize, sharing the same definitions.',
+            body: 'Case volume and SLA counters sit next to the queue they summarize, sharing the same definitions and permissions.',
           },
           {
             title: 'Navigation & apps',
-            body: 'Objects group into apps with menus and pages, so each team gets a focused workspace instead of one giant admin.',
+            body: 'Support gets a focused workspace — its objects, views, and dashboards grouped into one app — instead of one giant admin.',
           },
           {
             title: 'Multi-language UI',
             body: 'Labels, formats, and translations resolve per locale, so one definition serves every region.',
+          },
+        ],
+      },
+      {
+        id: 'designer',
+        eyebrow: 'The view designer',
+        title: 'Adjust the screen while looking at the screen',
+        copy:
+          'Views open in a live-preview designer in the open-source console — the preview is the real renderer with the draft injected, so what you see is what ships.',
+        items: [
+          {
+            title: 'Live preview while you edit',
+            body: 'Change a column, watch the grid change — the designer renders list, kanban, calendar, and form views with real data as you work.',
+          },
+          {
+            title: 'Column & filter inspectors',
+            body: 'Add, hide, and reorder columns from an inspector; build nested and/or filters visually — “open, urgent, unassigned” without writing a query.',
+          },
+          {
+            title: 'Record pages from blocks',
+            body: 'Compose detail pages from blocks — sections, fields, buttons — each with visibility rules, dragged into place on a canvas.',
+          },
+          {
+            title: 'Responsive by design',
+            body: 'The page designer previews mobile, tablet, and desktop breakpoints with a component tree and undo/redo — layout decisions stay visible.',
           },
         ],
       },
@@ -94,7 +119,7 @@ export const CaseViews = defineView({
         items: [
           {
             title: 'Rows they can see',
-            body: 'Row-level rules filter every list and dashboard, so a rep, a manager, and an auditor see different data on the same screen.',
+            body: 'The rep’s grid shows their team’s cases; the auditor’s shows everything — same screen definition, row rules applied inside the query.',
           },
           {
             title: 'Fields they can read',
@@ -102,11 +127,11 @@ export const CaseViews = defineView({
           },
           {
             title: 'Actions they can take',
-            body: 'Buttons and menu items appear only when the user’s permissions and the record’s state allow the action.',
+            body: 'The escalate button appears only when the user’s permissions and the record’s state allow it — gated server-side, not just hidden.',
           },
           {
             title: 'Real-time collaboration',
-            body: 'Record changes, comments, and activity feeds stream to open screens, so teams work from the same live picture.',
+            body: 'Record changes, comments, and activity feeds stream to open screens, so the team works from the same live picture.',
           },
         ],
       },
@@ -114,10 +139,10 @@ export const CaseViews = defineView({
     table: {
       columns: ['Business need', 'AI writes', 'Runtime supplies'],
       rows: [
-        ['A workspace for the support team', 'Views, forms, and an app definition', 'Rendered screens, navigation, saved filters'],
+        ['A workbench for the support team', 'Views, forms, and an app definition', 'Rendered screens, navigation, saved filters'],
+        ['The lead wants a kanban, reps want a grid', 'One view with two visualizations', 'Both, rendered from the same definition'],
         ['Managers see more than reps', 'Row and field rules on the object', 'The same screen, shaped per user'],
-        ['A field only finance can edit', 'One field-level rule', 'Read-only rendering everywhere else'],
-        ['Screens in three languages', 'Labels and locale settings', 'Localized UI from one definition'],
+        ['Ops tweaks columns without a deploy', 'Nothing — the designer edits the same metadata', 'Live preview, inspectors, drafts'],
       ],
     },
     checklistTitle: 'A UI review should confirm',
@@ -135,9 +160,9 @@ export const CaseViews = defineView({
           'Yes. The generated surfaces cover the repetitive CRUD majority, and the same APIs and permission model back any custom frontend you add — custom screens never bypass governance.',
       },
       {
-        question: 'Are the app interfaces in the open-source edition?',
+        question: 'Is the view designer in the open-source edition?',
         answer:
-          'Yes. Metadata-rendered views, forms, dashboards, navigation, localization, and real-time updates are part of the open-source runtime.',
+          'Yes. The live-preview view designer, column and filter inspectors, the block-based page canvas, and the responsive page designer ship in the open-source console — alongside metadata-rendered views, forms, dashboards, navigation, localization, and real-time updates.',
       },
     ],
   } satisfies MarketingPage;
