@@ -1,4 +1,5 @@
 import { LOCALES, type Locale } from '../lib/i18n';
+import { s2t } from '../lib/zhconvert';
 import type { MarketingPage } from './types';
 
 const PAGE_ORDER = [
@@ -43,6 +44,32 @@ const RAW_PAGES_BY_LOCALE = Object.entries(pageModules).reduce<
   pagesByLocale[locale as Locale] = pages;
   return pagesByLocale;
 }, {});
+
+// Traditional-Chinese marketing content is derived from Simplified (s2t),
+// never hand-kept — though a hand-written zh-Hant file, if ever added,
+// takes precedence over the derived copy.
+const deepS2t = <T,>(value: T): T => {
+  if (typeof value === 'string') return s2t(value) as unknown as T;
+  if (Array.isArray(value)) return value.map(deepS2t) as unknown as T;
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, entry]) => [key, deepS2t(entry)])
+    ) as unknown as T;
+  }
+  return value;
+};
+
+{
+  const hansPages = RAW_PAGES_BY_LOCALE['zh-Hans'] ?? [];
+  const hantPages = RAW_PAGES_BY_LOCALE['zh-Hant'] ?? [];
+  const hantSlugs = new Set(hantPages.map((page) => page.slug));
+  const derived = hansPages.filter((page) => !hantSlugs.has(page.slug)).map((page) => deepS2t(page));
+  if (derived.length > 0) {
+    RAW_PAGES_BY_LOCALE['zh-Hant'] = [...hantPages, ...derived].sort(
+      (a, b) => orderOf(a.slug) - orderOf(b.slug) || a.slug.localeCompare(b.slug)
+    );
+  }
+}
 
 const fallbackPages = RAW_PAGES_BY_LOCALE[FALLBACK_LOCALE] ?? [];
 

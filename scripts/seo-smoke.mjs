@@ -24,6 +24,11 @@ for (const dirent of await readdir(CONTENT_PAGES, { withFileTypes: true })) {
     marketingContentLocales.get(slug).add(dirent.name);
   }
 }
+// zh-Hant marketing pages are derived from zh-Hans at build time (registry
+// deepS2t), so they count as first-class localized pages too.
+for (const locales of marketingContentLocales.values()) {
+  if (locales.has('zh-Hans')) locales.add('zh-Hant');
+}
 const CLUSTER_SLUGS = [
   'ai-native-app-platform',
   'legacy-system-modernization',
