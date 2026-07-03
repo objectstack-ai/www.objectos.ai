@@ -85,7 +85,7 @@ const zhHans: HomeCopy = {
   aiTitle: ['让 Agent 生成软件，', '让人保留审阅权。'],
   aiCopy: 'ObjectOS 把对象、字段、流程、权限和动作变成 Agent 可读写的声明式元数据，并通过受治理工具访问。开源版采用自带 AI（BYO-AI）：你的编码 Agent 以源码方式编写元数据，通常只是生成整套应用代码的一小部分；你审阅 diff，任意 MCP 客户端即可问询数据。对 CRUD 和流程型场景，运行时承担重复的 99%，因此元数据级变更可以接近百倍迭代，同时仍然可审计、可治理。界面内 Build 与 Ask 助手在云端与企业版提供。',
   aiItems: [
-    { title: 'AI Builder', copy: '云端与企业版：用自然语言描述变更。内置 Builder 生成对象、字段、视图、流程和权限，结构性变更进入审批。开源版中，你自己的编码 Agent 编写同样紧凑的元数据 diff，而不是生成整套应用代码。' },
+    { title: 'AI Builder', copy: '云端与企业版：用自然语言描述变更。内置 Builder 生成对象、字段、视图和流程，结构性变更进入审批。开源版中，你自己的编码 Agent 编写同样紧凑的元数据 diff，而不是生成整套应用代码。' },
     { title: 'AI Ask', copy: '云端与企业版：在产品内问询数据、分析业务上下文，并在登录用户权限内触发已批准动作。开源版则通过 MCP 用你自己的 AI 问询同样的对象。' },
     { title: 'Tools / MCP', copy: '各版本通用：@objectstack/mcp 把对象、查询和动作暴露为受策略约束的工具，供 Claude、Cursor、任意 MCP 客户端或本地模型调用。' },
   ],
@@ -163,7 +163,7 @@ const en: HomeCopy = {
   aiTitle: ['Let agents create the software.', 'Keep people in the review loop.'],
   aiCopy: 'ObjectOS turns objects, fields, workflows, permissions, and actions into declarative metadata that agents can read and update through governed tools. In the open-source edition, you bring your own AI: a coding agent writes metadata as source files, often a tiny fraction of a generated app codebase; you review the diff, and any MCP client can query your data. For CRUD and workflow surfaces, the runtime supplies the repeated 99%, so metadata-only changes can move at two-orders-of-magnitude iteration speed. The in-app Build and Ask assistants run on Cloud and Enterprise.',
   aiItems: [
-    { title: 'AI Builder', copy: 'Cloud & Enterprise: describe a change in natural language. The in-app Builder generates objects, fields, views, workflows, and permissions, then routes structural changes for approval. In open source, your coding agent writes the same compact metadata diff instead of a full app codebase.' },
+    { title: 'AI Builder', copy: 'Cloud & Enterprise: describe a change in natural language. The in-app Builder generates objects, fields, views, and workflows, then routes structural changes for approval. In open source, your coding agent writes the same compact metadata diff instead of a full app codebase.' },
     { title: 'AI Ask', copy: 'Cloud & Enterprise: ask questions inside the product, analyze business context, and trigger approved actions within the signed-in user’s permissions. In open source, query the same objects through MCP with your own AI.' },
     { title: 'Tools / MCP', copy: 'All editions: @objectstack/mcp exposes objects, queries, and actions as policy-aware tools for Claude, Cursor, any MCP client, or a local model.' },
   ],
@@ -242,7 +242,7 @@ const ja: HomeCopy = {
   aiTitle: ['エージェントにソフトウェアを作らせる。', '人はレビューの輪に残る。'],
   aiCopy: 'ObjectOS はオブジェクト、項目、ワークフロー、権限、アクションを、エージェントが統制されたツールで読み書きできる宣言的メタデータにします。オープンソース版は BYO-AI：自分のコーディングエージェントがメタデータをソースファイルとして書きます。多くの場合、それは生成アプリコードのごく一部です。人は diff をレビューし、任意の MCP クライアントがデータを問い合わせられます。CRUD/ワークフロー領域では、反復的な 99% をランタイムが担うため、メタデータだけの変更は二桁違いの反復速度に近づけます。製品内の Build／Ask アシスタントは Cloud／Enterprise で提供します。',
   aiItems: [
-    { title: 'AI Builder', copy: 'Cloud／Enterprise：自然言語で変更を説明します。製品内 Builder がオブジェクト、項目、ビュー、ワークフロー、権限を生成し、構造変更を承認へ送ります。オープンソースでは、自分のコーディングエージェントがフルコードではなく同じコンパクトなメタデータ diff を書きます。' },
+    { title: 'AI Builder', copy: 'Cloud／Enterprise：自然言語で変更を説明します。製品内 Builder がオブジェクト、項目、ビュー、ワークフローを生成し、構造変更を承認へ送ります。オープンソースでは、自分のコーディングエージェントがフルコードではなく同じコンパクトなメタデータ diff を書きます。' },
     { title: 'AI Ask', copy: 'Cloud／Enterprise：製品内で質問し、業務コンテキストを分析し、ログインユーザーの権限内で承認済みアクションを実行します。オープンソースでは、同じオブジェクトを MCP 経由で自分の AI から問い合わせます。' },
     { title: 'Tools / MCP', copy: '全エディション共通：@objectstack/mcp がオブジェクト、クエリ、アクションをポリシー対応ツールとして Claude、Cursor、任意の MCP クライアント、ローカルモデルに公開します。' },
   ],
@@ -321,7 +321,7 @@ const de: HomeCopy = {
   aiTitle: ['Agents erstellen die Software.', 'Menschen bleiben in der Prüfung.'],
   aiCopy: 'ObjectOS macht Objekte, Felder, Workflows, Berechtigungen und Aktionen zu deklarativen Metadaten, die Agents über kontrollierte Tools lesen und ändern. In der Open-Source-Edition bringen Sie Ihre eigene AI mit: Ein Coding-Agent schreibt Metadaten als Quelldateien, oft nur einen winzigen Bruchteil einer generierten App-Codebasis; Sie prüfen den Diff, und jeder MCP-Client kann Ihre Daten abfragen. Bei CRUD- und Workflow-Oberflächen liefert die Runtime die wiederkehrenden 99 %, sodass reine Metadatenänderungen Iterationsgeschwindigkeit in zwei Größenordnungen erreichen können. Die In-App-Assistenten Build und Ask laufen auf Cloud und Enterprise.',
   aiItems: [
-    { title: 'AI Builder', copy: 'Cloud & Enterprise: Beschreiben Sie eine Änderung in natürlicher Sprache. Der In-App-Builder generiert Objekte, Felder, Views, Workflows und Berechtigungen und schickt Strukturänderungen zur Freigabe. In Open Source schreibt Ihr Coding-Agent denselben kompakten Metadaten-Diff statt einer vollständigen App-Codebasis.' },
+    { title: 'AI Builder', copy: 'Cloud & Enterprise: Beschreiben Sie eine Änderung in natürlicher Sprache. Der In-App-Builder generiert Objekte, Felder, Views und Workflows und schickt Strukturänderungen zur Freigabe. In Open Source schreibt Ihr Coding-Agent denselben kompakten Metadaten-Diff statt einer vollständigen App-Codebasis.' },
     { title: 'AI Ask', copy: 'Cloud & Enterprise: Stellen Sie Fragen im Produkt, analysieren Sie Geschäftskontext und lösen Sie freigegebene Aktionen innerhalb der Rechte des angemeldeten Nutzers aus. In Open Source fragen Sie dieselben Objekte über MCP mit Ihrer eigenen AI ab.' },
     { title: 'Tools / MCP', copy: 'Alle Editionen: @objectstack/mcp stellt Objekte, Abfragen und Aktionen als policy-bewusste Tools für Claude, Cursor, jeden MCP-Client oder ein lokales Modell bereit.' },
   ],
@@ -400,7 +400,7 @@ const es: HomeCopy = {
   aiTitle: ['Deja que los agentes creen el software.', 'Mantén a las personas en la revisión.'],
   aiCopy: 'ObjectOS convierte objetos, campos, workflows, permisos y acciones en metadatos declarativos que los agentes pueden leer y actualizar mediante herramientas gobernadas. En la edición open source, traes tu propia AI: un agente de código escribe metadatos como archivos fuente, a menudo una fracción mínima de una base de código generada; tú revisas el diff y cualquier cliente MCP puede consultar tus datos. En superficies CRUD y de workflow, el runtime aporta el 99 % repetido, por lo que los cambios solo de metadatos pueden moverse a velocidad de iteración de dos órdenes de magnitud. Los asistentes integrados Build y Ask se ejecutan en Cloud y Enterprise.',
   aiItems: [
-    { title: 'AI Builder', copy: 'Cloud y Enterprise: describe un cambio en lenguaje natural. El Builder integrado genera objetos, campos, vistas, workflows y permisos, y envía los cambios estructurales a aprobación. En open source, tu agente de código escribe el mismo diff compacto de metadatos en lugar de una base de código completa.' },
+    { title: 'AI Builder', copy: 'Cloud y Enterprise: describe un cambio en lenguaje natural. El Builder integrado genera objetos, campos, vistas y workflows, y envía los cambios estructurales a aprobación. En open source, tu agente de código escribe el mismo diff compacto de metadatos en lugar de una base de código completa.' },
     { title: 'AI Ask', copy: 'Cloud y Enterprise: haz preguntas dentro del producto, analiza contexto de negocio y ejecuta acciones aprobadas dentro de los permisos del usuario conectado. En open source, consulta los mismos objetos mediante MCP con tu propia AI.' },
     { title: 'Tools / MCP', copy: 'Todas las ediciones: @objectstack/mcp expone objetos, consultas y acciones como herramientas conscientes de políticas para Claude, Cursor, cualquier cliente MCP o un modelo local.' },
   ],
@@ -479,7 +479,7 @@ const fr: HomeCopy = {
   aiTitle: ['Laissez les agents créer le logiciel.', 'Gardez les humains dans la boucle de revue.'],
   aiCopy: 'ObjectOS transforme objets, champs, workflows, permissions et actions en métadonnées déclaratives que les agents peuvent lire et mettre à jour via des outils gouvernés. Dans l’édition open source, vous apportez votre propre AI : un agent de code écrit les métadonnées comme fichiers source, souvent une fraction minuscule d’une base de code générée ; vous relisez le diff, et n’importe quel client MCP peut interroger vos données. Pour les surfaces CRUD et workflow, le runtime fournit les 99 % répétitifs, si bien que les changements uniquement en métadonnées peuvent atteindre une vitesse d’itération de deux ordres de grandeur. Les assistants intégrés Build et Ask fonctionnent sur Cloud et Enterprise.',
   aiItems: [
-    { title: 'AI Builder', copy: 'Cloud et Enterprise : décrivez un changement en langage naturel. Le Builder intégré génère objets, champs, vues, workflows et permissions, puis envoie les changements structurants en validation. En open source, votre agent de code écrit le même diff compact de métadonnées au lieu d’une base de code complète.' },
+    { title: 'AI Builder', copy: 'Cloud et Enterprise : décrivez un changement en langage naturel. Le Builder intégré génère objets, champs, vues et workflows, puis envoie les changements structurants en validation. En open source, votre agent de code écrit le même diff compact de métadonnées au lieu d’une base de code complète.' },
     { title: 'AI Ask', copy: 'Cloud et Enterprise : posez des questions dans le produit, analysez le contexte métier et déclenchez des actions approuvées dans les permissions de l’utilisateur connecté. En open source, interrogez les mêmes objets via MCP avec votre propre AI.' },
     { title: 'Tools / MCP', copy: 'Toutes éditions : @objectstack/mcp expose objets, requêtes et actions comme outils sensibles aux politiques pour Claude, Cursor, tout client MCP ou un modèle local.' },
   ],
@@ -558,7 +558,7 @@ const ko: HomeCopy = {
   aiTitle: ['에이전트가 소프트웨어를 만들게 하세요.', '사람은 검토 루프 안에 남습니다.'],
   aiCopy: 'ObjectOS는 객체, 필드, 워크플로, 권한, 작업을 에이전트가 거버넌스 도구로 읽고 업데이트할 수 있는 선언형 메타데이터로 만듭니다. 오픈소스 에디션에서는 당신의 AI를 가져옵니다. 코딩 에이전트가 메타데이터를 소스 파일로 작성하며, 이는 생성된 앱 코드베이스의 아주 작은 일부인 경우가 많습니다. 당신은 diff를 검토하고 모든 MCP 클라이언트가 데이터를 조회할 수 있습니다. CRUD 및 워크플로 표면에서는 반복되는 99%를 런타임이 제공하므로 메타데이터만 바꾸는 변경은 두 자릿수 차원의 반복 속도에 도달할 수 있습니다. 제품 내 Build와 Ask 어시스턴트는 Cloud와 Enterprise에서 실행됩니다.',
   aiItems: [
-    { title: 'AI Builder', copy: 'Cloud · Enterprise: 자연어로 변경을 설명하세요. 제품 내 Builder가 객체, 필드, 뷰, 워크플로, 권한을 생성하고 구조 변경을 승인으로 보냅니다. 오픈소스에서는 코딩 에이전트가 전체 앱 코드베이스 대신 같은 압축 메타데이터 diff를 작성합니다.' },
+    { title: 'AI Builder', copy: 'Cloud · Enterprise: 자연어로 변경을 설명하세요. 제품 내 Builder가 객체, 필드, 뷰, 워크플로를 생성하고 구조 변경을 승인으로 보냅니다. 오픈소스에서는 코딩 에이전트가 전체 앱 코드베이스 대신 같은 압축 메타데이터 diff를 작성합니다.' },
     { title: 'AI Ask', copy: 'Cloud · Enterprise: 제품 안에서 질문하고 비즈니스 맥락을 분석하며 로그인 사용자 권한 안에서 승인된 작업을 실행합니다. 오픈소스에서는 같은 객체를 MCP로 당신의 AI에서 조회합니다.' },
     { title: 'Tools / MCP', copy: '모든 에디션: @objectstack/mcp가 객체, 쿼리, 작업을 정책 인식 도구로 Claude, Cursor, 모든 MCP 클라이언트 또는 로컬 모델에 노출합니다.' },
   ],

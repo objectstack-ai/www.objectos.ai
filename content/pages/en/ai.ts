@@ -9,11 +9,11 @@ const page = {
     eyebrow: 'AI Build & Ask',
     heroTitle: 'Describe the change. Review the diff. Ship the app.',
     lead:
-      'AI Build drafts objects, fields, views, flows, and permissions from a plain-language request — and structural changes wait for your approval. AI Ask answers questions and runs approved actions over live data, always inside the permissions of the person asking.',
+      'AI builds ObjectOS apps two ways: developers point a coding agent like Claude Code at the source project and it writes every metadata type, previewed in the browser and reviewed as a diff — or business users describe the change in conversation on Cloud. AI Ask answers questions and runs approved actions over live data, always inside the permissions of the person asking.',
     primary: { label: 'Compare editions and pricing', href: '/en/pricing/' },
     secondary: { label: 'See how agents write metadata', href: '/en/agent-developer/' },
     metrics: [
-      { value: '2 modes', label: 'AI Build creates the system; AI Ask answers and acts' },
+      { value: '2 paths', label: 'Build with a coding agent in source, or by conversation in the cloud' },
       { value: '~1%', label: 'Metadata surface the AI writes for CRUD/workflow apps' },
       { value: '0 bypasses', label: 'Every AI action runs inside user permissions and audit' },
     ],
@@ -24,7 +24,7 @@ const page = {
         'The loop is designed so speed never outruns control: the AI moves fast on the draft, and a person owns the decision.',
       steps: [
         'Describe: “Track vendor contracts with renewal reminders and an approval for anything over $50k.”',
-        'AI Build drafts the objects, fields, views, renewal flow, and permission model.',
+        'Your AI — a coding agent in source, or the in-app builder — drafts the objects, fields, views, and renewal flow.',
         'Structural changes land in the approval queue as a compact, readable diff.',
         'You approve — the runtime ships tables, APIs, screens, automations, and audit.',
         'AI Ask now answers contract questions for each user, scoped to what they may see.',
@@ -34,21 +34,25 @@ const page = {
       {
         id: 'build',
         eyebrow: 'AI Build',
-        title: 'The builder that produces definitions, not codebases',
+        title: 'Two ways to build — one reviewable definition',
         copy:
-          'On Cloud and Enterprise, the in-app builder turns natural language into ObjectStack metadata — the same compact format a human administrator would review and own.',
+          'Whether the AI works in your repository or in a chat panel, the output is the same compact ObjectStack metadata a human reviews and owns.',
         items: [
           {
-            title: 'Whole-system drafts',
-            body: 'One request can produce objects, relationships, views, flows, and permissions together, so the draft is a working system, not a fragment.',
+            title: 'In source, with your coding agent',
+            body: 'Developers point Claude Code, Cursor, or any coding agent at the project; it writes every metadata type as source files, previewed in the browser and reviewed as a git diff — a Salesforce DX-style workflow.',
+          },
+          {
+            title: 'In the cloud, by conversation',
+            body: 'On Cloud and Enterprise, business users describe the change in chat; the in-app builder drafts it as metadata with live preview — Airtable-style ease with runtime governance.',
+          },
+          {
+            title: 'Visual designers to fine-tune',
+            body: 'Every metadata type also has a visual designer, so developers and admins adjust what the AI drafted without touching files.',
           },
           {
             title: 'Approval before structure changes',
-            body: 'Anything that changes the shape of the system — new objects, fields, permissions — queues for human sign-off with the full diff.',
-          },
-          {
-            title: 'Small, reviewable iterations',
-            body: 'Follow-up requests become small metadata diffs, which is what keeps iteration fast weeks and months after the first version ships.',
+            body: 'Anything that changes the shape of the system queues for human sign-off with the full diff — on either path.',
           },
         ],
       },
