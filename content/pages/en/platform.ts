@@ -15,7 +15,7 @@ const page = {
     metrics: [
       { value: '25+', label: 'Runtime services behind every deployed application' },
       { value: '6', label: 'Capability areas, from data modeling to analytics' },
-      { value: '~1%', label: 'Metadata surface the AI writes; the runtime supplies the rest' },
+      { value: '1,792 lines', label: 'A whole CRM in metadata; the runtime supplies the rest' },
     ],
     artifact: {
       eyebrow: 'The 1% your agent writes',

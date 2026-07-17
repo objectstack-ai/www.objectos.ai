@@ -14,7 +14,7 @@ const page = {
     secondary: { label: 'See how agents write metadata', href: '/en/agent-developer/' },
     metrics: [
       { value: '2 paths', label: 'Build with a coding agent in source, or by conversation in the cloud' },
-      { value: '~1%', label: 'Metadata surface the AI writes for CRUD/workflow apps' },
+      { value: '1,792 lines', label: 'The metadata a whole CRM takes — small enough to review' },
       { value: '0 bypasses', label: 'Every AI action runs inside user permissions and audit' },
     ],
     artifact: {

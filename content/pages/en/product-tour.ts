@@ -14,8 +14,8 @@ const page = {
     secondary: { label: 'Review the trust model', href: '/en/trust-center/' },
     metrics: [
       { value: '5 steps', label: 'Requirement, metadata, review, runtime, governed AI' },
-      { value: '~1%', label: 'Review-surface heuristic for CRUD/workflow apps' },
-      { value: '100x', label: 'Iteration ambition when changes stay metadata-sized' },
+      { value: '1,792 lines', label: 'A complete CRM — the whole business system' },
+      { value: '~16k tokens', label: 'So the entire app fits in the agent’s context' },
     ],
     artifact: {
       eyebrow: 'Review surface',
