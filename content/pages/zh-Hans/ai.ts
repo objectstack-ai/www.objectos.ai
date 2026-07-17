@@ -14,7 +14,7 @@ const page = {
     secondary: { label: '看 Agent 如何编写元数据', href: '/en/agent-developer/' },
     metrics: [
       { value: '2 条路径', label: '在源码里用编码 Agent，或在云端用对话' },
-      { value: '~1%', label: 'CRUD/流程应用中 AI 需要编写的元数据面' },
+      { value: '1,792 行', label: '一个完整 CRM 的元数据 —— 小到能审阅' },
       { value: '0 后门', label: '每次 AI 动作都在用户权限与审计之内' },
     ],
     artifact: {

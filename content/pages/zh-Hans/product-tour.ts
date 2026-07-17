@@ -14,8 +14,8 @@ const page = {
     secondary: { label: '查看信任模型', href: '/en/trust-center/' },
     metrics: [
       { value: '5 步', label: '需求、元数据、审阅、运行时、受治理的 AI' },
-      { value: '~1%', label: 'CRUD/流程应用的审阅面经验值' },
-      { value: '100x', label: '变更保持元数据级时的迭代目标' },
+      { value: '1,792 行', label: '一个完整 CRM —— 整个业务系统' },
+      { value: '~16k tokens', label: '因此整个应用装得进 Agent 的上下文' },
     ],
     artifact: {
       eyebrow: '审阅面',

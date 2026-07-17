@@ -15,7 +15,7 @@ const page = {
     metrics: [
       { value: '25+', label: '每个已部署应用背后的运行时服务' },
       { value: '6', label: '能力域，从数据建模到报表分析' },
-      { value: '~1%', label: 'AI 只写元数据这一小层，其余由运行时供给' },
+      { value: '1,792 行', label: '一个完整 CRM 的元数据，其余由运行时供给' },
     ],
     artifact: {
       eyebrow: 'Agent 写的那 1%',
