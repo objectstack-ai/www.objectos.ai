@@ -90,9 +90,9 @@ const page = {
     },
     faqs: [
       {
-        question: 'Is the MCP server in the open-source edition?',
+        question: 'Is the MCP server in the open-source ObjectStack?',
         answer:
-          'Yes — it is the core of the open-source AI story. @objectstack/mcp ships with the platform, so you can connect Claude, Cursor, or a fully local model to your governed objects without a cloud subscription.',
+          'Yes — it is the core of the open-source ObjectStack AI story. @objectstack/mcp ships with the platform, so you can connect Claude, Cursor, or a fully local model to your governed objects without a cloud subscription.',
       },
       {
         question: 'Do we have to expose everything to the AI?',

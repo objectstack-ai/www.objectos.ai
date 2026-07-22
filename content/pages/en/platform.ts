@@ -111,7 +111,7 @@ export const Order = ObjectSchema.create({
           },
           {
             title: 'Designers & console',
-            body: '16+ open-source admin surfaces — the object designer, flow canvas, approvals inbox, permission matrix, and audit viewer — so people fine-tune everything the AI drafts.',
+            body: '16+ open-source ObjectStack admin surfaces — the object designer, flow canvas, approvals inbox, permission matrix, and audit viewer — so people fine-tune everything the AI drafts.',
           },
           {
             title: 'The review loop',
@@ -133,9 +133,9 @@ export const Order = ObjectSchema.create({
     },
     faqs: [
       {
-        question: 'Which capabilities are in the open-source edition?',
+        question: 'Which capabilities are in the open-source ObjectStack?',
         answer:
-          'The runtime capabilities on this page — data, UI, automation, approvals, permissions, analytics — are part of the open-source platform. You bring your own AI: a coding agent writes metadata as source files and any MCP client can query your objects. The in-app AI Build and Ask assistants run on Cloud and Enterprise.',
+          'The runtime capabilities on this page — data, UI, automation, approvals, permissions, analytics — are part of the open-source ObjectStack platform. You bring your own AI: a coding agent writes metadata as source files and any MCP client can query your objects. The in-app AI Build and Ask assistants run on Cloud and Enterprise.',
       },
       {
         question: 'Can it run in our own infrastructure?',

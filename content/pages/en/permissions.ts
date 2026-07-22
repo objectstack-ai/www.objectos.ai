@@ -84,7 +84,7 @@ const page = {
         eyebrow: 'The admin surfaces',
         title: 'Checked off in a matrix, answered from a log',
         copy:
-          'The permission definition your agent writes opens as a familiar matrix in the open-source console — and when something looks wrong, the audit viewer answers it line by line.',
+          'The permission definition your agent writes opens as a familiar matrix in the open-source ObjectStack console — and when something looks wrong, the audit viewer answers it line by line.',
         items: [
           {
             title: 'The permission matrix editor',
@@ -150,9 +150,9 @@ const page = {
           'No. Agents act as the signed-in user and inherit that user’s object, row, and field permissions. There is no privileged AI identity to leak or misuse.',
       },
       {
-        question: 'Are the permission matrix and audit viewer in the open-source edition?',
+        question: 'Are the permission matrix and audit viewer in the open-source ObjectStack?',
         answer:
-          'Yes. The permission matrix editor and the audit log viewer ship in the open-source console — alongside roles, row rules, field security, sharing, tenant isolation, and the audit log itself, all of which apply equally to MCP tool access.',
+          'Yes. The permission matrix editor and the audit log viewer ship in the open-source ObjectStack console — alongside roles, row rules, field security, sharing, tenant isolation, and the audit log itself, all of which apply equally to MCP tool access.',
       },
     ],
   } satisfies MarketingPage;

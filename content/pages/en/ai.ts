@@ -5,7 +5,7 @@ const page = {
     navLabel: 'AI Build & Ask',
     title: 'AI Build & Ask: Create and Query Business Apps in Natural Language',
     description:
-      'AI Build turns a described change into reviewable metadata. AI Ask answers questions over live business data inside user permissions. Open source brings your own agent via MCP.',
+      'AI Build turns a described change into reviewable metadata. AI Ask answers questions over live business data inside user permissions. The open-source ObjectStack brings your own agent via MCP.',
     eyebrow: 'AI Build & Ask',
     heroTitle: 'Describe the change. Review the diff. Ship the app.',
     lead:
@@ -79,10 +79,10 @@ const page = {
       },
       {
         id: 'byo-ai',
-        eyebrow: 'Open source',
+        eyebrow: 'Open-source ObjectStack',
         title: 'Bring your own AI, keep the same governance',
         copy:
-          'The open-source edition has no built-in assistant — by design. Your coding agent writes the same metadata as source files, and any MCP client queries the same governed objects.',
+          'The open-source ObjectStack has no built-in assistant — by design. Your coding agent writes the same metadata as source files, and any MCP client queries the same governed objects.',
         items: [
           {
             title: 'Agent writes source files',
@@ -102,7 +102,7 @@ const page = {
     table: {
       columns: ['Edition', 'How AI builds', 'How AI answers'],
       rows: [
-        ['Community (open source)', 'Your coding agent edits metadata source files; review as git diffs', 'Any MCP client queries governed objects with your own model'],
+        ['Open-source ObjectStack', 'Your coding agent edits metadata source files; review as git diffs', 'Any MCP client queries governed objects with your own model'],
         ['Cloud Team & Business', 'In-app AI Build drafts changes; approvals gate structure', 'In-app AI Ask answers and runs approved actions'],
         ['Enterprise', 'Same, plus private deployment and bring-your-own-model', 'Same, plus local models and internal identity'],
       ],
@@ -116,7 +116,7 @@ const page = {
       {
         question: 'Which models does it use?',
         answer:
-          'Cloud editions run managed models behind AI Build and Ask. Open source brings your own — any MCP-compatible client or a local model. Enterprise adds bring-your-own-model for private deployments.',
+          'Cloud editions run managed models behind AI Build and Ask. The open-source ObjectStack brings your own — any MCP-compatible client or a local model. Enterprise adds bring-your-own-model for private deployments.',
       },
     ],
   } satisfies MarketingPage;

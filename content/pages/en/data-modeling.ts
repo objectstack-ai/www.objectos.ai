@@ -84,7 +84,7 @@ export const Subscription = ObjectSchema.create({
         eyebrow: 'The object designer',
         title: 'Fine-tune fields, see the model as a diagram, mount the old database',
         copy:
-          'The definition your agent writes opens as a visual surface in the open-source console — changing a field never requires reading a line of code.',
+          'The definition your agent writes opens as a visual surface in the open-source ObjectStack console — changing a field never requires reading a line of code.',
         items: [
           {
             title: 'The field editor',
@@ -154,9 +154,9 @@ export const Subscription = ObjectSchema.create({
           'Postgres, MySQL, SQLite, Turso, and MongoDB are supported today, and the data layer is driver-based. Federation can additionally mount tables from external databases without moving the data.',
       },
       {
-        question: 'Are the object designer and ER diagram in the open-source edition?',
+        question: 'Are the object designer and ER diagram in the open-source ObjectStack?',
         answer:
-          'Yes. The object designer, the ER data-model designer, and datasource sync ship in the open-source console — alongside objects, relationships, validations, formulas, migrations, the query engine, REST APIs, and file storage.',
+          'Yes. The object designer, the ER data-model designer, and datasource sync ship in the open-source ObjectStack console — alongside objects, relationships, validations, formulas, migrations, the query engine, REST APIs, and file storage.',
       },
     ],
   } satisfies MarketingPage;

@@ -106,7 +106,7 @@ export const EscalateBreachedCases = defineFlow({
         eyebrow: '流程设计器',
         title: '画布上画，队列里跑，历史里查',
         copy:
-          '每条流程都能在开源控制台的可视化设计器中打开——Agent 写的那份定义，就是运营团队能接手的那张图。',
+          '每条流程都能在开源 ObjectStack 控制台的可视化设计器中打开——Agent 写的那份定义，就是运营团队能接手的那张图。',
         items: [
           {
             title: '16+ 类型化节点的面板',
@@ -184,9 +184,9 @@ export const EscalateBreachedCases = defineFlow({
           '流程状态是持久的。等待某个人或某个定时器的流程会从暂停处精确恢复——重启和部署不会丢失或重复任何工作。',
       },
       {
-        question: '可视化设计器在开源版里吗？',
+        question: '可视化设计器在开源 ObjectStack 里吗？',
         answer:
-          '在。流程画布、节点面板、校验、模拟、运行历史和调度预览都随开源控制台发布——连同流程、全部三类触发器、后台队列和 Webhook 投递。',
+          '在。流程画布、节点面板、校验、模拟、运行历史和调度预览都随开源 ObjectStack 控制台发布——连同流程、全部三类触发器、后台队列和 Webhook 投递。',
       },
     ],
   } satisfies MarketingPage;

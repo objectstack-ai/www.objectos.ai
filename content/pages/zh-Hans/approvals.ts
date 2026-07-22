@@ -107,7 +107,7 @@ export const DiscountApproval = defineFlow({
         eyebrow: '审批收件箱',
         title: '审批人真正用的那个界面',
         copy:
-          '开源控制台自带审批收件箱——不是邮件里的一个链接，而是一个带上下文、能直接决策的工作台。',
+          '开源 ObjectStack 控制台自带审批收件箱——不是邮件里的一个链接，而是一个带上下文、能直接决策的工作台。',
         items: [
           {
             title: '三个页签',
@@ -173,9 +173,9 @@ export const DiscountApproval = defineFlow({
           '不是——审批是流程里的一个持久步骤。整个过程只有一个执行模型：流程暂停，人来决定，流程继续。',
       },
       {
-        question: '审批收件箱在开源版里吗？',
+        question: '审批收件箱在开源 ObjectStack 里吗？',
         answer:
-          '在。三页签收件箱、侧栏时间线、评论、撤回与退回修改、键盘快捷键，连同多级审批、审批人解析、升级、记录锁定与审计轨迹，都是开源版的一部分。',
+          '在。三页签收件箱、侧栏时间线、评论、撤回与退回修改、键盘快捷键，连同多级审批、审批人解析、升级、记录锁定与审计轨迹，都是开源 ObjectStack 的一部分。',
       },
     ],
   } satisfies MarketingPage;

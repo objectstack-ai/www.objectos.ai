@@ -84,7 +84,7 @@ export const Subscription = ObjectSchema.create({
         eyebrow: '对象设计器',
         title: '字段级微调，图上看关系，一键接存量库',
         copy:
-          'Agent 写的定义，管理员在开源控制台里打开就是可视化界面——改一个字段不需要读一行代码。',
+          'Agent 写的定义，管理员在开源 ObjectStack 控制台里打开就是可视化界面——改一个字段不需要读一行代码。',
         items: [
           {
             title: '字段编辑器',
@@ -154,9 +154,9 @@ export const Subscription = ObjectSchema.create({
           '目前支持 Postgres、MySQL、SQLite、Turso 和 MongoDB，数据层基于驱动架构。联邦还能在不搬移数据的情况下挂载外部数据库的表。',
       },
       {
-        question: '对象设计器和 ER 图在开源版里吗？',
+        question: '对象设计器和 ER 图在开源 ObjectStack 里吗？',
         answer:
-          '在。对象设计器、ER 数据模型设计器、数据源同步，连同对象、关系、校验、公式、迁移、查询引擎、REST API 与文件存储，都是开源版的一部分。',
+          '在。对象设计器、ER 数据模型设计器、数据源同步，连同对象、关系、校验、公式、迁移、查询引擎、REST API 与文件存储，都是开源 ObjectStack 的一部分。',
       },
     ],
   } satisfies MarketingPage;
