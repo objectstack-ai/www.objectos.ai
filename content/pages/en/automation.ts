@@ -106,7 +106,7 @@ export const EscalateBreachedCases = defineFlow({
         eyebrow: 'The flow designer',
         title: 'Drawn on a canvas, run from a queue, debugged from history',
         copy:
-          'Every flow opens in a visual designer in the open-source console — the same definition your agent writes, as a diagram your operations team can own.',
+          'Every flow opens in a visual designer in the open-source ObjectStack console — the same definition your agent writes, as a diagram your operations team can own.',
         items: [
           {
             title: 'A palette of 16+ typed nodes',
@@ -184,9 +184,9 @@ export const EscalateBreachedCases = defineFlow({
           'Flow state is durable. A process waiting on a person or a timer resumes exactly where it paused — restarts and deploys do not lose or duplicate work.',
       },
       {
-        question: 'Is the visual designer in the open-source edition?',
+        question: 'Is the visual designer in the open-source ObjectStack?',
         answer:
-          'Yes. The flow canvas, node palette, validation, simulation, run history, and schedule previews ship in the open-source console — alongside flows, all three trigger types, background queues, and webhook delivery.',
+          'Yes. The flow canvas, node palette, validation, simulation, run history, and schedule previews ship in the open-source ObjectStack console — alongside flows, all three trigger types, background queues, and webhook delivery.',
       },
     ],
   } satisfies MarketingPage;

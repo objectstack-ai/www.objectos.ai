@@ -43,7 +43,7 @@ const page = {
           },
           {
             title: 'No required telemetry',
-            body: 'The open-source runtime does not need a license callback or product telemetry channel to operate.',
+            body: 'The open-source ObjectStack runtime does not need a license callback or product telemetry channel to operate.',
           },
           {
             title: 'Model choice',
@@ -76,7 +76,7 @@ const page = {
     table: {
       columns: ['Review area', 'Available now', 'Enterprise packet'],
       rows: [
-        ['Deployment', 'Self-hosted open-source runtime', 'VPC, private network, air-gapped deployment notes'],
+        ['Deployment', 'Self-hosted open-source ObjectStack runtime', 'VPC, private network, air-gapped deployment notes'],
         ['Identity', 'Project identity and permission metadata', 'SSO, SCIM, admin roles, session policy mapping'],
         ['AI governance', 'MCP tools, object permissions, approvals', 'Model routing policy and prompt/data boundary report'],
         ['Audit', 'Runtime audit design and metadata review', 'Exportable audit retention and investigation workflow'],

@@ -83,7 +83,7 @@ export const MrrByPlan = defineReport({
         eyebrow: 'The dashboard & report designers',
         title: 'Assembled by clicking, saved as metadata',
         copy:
-          'Dashboards and reports open in designers in the open-source console — what you click together is stored as the same reviewable definitions an agent writes.',
+          'Dashboards and reports open in designers in the open-source ObjectStack console — what you click together is stored as the same reviewable definitions an agent writes.',
         items: [
           {
             title: 'The dashboard designer',
@@ -149,9 +149,9 @@ export const MrrByPlan = defineReport({
           'For operational reporting on business objects, you will not need a separate stack: dashboards, funnels, and time series run in the platform. For cross-system warehousing, ObjectOS coexists — federation and APIs make governed objects easy to consume.',
       },
       {
-        question: 'Are the dashboard and report designers in the open-source edition?',
+        question: 'Are the dashboard and report designers in the open-source ObjectStack?',
         answer:
-          'Yes. The widget-based dashboard designer, the band-based report designer, drilldown, aggregations, time series, funnels, and semantic datasets are all part of the open-source runtime, with the same permission enforcement as the rest of the platform.',
+          'Yes. The widget-based dashboard designer, the band-based report designer, drilldown, aggregations, time series, funnels, and semantic datasets are all part of the open-source ObjectStack runtime, with the same permission enforcement as the rest of the platform.',
       },
     ],
   } satisfies MarketingPage;

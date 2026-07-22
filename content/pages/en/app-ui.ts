@@ -90,7 +90,7 @@ export const CaseViews = defineView({
         eyebrow: 'The view designer',
         title: 'Adjust the screen while looking at the screen',
         copy:
-          'Views open in a live-preview designer in the open-source console — the preview is the real renderer with the draft injected, so what you see is what ships.',
+          'Views open in a live-preview designer in the open-source ObjectStack console — the preview is the real renderer with the draft injected, so what you see is what ships.',
         items: [
           {
             title: 'Live preview while you edit',
@@ -160,9 +160,9 @@ export const CaseViews = defineView({
           'Yes. The generated surfaces cover the repetitive CRUD majority, and the same APIs and permission model back any custom frontend you add — custom screens never bypass governance.',
       },
       {
-        question: 'Is the view designer in the open-source edition?',
+        question: 'Is the view designer in the open-source ObjectStack?',
         answer:
-          'Yes. The live-preview view designer, column and filter inspectors, the block-based page canvas, and the responsive page designer ship in the open-source console — alongside metadata-rendered views, forms, dashboards, navigation, localization, and real-time updates.',
+          'Yes. The live-preview view designer, column and filter inspectors, the block-based page canvas, and the responsive page designer ship in the open-source ObjectStack console — alongside metadata-rendered views, forms, dashboards, navigation, localization, and real-time updates.',
       },
     ],
   } satisfies MarketingPage;

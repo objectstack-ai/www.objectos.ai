@@ -5,7 +5,7 @@ const page = {
     navLabel: 'AI Build & Ask',
     title: 'AI Build 与 Ask：用自然语言创建和问询业务应用',
     description:
-      'AI Build 把一句描述变成可审阅的元数据；AI Ask 在用户权限内回答实时业务数据的问题。开源版通过 MCP 自带你的 AI。',
+      'AI Build 把一句描述变成可审阅的元数据；AI Ask 在用户权限内回答实时业务数据的问题。开源 ObjectStack 通过 MCP 自带你的 AI。',
     eyebrow: 'AI Build & Ask',
     heroTitle: '描述变更，审阅 diff，上线应用。',
     lead:
@@ -79,10 +79,10 @@ const page = {
       },
       {
         id: 'byo-ai',
-        eyebrow: '开源版',
+        eyebrow: '开源 ObjectStack',
         title: '自带你的 AI，治理保持一致',
         copy:
-          '开源版有意不内置助手：你的编码 Agent 以源码文件编写同样的元数据，任意 MCP 客户端查询同样受治理的对象。',
+          '开源 ObjectStack 有意不内置助手：你的编码 Agent 以源码文件编写同样的元数据，任意 MCP 客户端查询同样受治理的对象。',
         items: [
           {
             title: 'Agent 写源码文件',
@@ -102,7 +102,7 @@ const page = {
     table: {
       columns: ['版本', 'AI 如何构建', 'AI 如何回答'],
       rows: [
-        ['社区版（开源）', '编码 Agent 编辑元数据源码文件，以 git diff 审阅', '任意 MCP 客户端用你自己的模型查询受治理对象'],
+        ['开源 ObjectStack', '编码 Agent 编辑元数据源码文件，以 git diff 审阅', '任意 MCP 客户端用你自己的模型查询受治理对象'],
         ['云端 Team 与 Business', '产品内 AI Build 起草变更，审批把守结构', '产品内 AI Ask 回答问题并执行已批准动作'],
         ['企业版', '同上，另支持私有部署与自带模型', '同上，另支持本地模型与内部身份系统'],
       ],
@@ -116,7 +116,7 @@ const page = {
       {
         question: '用的是什么模型？',
         answer:
-          '云端版本由托管模型驱动 AI Build 与 Ask。开源版自带模型——任意兼容 MCP 的客户端或本地模型。企业版支持在私有部署中自带模型。',
+          '云端版本由托管模型驱动 AI Build 与 Ask。开源 ObjectStack 自带模型——任意兼容 MCP 的客户端或本地模型。企业版支持在私有部署中自带模型。',
       },
     ],
   } satisfies MarketingPage;

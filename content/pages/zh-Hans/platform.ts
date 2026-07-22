@@ -111,7 +111,7 @@ export const Order = ObjectSchema.create({
           },
           {
             title: '设计器与控制台',
-            body: '16+ 个开源管理界面——对象设计器、流程画布、审批收件箱、权限矩阵、审计查看器——AI 起草的一切，人都能微调。',
+            body: '16+ 个开源 ObjectStack 管理界面——对象设计器、流程画布、审批收件箱、权限矩阵、审计查看器——AI 起草的一切，人都能微调。',
           },
           {
             title: '审阅闭环',
@@ -133,9 +133,9 @@ export const Order = ObjectSchema.create({
     },
     faqs: [
       {
-        question: '开源版包含哪些能力？',
+        question: '开源 ObjectStack 包含哪些能力？',
         answer:
-          '本页的运行时能力——数据、界面、自动化、审批、权限、报表分析——都属于开源平台。AI 自带（BYO-AI）：编码 Agent 以源码文件编写元数据，任意 MCP 客户端可以查询你的对象。产品内的 AI Build 与 Ask 助手在云端与企业版提供。',
+          '本页的运行时能力——数据、界面、自动化、审批、权限、报表分析——都属于开源 ObjectStack 平台。AI 自带（BYO-AI）：编码 Agent 以源码文件编写元数据，任意 MCP 客户端可以查询你的对象。产品内的 AI Build 与 Ask 助手在云端与企业版提供。',
       },
       {
         question: '能跑在我们自己的基础设施里吗？',

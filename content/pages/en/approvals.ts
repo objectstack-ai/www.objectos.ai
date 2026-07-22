@@ -173,9 +173,9 @@ export const DiscountApproval = defineFlow({
           'No — an approval is a durable step inside a flow. That keeps one execution model for the whole process: the flow pauses, people decide, the flow resumes.',
       },
       {
-        question: 'Is the approvals inbox in the open-source edition?',
+        question: 'Is the approvals inbox in the open-source ObjectStack?',
         answer:
-          'Yes. The three-tab inbox, side-panel timeline, comments, recall and return-for-revision, and keyboard shortcuts ship in the open-source console — alongside multi-step approvals, approver resolution, escalation, record locking, and the audit trail.',
+          'Yes. The three-tab inbox, side-panel timeline, comments, recall and return-for-revision, and keyboard shortcuts ship in the open-source ObjectStack console — alongside multi-step approvals, approver resolution, escalation, record locking, and the audit trail.',
       },
     ],
   } satisfies MarketingPage;
