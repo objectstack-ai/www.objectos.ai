@@ -1,0 +1,85 @@
+---
+title: "How Many Tokens Is a Business App? A Complete CRM in 16k"
+description: "Measured in the unit AI works in, a complete CRM is ~16k tokens of typed metadata — 8% of one context window. Software that fits whole in an agent's context is maintained differently. We call it context-sized software."
+author: ObjectStack Team
+date: 2026-07-22
+status: published
+topic: ai-agents
+audience: developer
+solutions:
+  - crm
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Context Window
+  - Context-Sized Software
+  - AI Agents
+  - Metadata
+  - ObjectStack
+---
+
+**The short version:** measured in the unit AI actually works in — tokens — a complete CRM is about **16,000 tokens**: 1,792 lines of typed metadata across 31 files, covering the data model, views, dashboards, a lead-conversion flow, permissions, actions, and translations. That is under 8% of a standard 200k-token context window. Software that clears this bar deserves a name: **context-sized software** — a system small enough for an AI agent to hold *in full*, reason about, and refactor whole. Once a system is context-sized, the agent stops being an autocomplete and starts being a maintainer.
+
+## Count it yourself
+
+The number is not a benchmark we designed. It falls out of an ordinary app — the CRM example that ships with the open-source [ObjectStack framework](https://github.com/objectstack-ai/objectstack):
+
+```bash
+git clone https://github.com/objectstack-ai/objectstack
+find objectstack/examples/app-crm/src -name '*.ts' -not -name '*.test.ts' \
+  | xargs cat | wc -l
+# → 1,792 lines across 31 files ≈ 16k tokens (at ~4 characters per token)
+```
+
+| System | Files | Lines | ≈ Tokens | Fits in a 200k context? |
+|---|---:|---:|---:|---|
+| Example CRM ([`app-crm`](https://github.com/objectstack-ai/objectstack/tree/main/examples/app-crm)) — objects, views, dashboard, flow, permissions, translations | 31 | 1,792 | ~16k | Yes — 12× headroom |
+| [HotCRM](https://github.com/objectstack-ai/hotcrm) — full marketplace CRM: 15 objects, 10 flows, 4 dashboards, 2 AI copilots, 4 languages | 128 | ~17,000 | ~150k | Yes — barely |
+| A conventional hand-written CRM codebase | thousands | 300k–1M+ | millions | No — not close |
+
+Same product category. Three orders of magnitude apart.
+
+## Why tokens became the right unit
+
+For fifty years we measured software in lines of code because the binding constraint was the human reader. The reader has changed. Before an AI agent can change a system *safely*, it has to load the system — and that puts every codebase into one of two regimes:
+
+- **System larger than context.** The agent greps, samples, and guesses. Its edits are local; its mistakes are global. Every change is archaeology performed through a keyhole.
+- **System smaller than context.** The agent reads everything — every object, every permission rule, every dependency — in one pass. *"What breaks if I change this?"* becomes an answerable question instead of a hope. A cross-cutting change — renaming a concept across the data model, permissions, API, and UI — is one coherent diff.
+
+That is not an incremental improvement. It is a regime change, and the boundary sits wherever your context window does.
+
+## Why a business app compresses 50×
+
+Not by a compression trick — by deletion. An enterprise application is two things interleaved:
+
+- **Decisions.** What objects exist, how they relate, who may see which field, what happens when a lead converts. This is your business **ontology**, and it is genuinely irreducible — nobody but you can decide it.
+- **Plumbing.** Tables, CRUD endpoints, list and detail screens, permission middleware, audit writes. This is essentially identical in every business app ever written — which means it is *derivable*.
+
+ObjectStack's bet is to keep only the decisions in the artifact and derive all the plumbing at runtime. Those 1,792 lines *are* the decision list — typed, Zod-validated metadata. The database schema, REST API, admin UI, and MCP tools are computed from it on every boot. Nothing derivable is stored, so nothing derivable can drift — and nothing derivable spends your token budget.
+
+## What does not compress
+
+Being honest about the boundary matters more than the pitch:
+
+- **Novel algorithms.** A pricing optimizer or a custom matching engine is real code and stays real code. The format has escape hatches — actions and plugins are ordinary TypeScript.
+- **Bespoke, pixel-perfect experiences.** Schema-driven UI renders enterprise patterns extremely well; it is not how you build a brand-defining marketing site or a game.
+- **Exotic integrations.** The connector to a thirty-year-old SOAP service is still connector code.
+
+So the claim is narrower than "everything becomes metadata" — and stronger for it: the CRUD-plus-workflow core that makes up most enterprise software is derivable, and the residue that actually matters — the ontology — fits in context.
+
+## What changes when software is context-sized
+
+1. **Review becomes real.** 1,792 lines is a code review. 300,000 lines is a ritual. A human can read the whole diff; the validation gate and the runtime's permission and audit enforcement stand behind it.
+2. **Maintenance stops rotting.** When the whole system fits in context, the agent refactors it whole instead of patching what it can see. The usual entropy curve of enterprise software — every change a little riskier than the last — flattens.
+3. **The ontology stays yours.** The definition is an Apache-2.0 open format, ordinary files in your repository — readable by humans, writable by any agent, portable across runtimes.
+
+## Try the loop
+
+Point your coding agent at ObjectStack — the scaffold ships with `AGENTS.md` and the skills bundle, so the agent starts with the format's rules loaded:
+
+```bash
+npm create objectstack@latest my-app && cd my-app
+npx os dev --ui   # the app, running — describe the next change to your agent
+```
+
+Prefer the browser instead of a repo? [ObjectOS](https://www.objectos.ai) is the same idea operated for you — build &amp; ask online, with the AI Builder, permissions, and audit built in.
