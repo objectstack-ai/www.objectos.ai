@@ -1,0 +1,85 @@
+---
+title: "Wie viele Tokens hat eine Business-App? Ein komplettes CRM in 16k"
+description: "Gemessen in der Einheit, in der AI arbeitet, ist ein komplettes CRM ~16k Tokens typisierter Metadaten — 8 % eines Kontextfensters. Software, die ganz in den Kontext eines Agents passt, wird anders gewartet: kontextgroße Software."
+author: ObjectStack Team
+date: 2026-07-22
+status: published
+topic: ai-agents
+audience: developer
+solutions:
+  - crm
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Kontextfenster
+  - Kontextgroße Software
+  - AI Agents
+  - Metadaten
+  - ObjectStack
+---
+
+**Kurzfassung:** Gemessen in der Einheit, in der AI tatsächlich arbeitet — Tokens — ist ein komplettes CRM etwa **16.000 Tokens** groß: 1.792 Zeilen typisierter Metadaten in 31 Dateien, die Datenmodell, Views, Dashboards, einen Lead-Conversion-Flow, Berechtigungen, Aktionen und Übersetzungen abdecken. Das ist weniger als 8 % eines Standard-Kontextfensters von 200k Tokens. Software, die diese Marke schafft, verdient einen Namen: **kontextgroße Software** — ein System, klein genug, dass ein AI Agent es *vollständig* laden, durchdenken und als Ganzes refaktorieren kann. Sobald ein System kontextgroß ist, hört der Agent auf, Autocomplete zu sein, und wird zum Maintainer.
+
+## Zählen Sie selbst nach
+
+Die Zahl ist kein von uns entworfener Benchmark. Sie fällt aus einer gewöhnlichen App heraus — dem CRM-Beispiel, das mit dem quelloffenen [ObjectStack-Framework](https://github.com/objectstack-ai/objectstack) ausgeliefert wird:
+
+```bash
+git clone https://github.com/objectstack-ai/objectstack
+find objectstack/examples/app-crm/src -name '*.ts' -not -name '*.test.ts' \
+  | xargs cat | wc -l
+# → 1.792 Zeilen in 31 Dateien ≈ 16k Tokens (bei ~4 Zeichen pro Token)
+```
+
+| System | Dateien | Zeilen | ≈ Tokens | Passt in 200k Kontext? |
+|---|---:|---:|---:|---|
+| CRM-Beispiel ([`app-crm`](https://github.com/objectstack-ai/objectstack/tree/main/examples/app-crm)) — Objekte, Views, Dashboard, Flow, Rechte, Übersetzungen | 31 | 1.792 | ~16k | Ja — 12-facher Spielraum |
+| [HotCRM](https://github.com/objectstack-ai/hotcrm) — vollwertiges Marketplace-CRM: 15 Objekte, 10 Flows, 4 Dashboards, 2 AI-Copiloten, 4 Sprachen | 128 | ~17.000 | ~150k | Ja — knapp |
+| Eine konventionelle, handgeschriebene CRM-Codebasis | Tausende | 300k–1M+ | Millionen | Nein — bei weitem nicht |
+
+Dieselbe Produktkategorie. Drei Größenordnungen Unterschied.
+
+## Warum Tokens die richtige Einheit wurden
+
+Fünfzig Jahre lang haben wir Software in Codezeilen gemessen, weil die bindende Beschränkung der menschliche Leser war. Der Leser hat gewechselt. Bevor ein AI Agent ein System *sicher* ändern kann, muss er es laden — und das teilt jede Codebasis in eines von zwei Regimen:
+
+- **System größer als der Kontext.** Der Agent greppt, sampelt und rät. Seine Änderungen sind lokal; seine Fehler sind global. Jede Änderung ist Archäologie durchs Schlüsselloch.
+- **System kleiner als der Kontext.** Der Agent liest alles — jedes Objekt, jede Berechtigungsregel, jede Abhängigkeit — in einem Durchgang. *„Was geht kaputt, wenn ich das ändere?"* wird eine beantwortbare Frage statt einer Hoffnung. Eine querschneidende Änderung — ein Konzept über Datenmodell, Rechte, API und UI hinweg umbenennen — ist ein kohärenter Diff.
+
+Das ist keine graduelle Verbesserung. Es ist ein Regimewechsel, und die Grenze verläuft dort, wo Ihr Kontextfenster endet.
+
+## Warum eine Business-App um das 50-Fache komprimiert
+
+Nicht durch einen Kompressionstrick — durch Weglassen. Eine Unternehmensanwendung besteht aus zwei ineinander verwobenen Dingen:
+
+- **Entscheidungen.** Welche Objekte existieren, wie sie zusammenhängen, wer welches Feld sehen darf, was passiert, wenn ein Lead konvertiert. Das ist Ihre Geschäfts-**Ontologie**, und sie ist echt irreduzibel — niemand außer Ihnen kann sie festlegen.
+- **Rohrleitungen.** Tabellen, CRUD-Endpunkte, Listen- und Detailansichten, Berechtigungs-Middleware, Audit-Einträge. Das ist in praktisch jeder je geschriebenen Business-App identisch — und damit *ableitbar*.
+
+ObjectStacks Wette: Nur die Entscheidungen bleiben im Artefakt, alle Rohrleitungen leitet die Runtime ab. Diese 1.792 Zeilen *sind* die Entscheidungsliste — typisierte, Zod-validierte Metadaten. Datenbankschema, REST-API, Admin-UI und MCP-Tools werden bei jedem Start daraus berechnet. Nichts Ableitbares wird gespeichert, also kann nichts Ableitbares driften — und nichts Ableitbares verbraucht Ihr Token-Budget.
+
+## Was sich nicht komprimieren lässt
+
+Ehrlichkeit über die Grenze zählt mehr als der Pitch:
+
+- **Neuartige Algorithmen.** Ein Preisoptimierer oder eine eigene Matching-Engine ist echter Code und bleibt echter Code. Das Format hat Notausgänge — Aktionen und Plugins sind gewöhnliches TypeScript.
+- **Maßgeschneiderte, pixelgenaue Erlebnisse.** Schemagesteuerte UI rendert Enterprise-Muster hervorragend; eine markenprägende Marketing-Site oder ein Spiel baut man so nicht.
+- **Exotische Integrationen.** Der Konnektor zu einem dreißig Jahre alten SOAP-Dienst bleibt Konnektor-Code.
+
+Die Behauptung ist also enger als „alles wird Metadaten" — und gerade deshalb stärker: Der CRUD-plus-Workflow-Kern, der den Großteil der Unternehmenssoftware ausmacht, ist ableitbar, und der Rest, der wirklich zählt — die Ontologie — passt in den Kontext.
+
+## Was sich ändert, wenn Software kontextgroß ist
+
+1. **Review wird real.** 1.792 Zeilen sind ein Code-Review. 300.000 Zeilen sind ein Ritual. Ein Mensch kann den ganzen Diff lesen; das Validierungsgate und die Rechte- und Audit-Durchsetzung der Runtime stehen dahinter.
+2. **Wartung hört auf zu verrotten.** Passt das ganze System in den Kontext, refaktoriert der Agent es als Ganzes, statt zu flicken, was er sieht. Die übliche Entropiekurve von Unternehmenssoftware — jede Änderung etwas riskanter als die letzte — wird flach.
+3. **Die Ontologie bleibt Ihre.** Die Definition ist ein offenes Apache-2.0-Format, gewöhnliche Dateien in Ihrem Repository — von Menschen lesbar, von jedem Agent schreibbar, über Runtimes hinweg portabel.
+
+## Probieren Sie die Schleife aus
+
+Richten Sie Ihren Coding-Agent auf ObjectStack — das Scaffold bringt `AGENTS.md` und das Skills-Bundle mit, der Agent startet also mit geladenen Formatregeln:
+
+```bash
+npm create objectstack@latest my-app && cd my-app
+npx os dev --ui   # die App läuft — beschreiben Sie Ihrem Agent die nächste Änderung
+```
+
+Lieber Browser statt Repository? [ObjectOS](https://www.objectos.ai) ist dieselbe Idee als betriebene Plattform — online bauen &amp; fragen, mit AI Builder, Rechten und Audit eingebaut.

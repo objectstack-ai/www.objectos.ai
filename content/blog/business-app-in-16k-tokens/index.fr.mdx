@@ -1,0 +1,85 @@
+---
+title: "Combien de tokens fait une application métier ? Un CRM complet en 16k"
+description: "Mesuré dans l’unité où travaille l’AI, un CRM complet fait ~16k tokens de métadonnées typées — 8 % d’une fenêtre de contexte. Le logiciel qui tient entier dans le contexte d’un agent se maintient autrement."
+author: ObjectStack Team
+date: 2026-07-22
+status: published
+topic: ai-agents
+audience: developer
+solutions:
+  - crm
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Fenêtre de contexte
+  - Logiciel à taille de contexte
+  - Agents AI
+  - Métadonnées
+  - ObjectStack
+---
+
+**La version courte :** mesuré dans l’unité où l’AI travaille réellement — les tokens — un CRM complet fait environ **16 000 tokens** : 1 792 lignes de métadonnées typées réparties sur 31 fichiers, couvrant le modèle de données, les vues, les tableaux de bord, un flux de conversion de leads, les permissions, les actions et les traductions. C’est moins de 8 % d’une fenêtre de contexte standard de 200k tokens. Le logiciel qui franchit cette barre mérite un nom : **logiciel à taille de contexte** — un système assez petit pour qu’un agent AI le charge *en entier*, le comprenne et le refactorise d’un bloc. Dès qu’un système est à taille de contexte, l’agent cesse d’être une autocomplétion et devient un mainteneur.
+
+## Comptez vous-même
+
+Ce nombre n’est pas un benchmark que nous avons conçu. Il sort d’une application ordinaire — l’exemple de CRM livré avec le [framework open source ObjectStack](https://github.com/objectstack-ai/objectstack) :
+
+```bash
+git clone https://github.com/objectstack-ai/objectstack
+find objectstack/examples/app-crm/src -name '*.ts' -not -name '*.test.ts' \
+  | xargs cat | wc -l
+# → 1 792 lignes dans 31 fichiers ≈ 16k tokens (à ~4 caractères par token)
+```
+
+| Système | Fichiers | Lignes | ≈ Tokens | Tient dans 200k de contexte ? |
+|---|---:|---:|---:|---|
+| CRM d’exemple ([`app-crm`](https://github.com/objectstack-ai/objectstack/tree/main/examples/app-crm)) — objets, vues, tableau de bord, flux, permissions, traductions | 31 | 1 792 | ~16k | Oui — 12× de marge |
+| [HotCRM](https://github.com/objectstack-ai/hotcrm) — CRM complet de marketplace : 15 objets, 10 flux, 4 tableaux de bord, 2 copilotes AI, 4 langues | 128 | ~17 000 | ~150k | Oui — de justesse |
+| Une base de code CRM conventionnelle écrite à la main | des milliers | 300k–1M+ | des millions | Non — loin de là |
+
+Même catégorie de produit. Trois ordres de grandeur d’écart.
+
+## Pourquoi le token est devenu la bonne unité
+
+Pendant cinquante ans, nous avons mesuré le logiciel en lignes de code, parce que la contrainte déterminante était le lecteur humain. Le lecteur a changé. Avant qu’un agent AI puisse modifier un système *en sécurité*, il doit le charger — ce qui place toute base de code dans l’un de deux régimes :
+
+- **Système plus grand que le contexte.** L’agent greppe, échantillonne, devine. Ses modifications sont locales ; ses erreurs, globales. Chaque changement est de l’archéologie à travers un trou de serrure.
+- **Système plus petit que le contexte.** L’agent lit tout — chaque objet, chaque règle de permission, chaque dépendance — en une passe. *« Qu’est-ce qui casse si je change ceci ? »* devient une question à laquelle on peut répondre, pas un espoir. Un changement transversal — renommer un concept dans le modèle de données, les permissions, l’API et l’UI — est un seul diff cohérent.
+
+Ce n’est pas une amélioration incrémentale. C’est un changement de régime, et la frontière passe là où se trouve votre fenêtre de contexte.
+
+## Pourquoi une application métier se compresse 50×
+
+Pas par un tour de compression — par suppression. Une application d’entreprise, ce sont deux choses entrelacées :
+
+- **Les décisions.** Quels objets existent, comment ils se relient, qui peut voir quel champ, ce qui se passe quand un lead convertit. C’est votre **ontologie** métier, et elle est véritablement irréductible — vous seul pouvez la décider.
+- **La plomberie.** Tables, endpoints CRUD, écrans liste et détail, middleware de permissions, écritures d’audit. C’est essentiellement identique dans toutes les applications métier jamais écrites — donc *dérivable*.
+
+Le pari d’ObjectStack : ne garder que les décisions dans l’artefact et dériver toute la plomberie au runtime. Ces 1 792 lignes *sont* la liste des décisions — des métadonnées typées, validées par Zod. Le schéma de base de données, l’API REST, l’UI d’administration et les outils MCP en sont calculés à chaque démarrage. Rien de dérivable n’est stocké, donc rien de dérivable ne peut dériver — et rien de dérivable ne consomme votre budget de tokens.
+
+## Ce qui ne se compresse pas
+
+L’honnêteté sur la frontière compte plus que l’argumentaire :
+
+- **Les algorithmes inédits.** Un optimiseur de prix ou un moteur d’appariement sur mesure est du vrai code et le restera. Le format a des issues de secours — les actions et les plugins sont du TypeScript ordinaire.
+- **Les expériences sur mesure au pixel près.** L’UI pilotée par schéma rend très bien les motifs d’entreprise ; ce n’est pas ainsi qu’on construit un site de marque ou un jeu.
+- **Les intégrations exotiques.** Le connecteur vers un service SOAP vieux de trente ans reste du code de connecteur.
+
+L’affirmation est donc plus étroite que « tout devient métadonnée » — et d’autant plus forte : le cœur CRUD-plus-workflow qui constitue l’essentiel du logiciel d’entreprise est dérivable, et le résidu qui compte vraiment — l’ontologie — tient dans le contexte.
+
+## Ce qui change quand le logiciel est à taille de contexte
+
+1. **La revue devient réelle.** 1 792 lignes, c’est une revue de code. 300 000 lignes, c’est un rituel. Un humain peut lire le diff entier ; la porte de validation et l’application des permissions et de l’audit par le runtime assurent le reste.
+2. **La maintenance cesse de pourrir.** Quand tout le système tient dans le contexte, l’agent le refactorise en entier au lieu de rapiécer ce qu’il voit. La courbe d’entropie habituelle du logiciel d’entreprise — chaque changement un peu plus risqué que le précédent — s’aplatit.
+3. **L’ontologie reste la vôtre.** La définition est un format ouvert Apache-2.0, des fichiers ordinaires dans votre dépôt — lisibles par des humains, inscriptibles par n’importe quel agent, portables entre runtimes.
+
+## Essayez la boucle
+
+Pointez votre agent de code vers ObjectStack — le scaffold embarque `AGENTS.md` et le bundle de skills, l’agent démarre donc avec les règles du format déjà chargées :
+
+```bash
+npm create objectstack@latest my-app && cd my-app
+npx os dev --ui   # l’app tourne — décrivez le prochain changement à votre agent
+```
+
+Vous préférez le navigateur à un dépôt ? [ObjectOS](https://www.objectos.ai) est la même idée, opérée pour vous — construire et interroger en ligne, avec l’AI Builder, les permissions et l’audit intégrés.
