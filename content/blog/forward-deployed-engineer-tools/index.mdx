@@ -1,6 +1,6 @@
 ---
 title: "What Tools Do Forward-Deployed Engineers Use? An Ontology-First Open Stack"
-description: "FDE hiring grew ~1,000% in a year, and the playbook that works is ontology-first. The unsolved part is the handover: the ontology should leave in the client's repo as typed, open files — we call it the ontology handover."
+description: "Five pains define forward-deployed work: plumbing eats week one, demos die in security review, requirements outrun code, patterns never compound, and the handover poisons trust. An ontology-first open stack removes each one."
 author: ObjectStack Team
 date: 2026-07-23
 status: published
@@ -17,36 +17,36 @@ tags:
   - ObjectStack
 ---
 
-**The short version:** the forward-deployed engineer is the fastest-growing role in enterprise AI — reported hiring growth of roughly 1,000% year over year, and OpenAI committed $4B to a dedicated deployment company in May 2026. The playbook that actually works is Palantir's: **ontology-first** — model the client's business before shipping any AI application. What the playbook leaves unsolved is the ending. Every engagement finishes with a handover, and today the ontology usually stays locked inside a platform the client rents forever. We think the defining question for the next wave of FDEs is what we call **the ontology handover**: does the client's ontology leave the engagement as typed, open files in *their* repository — or as renewal leverage in someone else's?
+**The short version:** forward-deployed engineering is the fastest-growing role in enterprise AI — hiring up roughly 1,000% year over year, OpenAI committing $4B to a dedicated deployment company. The playbook that works is Palantir's **ontology-first** method. But ask a working FDE about their actual week and you hear five recurring pains: plumbing eats the engagement, demos die in security review, requirements change faster than code, patterns never compound across clients, and the handover poisons the relationship. This article goes through all five, concretely, and shows how an open, ontology-first stack removes each one — ending with the question we think defines the next wave of this role: **the ontology handover**. Does the client's ontology leave the engagement as typed, open files in *their* repo, or as renewal leverage in someone else's platform?
 
-## The role that ate enterprise AI
+## The job nobody describes honestly
 
-The numbers, as reported this year: FDE job postings grew more than 800% between January and September 2025 and passed 1,000% year over year in early 2026 ([Perspective AI](https://getperspective.ai/blog/2026-fde-hiring-trends-what-1000-job-posts-reveal), [TechTarget](https://www.techtarget.com/searchenterpriseai/feature/The-rise-of-the-AI-forward-deployed-engineer)). In May 2026 OpenAI announced a deployment company with **$4B in committed capital** and ~150 FDEs. The reason is structural: models got good enough that the bottleneck moved from modeling to deployment — every enterprise has unique data, workflows, and compliance constraints, and someone has to sit inside them and make AI fit.
+The job postings talk about "0→1 ambiguity" and $300K–$550K comp bands ([Perspective AI](https://getperspective.ai/blog/2026-fde-hiring-trends-what-1000-job-posts-reveal), [TechTarget](https://www.techtarget.com/searchenterpriseai/feature/The-rise-of-the-AI-forward-deployed-engineer)). The actual job is making AI work inside someone else's walls: their data, their permissions, their compliance office, their definition of "good enough." Palantir codified the method years ago — their AI FDEs **front-load a customer-specific ontology before shipping any LLM application** and spend 30–40% of the week on discovery ([Palantir's AI FDE guidance](https://www.palantir.com/docs/foundry/ai-fde/overview)). The method is right. The tooling underneath it is where the week actually goes. Five pains, one by one.
 
-## The playbook that works is ontology-first
+## Pain 1 — Week one is always plumbing
 
-Palantir codified it years before the term was fashionable: their AI FDEs **front-load a customer-specific ontology before shipping any LLM-grounded application**, and spend 30–40% of the week on discovery ([Palantir's AI FDE guidance](https://www.palantir.com/docs/foundry/ai-fde/overview)). The insight is durable: generic models give generic answers. Enterprise value requires grounding in the customer's nouns and verbs — objects, relationships, permissions, approval paths. That is engineering, not prompting.
+Every engagement starts the same way: before you can show a single business object on a screen, you need auth, SSO, roles, CRUD APIs, an admin UI, file storage, and an audit table. None of it is why the client hired you. Your differentiator — the 30–40% of time spent understanding *their* business — gets squeezed by the 60% spent rebuilding the same undifferentiated substrate you built for the last client.
 
-None of that is controversial anymore. What is rarely discussed is what happens at the end.
+**What the stack changes:** the substrate is already there. One command scaffolds a project where the Console, sign-in and SSO, role/row/field-level permissions, audit logging, REST APIs, and an MCP server are running before lunch:
 
-## The unsolved part: the handover
+```bash
+npm create objectstack@latest client-app && cd client-app
+npx os dev --ui   # Console at :3000 — auth, RBAC, audit already enforced
+```
 
-Every forward-deployed engagement ends. The FDE rolls off, and the ontology they built — the most valuable artifact of the whole engagement, the encoded knowledge of how this business actually runs — lands in one of two places:
+Everything derivable is derived by the runtime. The only thing left to author is the thing only you can author: the client's objects, flows, and permission rules. Week one becomes discovery and modeling — the work you're actually differentiated at.
 
-- **Inside the vendor's platform.** The client can use it, but only through the platform, priced per seat, changed only by platform-trained specialists. The ontology has become renewal leverage.
-- **In the client's repository.** Typed, versioned, open files the client's own team — and the client's own AI agents — can read, run, and keep changing without anyone's permission.
+## Pain 2 — The demo that dies in security review
 
-The first outcome is the default today, and it is why enterprise clients have learned to fear successful pilots: the better the ontology, the deeper the lock-in. The second outcome is only possible if the definition layer itself is an open format.
+You know this arc. Friday of week one: a glued-together demo — a vibe-coded UI over a copied CSV — and the room applauds. Month two: infosec walks in with three questions. *What exactly can the AI see? Whose permissions apply when it acts? Where is the audit record?* For a demo stack, the honest answer is a rebuild, and the rebuild is where engagements go to die.
 
-## What an open FDE stack looks like
-
-This is the workflow [ObjectStack](https://github.com/objectstack-ai/objectstack) (Apache-2.0) is built for. Discovery notes become typed metadata — your coding agent writes it, a validation gate rejects what would fail silently:
+**What the stack changes:** governance is the substrate, not a retrofit. The validation gate won't even accept an object without a declared sharing model:
 
 ```ts
 export const Ticket = ObjectSchema.create({
   name: 'support_ticket',
   label: 'Ticket',
-  sharingModel: 'private',        // conservative by default — the gate requires it
+  sharingModel: 'private',        // required — the gate rejects an object without one
   fields: {
     subject:  Field.text({ label: 'Subject', required: true }),
     status:   Field.select({ label: 'Status', options: [/* the client's real states */] }),
@@ -55,33 +55,45 @@ export const Ticket = ObjectSchema.create({
 });
 ```
 
-From that definition the runtime derives the database, REST APIs, admin Console, and MCP tools, and enforces permissions and audit on every call — including after you leave. The whole app stays reviewable: a complete CRM is **1,792 lines, roughly 16k tokens** — count it yourself:
+At runtime, every call — human UI, REST, or an AI agent over MCP — passes the same RBAC, row-level and field-level security, and lands in the same audit log. When infosec asks *"what can the AI see?"*, the answer is a file they can read: the permission metadata, enforced by the runtime, not promised by a slide. Your Friday demo and your production deployment are the same artifact. There is no rebuild, because there was never a governance-free version.
 
-```bash
-find examples/app-crm/src -name '*.ts' -not -name '*.test.ts' | xargs cat | wc -l
-```
+## Pain 3 — Requirements change faster than code
 
-That size is what makes the handover honest. The client's security team reads the actual diff instead of trusting a platform boundary; the client's future agents load the entire system into context and refactor it whole.
+Mid-meeting, the ops lead says: *"actually, discounts above 20% go through regional managers first."* In a hand-built codebase that's a schema migration, three API changes, a UI change, and a week — and in the client's eyes, you got slower the moment they got specific. Forward-deployed work lives or dies on iteration speed *in the room*.
 
-## What this does not solve
+**What the stack changes:** the whole application is compact typed metadata — a complete CRM is **1,792 lines, roughly 16k tokens** (count it: `find examples/app-crm/src -name '*.ts' | xargs cat | wc -l`). That means your coding agent holds the *entire* system in context: the approval-chain change is one coherent diff across flow, permissions, and UI, written while the meeting is still going, validated by `os validate`, previewed live in the Console. "What breaks if we change this?" is a question the agent can actually answer, because it can see everything. Requirement changes stop being a threat to the timeline and become the demo.
 
-Being clear about the boundary: **massive-scale data federation and analytics pipelines** are Foundry's home turf, and an open application layer does not replace them. **Organizational change management** — getting people to use the thing — remains human work no stack fixes. And a client already standardized on a closed platform may rationally stay. The claim is narrower: for the application layer of forward-deployed work — modeling a business and shipping governed apps on it — the ontology can now be handed over instead of held hostage.
+## Pain 4 — Your patterns never compound
+
+Client A's approval-chain code can't be lifted into client B's codebase — different framework versions, different auth, different everything. So every engagement starts at zero, and a three-person boutique can never build the leverage that makes Palantir's model economics work. This is the quiet reason forward-deployed consultancies stay small.
+
+**What the stack changes:** patterns are typed metadata, and typed metadata is portable. The approval chain you modeled for client A is a flow definition you drop into client B's repo and rename. Over engagements you accumulate a house library — objects, flows, permission sets, seed data — that your agent applies to the next client in minutes. And you don't start the library from zero either: [HotCRM](https://github.com/objectstack-ai/hotcrm) is a complete, forkable reference — 15 objects, 10 flows, 4 dashboards, 2 AI copilots, 4 languages — built as the canonical example of the conventions. Fork, rename the namespace, and your engagement starts from a working system instead of a blank repo.
+
+## Pain 5 — The handover poisons the relationship
+
+Every engagement ends, and today it ends badly in one of two ways. Hand over a platform, and the client rents their own ontology back forever — you've become a sales channel, and they've learned to fear successful pilots, because the better the ontology, the deeper the lock-in. Hand over a bespoke codebase, and their team can't maintain it; it rots, and eighteen months later your name is on the rot.
+
+**What the stack changes:** this is **the ontology handover** — the ending the FDE playbook never solved. What you hand over is the client's repo: typed objects, flows, and permissions under Apache-2.0, plus the compiled artifact and a review checklist. Their security team already read every line — it's 16k tokens, not 300k lines. Their own coding agents maintain it with the same loop you used, because the format was built to be agent-writable. If they want the platform operated — browser AI Builder, cloud or self-managed — that's [ObjectOS](https://www.objectos.ai), and it runs the same open definition; they can leave it without losing the ontology. Your next contract is earned by new work, not extracted by lock-in. That difference is your reputation, compounding.
+
+## What this stack does not fix
+
+Steelmanning the alternatives: **Foundry-scale data federation and analytics pipelines** are Palantir's home turf — if the engagement is about fusing petabytes across forty legacy systems, that's a different tool class. **Organizational change management** — getting people to actually use the thing — no stack fixes. And a client already standardized on a closed platform may rationally stay. The claim is narrower: for the application layer of forward-deployed work — modeling a business and shipping governed apps on it — the five pains above are now removable, and the ontology can be handed over instead of held hostage.
 
 ## The FDE checklist
 
 1. Model the client's nouns and verbs as objects and flows before any UI conversation.
-2. Keep the whole definition context-sized so your agent can refactor it whole.
+2. Keep the whole definition context-sized so your agent can reason about and refactor it whole.
 3. Default permissions conservative; make every authority change explicit in the diff.
 4. Hand over the repo, the compiled artifact, and a review checklist — not a login to your tenant.
 5. Leave MCP enabled so the client's own AI operates the app under their permissions.
 
 ## Try the loop
 
-Point your coding agent at the open stack — the scaffold ships with `AGENTS.md` and the skills bundle preloaded:
+Point your coding agent at the open stack — the scaffold ships with `AGENTS.md` and the skills bundle, so the agent starts with the format's rules loaded:
 
 ```bash
 npm create objectstack@latest client-app && cd client-app
-npx os dev --ui   # the app, running — model the next object with your agent
+npx os dev --ui   # the app, running — model the first object with your agent
 ```
 
-For clients who want the platform operated — browser-based AI Builder, cloud or self-managed — that is [ObjectOS](https://www.objectos.ai), the commercial runtime on the same open definition.
+For clients who want the platform operated, [ObjectOS](https://www.objectos.ai) is the commercial runtime on the same open definition — build &amp; ask online, governance included.
