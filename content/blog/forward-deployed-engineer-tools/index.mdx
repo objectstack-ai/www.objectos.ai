@@ -1,0 +1,87 @@
+---
+title: "What Tools Do Forward-Deployed Engineers Use? An Ontology-First Open Stack"
+description: "FDE hiring grew ~1,000% in a year, and the playbook that works is ontology-first. The unsolved part is the handover: the ontology should leave in the client's repo as typed, open files — we call it the ontology handover."
+author: ObjectStack Team
+date: 2026-07-23
+status: published
+topic: ai-agents
+audience: developer
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Forward-Deployed Engineer
+  - Ontology
+  - Palantir
+  - MCP
+  - ObjectStack
+---
+
+**The short version:** the forward-deployed engineer is the fastest-growing role in enterprise AI — reported hiring growth of roughly 1,000% year over year, and OpenAI committed $4B to a dedicated deployment company in May 2026. The playbook that actually works is Palantir's: **ontology-first** — model the client's business before shipping any AI application. What the playbook leaves unsolved is the ending. Every engagement finishes with a handover, and today the ontology usually stays locked inside a platform the client rents forever. We think the defining question for the next wave of FDEs is what we call **the ontology handover**: does the client's ontology leave the engagement as typed, open files in *their* repository — or as renewal leverage in someone else's?
+
+## The role that ate enterprise AI
+
+The numbers, as reported this year: FDE job postings grew more than 800% between January and September 2025 and passed 1,000% year over year in early 2026 ([Perspective AI](https://getperspective.ai/blog/2026-fde-hiring-trends-what-1000-job-posts-reveal), [TechTarget](https://www.techtarget.com/searchenterpriseai/feature/The-rise-of-the-AI-forward-deployed-engineer)). In May 2026 OpenAI announced a deployment company with **$4B in committed capital** and ~150 FDEs. The reason is structural: models got good enough that the bottleneck moved from modeling to deployment — every enterprise has unique data, workflows, and compliance constraints, and someone has to sit inside them and make AI fit.
+
+## The playbook that works is ontology-first
+
+Palantir codified it years before the term was fashionable: their AI FDEs **front-load a customer-specific ontology before shipping any LLM-grounded application**, and spend 30–40% of the week on discovery ([Palantir's AI FDE guidance](https://www.palantir.com/docs/foundry/ai-fde/overview)). The insight is durable: generic models give generic answers. Enterprise value requires grounding in the customer's nouns and verbs — objects, relationships, permissions, approval paths. That is engineering, not prompting.
+
+None of that is controversial anymore. What is rarely discussed is what happens at the end.
+
+## The unsolved part: the handover
+
+Every forward-deployed engagement ends. The FDE rolls off, and the ontology they built — the most valuable artifact of the whole engagement, the encoded knowledge of how this business actually runs — lands in one of two places:
+
+- **Inside the vendor's platform.** The client can use it, but only through the platform, priced per seat, changed only by platform-trained specialists. The ontology has become renewal leverage.
+- **In the client's repository.** Typed, versioned, open files the client's own team — and the client's own AI agents — can read, run, and keep changing without anyone's permission.
+
+The first outcome is the default today, and it is why enterprise clients have learned to fear successful pilots: the better the ontology, the deeper the lock-in. The second outcome is only possible if the definition layer itself is an open format.
+
+## What an open FDE stack looks like
+
+This is the workflow [ObjectStack](https://github.com/objectstack-ai/objectstack) (Apache-2.0) is built for. Discovery notes become typed metadata — your coding agent writes it, a validation gate rejects what would fail silently:
+
+```ts
+export const Ticket = ObjectSchema.create({
+  name: 'support_ticket',
+  label: 'Ticket',
+  sharingModel: 'private',        // conservative by default — the gate requires it
+  fields: {
+    subject:  Field.text({ label: 'Subject', required: true }),
+    status:   Field.select({ label: 'Status', options: [/* the client's real states */] }),
+    approver: Field.lookup('sys_user'),
+  },
+});
+```
+
+From that definition the runtime derives the database, REST APIs, admin Console, and MCP tools, and enforces permissions and audit on every call — including after you leave. The whole app stays reviewable: a complete CRM is **1,792 lines, roughly 16k tokens** — count it yourself:
+
+```bash
+find examples/app-crm/src -name '*.ts' -not -name '*.test.ts' | xargs cat | wc -l
+```
+
+That size is what makes the handover honest. The client's security team reads the actual diff instead of trusting a platform boundary; the client's future agents load the entire system into context and refactor it whole.
+
+## What this does not solve
+
+Being clear about the boundary: **massive-scale data federation and analytics pipelines** are Foundry's home turf, and an open application layer does not replace them. **Organizational change management** — getting people to use the thing — remains human work no stack fixes. And a client already standardized on a closed platform may rationally stay. The claim is narrower: for the application layer of forward-deployed work — modeling a business and shipping governed apps on it — the ontology can now be handed over instead of held hostage.
+
+## The FDE checklist
+
+1. Model the client's nouns and verbs as objects and flows before any UI conversation.
+2. Keep the whole definition context-sized so your agent can refactor it whole.
+3. Default permissions conservative; make every authority change explicit in the diff.
+4. Hand over the repo, the compiled artifact, and a review checklist — not a login to your tenant.
+5. Leave MCP enabled so the client's own AI operates the app under their permissions.
+
+## Try the loop
+
+Point your coding agent at the open stack — the scaffold ships with `AGENTS.md` and the skills bundle preloaded:
+
+```bash
+npm create objectstack@latest client-app && cd client-app
+npx os dev --ui   # the app, running — model the next object with your agent
+```
+
+For clients who want the platform operated — browser-based AI Builder, cloud or self-managed — that is [ObjectOS](https://www.objectos.ai), the commercial runtime on the same open definition.

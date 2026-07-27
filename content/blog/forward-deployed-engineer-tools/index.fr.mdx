@@ -1,0 +1,87 @@
+---
+title: "Quels outils utilisent les forward-deployed engineers ? Un stack ouvert, ontologie d’abord"
+description: "Le recrutement de FDE a crû d’environ 1 000 % en un an, et le playbook qui marche est « ontologie d’abord ». Reste la passation : l’ontologie devrait rester dans le dépôt du client, en fichiers ouverts et typés."
+author: ObjectStack Team
+date: 2026-07-23
+status: published
+topic: ai-agents
+audience: developer
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Forward-Deployed Engineer
+  - Ontologie
+  - Palantir
+  - MCP
+  - ObjectStack
+---
+
+**La version courte :** le forward-deployed engineer est le rôle qui croît le plus vite dans l’AI d’entreprise — une croissance de recrutement rapportée d’environ 1 000 % sur un an, et OpenAI a engagé 4 Md$ dans une société de déploiement dédiée en mai 2026. Le playbook qui fonctionne vraiment est celui de Palantir : **l’ontologie d’abord** — modéliser le métier du client avant de livrer la moindre application AI. Ce que le playbook laisse sans réponse, c’est la fin. Tout engagement se termine par une passation, et aujourd’hui l’ontologie reste généralement enfermée dans une plateforme que le client loue pour toujours. La question qui définira la prochaine vague de FDE est ce que nous appelons **la passation d’ontologie** : l’ontologie du client sort-elle de l’engagement sous forme de fichiers ouverts et typés dans *son* dépôt — ou comme levier de renouvellement dans celui d’un autre ?
+
+## Le rôle qui a dévoré l’AI d’entreprise
+
+Les chiffres rapportés cette année : les offres d’emploi FDE ont augmenté de plus de 800 % entre janvier et septembre 2025 et dépassé 1 000 % sur un an début 2026 ([Perspective AI](https://getperspective.ai/blog/2026-fde-hiring-trends-what-1000-job-posts-reveal), [TechTarget](https://www.techtarget.com/searchenterpriseai/feature/The-rise-of-the-AI-forward-deployed-engineer)). En mai 2026, OpenAI a annoncé une société de déploiement dotée de **4 Md$ de capital engagé** et d’environ 150 FDE. La raison est structurelle : les modèles sont devenus assez bons, le goulot d’étranglement est passé de la modélisation au déploiement — chaque entreprise a des données, des flux et des contraintes de conformité uniques, et il faut que quelqu’un s’installe dedans pour faire tenir l’AI.
+
+## Le playbook qui marche : l’ontologie d’abord
+
+Palantir l’a codifié bien avant que le terme soit à la mode : ses AI FDE **construisent d’abord une ontologie propre au client avant de livrer toute application fondée sur un LLM**, et consacrent 30 à 40 % de la semaine à la découverte ([guide AI FDE de Palantir](https://www.palantir.com/docs/foundry/ai-fde/overview)). L’intuition tient toujours : les modèles génériques donnent des réponses génériques. La valeur d’entreprise exige un ancrage dans les noms et les verbes du client — objets, relations, permissions, circuits de validation. C’est de l’ingénierie, pas du prompting.
+
+Rien de tout cela n’est encore controversé. Ce dont on parle rarement, c’est de ce qui se passe à la fin.
+
+## La partie non résolue : la passation
+
+Tout engagement forward-deployed se termine. Le FDE se retire, et l’ontologie qu’il a construite — l’artefact le plus précieux de tout l’engagement, le savoir encodé de la façon dont ce métier tourne réellement — atterrit à l’un de deux endroits :
+
+- **Dans la plateforme du fournisseur.** Le client peut s’en servir, mais uniquement via la plateforme, facturée au siège, modifiable seulement par des spécialistes formés par le fournisseur. L’ontologie est devenue un levier de renouvellement.
+- **Dans le dépôt du client.** Des fichiers typés, versionnés, ouverts, que l’équipe du client — et ses propres agents AI — peuvent lire, exécuter et continuer à modifier sans la permission de personne.
+
+Le premier dénouement est aujourd’hui le défaut, et c’est pourquoi les clients ont appris à craindre les pilotes réussis : meilleure est l’ontologie, plus profond est le verrouillage. Le second n’est possible que si la couche de définition est elle-même un format ouvert.
+
+## À quoi ressemble un stack FDE ouvert
+
+C’est le flux pour lequel [ObjectStack](https://github.com/objectstack-ai/objectstack) (Apache-2.0) est conçu. Les notes de découverte deviennent des métadonnées typées — votre agent de code les écrit, une porte de validation rejette ce qui échouerait en silence :
+
+```ts
+export const Ticket = ObjectSchema.create({
+  name: 'support_ticket',
+  label: 'Ticket',
+  sharingModel: 'private',        // prudent par défaut — la porte l’exige
+  fields: {
+    subject:  Field.text({ label: 'Subject', required: true }),
+    status:   Field.select({ label: 'Status', options: [/* les états réels du client */] }),
+    approver: Field.lookup('sys_user'),
+  },
+});
+```
+
+De cette définition, le runtime dérive la base de données, les API REST, la Console d’administration et les outils MCP, et applique permissions et audit à chaque appel — y compris après votre départ. Toute l’app reste relisible : un CRM complet fait **1 792 lignes, environ 16k tokens** — comptez vous-même :
+
+```bash
+find examples/app-crm/src -name '*.ts' -not -name '*.test.ts' | xargs cat | wc -l
+```
+
+C’est cette taille qui rend la passation honnête. L’équipe sécurité du client lit le diff réel au lieu de faire confiance à une frontière de plateforme ; les futurs agents du client chargent le système entier en contexte et le refactorisent d’un bloc.
+
+## Ce que ce stack ne résout pas
+
+Soyons clairs sur la limite : **la fédération de données et les pipelines analytiques à très grande échelle** restent le terrain de Foundry, et une couche applicative ouverte ne les remplace pas. **La conduite du changement** — faire que les gens utilisent l’outil — reste un travail humain qu’aucun stack ne corrige. Et un client déjà standardisé sur une plateforme fermée peut rationnellement y rester. L’affirmation est plus étroite : pour la couche applicative du travail forward-deployed — modéliser un métier et livrer des apps gouvernées dessus — l’ontologie peut désormais être transmise au lieu d’être retenue en otage.
+
+## La checklist du FDE
+
+1. Modéliser les noms et les verbes du client en objets et en flux avant toute discussion d’UI.
+2. Garder la définition entière à taille de contexte pour que l’agent puisse la refactoriser d’un bloc.
+3. Permissions prudentes par défaut ; tout changement d’autorité explicite dans le diff.
+4. Transmettre le dépôt, l’artefact compilé et une checklist de revue — pas un login vers votre tenant.
+5. Laisser MCP activé pour que l’AI du client opère l’app dans le cadre de ses permissions.
+
+## Essayez la boucle
+
+Pointez votre agent de code vers le stack ouvert — le scaffold embarque `AGENTS.md` et le bundle de skills :
+
+```bash
+npm create objectstack@latest client-app && cd client-app
+npx os dev --ui   # l’app tourne — modélisez l’objet suivant avec votre agent
+```
+
+Pour les clients qui veulent la plateforme opérée — AI Builder dans le navigateur, cloud ou self-managed — il y a [ObjectOS](https://www.objectos.ai), le runtime commercial sur la même définition ouverte.

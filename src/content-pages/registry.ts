@@ -16,6 +16,7 @@ const PAGE_ORDER = [
   'trust-center',
   'templates',
   'agent-developer',
+  'forward-deployed-engineers',
   'customer-stories',
 ];
 
