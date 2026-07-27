@@ -75,6 +75,51 @@ export const Ticket = ObjectSchema.create({
 
 **このスタックが変えること：** これが**オントロジーの引き継ぎ** — FDE プレイブックが解かなかった結末です。渡すのは顧客のリポジトリ：Apache-2.0 の型付きオブジェクト、フロー、権限、それにコンパイル済み成果物とレビューチェックリスト。セキュリティチームはすでに全行を読んでいます — 16k トークンであって 30 万行ではないからです。顧客自身のコーディングエージェントが、あなたが使ったのと同じループで維持を続けます — このフォーマットはエージェントが書くために作られているからです。プラットフォームの運用ごと任せたければ [ObjectOS](https://www.objectos.ai) があり、同じオープンな定義の上で動きます — 離れてもオントロジーは失われません。次の契約はロックインで搾り取るものではなく、新しい仕事で勝ち取るもの。その違いが、複利で効いてくるあなたの評判です。
 
+## FDE のための完全なメタデータツールキット
+
+オントロジーはデータモデルだけではありません。フォワードデプロイドのエンゲージメントは、ディスカバリーから引き継ぎまで、各フェーズにメタデータタイプを使います — そしてそのすべてが、同じ型付き・検証可能・移植可能な定義です:
+
+| フェーズ | 答えるべき顧客の問い | 使うメタデータタイプ |
+|---|---|---|
+| **1 · 名詞のモデリング** | 「うちのビジネスには何がある？」 | オブジェクトと項目(関係、検証ルール、数式)· データソース(既存 DB に接続、移行不要)· シードデータ(デモと検収用) |
+| **2 · 動詞のモデリング** | 「仕事は実際どう流れる？」 | フロー(承認チェーン、状態機械、レコードトリガー、スケジュール)· 承認(多段階、キュー、レコードロック)· アクション(権限チェック付きのボタンとサーバー操作) |
+| **3 · 人のための画面** | 「うちの人はどこで働く？」 | アプリとナビゲーション · ビュー(リスト/かんばん/カレンダー/ガント)· ページとフォーム · ダッシュボードとレポート(経営陣が求める KPI) |
+| **4 · セキュリティレビュー通過** | 「誰が何を見て何ができる？」 | 権限セットとロール(RBAC)· 行・フィールドレベルセキュリティ · 共有ルール · 監査(ランタイム内蔵 — 宣言すれば得られる) |
+| **5 · 顧客が本当に欲しい AI** | 「AI は何をしてくれる？」 | AI エージェント(営業/サポートのコパイロット)· AI ツールとスキル · MCP 公開(`ai: { exposed: true }`) |
+| **6 · 引き継ぎと複利** | 「あなたが去った後は？」 | 翻訳(多言語ラベル、グローバル顧客向け)· アプリマニフェストとパッケージング(1 つの `objectstack.json` にコンパイルし、任意の環境へ) |
+
+要点は、**この 6 層が同じ素材でできている**ことです。承認チェーンもデータモデルと同じ型付きメタデータであり、AI エージェントもそうです — 同じ検証ゲートが検査し、同じ diff でレビューされ、同じリポジトリで引き継がれます:
+
+```ts
+// The client's verbs: a discount approval — typed metadata, same as an object
+export const DiscountApproval: Flow = {
+  name: 'discount_approval',
+  label: 'Discount Approval',
+  type: 'record_change',
+  status: 'active',
+  nodes: [
+    { id: 'start', type: 'start', label: 'Start',
+      config: { objectName: 'crm_quote', triggerType: 'record-after-update',
+                condition: 'record.discount > 0.20' } },
+    { id: 'review', type: 'approval', label: 'Regional Manager Review',
+      config: { approvers: [{ type: 'position', value: 'regional_manager' }], lockRecord: true } },
+    { id: 'end', type: 'end', label: 'End' },
+  ],
+  edges: [/* start -> review -> end */],
+};
+
+// The AI the client actually wants: a service copilot — still metadata
+export const ServiceCopilot = defineAgent({
+  name: 'service_copilot',
+  label: 'Service Copilot',
+  instructions: 'Help support reps triage and resolve cases. Retrieve only within the user\'s permissions. Always cite case IDs.',
+  skills: ['case_triage', 'customer_360'],
+  knowledge: { topics: ['support_kb', 'sla_policies'] },
+});
+```
+
+HotCRM はこの語彙の完全な使用例です:15 オブジェクト、10 フロー、10 アクション、4 ダッシュボード、2 つの AI コパイロット、6 スキル、10 ロール、5 つの共有ルール、4 言語 — すべての層が揃って約 17,000 行です。
+
 ## このスタックが直さないもの
 
 相手側の言い分も立てておきます：**Foundry 級のデータフェデレーションと分析パイプライン**は Palantir のホームグラウンドです — 40 の遺産システムからペタバイトを融合する案件なら、別の道具のクラスです。**組織のチェンジマネジメント**はどんなスタックにも直せません。すでに閉じたプラットフォームに全面標準化した顧客が留まるのも合理的でしょう。主張はより狭い：フォワードデプロイド業務のアプリケーション層 — ビジネスをモデル化し、統制されたアプリをその上で出荷する — に関しては、上の 5 つの痛みはいまや取り除け、オントロジーは人質ではなく引き継ぎ物にできる、ということです。

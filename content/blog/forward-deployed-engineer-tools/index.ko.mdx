@@ -75,6 +75,51 @@ export const Ticket = ObjectSchema.create({
 
 **이 스택이 바꾸는 것:** 이것이 **온톨로지 인계** — FDE 플레이북이 끝내 풀지 않은 결말입니다. 당신이 넘기는 것은 고객의 저장소입니다: Apache-2.0 아래의 타입 있는 객체·플로·권한, 컴파일된 산출물, 그리고 리뷰 체크리스트. 보안팀은 이미 모든 줄을 읽었습니다 — 30만 줄이 아니라 16k 토큰이니까요. 고객 자신의 코딩 에이전트가 당신이 쓰던 그 루프로 유지보수를 이어갑니다 — 이 포맷은 애초에 에이전트가 쓰라고 만들어졌기 때문입니다. 플랫폼 운영까지 맡기고 싶다면 [ObjectOS](https://www.objectos.ai)가 있고, 같은 오픈 정의 위에서 돕니다 — 떠나도 온톨로지를 잃지 않습니다. 다음 계약은 락인으로 짜내는 것이 아니라 새로운 일로 얻어냅니다. 그 차이가 복리로 쌓이는 당신의 평판입니다.
 
+## FDE의 완전한 메타데이터 툴킷
+
+온톨로지는 데이터 모델만이 아닙니다. 포워드 디플로이드 프로젝트는 디스커버리부터 인계까지 단계마다 메타데이터 타입을 사용합니다 — 그리고 모두가 같은 종류의, 타입 있고 검증 가능하며 이식 가능한 정의입니다:
+
+| 단계 | 답해야 할 고객의 질문 | 사용하는 메타데이터 타입 |
+|---|---|---|
+| **1 · 명사 모델링** | "우리 비즈니스에는 무엇이 있나?" | 객체와 필드(관계, 검증 규칙, 수식) · 데이터소스(기존 DB 연결, 마이그레이션 불필요) · 시드 데이터(데모와 검수용) |
+| **2 · 동사 모델링** | "일은 실제로 어떻게 흐르나?" | 플로(승인 체인, 상태 기계, 레코드 트리거, 스케줄) · 승인(다단계, 대기열, 레코드 잠금) · 액션(권한 검사되는 버튼과 서버 작업) |
+| **3 · 사람을 위한 화면** | "우리 직원은 어디서 일하나?" | 앱과 내비게이션 · 뷰(목록/칸반/캘린더/간트) · 페이지와 폼 · 대시보드와 리포트(경영진이 찾는 KPI) |
+| **4 · 보안 심사 통과** | "누가 무엇을 보고 무엇을 할 수 있나?" | 권한 세트와 역할(RBAC) · 행·필드 수준 보안 · 공유 규칙 · 감사(런타임 내장 — 선언하면 제공) |
+| **5 · 고객이 진짜 원하는 AI** | "AI가 우리에게 뭘 해 주나?" | AI 에이전트(영업/고객지원 코파일럿) · AI 도구와 스킬 · MCP 노출(`ai: { exposed: true }`) |
+| **6 · 인계와 복리** | "당신이 떠난 뒤에는?" | 번역(글로벌 고객용 다국어 레이블) · 앱 매니페스트와 패키징(하나의 `objectstack.json`으로 컴파일, 어떤 환경에든 설치) |
+
+핵심은 **여섯 계층이 같은 재료**라는 것입니다. 승인 체인도 데이터 모델과 똑같은 타입 메타데이터이고, AI 에이전트도 그렇습니다 — 같은 검증 게이트가 검사하고, 같은 diff에서 리뷰되고, 같은 저장소로 인계됩니다:
+
+```ts
+// The client's verbs: a discount approval — typed metadata, same as an object
+export const DiscountApproval: Flow = {
+  name: 'discount_approval',
+  label: 'Discount Approval',
+  type: 'record_change',
+  status: 'active',
+  nodes: [
+    { id: 'start', type: 'start', label: 'Start',
+      config: { objectName: 'crm_quote', triggerType: 'record-after-update',
+                condition: 'record.discount > 0.20' } },
+    { id: 'review', type: 'approval', label: 'Regional Manager Review',
+      config: { approvers: [{ type: 'position', value: 'regional_manager' }], lockRecord: true } },
+    { id: 'end', type: 'end', label: 'End' },
+  ],
+  edges: [/* start -> review -> end */],
+};
+
+// The AI the client actually wants: a service copilot — still metadata
+export const ServiceCopilot = defineAgent({
+  name: 'service_copilot',
+  label: 'Service Copilot',
+  instructions: 'Help support reps triage and resolve cases. Retrieve only within the user\'s permissions. Always cite case IDs.',
+  skills: ['case_triage', 'customer_360'],
+  knowledge: { topics: ['support_kb', 'sla_policies'] },
+});
+```
+
+HotCRM이 이 어휘의 완전한 사용례입니다: 15개 객체, 10개 플로, 10개 액션, 4개 대시보드, 2개 AI 코파일럿, 6개 스킬, 10개 역할, 5개 공유 규칙, 4개 언어 — 모든 계층이 갖춰져 약 17,000줄입니다.
+
 ## 이 스택이 고치지 못하는 것
 
 상대편도 공정하게: **Foundry급 데이터 페더레이션과 분석 파이프라인**은 Palantir의 홈그라운드입니다 — 40개 레거시 시스템에서 페타바이트를 융합하는 프로젝트라면 다른 도구 클래스입니다. **조직 변화 관리**는 어떤 스택도 고치지 못합니다. 이미 닫힌 플랫폼에 전면 표준화한 고객이라면 남는 것이 합리적일 수 있습니다. 주장은 더 좁습니다: 포워드 디플로이드 업무의 애플리케이션 계층 — 비즈니스를 모델링하고 그 위에 거버넌스된 앱을 내놓는 일 — 에서는 위의 다섯 고통이 이제 제거 가능하고, 온톨로지는 인질이 아니라 인계물이 될 수 있습니다.

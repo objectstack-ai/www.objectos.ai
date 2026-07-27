@@ -75,6 +75,51 @@ Jedes Engagement endet, und heute endet es schlecht — auf eine von zwei Arten.
 
 **Was der Stack ändert:** Das ist **die Ontologie-Übergabe** — das Ende, das das FDE-Playbook nie gelöst hat. Was Sie übergeben, ist das Repo des Kunden: typisierte Objekte, Flows und Berechtigungen unter Apache-2.0, dazu das kompilierte Artefakt und eine Review-Checkliste. Sein Security-Team hat bereits jede Zeile gelesen — es sind 16k Tokens, nicht 300.000 Zeilen. Seine eigenen Coding-Agents warten das System mit derselben Schleife, die Sie benutzt haben, denn das Format wurde agentenschreibbar gebaut. Will der Kunde die Plattform betrieben haben — Browser-AI-Builder, Cloud oder Self-Managed — gibt es [ObjectOS](https://www.objectos.ai), auf derselben offenen Definition; er kann gehen, ohne die Ontologie zu verlieren. Ihren nächsten Vertrag verdienen Sie mit neuer Arbeit, nicht mit Lock-in. Dieser Unterschied ist Ihre Reputation — mit Zinseszins.
 
+## Das komplette Metadaten-Toolkit des FDE
+
+Die Ontologie ist nicht nur das Datenmodell. Ein Forward-Deployed-Engagement nutzt für jede Phase — von Discovery bis Übergabe — einen Metadatentyp, und alle sind dieselbe Art typisierter, validierbarer, portabler Definition:
+
+| Phase | Die Kundenfrage, die Sie beantworten | Genutzte Metadatentypen |
+|---|---|---|
+| **1 · Substantive modellieren** | „Was existiert in unserem Geschäft?" | Objekte & Felder (Beziehungen, Validierungsregeln, Formeln) · Datenquellen (bestehende Datenbanken anbinden, keine Migration) · Seed-Daten (für Demos und Abnahme) |
+| **2 · Verben modellieren** | „Wie fließt die Arbeit wirklich?" | Flows (Freigabeketten, Zustandsmaschinen, Record-Trigger, Zeitpläne) · Freigaben (mehrstufig, Queues, Record-Locking) · Aktionen (rechtegeprüfte Buttons und Serveroperationen) |
+| **3 · Oberflächen für Menschen** | „Wo arbeiten unsere Leute?" | Apps & Navigation · Views (Liste/Kanban/Kalender/Gantt) · Seiten & Formulare · Dashboards & Berichte (die KPIs, nach denen das Management fragt) |
+| **4 · Security-Review bestehen** | „Wer darf was sehen und tun?" | Berechtigungssets & Rollen (RBAC) · Zeilen- und Feldsicherheit · Sharing-Regeln · Audit (in der Runtime eingebaut — deklariert, geliefert) |
+| **5 · Die AI, die der Kunde wirklich will** | „Was kann AI für uns tun?" | AI Agents (Sales-/Service-Copiloten) · AI-Tools & Skills · MCP-Exposition (`ai: { exposed: true }`) |
+| **6 · Übergabe & Zinseszins** | „Was passiert, wenn Sie gehen?" | Übersetzungen (mehrsprachige Labels für globale Kunden) · App-Manifest & Packaging (kompiliert zu einer `objectstack.json`, installierbar in jede Umgebung) |
+
+Der Punkt: **Alle sechs Schichten sind derselbe Stoff.** Eine Freigabekette ist typisierte Metadaten genau wie das Datenmodell — und ein AI Agent auch. Dasselbe Validierungsgate prüft sie, derselbe Diff reviewt sie, dasselbe Repo übergibt sie:
+
+```ts
+// The client's verbs: a discount approval — typed metadata, same as an object
+export const DiscountApproval: Flow = {
+  name: 'discount_approval',
+  label: 'Discount Approval',
+  type: 'record_change',
+  status: 'active',
+  nodes: [
+    { id: 'start', type: 'start', label: 'Start',
+      config: { objectName: 'crm_quote', triggerType: 'record-after-update',
+                condition: 'record.discount > 0.20' } },
+    { id: 'review', type: 'approval', label: 'Regional Manager Review',
+      config: { approvers: [{ type: 'position', value: 'regional_manager' }], lockRecord: true } },
+    { id: 'end', type: 'end', label: 'End' },
+  ],
+  edges: [/* start -> review -> end */],
+};
+
+// The AI the client actually wants: a service copilot — still metadata
+export const ServiceCopilot = defineAgent({
+  name: 'service_copilot',
+  label: 'Service Copilot',
+  instructions: 'Help support reps triage and resolve cases. Retrieve only within the user\'s permissions. Always cite case IDs.',
+  skills: ['case_triage', 'customer_360'],
+  knowledge: { topics: ['support_kb', 'sla_policies'] },
+});
+```
+
+HotCRM ist die vollständige Demonstration dieses Vokabulars: 15 Objekte, 10 Flows, 10 Aktionen, 4 Dashboards, 2 AI-Copiloten, 6 Skills, 10 Rollen, 5 Sharing-Regeln und 4 Sprachen — jede Schicht vorhanden, in rund 17.000 Zeilen.
+
 ## Was dieser Stack nicht behebt
 
 Die Gegenseite fair behandelt: **Datenföderation und Analytics-Pipelines im Foundry-Maßstab** sind Palantirs Heimspiel — geht es darum, Petabytes über vierzig Legacy-Systeme zu fusionieren, ist das eine andere Werkzeugklasse. **Change Management** behebt kein Stack. Und ein Kunde, der bereits vollständig auf eine geschlossene Plattform standardisiert ist, bleibt womöglich rational dort. Die Behauptung ist enger: Für die Anwendungsschicht der Forward-Deployed-Arbeit — ein Geschäft modellieren und darauf kontrollierte Apps ausliefern — sind die fünf Schmerzen oben jetzt beseitigbar, und die Ontologie kann übergeben statt als Geisel gehalten werden.

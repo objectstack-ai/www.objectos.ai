@@ -75,6 +75,51 @@ Every engagement ends, and today it ends badly in one of two ways. Hand over a p
 
 **What the stack changes:** this is **the ontology handover** — the ending the FDE playbook never solved. What you hand over is the client's repo: typed objects, flows, and permissions under Apache-2.0, plus the compiled artifact and a review checklist. Their security team already read every line — it's 16k tokens, not 300k lines. Their own coding agents maintain it with the same loop you used, because the format was built to be agent-writable. If they want the platform operated — browser AI Builder, cloud or self-managed — that's [ObjectOS](https://www.objectos.ai), and it runs the same open definition; they can leave it without losing the ontology. Your next contract is earned by new work, not extracted by lock-in. That difference is your reputation, compounding.
 
+## The FDE's complete metadata toolkit
+
+The ontology is not just the data model. A forward-deployed engagement uses a metadata type for every phase, from discovery to handover — and all of them are the same kind of typed, validated, portable definition:
+
+| Engagement phase | The client question you answer | Metadata types you use |
+|---|---|---|
+| **1 · Model the nouns** | "What exists in our business?" | Objects & fields (relations, validation rules, formulas) · datasources (connect existing databases, no migration) · seed data (for demos and acceptance) |
+| **2 · Model the verbs** | "How does work actually flow?" | Flows (approval chains, state machines, record triggers, schedules) · approvals (multi-step, queues, record locking) · actions (permission-checked buttons and server operations) |
+| **3 · Screens for people** | "Where do our people work?" | Apps & navigation · views (list / kanban / calendar / gantt) · pages & forms · dashboards & reports (the KPIs executives ask for) |
+| **4 · Pass security review** | "Who can see and do what?" | Permission sets & roles (RBAC) · row- and field-level security · sharing rules · audit (built into the runtime — declared, delivered) |
+| **5 · The AI they actually want** | "What can AI do for us?" | AI agents (sales / service copilots) · AI tools & skills · MCP exposure (`ai: { exposed: true }`) |
+| **6 · Handover & compounding** | "What happens after you leave?" | Translations (multi-language labels for global clients) · app manifest & packaging (compile to one `objectstack.json`, install into any environment) |
+
+The point is that **all six layers are the same substance**. An approval chain is typed metadata exactly like the data model, and so is an AI agent — the same validation gate checks them, the same diff reviews them, the same repo hands them over:
+
+```ts
+// The client's verbs: a discount approval — typed metadata, same as an object
+export const DiscountApproval: Flow = {
+  name: 'discount_approval',
+  label: 'Discount Approval',
+  type: 'record_change',
+  status: 'active',
+  nodes: [
+    { id: 'start', type: 'start', label: 'Start',
+      config: { objectName: 'crm_quote', triggerType: 'record-after-update',
+                condition: 'record.discount > 0.20' } },
+    { id: 'review', type: 'approval', label: 'Regional Manager Review',
+      config: { approvers: [{ type: 'position', value: 'regional_manager' }], lockRecord: true } },
+    { id: 'end', type: 'end', label: 'End' },
+  ],
+  edges: [/* start -> review -> end */],
+};
+
+// The AI the client actually wants: a service copilot — still metadata
+export const ServiceCopilot = defineAgent({
+  name: 'service_copilot',
+  label: 'Service Copilot',
+  instructions: 'Help support reps triage and resolve cases. Retrieve only within the user\'s permissions. Always cite case IDs.',
+  skills: ['case_triage', 'customer_360'],
+  knowledge: { topics: ['support_kb', 'sla_policies'] },
+});
+```
+
+HotCRM is the full demonstration of this vocabulary in use: 15 objects, 10 flows, 10 actions, 4 dashboards, 2 AI copilots, 6 skills, 10 roles, 5 sharing rules, and 4 languages — every layer present, in about 17,000 lines.
+
 ## What this stack does not fix
 
 Steelmanning the alternatives: **Foundry-scale data federation and analytics pipelines** are Palantir's home turf — if the engagement is about fusing petabytes across forty legacy systems, that's a different tool class. **Organizational change management** — getting people to actually use the thing — no stack fixes. And a client already standardized on a closed platform may rationally stay. The claim is narrower: for the application layer of forward-deployed work — modeling a business and shipping governed apps on it — the five pains above are now removable, and the ontology can be handed over instead of held hostage.

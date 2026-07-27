@@ -76,6 +76,51 @@ export const Ticket = ObjectSchema.create({
 
 **這套棧改變了什麼:** 這就是**本體交接**——FDE 打法從未解決的結尾。你交出的是客戶的倉庫:Apache-2.0 下的型別化物件、流程與許可權,加上編譯好的製品和一份評審清單。他們的安全團隊已經讀過每一行——那是 16k token,不是 30 萬行。他們自己的編碼智慧體用你用過的同一個迴圈繼續維護,因為這個格式生來就是給智慧體寫的。如果他們想要平臺被託管運營——瀏覽器 AI Builder、雲端或自管——那是 [ObjectOS](https://www.objectos.ai),跑的是同一份開放定義;哪天離開也不會失去本體。你的下一份合同靠新的工作贏來,而不是靠鎖定榨出來。這個差別,就是你的口碑在複利。
 
+## FDE 的完整後設資料工具箱
+
+本體不只是資料模型。一個前沿部署專案從發現到交接,每個階段都對應一組後設資料型別——而它們全部是同一種類型化、可校驗、可移植的定義:
+
+| 專案階段 | 你要回答的客戶問題 | 用到的後設資料型別 |
+|---|---|---|
+| **1 · 建模客戶的名詞** | "我們的業務裡有什麼?" | 物件與欄位(關係、校驗規則、公式欄位)· 資料來源(連線現有資料庫,不遷移)· 種子資料(演示與驗收用) |
+| **2 · 建模客戶的動詞** | "事情是怎麼流轉的?" | 流程(審批鏈、狀態機、記錄觸發、定時任務)· 審批(多級、佇列、記錄鎖定)· 動作(許可權校驗的按鈕與服務端操作) |
+| **3 · 給人用的介面** | "我們的人在哪裡幹活?" | 應用與導航 · 檢視(列表/看板/日曆/甘特)· 頁面與表單 · 儀表盤與報表(高管要看的 KPI) |
+| **4 · 過安全評審** | "誰能看到什麼、做什麼?" | 許可權集與角色(RBAC)· 行級/欄位級安全 · 共享規則 · 審計(執行時自帶,宣告即得) |
+| **5 · 客戶真正想買的 AI** | "AI 能替我們幹什麼?" | AI 智慧體(銷售/客服 copilot)· AI 工具與技能 · MCP 暴露(`ai: { exposed: true }`) |
+| **6 · 交接與複利** | "你走了之後呢?" | 翻譯(多語言標籤,跨國客戶)· 應用清單與打包(編譯成一個 `objectstack.json`,裝進任何環境) |
+
+關鍵在於:**這六層是同一種東西。** 審批鏈和資料模型一樣是型別化後設資料,AI 智慧體也是——同一個校驗門把關,同一個 diff 裡評審,同一個倉庫裡交接:
+
+```ts
+// The client's verbs: a discount approval — typed metadata, same as an object
+export const DiscountApproval: Flow = {
+  name: 'discount_approval',
+  label: 'Discount Approval',
+  type: 'record_change',
+  status: 'active',
+  nodes: [
+    { id: 'start', type: 'start', label: 'Start',
+      config: { objectName: 'crm_quote', triggerType: 'record-after-update',
+                condition: 'record.discount > 0.20' } },
+    { id: 'review', type: 'approval', label: 'Regional Manager Review',
+      config: { approvers: [{ type: 'position', value: 'regional_manager' }], lockRecord: true } },
+    { id: 'end', type: 'end', label: 'End' },
+  ],
+  edges: [/* start -> review -> end */],
+};
+
+// The AI the client actually wants: a service copilot — still metadata
+export const ServiceCopilot = defineAgent({
+  name: 'service_copilot',
+  label: 'Service Copilot',
+  instructions: 'Help support reps triage and resolve cases. Retrieve only within the user\'s permissions. Always cite case IDs.',
+  skills: ['case_triage', 'customer_360'],
+  knowledge: { topics: ['support_kb', 'sla_policies'] },
+});
+```
+
+HotCRM 就是這份詞彙表的完整用法示範:15 個物件、10 個流程、10 個動作、4 個儀表盤、2 個 AI copilot、6 個技能、10 個角色、5 條共享規則、4 種語言——每一層都有,總共約 17,000 行。
+
 ## 這套棧不解決什麼
 
 替對手說句公道話:**Foundry 量級的資料聯邦與分析管道**是 Palantir 的主場——如果專案是把 PB 級資料從四十個遺留系統裡融合出來,那是另一個工具類別。**組織變革管理**——讓人真正用起來——沒有任何棧能修。已經全面標準化在封閉平臺上的客戶,留在原地也可能是理性的。這個論斷更窄:就前沿部署工作的應用層——為業務建模並在其上交付受治理應用——而言,上面五個痛點如今是可拆除的,本體也終於可以交接,而不必扣為人質。

@@ -75,6 +75,51 @@ Tout engagement se termine, et aujourd’hui il se termine mal, d’une de deux 
 
 **Ce que le stack change :** c’est **la passation d’ontologie** — la fin que le playbook FDE n’a jamais résolue. Ce que vous transmettez, c’est le dépôt du client : objets, flux et permissions typés sous Apache-2.0, plus l’artefact compilé et une checklist de revue. Son équipe sécurité a déjà lu chaque ligne — ce sont 16k tokens, pas 300 000 lignes. Ses propres agents de code entretiennent le système avec la même boucle que vous, parce que le format est né pour être écrit par des agents. S’il veut la plateforme opérée — AI Builder dans le navigateur, cloud ou self-managed — il y a [ObjectOS](https://www.objectos.ai), sur la même définition ouverte ; il peut partir sans perdre l’ontologie. Votre prochain contrat se gagne par du travail nouveau, il ne s’extrait pas par le verrouillage. Cette différence, c’est votre réputation qui capitalise.
 
+## La boîte à outils métadonnées complète du FDE
+
+L'ontologie n'est pas que le modèle de données. Un engagement forward-deployed utilise un type de métadonnée à chaque phase, de la découverte à la passation — et toutes relèvent de la même définition typée, validable et portable :
+
+| Phase | La question du client à laquelle vous répondez | Types de métadonnées utilisés |
+|---|---|---|
+| **1 · Modéliser les noms** | « Qu'existe-t-il dans notre métier ? » | Objets et champs (relations, règles de validation, formules) · datasources (connexion aux bases existantes, sans migration) · données d'amorçage (démos et recette) |
+| **2 · Modéliser les verbes** | « Comment le travail circule-t-il vraiment ? » | Flux (chaînes de validation, machines à états, déclencheurs, planifications) · validations (multi-niveaux, files, verrouillage d'enregistrement) · actions (boutons et opérations serveur à permissions vérifiées) |
+| **3 · Des écrans pour les gens** | « Où travaillent nos équipes ? » | Apps et navigation · vues (liste/kanban/calendrier/gantt) · pages et formulaires · tableaux de bord et rapports (les KPI que demande la direction) |
+| **4 · Passer la revue de sécurité** | « Qui peut voir et faire quoi ? » | Jeux de permissions et rôles (RBAC) · sécurité de ligne et de champ · règles de partage · audit (intégré au runtime — déclaré, livré) |
+| **5 · L'AI que le client veut vraiment** | « Que peut faire l'AI pour nous ? » | Agents AI (copilotes ventes/support) · outils et skills AI · exposition MCP (`ai: { exposed: true }`) |
+| **6 · Passation et capitalisation** | « Que se passe-t-il après votre départ ? » | Traductions (libellés multilingues pour clients internationaux) · manifeste et packaging (compilation en un `objectstack.json`, installable dans tout environnement) |
+
+L'essentiel : **les six couches sont la même matière.** Une chaîne de validation est une métadonnée typée exactement comme le modèle de données, et un agent AI aussi — la même porte de validation les contrôle, le même diff les relit, le même dépôt les transmet :
+
+```ts
+// The client's verbs: a discount approval — typed metadata, same as an object
+export const DiscountApproval: Flow = {
+  name: 'discount_approval',
+  label: 'Discount Approval',
+  type: 'record_change',
+  status: 'active',
+  nodes: [
+    { id: 'start', type: 'start', label: 'Start',
+      config: { objectName: 'crm_quote', triggerType: 'record-after-update',
+                condition: 'record.discount > 0.20' } },
+    { id: 'review', type: 'approval', label: 'Regional Manager Review',
+      config: { approvers: [{ type: 'position', value: 'regional_manager' }], lockRecord: true } },
+    { id: 'end', type: 'end', label: 'End' },
+  ],
+  edges: [/* start -> review -> end */],
+};
+
+// The AI the client actually wants: a service copilot — still metadata
+export const ServiceCopilot = defineAgent({
+  name: 'service_copilot',
+  label: 'Service Copilot',
+  instructions: 'Help support reps triage and resolve cases. Retrieve only within the user\'s permissions. Always cite case IDs.',
+  skills: ['case_triage', 'customer_360'],
+  knowledge: { topics: ['support_kb', 'sla_policies'] },
+});
+```
+
+HotCRM est la démonstration complète de ce vocabulaire à l'œuvre : 15 objets, 10 flux, 10 actions, 4 tableaux de bord, 2 copilotes AI, 6 skills, 10 rôles, 5 règles de partage et 4 langues — chaque couche présente, en 17 000 lignes environ.
+
 ## Ce que ce stack ne règle pas
 
 Rendons justice aux alternatives : **la fédération de données et les pipelines analytiques à l’échelle Foundry** restent le terrain de Palantir — si l’engagement consiste à fusionner des pétaoctets entre quarante systèmes legacy, c’est une autre classe d’outil. **La conduite du changement** ne se règle avec aucun stack. Et un client déjà standardisé sur une plateforme fermée peut rationnellement y rester. L’affirmation est plus étroite : pour la couche applicative du travail forward-deployed — modéliser un métier et livrer des apps gouvernées dessus — les cinq douleurs ci-dessus sont désormais éliminables, et l’ontologie peut être transmise au lieu d’être retenue en otage.

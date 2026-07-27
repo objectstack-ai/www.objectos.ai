@@ -75,6 +75,51 @@ Todo engagement termina, y hoy termina mal de una de dos maneras. Entrega una pl
 
 **Lo que cambia el stack:** esto es **la entrega de la ontología** — el final que el playbook FDE nunca resolvió. Lo que entregas es el repo del cliente: objetos, flujos y permisos tipados bajo Apache-2.0, más el artefacto compilado y una checklist de revisión. Su equipo de seguridad ya leyó cada línea — son 16k tokens, no 300.000 líneas. Sus propios agentes de código lo mantienen con el mismo bucle que tú usaste, porque el formato nació para ser escrito por agentes. Si quieren la plataforma operada — AI Builder en el navegador, cloud o self-managed — está [ObjectOS](https://www.objectos.ai), sobre la misma definición abierta; pueden irse sin perder la ontología. Tu siguiente contrato se gana con trabajo nuevo, no se extrae con lock-in. Esa diferencia es tu reputación, capitalizando.
 
+## El kit completo de metadatos del FDE
+
+La ontología no es solo el modelo de datos. Un engagement forward-deployed usa un tipo de metadato para cada fase, del discovery a la entrega — y todos son la misma clase de definición tipada, validable y portable:
+
+| Fase | La pregunta del cliente que respondes | Tipos de metadatos que usas |
+|---|---|---|
+| **1 · Modelar los sustantivos** | «¿Qué existe en nuestro negocio?» | Objetos y campos (relaciones, reglas de validación, fórmulas) · datasources (conectar bases de datos existentes, sin migración) · datos semilla (para demos y aceptación) |
+| **2 · Modelar los verbos** | «¿Cómo fluye realmente el trabajo?» | Flujos (cadenas de aprobación, máquinas de estados, triggers de registro, programaciones) · aprobaciones (multinivel, colas, bloqueo de registro) · acciones (botones y operaciones de servidor con permisos verificados) |
+| **3 · Pantallas para personas** | «¿Dónde trabaja nuestra gente?» | Apps y navegación · vistas (lista/kanban/calendario/gantt) · páginas y formularios · dashboards e informes (los KPI que piden los ejecutivos) |
+| **4 · Pasar la revisión de seguridad** | «¿Quién puede ver y hacer qué?» | Conjuntos de permisos y roles (RBAC) · seguridad de fila y de campo · reglas de compartición · auditoría (integrada en el runtime — declarada, entregada) |
+| **5 · La AI que el cliente quiere de verdad** | «¿Qué puede hacer la AI por nosotros?» | Agentes de AI (copilotos de ventas/soporte) · herramientas y skills de AI · exposición MCP (`ai: { exposed: true }`) |
+| **6 · Entrega y capitalización** | «¿Qué pasa cuando te vayas?» | Traducciones (etiquetas multiidioma para clientes globales) · manifiesto y empaquetado (compilar a un `objectstack.json`, instalable en cualquier entorno) |
+
+La clave: **las seis capas son la misma sustancia.** Una cadena de aprobación es metadato tipado exactamente igual que el modelo de datos, y un agente de AI también — la misma puerta de validación los revisa, el mismo diff los evalúa, el mismo repo los entrega:
+
+```ts
+// The client's verbs: a discount approval — typed metadata, same as an object
+export const DiscountApproval: Flow = {
+  name: 'discount_approval',
+  label: 'Discount Approval',
+  type: 'record_change',
+  status: 'active',
+  nodes: [
+    { id: 'start', type: 'start', label: 'Start',
+      config: { objectName: 'crm_quote', triggerType: 'record-after-update',
+                condition: 'record.discount > 0.20' } },
+    { id: 'review', type: 'approval', label: 'Regional Manager Review',
+      config: { approvers: [{ type: 'position', value: 'regional_manager' }], lockRecord: true } },
+    { id: 'end', type: 'end', label: 'End' },
+  ],
+  edges: [/* start -> review -> end */],
+};
+
+// The AI the client actually wants: a service copilot — still metadata
+export const ServiceCopilot = defineAgent({
+  name: 'service_copilot',
+  label: 'Service Copilot',
+  instructions: 'Help support reps triage and resolve cases. Retrieve only within the user\'s permissions. Always cite case IDs.',
+  skills: ['case_triage', 'customer_360'],
+  knowledge: { topics: ['support_kb', 'sla_policies'] },
+});
+```
+
+HotCRM es la demostración completa de este vocabulario en uso: 15 objetos, 10 flujos, 10 acciones, 4 dashboards, 2 copilotos de AI, 6 skills, 10 roles, 5 reglas de compartición y 4 idiomas — todas las capas presentes, en unas 17.000 líneas.
+
 ## Lo que este stack no arregla
 
 Tratando con justicia a las alternativas: **la federación de datos y los pipelines analíticos a escala Foundry** son el terreno de Palantir — si el engagement va de fusionar petabytes entre cuarenta sistemas legacy, esa es otra clase de herramienta. **La gestión del cambio organizacional** no la arregla ningún stack. Y un cliente ya estandarizado por completo en una plataforma cerrada puede, racionalmente, quedarse. La afirmación es más estrecha: para la capa de aplicación del trabajo forward-deployed — modelar un negocio y entregar apps gobernadas sobre él — los cinco dolores de arriba ahora son eliminables, y la ontología puede entregarse en lugar de retenerse como rehén.
