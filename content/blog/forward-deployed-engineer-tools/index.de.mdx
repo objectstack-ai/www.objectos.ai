@@ -1,0 +1,87 @@
+---
+title: "Welche Tools nutzen Forward-Deployed Engineers? Ein Ontologie-first Open Stack"
+description: "FDE-Hiring wuchs in einem Jahr um ~1.000 %, und das Playbook, das funktioniert, ist Ontologie-first. Ungelöst ist die Übergabe: Die Ontologie sollte als typisierte, offene Dateien im Repo des Kunden bleiben — wir nennen es die Ontologie-Übergabe."
+author: ObjectStack Team
+date: 2026-07-23
+status: published
+topic: ai-agents
+audience: developer
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Forward-Deployed Engineer
+  - Ontologie
+  - Palantir
+  - MCP
+  - ObjectStack
+---
+
+**Kurzfassung:** Der Forward-Deployed Engineer ist die am schnellsten wachsende Rolle in Enterprise AI — berichtetes Hiring-Wachstum von rund 1.000 % im Jahresvergleich, und OpenAI hat im Mai 2026 4 Mrd. $ für eine eigene Deployment-Gesellschaft zugesagt. Das Playbook, das tatsächlich funktioniert, ist das von Palantir: **Ontologie-first** — das Geschäft des Kunden modellieren, bevor irgendeine AI-Anwendung ausgeliefert wird. Was das Playbook ungelöst lässt, ist das Ende. Jedes Engagement schließt mit einer Übergabe, und heute bleibt die Ontologie meist in einer Plattform eingeschlossen, die der Kunde für immer mietet. Die entscheidende Frage der nächsten FDE-Welle ist das, was wir **die Ontologie-Übergabe** nennen: Verlässt die Ontologie des Kunden das Engagement als typisierte, offene Dateien in *seinem* Repository — oder als Verlängerungshebel in dem eines anderen?
+
+## Die Rolle, die Enterprise AI verschlungen hat
+
+Die in diesem Jahr berichteten Zahlen: FDE-Stellenausschreibungen wuchsen zwischen Januar und September 2025 um mehr als 800 % und überschritten Anfang 2026 1.000 % im Jahresvergleich ([Perspective AI](https://getperspective.ai/blog/2026-fde-hiring-trends-what-1000-job-posts-reveal), [TechTarget](https://www.techtarget.com/searchenterpriseai/feature/The-rise-of-the-AI-forward-deployed-engineer)). Im Mai 2026 kündigte OpenAI eine Deployment-Gesellschaft mit **4 Mrd. $ zugesagtem Kapital** und ~150 FDEs an. Der Grund ist strukturell: Die Modelle wurden gut genug, der Engpass wanderte vom Modellieren zum Deployment — jedes Unternehmen hat einzigartige Daten, Workflows und Compliance-Zwänge, und jemand muss sich hineinsetzen und AI passend machen.
+
+## Das funktionierende Playbook ist Ontologie-first
+
+Palantir hat es kodifiziert, lange bevor der Begriff modern wurde: Ihre AI FDEs **bauen zuerst eine kundenspezifische Ontologie, bevor irgendeine LLM-gestützte Anwendung ausgeliefert wird**, und verbringen 30–40 % der Woche mit Discovery ([Palantirs AI-FDE-Leitfaden](https://www.palantir.com/docs/foundry/ai-fde/overview)). Die Einsicht ist dauerhaft: Generische Modelle geben generische Antworten. Enterprise-Wert verlangt Verankerung in den Substantiven und Verben des Kunden — Objekte, Beziehungen, Berechtigungen, Freigabewege. Das ist Engineering, kein Prompting.
+
+Nichts davon ist noch umstritten. Selten besprochen wird, was am Ende passiert.
+
+## Der ungelöste Teil: die Übergabe
+
+Jedes Forward-Deployed-Engagement endet. Der FDE zieht ab, und die von ihm gebaute Ontologie — das wertvollste Artefakt des gesamten Engagements, das kodierte Wissen darüber, wie dieses Geschäft wirklich läuft — landet an einem von zwei Orten:
+
+- **In der Plattform des Anbieters.** Der Kunde kann sie nutzen, aber nur durch die Plattform, pro Sitz bepreist, geändert nur von plattformgeschulten Spezialisten. Die Ontologie ist zum Verlängerungshebel geworden.
+- **Im Repository des Kunden.** Typisierte, versionierte, offene Dateien, die das eigene Team des Kunden — und dessen eigene AI Agents — ohne fremde Erlaubnis lesen, ausführen und weiter ändern können.
+
+Der erste Ausgang ist heute der Standard, und deshalb haben Enterprise-Kunden gelernt, erfolgreiche Pilotprojekte zu fürchten: Je besser die Ontologie, desto tiefer der Lock-in. Der zweite Ausgang ist nur möglich, wenn die Definitionsschicht selbst ein offenes Format ist.
+
+## Wie ein offener FDE-Stack aussieht
+
+Das ist der Workflow, für den [ObjectStack](https://github.com/objectstack-ai/objectstack) (Apache-2.0) gebaut ist. Discovery-Notizen werden typisierte Metadaten — Ihr Coding-Agent schreibt sie, ein Validierungsgate weist zurück, was still scheitern würde:
+
+```ts
+export const Ticket = ObjectSchema.create({
+  name: 'support_ticket',
+  label: 'Ticket',
+  sharingModel: 'private',        // konservativ per Default — das Gate verlangt es
+  fields: {
+    subject:  Field.text({ label: 'Subject', required: true }),
+    status:   Field.select({ label: 'Status', options: [/* die echten Zustände des Kunden */] }),
+    approver: Field.lookup('sys_user'),
+  },
+});
+```
+
+Aus dieser Definition leitet die Runtime Datenbank, REST-APIs, Admin-Console und MCP-Tools ab und erzwingt Berechtigungen und Audit bei jedem Aufruf — auch nachdem Sie gegangen sind. Die ganze App bleibt prüfbar: Ein vollständiges CRM sind **1.792 Zeilen, rund 16k Tokens** — zählen Sie selbst:
+
+```bash
+find examples/app-crm/src -name '*.ts' -not -name '*.test.ts' | xargs cat | wc -l
+```
+
+Diese Größe macht die Übergabe ehrlich. Das Security-Team des Kunden liest den tatsächlichen Diff, statt einer Plattformgrenze zu vertrauen; die künftigen Agents des Kunden laden das gesamte System in den Kontext und refaktorieren es als Ganzes.
+
+## Was dieser Stack nicht löst
+
+Klarheit über die Grenze: **Datenföderation und Analytics-Pipelines im ganz großen Maßstab** sind Foundrys Heimspiel, und eine offene Anwendungsschicht ersetzt sie nicht. **Organisatorisches Change Management** — Menschen dazu zu bringen, das Ding zu nutzen — bleibt Menschenarbeit, die kein Stack behebt. Und ein Kunde, der bereits vollständig auf eine geschlossene Plattform standardisiert ist, bleibt womöglich rational dort. Die Behauptung ist enger: Für die Anwendungsschicht der Forward-Deployed-Arbeit — ein Geschäft modellieren und darauf kontrollierte Apps ausliefern — kann die Ontologie jetzt übergeben statt als Geisel gehalten werden.
+
+## Die FDE-Checkliste
+
+1. Die Substantive und Verben des Kunden als Objekte und Flows modellieren, vor jedem UI-Gespräch.
+2. Die gesamte Definition kontextgroß halten, damit der Agent sie als Ganzes refaktorieren kann.
+3. Berechtigungen per Default konservativ; jede Autoritätsänderung explizit im Diff.
+4. Übergeben werden Repo, kompiliertes Artefakt und Review-Checkliste — kein Login in Ihren Tenant.
+5. MCP aktiviert lassen, damit die eigene AI des Kunden die App innerhalb seiner Berechtigungen bedient.
+
+## Die Schleife ausprobieren
+
+Richten Sie Ihren Coding-Agent auf den offenen Stack — das Scaffold bringt `AGENTS.md` und das Skills-Bundle mit:
+
+```bash
+npm create objectstack@latest client-app && cd client-app
+npx os dev --ui   # die App läuft — modellieren Sie das nächste Objekt mit Ihrem Agent
+```
+
+Für Kunden, die die Plattform betrieben haben wollen — AI Builder im Browser, Cloud oder Self-Managed — gibt es [ObjectOS](https://www.objectos.ai), die kommerzielle Runtime auf derselben offenen Definition.
