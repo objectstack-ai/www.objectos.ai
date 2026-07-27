@@ -1,6 +1,6 @@
 ---
 title: "Quels outils utilisent les forward-deployed engineers ? Un stack ouvert, ontologie d’abord"
-description: "Le recrutement de FDE a crû d’environ 1 000 % en un an, et le playbook qui marche est « ontologie d’abord ». Reste la passation : l’ontologie devrait rester dans le dépôt du client, en fichiers ouverts et typés."
+description: "Cinq douleurs définissent le travail forward-deployed : la plomberie dévore la semaine une, les démos meurent en revue de sécurité, les besoins changent plus vite que le code, les patterns ne capitalisent pas, la passation empoisonne la confiance."
 author: ObjectStack Team
 date: 2026-07-23
 status: published
@@ -17,36 +17,36 @@ tags:
   - ObjectStack
 ---
 
-**La version courte :** le forward-deployed engineer est le rôle qui croît le plus vite dans l’AI d’entreprise — une croissance de recrutement rapportée d’environ 1 000 % sur un an, et OpenAI a engagé 4 Md$ dans une société de déploiement dédiée en mai 2026. Le playbook qui fonctionne vraiment est celui de Palantir : **l’ontologie d’abord** — modéliser le métier du client avant de livrer la moindre application AI. Ce que le playbook laisse sans réponse, c’est la fin. Tout engagement se termine par une passation, et aujourd’hui l’ontologie reste généralement enfermée dans une plateforme que le client loue pour toujours. La question qui définira la prochaine vague de FDE est ce que nous appelons **la passation d’ontologie** : l’ontologie du client sort-elle de l’engagement sous forme de fichiers ouverts et typés dans *son* dépôt — ou comme levier de renouvellement dans celui d’un autre ?
+**La version courte :** l’ingénierie forward-deployed est le rôle qui croît le plus vite dans l’AI d’entreprise — recrutement en hausse d’environ 1 000 % sur un an, OpenAI engageant 4 Md$ dans une société de déploiement dédiée. Le playbook qui fonctionne est la méthode **ontologie d’abord** de Palantir. Mais demandez à un FDE en poste à quoi ressemble vraiment sa semaine, et vous entendrez cinq douleurs récurrentes : la plomberie dévore l’engagement, les démos meurent en revue de sécurité, les besoins changent plus vite que le code, les patterns ne capitalisent jamais d’un client à l’autre, et la passation empoisonne la relation. Cet article les passe en revue toutes les cinq, concrètement, et montre comment un stack ouvert, ontologie d’abord, élimine chacune — pour finir sur la question qui, selon nous, définira la prochaine vague du rôle : **la passation d’ontologie**. L’ontologie du client sort-elle de l’engagement en fichiers ouverts et typés dans *son* dépôt — ou comme levier de renouvellement dans la plateforme d’un autre ?
 
-## Le rôle qui a dévoré l’AI d’entreprise
+## Le métier que personne ne décrit honnêtement
 
-Les chiffres rapportés cette année : les offres d’emploi FDE ont augmenté de plus de 800 % entre janvier et septembre 2025 et dépassé 1 000 % sur un an début 2026 ([Perspective AI](https://getperspective.ai/blog/2026-fde-hiring-trends-what-1000-job-posts-reveal), [TechTarget](https://www.techtarget.com/searchenterpriseai/feature/The-rise-of-the-AI-forward-deployed-engineer)). En mai 2026, OpenAI a annoncé une société de déploiement dotée de **4 Md$ de capital engagé** et d’environ 150 FDE. La raison est structurelle : les modèles sont devenus assez bons, le goulot d’étranglement est passé de la modélisation au déploiement — chaque entreprise a des données, des flux et des contraintes de conformité uniques, et il faut que quelqu’un s’installe dedans pour faire tenir l’AI.
+Les offres d’emploi parlent d’« ambiguïté 0→1 » et de bandes de 300–550K $ ([Perspective AI](https://getperspective.ai/blog/2026-fde-hiring-trends-what-1000-job-posts-reveal), [TechTarget](https://www.techtarget.com/searchenterpriseai/feature/The-rise-of-the-AI-forward-deployed-engineer)). Le vrai métier consiste à faire fonctionner l’AI à l’intérieur des murs de quelqu’un d’autre : ses données, ses permissions, son service conformité, sa définition du « suffisant ». Palantir a codifié la méthode il y a des années : ses AI FDE **construisent d’abord une ontologie propre au client avant de livrer toute application LLM** et consacrent 30 à 40 % de la semaine à la découverte ([guide AI FDE de Palantir](https://www.palantir.com/docs/foundry/ai-fde/overview)). La méthode est bonne. C’est l’outillage en dessous qui décide où part vraiment la semaine. Cinq douleurs, une par une.
 
-## Le playbook qui marche : l’ontologie d’abord
+## Douleur 1 — La semaine une, c’est toujours la plomberie
 
-Palantir l’a codifié bien avant que le terme soit à la mode : ses AI FDE **construisent d’abord une ontologie propre au client avant de livrer toute application fondée sur un LLM**, et consacrent 30 à 40 % de la semaine à la découverte ([guide AI FDE de Palantir](https://www.palantir.com/docs/foundry/ai-fde/overview)). L’intuition tient toujours : les modèles génériques donnent des réponses génériques. La valeur d’entreprise exige un ancrage dans les noms et les verbes du client — objets, relations, permissions, circuits de validation. C’est de l’ingénierie, pas du prompting.
+Chaque engagement commence pareil : avant d’afficher un seul objet métier à l’écran, il faut l’auth, le SSO, les rôles, les API CRUD, une UI d’admin, du stockage de fichiers et une table d’audit. Rien de tout cela n’est la raison pour laquelle le client vous a engagé. Votre différenciateur — les 30–40 % du temps passés à comprendre *son* métier — se fait écraser par les 60 % passés à reconstruire le même socle indifférencié que vous aviez déjà construit chez le client précédent.
 
-Rien de tout cela n’est encore controversé. Ce dont on parle rarement, c’est de ce qui se passe à la fin.
+**Ce que le stack change :** le socle est déjà là. Une commande, et avant le déjeuner tournent la Console, la connexion avec SSO, les permissions rôle/ligne/champ, le journal d’audit, les API REST et un serveur MCP :
 
-## La partie non résolue : la passation
+```bash
+npm create objectstack@latest client-app && cd client-app
+npx os dev --ui   # Console sur :3000 — auth, RBAC, audit déjà appliqués
+```
 
-Tout engagement forward-deployed se termine. Le FDE se retire, et l’ontologie qu’il a construite — l’artefact le plus précieux de tout l’engagement, le savoir encodé de la façon dont ce métier tourne réellement — atterrit à l’un de deux endroits :
+Tout ce qui est dérivable est dérivé par le runtime. Il ne reste à écrire que ce que vous seul pouvez écrire : les objets, flux et règles de permissions du client. La semaine une devient découverte et modélisation — le travail sur lequel vous êtes réellement différencié.
 
-- **Dans la plateforme du fournisseur.** Le client peut s’en servir, mais uniquement via la plateforme, facturée au siège, modifiable seulement par des spécialistes formés par le fournisseur. L’ontologie est devenue un levier de renouvellement.
-- **Dans le dépôt du client.** Des fichiers typés, versionnés, ouverts, que l’équipe du client — et ses propres agents AI — peuvent lire, exécuter et continuer à modifier sans la permission de personne.
+## Douleur 2 — La démo qui meurt en revue de sécurité
 
-Le premier dénouement est aujourd’hui le défaut, et c’est pourquoi les clients ont appris à craindre les pilotes réussis : meilleure est l’ontologie, plus profond est le verrouillage. Le second n’est possible que si la couche de définition est elle-même un format ouvert.
+Vous connaissez la courbe. Vendredi de la semaine une : une démo bricolée — une UI improvisée sur un CSV copié — et la salle applaudit. Mois deux : l’infosec arrive avec trois questions. *Que peut voir exactement l’AI ? Avec les permissions de qui agit-elle ? Où est la trace d’audit ?* Pour un stack de démo, la réponse honnête est une reconstruction, et la reconstruction est l’endroit où meurent les engagements.
 
-## À quoi ressemble un stack FDE ouvert
-
-C’est le flux pour lequel [ObjectStack](https://github.com/objectstack-ai/objectstack) (Apache-2.0) est conçu. Les notes de découverte deviennent des métadonnées typées — votre agent de code les écrit, une porte de validation rejette ce qui échouerait en silence :
+**Ce que le stack change :** la gouvernance est le socle, pas une rustine. La porte de validation n’accepte même pas un objet sans modèle de partage déclaré :
 
 ```ts
 export const Ticket = ObjectSchema.create({
   name: 'support_ticket',
   label: 'Ticket',
-  sharingModel: 'private',        // prudent par défaut — la porte l’exige
+  sharingModel: 'private',        // obligatoire — sans lui, la porte refuse
   fields: {
     subject:  Field.text({ label: 'Subject', required: true }),
     status:   Field.select({ label: 'Status', options: [/* les états réels du client */] }),
@@ -55,33 +55,90 @@ export const Ticket = ObjectSchema.create({
 });
 ```
 
-De cette définition, le runtime dérive la base de données, les API REST, la Console d’administration et les outils MCP, et applique permissions et audit à chaque appel — y compris après votre départ. Toute l’app reste relisible : un CRM complet fait **1 792 lignes, environ 16k tokens** — comptez vous-même :
+À l’exécution, chaque appel — UI humaine, REST ou agent AI via MCP — passe par le même RBAC, la même sécurité de ligne et de champ, et atterrit dans le même journal d’audit. Quand l’infosec demande *« que peut voir l’AI ? »*, la réponse est un fichier qu’elle peut lire : des métadonnées de permissions appliquées par le runtime, pas une promesse sur une diapositive. Votre démo du vendredi et votre déploiement de production sont le même artefact. Il n’y a pas de reconstruction, parce qu’il n’a jamais existé de version sans gouvernance.
 
-```bash
-find examples/app-crm/src -name '*.ts' -not -name '*.test.ts' | xargs cat | wc -l
+## Douleur 3 — Les besoins changent plus vite que le code
+
+En pleine réunion, le responsable des opérations lâche : *« au fait, les remises au-dessus de 20 % passent d’abord par les managers régionaux »*. Dans une base de code artisanale, c’est une migration de schéma, trois changements d’API, un changement d’UI et une semaine — et aux yeux du client, vous êtes devenu lent au moment précis où il est devenu précis. Le travail forward-deployed vit ou meurt de la vitesse d’itération *dans la salle*.
+
+**Ce que le stack change :** toute l’application est une métadonnée typée et compacte — un CRM complet fait **1 792 lignes, environ 16k tokens** (comptez : `find examples/app-crm/src -name '*.ts' | xargs cat | wc -l`). Votre agent de code tient donc le système *entier* en contexte : le changement de chaîne de validation est un seul diff cohérent à travers flux, permissions et UI, écrit avant la fin de la réunion, validé par `os validate`, prévisualisé en direct dans la Console. « Qu’est-ce qui casse si on change ça ? » est une question à laquelle l’agent peut vraiment répondre, parce qu’il voit tout. Les changements de besoins cessent de menacer le planning — ils deviennent la démo.
+
+## Douleur 4 — Vos patterns ne capitalisent jamais
+
+Le code de chaîne de validation du client A ne se transporte pas dans la base de code du client B — versions de framework différentes, auth différente, tout différent. Chaque engagement repart donc de zéro, et une boutique de trois personnes ne peut jamais construire le levier qui fait tenir l’économie du modèle Palantir. C’est la raison silencieuse pour laquelle les cabinets forward-deployed restent petits.
+
+**Ce que le stack change :** les patterns sont des métadonnées typées, et les métadonnées typées sont portables. La chaîne de validation modélisée pour le client A est une définition de flux que vous déposez dans le dépôt du client B et renommez. Au fil des engagements, vous accumulez une bibliothèque maison — objets, flux, jeux de permissions, données d’amorçage — que votre agent applique au client suivant en quelques minutes. Et vous ne partez pas de zéro : [HotCRM](https://github.com/objectstack-ai/hotcrm) est une référence complète et forkable — 15 objets, 10 flux, 4 tableaux de bord, 2 copilotes AI, 4 langues — construite comme exemple canonique des conventions. Forkez, renommez le namespace, et votre engagement démarre d’un système qui tourne plutôt que d’un dépôt vide.
+
+## Douleur 5 — La passation empoisonne la relation
+
+Tout engagement se termine, et aujourd’hui il se termine mal, d’une de deux façons. Livrez une plateforme, et le client loue sa propre ontologie pour toujours — vous êtes devenu le canal de vente d’un autre, et il a appris à craindre les pilotes réussis : meilleure est l’ontologie, plus profond est le verrouillage. Livrez une base de code sur mesure, et son équipe ne peut pas la maintenir ; elle pourrit, et dix-huit mois plus tard cette pourriture porte votre nom.
+
+**Ce que le stack change :** c’est **la passation d’ontologie** — la fin que le playbook FDE n’a jamais résolue. Ce que vous transmettez, c’est le dépôt du client : objets, flux et permissions typés sous Apache-2.0, plus l’artefact compilé et une checklist de revue. Son équipe sécurité a déjà lu chaque ligne — ce sont 16k tokens, pas 300 000 lignes. Ses propres agents de code entretiennent le système avec la même boucle que vous, parce que le format est né pour être écrit par des agents. S’il veut la plateforme opérée — AI Builder dans le navigateur, cloud ou self-managed — il y a [ObjectOS](https://www.objectos.ai), sur la même définition ouverte ; il peut partir sans perdre l’ontologie. Votre prochain contrat se gagne par du travail nouveau, il ne s’extrait pas par le verrouillage. Cette différence, c’est votre réputation qui capitalise.
+
+## La boîte à outils métadonnées complète du FDE
+
+L'ontologie n'est pas que le modèle de données. Un engagement forward-deployed utilise un type de métadonnée à chaque phase, de la découverte à la passation — et toutes relèvent de la même définition typée, validable et portable :
+
+| Phase | La question du client à laquelle vous répondez | Types de métadonnées utilisés |
+|---|---|---|
+| **1 · Modéliser les noms** | « Qu'existe-t-il dans notre métier ? » | Objets et champs (relations, règles de validation, formules) · datasources (connexion aux bases existantes, sans migration) · données d'amorçage (démos et recette) |
+| **2 · Modéliser les verbes** | « Comment le travail circule-t-il vraiment ? » | Flux (chaînes de validation, machines à états, déclencheurs, planifications) · validations (multi-niveaux, files, verrouillage d'enregistrement) · actions (boutons et opérations serveur à permissions vérifiées) |
+| **3 · Des écrans pour les gens** | « Où travaillent nos équipes ? » | Apps et navigation · vues (liste/kanban/calendrier/gantt) · pages et formulaires · tableaux de bord et rapports (les KPI que demande la direction) |
+| **4 · Passer la revue de sécurité** | « Qui peut voir et faire quoi ? » | Jeux de permissions et rôles (RBAC) · sécurité de ligne et de champ · règles de partage · audit (intégré au runtime — déclaré, livré) |
+| **5 · L'AI que le client veut vraiment** | « Que peut faire l'AI pour nous ? » | Agents AI (copilotes ventes/support) · outils et skills AI · exposition MCP (`ai: { exposed: true }`) |
+| **6 · Passation et capitalisation** | « Que se passe-t-il après votre départ ? » | Traductions (libellés multilingues pour clients internationaux) · manifeste et packaging (compilation en un `objectstack.json`, installable dans tout environnement) |
+
+L'essentiel : **les six couches sont la même matière.** Une chaîne de validation est une métadonnée typée exactement comme le modèle de données, et un agent AI aussi — la même porte de validation les contrôle, le même diff les relit, le même dépôt les transmet :
+
+```ts
+// The client's verbs: a discount approval — typed metadata, same as an object
+export const DiscountApproval: Flow = {
+  name: 'discount_approval',
+  label: 'Discount Approval',
+  type: 'record_change',
+  status: 'active',
+  nodes: [
+    { id: 'start', type: 'start', label: 'Start',
+      config: { objectName: 'crm_quote', triggerType: 'record-after-update',
+                condition: 'record.discount > 0.20' } },
+    { id: 'review', type: 'approval', label: 'Regional Manager Review',
+      config: { approvers: [{ type: 'position', value: 'regional_manager' }], lockRecord: true } },
+    { id: 'end', type: 'end', label: 'End' },
+  ],
+  edges: [/* start -> review -> end */],
+};
+
+// The AI the client actually wants: a service copilot — still metadata
+export const ServiceCopilot = defineAgent({
+  name: 'service_copilot',
+  label: 'Service Copilot',
+  instructions: 'Help support reps triage and resolve cases. Retrieve only within the user\'s permissions. Always cite case IDs.',
+  skills: ['case_triage', 'customer_360'],
+  knowledge: { topics: ['support_kb', 'sla_policies'] },
+});
 ```
 
-C’est cette taille qui rend la passation honnête. L’équipe sécurité du client lit le diff réel au lieu de faire confiance à une frontière de plateforme ; les futurs agents du client chargent le système entier en contexte et le refactorisent d’un bloc.
+HotCRM est la démonstration complète de ce vocabulaire à l'œuvre : 15 objets, 10 flux, 10 actions, 4 tableaux de bord, 2 copilotes AI, 6 skills, 10 rôles, 5 règles de partage et 4 langues — chaque couche présente, en 17 000 lignes environ.
 
-## Ce que ce stack ne résout pas
+## Ce que ce stack ne règle pas
 
-Soyons clairs sur la limite : **la fédération de données et les pipelines analytiques à très grande échelle** restent le terrain de Foundry, et une couche applicative ouverte ne les remplace pas. **La conduite du changement** — faire que les gens utilisent l’outil — reste un travail humain qu’aucun stack ne corrige. Et un client déjà standardisé sur une plateforme fermée peut rationnellement y rester. L’affirmation est plus étroite : pour la couche applicative du travail forward-deployed — modéliser un métier et livrer des apps gouvernées dessus — l’ontologie peut désormais être transmise au lieu d’être retenue en otage.
+Rendons justice aux alternatives : **la fédération de données et les pipelines analytiques à l’échelle Foundry** restent le terrain de Palantir — si l’engagement consiste à fusionner des pétaoctets entre quarante systèmes legacy, c’est une autre classe d’outil. **La conduite du changement** ne se règle avec aucun stack. Et un client déjà standardisé sur une plateforme fermée peut rationnellement y rester. L’affirmation est plus étroite : pour la couche applicative du travail forward-deployed — modéliser un métier et livrer des apps gouvernées dessus — les cinq douleurs ci-dessus sont désormais éliminables, et l’ontologie peut être transmise au lieu d’être retenue en otage.
 
 ## La checklist du FDE
 
 1. Modéliser les noms et les verbes du client en objets et en flux avant toute discussion d’UI.
-2. Garder la définition entière à taille de contexte pour que l’agent puisse la refactoriser d’un bloc.
+2. Garder la définition entière à taille de contexte pour que l’agent puisse la raisonner et la refactoriser d’un bloc.
 3. Permissions prudentes par défaut ; tout changement d’autorité explicite dans le diff.
 4. Transmettre le dépôt, l’artefact compilé et une checklist de revue — pas un login vers votre tenant.
 5. Laisser MCP activé pour que l’AI du client opère l’app dans le cadre de ses permissions.
 
 ## Essayez la boucle
 
-Pointez votre agent de code vers le stack ouvert — le scaffold embarque `AGENTS.md` et le bundle de skills :
+Pointez votre agent de code vers le stack ouvert — le scaffold embarque `AGENTS.md` et le bundle de skills, l’agent démarre donc avec les règles du format déjà chargées :
 
 ```bash
 npm create objectstack@latest client-app && cd client-app
-npx os dev --ui   # l’app tourne — modélisez l’objet suivant avec votre agent
+npx os dev --ui   # l’app tourne — modélisez le premier objet avec votre agent
 ```
 
-Pour les clients qui veulent la plateforme opérée — AI Builder dans le navigateur, cloud ou self-managed — il y a [ObjectOS](https://www.objectos.ai), le runtime commercial sur la même définition ouverte.
+Pour les clients qui veulent la plateforme opérée, [ObjectOS](https://www.objectos.ai) est le runtime commercial sur la même définition ouverte — construire et interroger en ligne, gouvernance incluse.
