@@ -9,7 +9,7 @@ const page = {
     eyebrow: '工具与 MCP',
     heroTitle: '你的业务对象，成为任意 AI 的受治理工具。',
     lead:
-      '多数公司用手写的胶水代码把 AI 接到数据上，绕过了自己建立的所有控制。ObjectOS 反其道而行：工具直接从元数据生成——无论你的模型是 Claude、Cursor 还是完全本地的模型，它都走和你的员工一样的权限、审批与审计。',
+      '多数公司用手写的胶水代码把 AI 接到数据上，绕过了自己建立的所有控制。ObjectStack 运行时则直接从元数据生成受治理工具：无论你的模型是 Claude、Cursor 还是完全本地的模型，它都走和员工一样的权限、审批与审计。ObjectOS 为同一应用增加生产运营体验。',
     primary: { label: '对比版本与定价', href: '/en/pricing/' },
     secondary: { label: '阅读文档', href: 'https://docs.objectos.ai' },
     metrics: [
@@ -92,7 +92,7 @@ const page = {
       {
         question: 'MCP 服务器在开源 ObjectStack 里吗？',
         answer:
-          '在——它是开源 ObjectStack AI 故事的核心。@objectstack/mcp 随平台发布，你可以把 Claude、Cursor 或完全本地的模型接到受治理对象上，无需云端订阅。',
+          '在——它是开源 ObjectStack AI 故事的核心。@objectstack/mcp 随 ObjectStack 发布，你可以把 Claude、Cursor 或完全本地的模型接到受治理对象上，无需云端订阅。',
       },
       {
         question: '必须把所有东西都暴露给 AI 吗？',

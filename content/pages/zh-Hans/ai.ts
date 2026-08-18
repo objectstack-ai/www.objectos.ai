@@ -5,16 +5,16 @@ const page = {
     navLabel: 'AI Build & Ask',
     title: 'AI Build 与 Ask：用自然语言创建和问询业务应用',
     description:
-      'AI Build 把一句描述变成可审阅的元数据；AI Ask 在用户权限内回答实时业务数据的问题。开源 ObjectStack 通过 MCP 自带你的 AI。',
+      'ObjectOS AI Build 把一句描述变成可审阅的 ObjectStack 元数据；AI Ask 在用户权限内回答实时数据问题，开源 ObjectStack 则通过 MCP 接入你自己的 AI。',
     eyebrow: 'AI Build & Ask',
     heroTitle: '描述变更，审阅 diff，上线应用。',
     lead:
-      'AI 有两条路径构建 ObjectOS 应用：开发者把 Claude Code 这类编码 Agent 指向源码项目，写出全部类型的元数据，在浏览器中预览、以 diff 审阅；业务人员则可在云端以对话方式描述变更。AI Ask 对实时数据回答问题、执行已批准的动作——始终在提问者本人的权限之内。',
+      '开发者把 Claude Code 这类编码 Agent 指向源码项目来构建 ObjectStack 应用。ObjectOS 为团队增加第二条路径：业务人员在云端或企业版中通过对话描述变更。两条路径都产出同一种类型化 ObjectStack 元数据，并运行在同一受治理运行时上；ObjectOS AI Ask 则在提问者本人的权限内回答实时数据并执行动作。',
     primary: { label: '对比版本与定价', href: '/en/pricing/' },
     secondary: { label: '看 Agent 如何编写元数据', href: '/en/agent-developer/' },
     metrics: [
       { value: '2 条路径', label: '在源码里用编码 Agent，或在云端用对话' },
-      { value: '1,792 行', label: '一个完整 CRM 的元数据 —— 小到能审阅' },
+      { value: '<150k tokens', label: '完整 CRM 全应用（含 UI），一个上下文窗口可容纳' },
       { value: '0 后门', label: '每次 AI 动作都在用户权限与审计之内' },
     ],
     artifact: {
@@ -26,7 +26,7 @@ const page = {
         '描述：“跟踪供应商合同，带续约提醒，超过 5 万美元的合同需要审批。”',
         '你的 AI——源码里的编码 Agent，或产品内的构建器——起草对象、字段、视图和续约流程。',
         '结构性变更以紧凑、可读的 diff 进入审批队列。',
-        '你批准——运行时上线表、API、界面、自动化和审计。',
+        '你批准——ObjectStack 运行时派生并上线表、API、界面、自动化和审计。',
         'AI Ask 随即可以为每个用户回答合同问题，范围以其可见数据为界。',
       ],
     },
@@ -36,7 +36,7 @@ const page = {
         eyebrow: 'AI Build',
         title: '两种构建方式，同一份可审阅的定义',
         copy:
-          '无论 AI 是在你的代码仓库里工作，还是在聊天面板里工作，产出都是同一种紧凑的 ObjectStack 元数据——由人审阅、由人负责。',
+          '无论 AI 是在你的代码仓库里工作，还是在 ObjectOS 聊天面板里工作，产出都是由人审阅并拥有的同一种 ObjectStack 类型化元数据。完整 CRM 全应用小于 150k tokens：对象、流程、权限等业务逻辑小于 100k，UI 元数据约 50k。',
         items: [
           {
             title: '在源码里，用你的编码 Agent',
@@ -44,7 +44,7 @@ const page = {
           },
           {
             title: '在云端，用对话',
-            body: '云端与企业版中，业务人员在聊天里描述变更；产品内构建器把它起草成元数据并实时预览——Airtable 式的易用，配运行时治理。',
+            body: 'ObjectOS 云端与企业版中，业务人员在聊天里描述变更；产品内构建器把它起草成 ObjectStack 元数据并实时预览——Airtable 式的易用，配运行时治理。',
           },
           {
             title: '可视化设计器微调',
@@ -82,7 +82,7 @@ const page = {
         eyebrow: '开源 ObjectStack',
         title: '自带你的 AI，治理保持一致',
         copy:
-          '开源 ObjectStack 有意不内置助手：你的编码 Agent 以源码文件编写同样的元数据，任意 MCP 客户端查询同样受治理的对象。',
+          '开源 ObjectStack 有意不内置助手：你的编码 Agent 以源码文件编写同样的元数据，任意 MCP 客户端通过它的开放运行时查询同样受治理的对象。',
         items: [
           {
             title: 'Agent 写源码文件',
@@ -103,15 +103,15 @@ const page = {
       columns: ['版本', 'AI 如何构建', 'AI 如何回答'],
       rows: [
         ['开源 ObjectStack', '编码 Agent 编辑元数据源码文件，以 git diff 审阅', '任意 MCP 客户端用你自己的模型查询受治理对象'],
-        ['云端 Team 与 Business', '产品内 AI Build 起草变更，审批把守结构', '产品内 AI Ask 回答问题并执行已批准动作'],
-        ['企业版', '同上，另支持私有部署与自带模型', '同上，另支持本地模型与内部身份系统'],
+        ['ObjectOS 云端 Team 与 Business', '产品内 AI Build 起草变更，审批把守结构', '产品内 AI Ask 回答问题并执行已批准动作'],
+        ['ObjectOS 企业版', '同上，另支持私有部署与自带模型', '同上，另支持本地模型与内部身份系统'],
       ],
     },
     faqs: [
       {
         question: '怎么防止 AI 弄坏生产环境？',
         answer:
-          '三条运行时保证：结构性变更必须经人审批；每个动作都在发起用户的权限之内执行；一切都被审计。AI 能快速起草，恰恰因为它无法悄悄上线。',
+          'ObjectStack 运行时强制三条保证：结构性变更必须经人审批；每个动作都在发起用户的权限之内执行；一切都被审计。ObjectOS 把这套审批与审计闭环提供在生产产品中，因此 AI 可以快速起草，却无法悄悄上线。',
       },
       {
         question: '用的是什么模型？',

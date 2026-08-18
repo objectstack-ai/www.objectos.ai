@@ -35,7 +35,7 @@ const page = {
         eyebrow: 'Boundaries',
         title: 'Keep sensitive business data inside controlled infrastructure',
         copy:
-          'ObjectOS can run as a self-hosted runtime. Unless you configure external providers, business records, prompts, files, audit logs, and credentials stay in infrastructure you control.',
+          'ObjectOS can deploy and operate the ObjectStack runtime inside customer-controlled infrastructure. Unless you configure external providers, business records, prompts, files, audit logs, and credentials stay inside that boundary.',
         items: [
           {
             title: 'Data residency',
@@ -100,7 +100,7 @@ const page = {
       {
         question: 'Can ObjectOS run without internet access?',
         answer:
-          'The runtime is designed for self-hosted and isolated deployment patterns. The exact operating model depends on package mirrors, model routing, identity, and customer infrastructure.',
+          'Yes. ObjectOS Enterprise can operate the ObjectStack runtime in self-hosted and isolated deployment patterns. The exact model depends on package mirrors, model routing, identity, and customer infrastructure.',
       },
     ],
   } satisfies MarketingPage;

@@ -1,6 +1,6 @@
 ---
-title: "Combien de tokens fait une application métier ? Un CRM complet en 16k"
-description: "Mesuré dans l’unité où travaille l’AI, un CRM complet fait ~16k tokens de métadonnées typées — 8 % d’une fenêtre de contexte. Le logiciel qui tient entier dans le contexte d’un agent se maintient autrement."
+title: "Combien de tokens fait une application métier ? Un CRM complet sous 150k"
+description: "Un CRM complet tient sous 150k tokens de métadonnées typées : logique métier sous 100k, UI autour de 50k. Le CRM de référence fourni reste à environ 16k."
 author: ObjectStack Team
 date: 2026-07-22
 status: published
@@ -18,11 +18,11 @@ tags:
   - ObjectStack
 ---
 
-**La version courte :** mesuré dans l’unité où l’AI travaille réellement — les tokens — un CRM complet fait environ **16 000 tokens** : 1 792 lignes de métadonnées typées réparties sur 31 fichiers, couvrant le modèle de données, les vues, les tableaux de bord, un flux de conversion de leads, les permissions, les actions et les traductions. C’est moins de 8 % d’une fenêtre de contexte standard de 200k tokens. Le logiciel qui franchit cette barre mérite un nom : **logiciel à taille de contexte** — un système assez petit pour qu’un agent AI le charge *en entier*, le comprenne et le refactorise d’un bloc. Dès qu’un système est à taille de contexte, l’agent cesse d’être une autocomplétion et devient un mainteneur.
+**La version courte :** un CRM complet tient sous **150 000 tokens** de métadonnées typées : la logique métier — chaque objet, workflow, action et permission — reste sous **100 000**, tandis que l’UI déclarative ajoute environ **50 000**. La référence `app-crm` fournie est encore plus petite : 1 792 lignes réparties sur 31 fichiers, soit environ **16 000 tokens**. Ces 16k décrivent l’échantillon de référence, pas le plafond d’un CRM complet de niveau produit. Les deux tiennent dans une fenêtre de 200k. C’est un **logiciel à taille de contexte** : l’AI peut tenir, raisonner et refactoriser l’application entière pendant qu’un humain relit le diff.
 
 ## Comptez vous-même
 
-Ce nombre n’est pas un benchmark que nous avons conçu. Il sort d’une application ordinaire — l’exemple de CRM livré avec le [framework open source ObjectStack](https://github.com/objectstack-ai/objectstack) :
+Les 16k ne sont pas un benchmark de produit complet. C’est le décompte reproductible de la référence CRM livrée avec le [framework open source ObjectStack](https://github.com/objectstack-ai/objectstack) :
 
 ```bash
 git clone https://github.com/objectstack-ai/objectstack
@@ -34,10 +34,10 @@ find objectstack/examples/app-crm/src -name '*.ts' -not -name '*.test.ts' \
 | Système | Fichiers | Lignes | ≈ Tokens | Tient dans 200k de contexte ? |
 |---|---:|---:|---:|---|
 | CRM d’exemple ([`app-crm`](https://github.com/objectstack-ai/objectstack/tree/main/examples/app-crm)) — objets, vues, tableau de bord, flux, permissions, traductions | 31 | 1 792 | ~16k | Oui — 12× de marge |
-| [HotCRM](https://github.com/objectstack-ai/hotcrm) — CRM complet de marketplace : 15 objets, 17 flux, 4 tableaux de bord, 2 copilotes AI, 4 langues | 132 | ~18 000 | ~170k | Oui — de justesse |
+| [HotCRM](https://github.com/objectstack-ai/hotcrm) — CRM complet de marketplace : 15 objets, 17 flux, 4 tableaux de bord, 2 copilotes AI, 4 langues | 132 | ~18 000 | moins de 150k au total (logique métier sous 100k + UI ~50k) | Oui — plus de 50k de marge |
 | Une base de code CRM conventionnelle écrite à la main | des milliers | 300k–1M+ | des millions | Non — loin de là |
 
-Même catégorie de produit. Trois ordres de grandeur d’écart.
+Même catégorie de produit, deux échelles utiles : un échantillon de référence à environ 16k et un CRM complet sous 150k. Les deux ont une taille de contexte ; une base de code conventionnelle, non.
 
 ## Pourquoi le token est devenu la bonne unité
 
@@ -48,14 +48,14 @@ Pendant cinquante ans, nous avons mesuré le logiciel en lignes de code, parce q
 
 Ce n’est pas une amélioration incrémentale. C’est un changement de régime, et la frontière passe là où se trouve votre fenêtre de contexte.
 
-## Pourquoi une application métier se compresse 50×
+## Pourquoi la logique métier reste sous 100k tokens
 
 Pas par un tour de compression — par suppression. Une application d’entreprise, ce sont deux choses entrelacées :
 
 - **Les décisions.** Quels objets existent, comment ils se relient, qui peut voir quel champ, ce qui se passe quand un lead convertit. C’est votre **ontologie** métier, et elle est véritablement irréductible — vous seul pouvez la décider.
 - **La plomberie.** Tables, endpoints CRUD, écrans liste et détail, middleware de permissions, écritures d’audit. C’est essentiellement identique dans toutes les applications métier jamais écrites — donc *dérivable*.
 
-Le pari d’ObjectStack : ne garder que les décisions dans l’artefact et dériver toute la plomberie au runtime. Ces 1 792 lignes *sont* la liste des décisions — des métadonnées typées, validées par Zod. Le schéma de base de données, l’API REST, l’UI d’administration et les outils MCP en sont calculés à chaque démarrage. Rien de dérivable n’est stocké, donc rien de dérivable ne peut dériver — et rien de dérivable ne consomme votre budget de tokens.
+Le pari d’ObjectStack : ne garder que les décisions dans l’artefact et dériver toute la plomberie au runtime. Dans le CRM de référence fourni, ces 1 792 lignes *sont* la liste des décisions — des métadonnées typées, validées par Zod. Le schéma de base de données, l’API REST, l’UI rendue et les outils MCP en sont calculés à chaque démarrage. Rien de dérivable n’est stocké, donc rien ne peut dériver. Dans le HotCRM complet, cette séparation maintient la logique métier sous 100k tokens ; l’UI déclarative ajoute environ 50k et garde l’application entière sous 150k.
 
 ## Ce qui ne se compresse pas
 

@@ -1,6 +1,6 @@
 ---
-title: "¿Cuántos tokens tiene una app de negocio? Un CRM completo en 16k"
-description: "Medido en la unidad en que trabaja la AI, un CRM completo son ~16k tokens de metadatos tipados — el 8 % de una ventana de contexto. El software que cabe entero en el contexto de un agente se mantiene distinto."
+title: "¿Cuántos tokens tiene una app de negocio? Un CRM completo en menos de 150k"
+description: "Un CRM completo cabe en menos de 150k tokens de metadatos tipados: lógica de negocio bajo 100k y UI en torno a 50k. El CRM de referencia incluido sigue rondando los 16k."
 author: ObjectStack Team
 date: 2026-07-22
 status: published
@@ -18,11 +18,11 @@ tags:
   - ObjectStack
 ---
 
-**La versión corta:** medido en la unidad en la que la AI trabaja de verdad — tokens — un CRM completo son unos **16.000 tokens**: 1.792 líneas de metadatos tipados en 31 archivos, que cubren el modelo de datos, vistas, dashboards, un flujo de conversión de leads, permisos, acciones y traducciones. Eso es menos del 8 % de una ventana de contexto estándar de 200k tokens. El software que supera ese listón merece un nombre: **software a escala de contexto** — un sistema lo bastante pequeño para que un agente de AI lo cargue *entero*, razone sobre él y lo refactorice completo. Cuando un sistema alcanza la escala de contexto, el agente deja de ser autocompletado y pasa a ser mantenedor.
+**La versión corta:** un CRM completo cabe en menos de **150.000 tokens** de metadatos tipados: la lógica de negocio — cada objeto, flujo, acción y permiso — se mantiene por debajo de **100.000**, y la UI declarativa añade unos **50.000**. La referencia `app-crm` incluida es aún menor: 1.792 líneas en 31 archivos, unos **16.000 tokens**. Esa cifra de 16k describe la muestra de referencia, no el límite de un CRM completo de nivel producto. Ambos caben en una ventana de 200k. Lo llamamos **software a escala de contexto**: la AI puede sostener, razonar y refactorizar la aplicación entera mientras una persona revisa el diff.
 
 ## Cuéntalo tú mismo
 
-El número no es un benchmark diseñado por nosotros. Sale de una app corriente — el ejemplo de CRM que acompaña al [framework open source ObjectStack](https://github.com/objectstack-ai/objectstack):
+Los 16k no son un benchmark de producto completo. Son el recuento reproducible de la referencia CRM que acompaña al [framework open source ObjectStack](https://github.com/objectstack-ai/objectstack):
 
 ```bash
 git clone https://github.com/objectstack-ai/objectstack
@@ -34,10 +34,10 @@ find objectstack/examples/app-crm/src -name '*.ts' -not -name '*.test.ts' \
 | Sistema | Archivos | Líneas | ≈ Tokens | ¿Cabe en 200k de contexto? |
 |---|---:|---:|---:|---|
 | CRM de ejemplo ([`app-crm`](https://github.com/objectstack-ai/objectstack/tree/main/examples/app-crm)) — objetos, vistas, dashboard, flujo, permisos, traducciones | 31 | 1.792 | ~16k | Sí — con 12× de margen |
-| [HotCRM](https://github.com/objectstack-ai/hotcrm) — CRM completo de marketplace: 15 objetos, 17 flujos, 4 dashboards, 2 copilotos de AI, 4 idiomas | 132 | ~18.000 | ~170k | Sí — por poco |
+| [HotCRM](https://github.com/objectstack-ai/hotcrm) — CRM completo de marketplace: 15 objetos, 17 flujos, 4 dashboards, 2 copilotos de AI, 4 idiomas | 132 | ~18.000 | menos de 150k en total (lógica de negocio bajo 100k + UI ~50k) | Sí — más de 50k de margen |
 | Una base de código CRM convencional escrita a mano | miles | 300k–1M+ | millones | No — ni de lejos |
 
-La misma categoría de producto. Tres órdenes de magnitud de diferencia.
+La misma categoría de producto, dos escalas útiles: una muestra de referencia de ~16k y un CRM completo por debajo de 150k. Ambos están a escala de contexto; una base de código convencional no.
 
 ## Por qué los tokens pasaron a ser la unidad correcta
 
@@ -48,14 +48,14 @@ Durante cincuenta años medimos el software en líneas de código porque la rest
 
 No es una mejora incremental. Es un cambio de régimen, y la frontera está donde esté tu ventana de contexto.
 
-## Por qué una app de negocio se comprime 50×
+## Por qué la lógica de negocio se mantiene bajo 100k tokens
 
 No por un truco de compresión — por eliminación. Una aplicación empresarial son dos cosas entrelazadas:
 
 - **Decisiones.** Qué objetos existen, cómo se relacionan, quién puede ver qué campo, qué pasa cuando un lead convierte. Esa es tu **ontología** de negocio, y es genuinamente irreducible — nadie más que tú puede decidirla.
 - **Fontanería.** Tablas, endpoints CRUD, pantallas de lista y detalle, middleware de permisos, escrituras de auditoría. Esto es esencialmente idéntico en toda app de negocio jamás escrita — es decir, *derivable*.
 
-La apuesta de ObjectStack: conservar solo las decisiones en el artefacto y derivar toda la fontanería en el runtime. Esas 1.792 líneas *son* la lista de decisiones — metadatos tipados y validados con Zod. El esquema de base de datos, la API REST, la UI de administración y las herramientas MCP se calculan a partir de ellas en cada arranque. Nada derivable se almacena, así que nada derivable puede desviarse — ni gastar tu presupuesto de tokens.
+La apuesta de ObjectStack: conservar solo las decisiones en el artefacto y derivar toda la fontanería en el runtime. En el CRM de referencia incluido, esas 1.792 líneas *son* la lista de decisiones — metadatos tipados y validados con Zod. El esquema de base de datos, la API REST, la UI renderizada y las herramientas MCP se calculan a partir de ellas en cada arranque. Nada derivable se almacena, así que nada puede desviarse. En el HotCRM completo, esta separación mantiene la lógica de negocio bajo 100k tokens; la UI declarativa añade unos 50k y deja la aplicación entera por debajo de 150k.
 
 ## Lo que no se comprime
 

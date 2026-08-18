@@ -5,23 +5,23 @@ const page = {
     navLabel: '平台总览',
     title: 'ObjectOS 平台：AI 编写的业务应用背后的全部能力',
     description:
-      '一个受治理运行时，供给每个 AI 编写的业务应用所需的数据库、API、界面、自动化、审批、权限与报表分析。',
+      'ObjectOS 是 ObjectStack 应用的商业生产平台，把产品内 AI、部署与团队运营建立在开放、受治理的 ObjectStack 运行时之上。',
     eyebrow: '平台总览',
-    heroTitle: '一个业务系统需要的一切，由运行时供给。',
+    heroTitle: '一个业务系统需要的一切，随时可投入生产。',
     lead:
-      '你的 Agent 用紧凑的元数据描述业务，ObjectOS 把它变成可运行的系统：数据库与 API、权限感知的界面、自动化流程、审批队列和仪表盘——治理在运行时强制执行，而不是停留在演示片里。',
+      '你的 Agent 用紧凑、类型化的 ObjectStack 元数据描述业务。开放的 ObjectStack 运行时派生数据库、API、权限感知的界面、自动化流程、审批队列和仪表盘，并在每次调用中强制治理。ObjectOS 把这个基础打包成用于构建、部署与生产运营的商业平台。',
     primary: { label: '对比版本与定价', href: '/en/pricing/' },
     secondary: { label: '查看产品导览', href: '/en/product-tour/' },
     metrics: [
       { value: '25+', label: '每个已部署应用背后的运行时服务' },
       { value: '6', label: '能力域，从数据建模到报表分析' },
-      { value: '1,792 行', label: '一个完整 CRM 的元数据，其余由运行时供给' },
+      { value: '<150k tokens', label: '完整 CRM 全应用（含 UI），一个上下文窗口可容纳' },
     ],
     artifact: {
-      eyebrow: 'Agent 写的那 1%',
+      eyebrow: 'Agent 编写的类型化元数据',
       title: '一份定义，背后是一整个应用。',
       body:
-        '这就是一个受治理订单对象的形状。权限集、审批流程、视图和 AI 工具是同一套可审阅栈里的并列定义——而表、API、界面、队列和审计由运行时供给。',
+        '这就是一个受治理订单对象的形状。权限集、审批流程、视图和 AI 工具都是同一套可审阅 ObjectStack 目标格式中的并列定义，表、API、界面、队列和审计则由 ObjectStack 运行时派生。',
       code: `import { ObjectSchema, Field } from '@objectstack/spec/data';
 
 export const Order = ObjectSchema.create({
@@ -48,9 +48,9 @@ export const Order = ObjectSchema.create({
       {
         id: 'capabilities',
         eyebrow: '能力地图',
-        title: '六大能力域，一个受治理运行时',
+        title: '六大能力域，一个开放、受治理的运行时',
         copy:
-          '一个成熟业务平台该有的能力这里都有——区别在于：定义由你的 AI 编写，组装由运行时完成。',
+          '一个成熟业务平台该有的能力这里都有——区别在于：ObjectStack 定义由你的 AI 编写，组装由它的运行时完成。',
         items: [
           {
             title: '数据建模',
@@ -95,11 +95,11 @@ export const Order = ObjectSchema.create({
         eyebrow: '为 AI 而设计',
         title: '让 Agent 来写，让人来审',
         copy:
-          '上面每一项能力都是元数据驱动的——这正是平台可被 AI 编写的原因：定义小、diff 可读、运行时强制执行。',
+          '上面每一项 ObjectStack 能力都由元数据驱动——这正是应用可被 AI 编写的原因：整体可装入上下文的定义、可读 diff 与运行时强制执行。ObjectOS 则为团队增加产品内 AI 与生产运营体验。',
         items: [
           {
             title: 'AI Build & Ask',
-            body: '用自然语言描述变更并审阅 diff，或对实时业务数据提问——始终在登录用户的权限之内。',
+            body: '在 ObjectOS 云端与企业版中，用自然语言描述变更并审阅 diff，或对实时业务数据提问——始终在登录用户的权限之内。',
             meta: '指南',
             href: '/en/ai/',
           },
@@ -123,7 +123,7 @@ export const Order = ObjectSchema.create({
       },
     ],
     table: {
-      columns: ['业务需求', 'AI 编写', '运行时供给'],
+      columns: ['业务需求', 'AI 编写', 'ObjectStack 运行时派生'],
       rows: [
         ['一个带 API 的客户数据库', '对象、字段、关系', '表、迁移、查询语言、REST 端点'],
         ['给每个团队各自的界面', '视图、表单、仪表盘', '尊重每个用户权限的渲染 UI'],
@@ -135,12 +135,12 @@ export const Order = ObjectSchema.create({
       {
         question: '开源 ObjectStack 包含哪些能力？',
         answer:
-          '本页的运行时能力——数据、界面、自动化、审批、权限、报表分析——都属于开源 ObjectStack 平台。AI 自带（BYO-AI）：编码 Agent 以源码文件编写元数据，任意 MCP 客户端可以查询你的对象。产品内的 AI Build 与 Ask 助手在云端与企业版提供。',
+          '本页的运行时能力——数据、界面、自动化、审批、权限、报表分析——都属于开源 ObjectStack 目标格式与运行时。AI 自带（BYO-AI）：编码 Agent 以源码文件编写元数据，任意 MCP 客户端可以查询你的对象。产品内 AI Build 与 Ask 是 ObjectOS 云端与企业版能力。',
       },
       {
         question: '能跑在我们自己的基础设施里吗？',
         answer:
-          '可以。ObjectOS 支持自托管，可运行在 VPC、本地服务器或隔离网络中；企业版还支持本地模型、内部身份系统和自有密钥管理。',
+          '可以。开源 ObjectStack 运行时可自托管。ObjectOS 企业版也支持私有部署到 VPC、本地服务器或隔离网络，并提供本地模型、内部身份系统、自有密钥管理与企业支持。',
       },
     ],
   } satisfies MarketingPage;

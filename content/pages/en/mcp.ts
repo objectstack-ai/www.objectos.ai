@@ -9,7 +9,7 @@ const page = {
     eyebrow: 'Tools & MCP',
     heroTitle: 'Your business objects, as governed tools for any AI.',
     lead:
-      'Most companies wire AI to their data with handwritten glue that bypasses every control they have. ObjectOS generates the tools from metadata instead: whatever your model — Claude, Cursor, or something fully local — it works through the same permissions, approvals, and audit as your people.',
+      'Most companies wire AI to their data with handwritten glue that bypasses every control they have. The ObjectStack runtime generates governed tools from metadata instead: whatever your model — Claude, Cursor, or something fully local — it works through the same permissions, approvals, and audit as your people. ObjectOS adds the production operations around that same app.',
     primary: { label: 'Compare editions and pricing', href: '/en/pricing/' },
     secondary: { label: 'Read the docs', href: 'https://docs.objectos.ai' },
     metrics: [
@@ -92,7 +92,7 @@ const page = {
       {
         question: 'Is the MCP server in the open-source ObjectStack?',
         answer:
-          'Yes — it is the core of the open-source ObjectStack AI story. @objectstack/mcp ships with the platform, so you can connect Claude, Cursor, or a fully local model to your governed objects without a cloud subscription.',
+          'Yes — it is the core of the open-source ObjectStack AI story. @objectstack/mcp ships with ObjectStack, so you can connect Claude, Cursor, or a fully local model to your governed objects without a cloud subscription.',
       },
       {
         question: 'Do we have to expose everything to the AI?',
