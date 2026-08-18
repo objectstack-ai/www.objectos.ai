@@ -5,23 +5,23 @@ const page = {
     navLabel: 'Product tour',
     title: 'ObjectOS Product Tour: From Prompt to Governed App',
     description:
-      'See how ObjectOS turns a business request into reviewable ObjectStack metadata, then runs the app with permissions, approvals, audit, APIs, UI, and AI tools.',
+      'See how teams use ObjectOS to take an ObjectStack app from a business request to production: typed metadata, a human-reviewed diff, and governed operation.',
     eyebrow: 'Product tour',
     heroTitle: 'From one request to a governed application.',
     lead:
-      'ObjectOS is not another code generator. It is the target format and runtime where AI-written enterprise software lands: the agent writes compact metadata, a person reviews the diff, and the runtime supplies the repeatable application surfaces.',
+      'ObjectStack is the open, typed target format and runtime for AI-written enterprise software: an agent writes compact metadata, a person reviews the diff, and the runtime derives the repeatable application surfaces. ObjectOS is the commercial production platform for building, deploying, and operating those apps.',
     primary: { label: 'Point your agent at ObjectStack', href: '/en/agent-developer/' },
     secondary: { label: 'Review the trust model', href: '/en/trust-center/' },
     metrics: [
-      { value: '5 steps', label: 'Requirement, metadata, review, runtime, governed AI' },
-      { value: '1,792 lines', label: 'A complete CRM — the whole business system' },
-      { value: '~16k tokens', label: 'So the entire app fits in the agent’s context' },
+      { value: '<150k tokens', label: 'A complete CRM including UI — one context window' },
+      { value: '<100k tokens', label: 'Objects, workflows, permissions, and business logic' },
+      { value: '~50k tokens', label: 'The UI metadata for the complete CRM' },
     ],
     artifact: {
       eyebrow: 'Review surface',
       title: 'The diff is the product boundary.',
       body:
-        'Instead of asking a reviewer to audit a generated application codebase, ObjectStack asks the agent to change the business definition layer: objects, fields, views, permissions, workflows, actions, APIs, and tools.',
+        'Instead of asking a reviewer to audit a generated application codebase, ObjectStack gives the agent an open, typed definition layer to change: objects, fields, views, permissions, workflows, actions, APIs, and tools.',
       code: `import { ObjectSchema, Field } from '@objectstack/spec/data';
 
 export const Case = ObjectSchema.create({
@@ -66,17 +66,17 @@ export const Case = ObjectSchema.create({
           },
           {
             title: '2. Agent writes metadata',
-            body: 'The coding agent edits ObjectStack definitions instead of generating controllers, screens, migrations, APIs, and permission glue by hand.',
+            body: 'The coding agent edits Strict TypeScript ObjectStack definitions that must conform to the published Zod schemas instead of generating controllers, screens, migrations, APIs, and permission glue by hand.',
             meta: 'AI writes',
           },
           {
             title: '3. Reviewer signs off',
-            body: 'The reviewer checks a compact diff: field names, relationships, permissions, transitions, workflow rules, and tool exposure.',
+            body: 'After the validation gate passes, the reviewer checks a compact diff: field names, relationships, permissions, transitions, workflow rules, and tool exposure.',
             meta: 'Human review',
           },
           {
             title: '4. Runtime supplies surfaces',
-            body: 'ObjectOS turns metadata into tables, views, forms, ObjectQL, APIs, audit trails, MCP tools, and admin surfaces.',
+            body: 'The ObjectStack runtime derives tables, views, forms, ObjectQL, APIs, audit trails, MCP tools, and admin surfaces. ObjectOS operates the resulting app in production.',
             meta: 'Runtime layer',
           },
           {
@@ -91,7 +91,7 @@ export const Case = ObjectSchema.create({
         eyebrow: 'Existing systems',
         title: 'Add an object layer without replacing systems of record',
         copy:
-          'Most enterprise software value is already trapped in databases, ERP, CRM, ticketing, files, and custom systems. ObjectOS gives agents an explicit object model over that estate.',
+          'Most enterprise software value is already trapped in databases, ERP, CRM, ticketing, files, and custom systems. ObjectStack gives agents an explicit object model over that estate; ObjectOS gives teams a production platform for operating apps built on it.',
         items: [
           {
             title: 'Connect databases and APIs',
@@ -109,7 +109,7 @@ export const Case = ObjectSchema.create({
       },
     ],
     table: {
-      columns: ['Layer', 'AI writes', 'ObjectOS supplies'],
+      columns: ['Layer', 'AI writes', 'ObjectStack runtime derives'],
       rows: [
         ['Data model', 'Objects, fields, relationships, validations', 'Tables, migrations, ObjectQL, generated APIs'],
         ['Experience', 'Views, forms, dashboards, actions', 'Rendered UI, navigation, status states, access checks'],
@@ -129,12 +129,12 @@ export const Case = ObjectSchema.create({
       {
         question: 'Is ObjectOS a low-code builder?',
         answer:
-          'No. Low-code usually optimizes human screen building. ObjectOS is a target format and runtime for AI-written business software, where metadata stays reviewable and runtime governance stays enforced.',
+          'No. Low-code usually optimizes human screen building. ObjectOS is the commercial production platform for ObjectStack apps. ObjectStack is the open, typed target format and runtime that keeps metadata reviewable and enforces governance on every call.',
       },
       {
-        question: 'Is the 1% claim a benchmark?',
+        question: 'How do ObjectStack and ObjectOS differ?',
         answer:
-          'It is a review-surface heuristic for typical CRUD and workflow apps. The exact ratio depends on the domain, but the key point is that the agent edits metadata while ObjectOS supplies repeated application mechanics.',
+          'ObjectStack defines and runs the application as open, versioned metadata. ObjectOS is the commercial production platform that adds the in-app AI experience, team operation, deployment choices, and enterprise support around ObjectStack apps.',
       },
     ],
   } satisfies MarketingPage;

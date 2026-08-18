@@ -34,18 +34,18 @@ export const GET: APIRoute = async ({ site }) => {
   const lines = [
     '# ObjectOS',
     '',
-    '> ObjectOS is the target format and runtime for AI-written enterprise software: an AI agent generates the application as governed metadata, a human reviews it as a small diff, and the runtime keeps every action inside permissions, approval, and audit.',
+    '> ObjectStack is the open target format and runtime for AI-written enterprise software; ObjectOS is the commercial production platform where teams build, review, deploy, and operate ObjectStack applications.',
     '',
-    'Built for a world where AI writes the code. ObjectStack is the open protocol (Apache 2.0) for defining business objects, relations, permissions, flows, APIs, and AI tools as portable metadata in your own repository; ObjectOS is the self-hosted runtime that executes that metadata and enforces governance. Teams model business objects, generate application structure from natural language, connect existing systems without migration, and let AI agents operate inside enterprise permission boundaries. In the open-source edition, you bring your own AI: ObjectOS exposes objects, queries, and business actions through MCP for clients such as Claude, Cursor, or a local model, while metadata is authored as source files and reviewed as a diff. The in-app AI Build (Studio) and Ask (data console) assistants ship in the Cloud and Enterprise editions.',
+    'ObjectStack (Apache 2.0) keeps the whole application — data model, UI, workflows, permissions, APIs, and AI tools — as portable typed definitions in your own repository. A complete CRM stays under 150k tokens — business logic under 100k, with UI adding about 50k — so an AI agent can read and reason about the whole system in one context window. Strict TypeScript, Zod schemas, and a validation gate catch structural mistakes before deployment; the open ObjectStack runtime then derives the database, REST API, UI, and MCP server from the validated definitions, and enforces permissions and audit on every call. In the open-source edition, you bring your own coding agent and MCP client, author metadata as source files, and review changes as diffs. ObjectOS is the commercial production platform for the same ObjectStack applications: teams use in-app AI Build and Ask, human approvals, SSO, managed deployment, and operational controls on Cloud and Enterprise, in our cloud or customer-controlled infrastructure.',
     '',
     '## Primary Pages',
     '',
-    `- [Home](${absoluteUrl(site, homePath('en'))}): Governed runtime for AI-written business applications.`,
+    `- [Home](${absoluteUrl(site, homePath('en'))}): Commercial production platform for building, reviewing, deploying, and operating ObjectStack applications.`,
     ...getMarketingPages('en').map(
       (page) => `- [${page.navLabel}](${absoluteUrl(site, marketingPagePath('en', page.slug))}): ${page.description}`
     ),
     `- [Security](${absoluteUrl(site, securityPath('en'))}): Data residency, permissions, approvals, audit logs, and self-hosted deployment boundaries.`,
-    `- [Pricing](${absoluteUrl(site, pricingPath('en'))}): Plans for open-source, cloud, and enterprise ObjectOS adoption.`,
+    `- [Pricing](${absoluteUrl(site, pricingPath('en'))}): Open-source ObjectStack and ObjectOS Cloud and Enterprise plans.`,
     `- [Articles](${absoluteUrl(site, blogPath('en'))}): Practical writing on AI-native software, enterprise AI agents, integration, modernization, and governance.`,
     `- [Documentation](https://docs.objectos.ai/): Product and developer documentation.`,
     '',

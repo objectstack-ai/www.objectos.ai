@@ -5,23 +5,23 @@ const page = {
     navLabel: 'Platform',
     title: 'ObjectOS Platform: The Capabilities Behind AI-Written Business Apps',
     description:
-      'One governed runtime supplies the database, APIs, screens, automation, approvals, permissions, and analytics that every AI-written business application needs.',
+      'ObjectOS is the commercial production platform for ObjectStack apps, combining in-app AI, deployment, and team operations with the open, governed ObjectStack runtime.',
     eyebrow: 'Platform',
-    heroTitle: 'Everything a business system needs. Supplied by the runtime.',
+    heroTitle: 'Everything a business system needs. Ready for production.',
     lead:
-      'Your agent describes the business in compact metadata. ObjectOS turns it into a working system: database and APIs, permission-aware screens, automated processes, approval queues, and dashboards — with governance enforced at runtime, not promised in a slide.',
+      'Your agent describes the business as compact, typed ObjectStack metadata. The open ObjectStack runtime derives the database, APIs, permission-aware screens, automated processes, approval queues, and dashboards, enforcing governance on every call. ObjectOS packages that foundation as a commercial platform for building, deploying, and operating the app in production.',
     primary: { label: 'Compare editions and pricing', href: '/en/pricing/' },
     secondary: { label: 'Take the product tour', href: '/en/product-tour/' },
     metrics: [
       { value: '25+', label: 'Runtime services behind every deployed application' },
       { value: '6', label: 'Capability areas, from data modeling to analytics' },
-      { value: '1,792 lines', label: 'A whole CRM in metadata; the runtime supplies the rest' },
+      { value: '<150k tokens', label: 'A complete CRM including UI, held in one context window' },
     ],
     artifact: {
-      eyebrow: 'The 1% your agent writes',
+      eyebrow: 'Typed metadata your agent writes',
       title: 'One definition. A whole application behind it.',
       body:
-        'This is the shape of a governed order object. Permission sets, approval flows, views, and AI tools are sibling definitions in the same reviewable stack — while tables, APIs, screens, queues, and audit come from the runtime.',
+        'This is the shape of a governed order object. Permission sets, approval flows, views, and AI tools are sibling ObjectStack definitions in the same reviewable target format, while the ObjectStack runtime derives tables, APIs, screens, queues, and audit.',
       code: `import { ObjectSchema, Field } from '@objectstack/spec/data';
 
 export const Order = ObjectSchema.create({
@@ -48,9 +48,9 @@ export const Order = ObjectSchema.create({
       {
         id: 'capabilities',
         eyebrow: 'Capability map',
-        title: 'Six capability areas, one governed runtime',
+        title: 'Six capability areas, one open governed runtime',
         copy:
-          'The same capabilities you would expect from a mature business platform — except your AI writes the definition and the runtime does the assembly.',
+          'The same capabilities you would expect from a mature business platform — except your AI writes the ObjectStack definition and its runtime does the assembly.',
         items: [
           {
             title: 'Data modeling',
@@ -95,11 +95,11 @@ export const Order = ObjectSchema.create({
         eyebrow: 'Built for AI',
         title: 'Designed to be written by agents, reviewed by people',
         copy:
-          'Every capability above is metadata-driven, which is exactly what makes the platform AI-writable: small definitions, readable diffs, and runtime enforcement.',
+          'Every ObjectStack capability above is metadata-driven, which is exactly what makes the application AI-writable: a whole-context definition, readable diffs, and runtime enforcement. ObjectOS adds the in-app AI and production experience for teams.',
         items: [
           {
             title: 'AI Build & Ask',
-            body: 'Describe a change in natural language and review the diff, or ask questions over live business data — always inside the signed-in user’s permissions.',
+            body: 'In ObjectOS Cloud and Enterprise, describe a change in natural language and review the diff, or ask questions over live business data — always inside the signed-in user’s permissions.',
             meta: 'Guide',
             href: '/en/ai/',
           },
@@ -123,7 +123,7 @@ export const Order = ObjectSchema.create({
       },
     ],
     table: {
-      columns: ['Business need', 'AI writes', 'Runtime supplies'],
+      columns: ['Business need', 'AI writes', 'ObjectStack runtime derives'],
       rows: [
         ['A customer database with an API', 'Objects, fields, relationships', 'Tables, migrations, query language, REST endpoints'],
         ['Screens for each team', 'Views, forms, dashboards', 'Rendered UI that respects each user’s permissions'],
@@ -135,12 +135,12 @@ export const Order = ObjectSchema.create({
       {
         question: 'Which capabilities are in the open-source ObjectStack?',
         answer:
-          'The runtime capabilities on this page — data, UI, automation, approvals, permissions, analytics — are part of the open-source ObjectStack platform. You bring your own AI: a coding agent writes metadata as source files and any MCP client can query your objects. The in-app AI Build and Ask assistants run on Cloud and Enterprise.',
+          'The runtime capabilities on this page — data, UI, automation, approvals, permissions, analytics — are part of the open-source ObjectStack target format and runtime. You bring your own AI: a coding agent writes metadata as source files and any MCP client can query your objects. The in-app AI Build and Ask assistants are ObjectOS Cloud and Enterprise capabilities.',
       },
       {
         question: 'Can it run in our own infrastructure?',
         answer:
-          'Yes. ObjectOS is self-hostable and runs in VPCs, on local servers, or in air-gapped networks, with local models, internal identity, and your own secret management on Enterprise.',
+          'Yes. The open-source ObjectStack runtime can be self-hosted. ObjectOS Enterprise also supports private deployment in a VPC, on local servers, or in air-gapped networks, with local models, internal identity, your own secret management, and enterprise support.',
       },
     ],
   } satisfies MarketingPage;

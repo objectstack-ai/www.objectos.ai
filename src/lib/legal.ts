@@ -41,10 +41,10 @@ const termsEn: LegalPageCopy = {
       ],
     },
     {
-      heading: '3. Open-source and self-hosted ObjectOS',
+      heading: '3. Open-source ObjectStack and self-hosted ObjectOS',
       paragraphs: [
-        'ObjectOS source code identified as open source is licensed under the Apache License 2.0 or another license stated in the applicable repository or file. These Terms do not replace or restrict rights granted by an applicable open-source license.',
-        'Self-hosted deployments run in infrastructure you control. You are responsible for deployment, configuration, security, users, permissions, integrations, backups, availability, regulatory compliance, and all data processed by your deployment. Unless a separate support agreement states otherwise, self-hosted software is provided without hosted operations, monitoring, backup, or recovery by ObjectStack AI.',
+        'ObjectStack source code identified as open source is licensed under the Apache License 2.0 or another license stated in the applicable repository or file. These Terms do not replace or restrict rights granted by an applicable open-source license.',
+        'Self-hosted ObjectStack and private ObjectOS deployments run in infrastructure you control. You are responsible for deployment, configuration, security, users, permissions, integrations, backups, availability, regulatory compliance, and all data processed by your deployment. Unless a separate support agreement states otherwise, self-hosted software is provided without hosted operations, monitoring, backup, or recovery by ObjectStack AI.',
       ],
     },
     {
@@ -201,10 +201,10 @@ const termsZhHans: LegalPageCopy = {
       ],
     },
     {
-      heading: '3. 开源与自托管 ObjectOS',
+      heading: '3. 开源 ObjectStack 与自托管 ObjectOS',
       paragraphs: [
-        '标识为开源的 ObjectOS 源代码适用 Apache License 2.0，或相关仓库或文件中明确列出的其他许可证。本条款不会替代或限制适用开源许可证授予的权利。',
-        '自托管部署运行在你控制的基础设施中。你负责部署、配置、安全、用户、权限、集成、备份、可用性、监管合规以及部署所处理的全部数据。除非另有支持协议，自托管软件不包含由 ObjectStack AI 提供的托管运维、监控、备份或恢复。',
+        '标识为开源的 ObjectStack 源代码适用 Apache License 2.0，或相关仓库或文件中明确列出的其他许可证。本条款不会替代或限制适用开源许可证授予的权利。',
+        '自托管 ObjectStack 与私有部署的 ObjectOS 运行在你控制的基础设施中。你负责部署、配置、安全、用户、权限、集成、备份、可用性、监管合规以及部署所处理的全部数据。除非另有支持协议，自托管软件不包含由 ObjectStack AI 提供的托管运维、监控、备份或恢复。',
       ],
     },
     {
@@ -345,12 +345,12 @@ const privacyEn: LegalPageCopy = {
     'How ObjectStack AI LLC collects, uses, shares, and protects personal information across ObjectOS websites and cloud services.',
   updated: 'Effective and last updated: June 4, 2026',
   intro:
-    'This Privacy Policy explains how ObjectStack AI LLC ("ObjectStack AI", "we", "us", or "our") handles personal information when you visit our websites, communicate with us, create an account, or use current or future hosted, managed, or cloud-based ObjectOS services ("Cloud Services"). It also explains the important distinction between Cloud Services and self-hosted ObjectOS deployments.',
+    'This Privacy Policy explains how ObjectStack AI LLC ("ObjectStack AI", "we", "us", or "our") handles personal information when you visit our websites, communicate with us, create an account, or use current or future hosted, managed, or cloud-based ObjectOS services ("Cloud Services"). It also explains the important distinction between Cloud Services and self-hosted ObjectStack or ObjectOS deployments.',
   sections: [
     {
       heading: '1. Scope',
       paragraphs: [
-        'This policy applies to www.objectos.ai, docs.objectos.ai, related websites that link to it, account and support interactions, and Cloud Services we operate. It does not apply to third-party websites, products, or services, or to self-hosted ObjectOS deployments that we do not operate.',
+        'This policy applies to www.objectos.ai, docs.objectos.ai, related websites that link to it, account and support interactions, and Cloud Services we operate. It does not apply to third-party websites, products, or services, or to self-hosted ObjectStack or ObjectOS deployments that we do not operate.',
       ],
     },
     {
@@ -361,9 +361,9 @@ const privacyEn: LegalPageCopy = {
       ],
     },
     {
-      heading: '3. Self-hosted ObjectOS',
+      heading: '3. Self-hosted ObjectStack and ObjectOS',
       paragraphs: [
-        'A self-hosted ObjectOS deployment runs in infrastructure controlled by the customer. Unless the customer separately enables a connection to our Cloud Services or sends information to us for support, we do not receive or process the application records, prompts, files, credentials, or other data inside that deployment. The operator of the deployment is responsible for its privacy practices.',
+        'A self-hosted ObjectStack or ObjectOS deployment runs in infrastructure controlled by the customer. Unless the customer separately enables a connection to our Cloud Services or sends information to us for support, we do not receive or process the application records, prompts, files, credentials, or other data inside that deployment. The operator of the deployment is responsible for its privacy practices.',
       ],
     },
     {
@@ -506,12 +506,12 @@ const privacyZhHans: LegalPageCopy = {
   description: 'ObjectStack AI LLC 如何在 ObjectOS 网站与云服务中收集、使用、共享和保护个人信息。',
   updated: '生效及最近更新：2026 年 6 月 4 日',
   intro:
-    '本隐私政策说明 ObjectStack AI LLC（以下简称“ObjectStack AI”或“我们”）在你访问网站、与我们沟通、创建账号或使用当前或未来托管、代管或云端 ObjectOS 服务（以下简称“云服务”）时如何处理个人信息，并说明云服务与自托管 ObjectOS 部署之间的重要区别。',
+    '本隐私政策说明 ObjectStack AI LLC（以下简称“ObjectStack AI”或“我们”）在你访问网站、与我们沟通、创建账号或使用当前或未来托管、代管或云端 ObjectOS 服务（以下简称“云服务”）时如何处理个人信息，并说明云服务与自托管 ObjectStack 或 ObjectOS 部署之间的重要区别。',
   sections: [
     {
       heading: '1. 适用范围',
       paragraphs: [
-        '本政策适用于 www.objectos.ai、docs.objectos.ai、链接到本政策的相关网站、账号与支持互动，以及我们运营的云服务。本政策不适用于第三方网站、产品或服务，也不适用于并非由我们运营的自托管 ObjectOS 部署。',
+        '本政策适用于 www.objectos.ai、docs.objectos.ai、链接到本政策的相关网站、账号与支持互动，以及我们运营的云服务。本政策不适用于第三方网站、产品或服务，也不适用于并非由我们运营的自托管 ObjectStack 或 ObjectOS 部署。',
       ],
     },
     {
@@ -522,9 +522,9 @@ const privacyZhHans: LegalPageCopy = {
       ],
     },
     {
-      heading: '3. 自托管 ObjectOS',
+      heading: '3. 自托管 ObjectStack 与 ObjectOS',
       paragraphs: [
-        '自托管 ObjectOS 部署运行在客户控制的基础设施中。除非客户另行启用与云服务的连接，或为获得支持主动向我们发送信息，否则我们不会接收或处理该部署中的应用记录、提示词、文件、凭证或其他数据。部署运营方负责其隐私实践。',
+        '自托管 ObjectStack 或 ObjectOS 部署运行在客户控制的基础设施中。除非客户另行启用与云服务的连接，或为获得支持主动向我们发送信息，否则我们不会接收或处理该部署中的应用记录、提示词、文件、凭证或其他数据。部署运营方负责其隐私实践。',
       ],
     },
     {

@@ -5,29 +5,30 @@ const page = {
     navLabel: 'Agent developer',
     title: 'Agent Developer Guide: How AI Writes ObjectStack Metadata',
     description:
-      'Give your coding agent the rules, files, metadata patterns, and review checklist it needs to generate ObjectStack applications correctly and keep humans in control.',
+      'Teach a coding agent the open ObjectStack target format, Strict TypeScript definitions, Zod schemas, validation gate, and whole-context proof needed to generate reviewable applications.',
     eyebrow: 'Agent developer',
     heroTitle: 'Do not teach every developer to hand-write apps. Teach your agent the target format.',
     lead:
-      'ObjectStack is designed for the agent as the writer and the human as the reviewer. The developer workflow is to give the agent rules, examples, tests, and review gates so metadata changes stay small and governable.',
+      'ObjectStack is the open, typed metadata target format and runtime designed for the agent as writer and the human as reviewer. A complete CRM including UI fits under 150k tokens, so an agent can hold the whole app in one context; Strict TypeScript, Zod schemas, and a validation gate catch invalid output before it reaches the runtime.',
     primary: { label: 'Read the docs', href: 'https://docs.objectos.ai' },
     secondary: { label: 'See template patterns', href: '/en/templates/' },
     metrics: [
-      { value: 'Agent first', label: 'Rules and examples are part of the product surface' },
-      { value: 'Metadata diff', label: 'Review objects, views, workflows, permissions, tools' },
-      { value: 'MCP ready', label: 'Expose governed objects and actions to AI clients' },
+      { value: '<150k tokens', label: 'A complete CRM including UI — one context window' },
+      { value: '<100k tokens', label: 'Objects, workflows, permissions, and business logic' },
+      { value: '~50k tokens', label: 'UI metadata for the complete CRM' },
     ],
     artifact: {
       eyebrow: 'Agent instruction',
       title: 'A good rule file makes the target format explicit',
       body:
-        'The most important developer artifact is not a tutorial for hand-coding screens. It is a compact, retrievable instruction set that tells the agent what to edit, what not to invent, and how to prove the change is reviewable.',
+        'The most important developer artifact is not a tutorial for hand-coding screens. It is a compact, retrievable instruction set that tells the agent what to edit, what not to invent, which schemas must pass, and how to return both a reviewable diff and proof that it considered the whole application.',
       code: `When building an ObjectStack app:
 1. Model business objects before UI.
-2. Prefer metadata definitions over generated application code.
-3. Add conservative permissions by default.
-4. Expose AI actions only through approved tools.
-5. Return a small diff and a reviewer checklist.`,
+2. Write Strict TypeScript metadata that conforms to the published Zod schemas.
+3. Prefer metadata definitions over generated application code.
+4. Add conservative permissions and expose AI actions only through approved tools.
+5. Run the validation gate before proposing deployment.
+6. Return a small diff, reviewer checklist, and whole-context proof.`,
     },
     sections: [
       {
@@ -35,21 +36,21 @@ const page = {
         eyebrow: 'Workflow',
         title: 'The agent-written development loop',
         copy:
-          'The loop is intentionally simple: give the agent context, let it edit metadata, run checks, then review business authority before deployment.',
+          'The loop is intentionally simple: give the agent the complete current definition and operating context, let it edit typed metadata, run the validation gate, then review business authority before deployment.',
         items: [
           {
             title: '1. Provide operating context',
-            body: 'Give the agent the business process, object names, permission boundaries, workflow states, and integration constraints.',
+            body: 'Give the agent the business process, object names, permission boundaries, workflow states, integration constraints, and the complete current definition. Under 150k tokens for a full CRM including UI, the app can be inspected as a whole instead of reconstructed from fragments.',
             meta: 'Context',
           },
           {
             title: '2. Generate metadata',
-            body: 'The agent edits object, view, workflow, action, dashboard, translation, and tool definitions rather than app glue code.',
+            body: 'The agent edits object, view, workflow, action, dashboard, translation, and tool definitions as Strict TypeScript rather than generating app glue code.',
             meta: 'Write',
           },
           {
-            title: '3. Run generated checks',
-            body: 'Validate schema, permissions, required labels, sample data, object queries, and workflow transitions.',
+            title: '3. Pass the validation gate',
+            body: 'Compile in Strict TypeScript mode, validate every definition against its Zod schema, then check permissions, required labels, sample data, object queries, and workflow transitions.',
             meta: 'Verify',
           },
           {
@@ -68,7 +69,7 @@ const page = {
         items: [
           {
             title: 'Objects and fields',
-            body: 'Use business names, relationships, validations, indexes, and lifecycle rules that map to real operations.',
+            body: 'Use business names, relationships, validations, indexes, and lifecycle rules that map to real operations and conform to the published Zod schemas.',
           },
           {
             title: 'Views and actions',
@@ -96,6 +97,8 @@ const page = {
     },
     checklistTitle: 'Diff review checklist for agent-written ObjectStack',
     checklist: [
+      'Did the agent inspect the whole current application instead of inferring missing state from fragments?',
+      'Does the change pass Strict TypeScript compilation, Zod schema validation, and the validation gate?',
       'Does the diff change business authority or only presentation?',
       'Are object and field names stable and domain-specific?',
       'Are defaults conservative for reads, writes, exports, and tools?',
@@ -112,7 +115,7 @@ const page = {
       {
         question: 'Can any coding agent write ObjectStack?',
         answer:
-          'Any strong coding agent can work with the format if it has clear docs, examples, rules, and tests. The site and docs should be written so agents can retrieve and generate the format correctly.',
+          'Any strong coding agent can work with the format if it has clear docs, examples, rules, tests, and access to the whole current definition. Strict TypeScript, Zod schemas, and the validation gate provide deterministic feedback before the same validated app is either self-hosted on ObjectStack or operated through ObjectOS, which runs the same open runtime.',
       },
     ],
   } satisfies MarketingPage;

@@ -1,6 +1,6 @@
 ---
 title: "Quels outils utilisent les forward-deployed engineers ? Un stack ouvert, ontologie d’abord"
-description: "Cinq douleurs définissent le travail forward-deployed : la plomberie dévore la semaine une, les démos meurent en revue de sécurité, les besoins changent plus vite que le code, les patterns ne capitalisent pas, la passation empoisonne la confiance."
+description: "Cinq problèmes du travail forward-deployed : intégration, revues de sécurité, besoins changeants, patterns non réutilisés et passation qui érode la confiance. Un stack d’ontologie ouvert y répond."
 author: ObjectStack Team
 date: 2026-07-23
 status: published
@@ -61,7 +61,7 @@ export const Ticket = ObjectSchema.create({
 
 En pleine réunion, le responsable des opérations lâche : *« au fait, les remises au-dessus de 20 % passent d’abord par les managers régionaux »*. Dans une base de code artisanale, c’est une migration de schéma, trois changements d’API, un changement d’UI et une semaine — et aux yeux du client, vous êtes devenu lent au moment précis où il est devenu précis. Le travail forward-deployed vit ou meurt de la vitesse d’itération *dans la salle*.
 
-**Ce que le stack change :** toute l’application est une métadonnée typée et compacte — un CRM complet fait **1 792 lignes, environ 16k tokens** (comptez : `find examples/app-crm/src -name '*.ts' | xargs cat | wc -l`). Votre agent de code tient donc le système *entier* en contexte : le changement de chaîne de validation est un seul diff cohérent à travers flux, permissions et UI, écrit avant la fin de la réunion, validé par `os validate`, prévisualisé en direct dans la Console. « Qu’est-ce qui casse si on change ça ? » est une question à laquelle l’agent peut vraiment répondre, parce qu’il voit tout. Les changements de besoins cessent de menacer le planning — ils deviennent la démo.
+**Ce que le stack change :** toute l’application est une métadonnée typée et compacte. La référence CRM fournie fait **1 792 lignes, environ 16k tokens** (comptez : `find examples/app-crm/src -name '*.ts' | xargs cat | wc -l`) ; le HotCRM complet reste sous **150k tokens** au total — logique métier sous 100k, plus environ 50k pour l’UI. À ces deux échelles, votre agent de code tient le système *entier* en contexte : le changement de chaîne de validation est un seul diff cohérent à travers flux, permissions et UI, écrit avant la fin de la réunion, validé par `os validate`, prévisualisé en direct dans la Console. « Qu’est-ce qui casse si on change ça ? » est une question à laquelle l’agent peut vraiment répondre, parce qu’il voit tout. Les changements de besoins cessent de menacer le planning — ils deviennent la démo.
 
 ## Douleur 4 — Vos patterns ne capitalisent jamais
 
@@ -73,7 +73,7 @@ Le code de chaîne de validation du client A ne se transporte pas dans la base d
 
 Tout engagement se termine, et aujourd’hui il se termine mal, d’une de deux façons. Livrez une plateforme, et le client loue sa propre ontologie pour toujours — vous êtes devenu le canal de vente d’un autre, et il a appris à craindre les pilotes réussis : meilleure est l’ontologie, plus profond est le verrouillage. Livrez une base de code sur mesure, et son équipe ne peut pas la maintenir ; elle pourrit, et dix-huit mois plus tard cette pourriture porte votre nom.
 
-**Ce que le stack change :** c’est **la passation d’ontologie** — la fin que le playbook FDE n’a jamais résolue. Ce que vous transmettez, c’est le dépôt du client : objets, flux et permissions typés sous Apache-2.0, plus l’artefact compilé et une checklist de revue. Son équipe sécurité a déjà lu chaque ligne — ce sont 16k tokens, pas 300 000 lignes. Ses propres agents de code entretiennent le système avec la même boucle que vous, parce que le format est né pour être écrit par des agents. S’il veut la plateforme opérée — AI Builder dans le navigateur, cloud ou self-managed — il y a [ObjectOS](https://www.objectos.ai), sur la même définition ouverte ; il peut partir sans perdre l’ontologie. Votre prochain contrat se gagne par du travail nouveau, il ne s’extrait pas par le verrouillage. Cette différence, c’est votre réputation qui capitalise.
+**Ce que le stack change :** c’est **la passation d’ontologie** — la fin que le playbook FDE n’a jamais résolue. Ce que vous transmettez, c’est le dépôt du client : objets, flux et permissions typés sous Apache-2.0, plus l’artefact compilé et une checklist de revue. Son équipe sécurité peut inspecter la définition entière — la référence fournie fait 16k tokens et même le HotCRM complet reste sous 150k, pas 300 000 lignes de code. Ses propres agents de code entretiennent le système avec la même boucle que vous, parce que le format est né pour être écrit par des agents. S’il veut la plateforme opérée — AI Builder dans le navigateur, cloud ou self-managed — il y a [ObjectOS](https://www.objectos.ai), sur la même définition ouverte ; il peut partir sans perdre l’ontologie. Votre prochain contrat se gagne par du travail nouveau, il ne s’extrait pas par le verrouillage. Cette différence, c’est votre réputation qui capitalise.
 
 ## La boîte à outils métadonnées complète du FDE
 
@@ -118,7 +118,7 @@ export const ServiceCopilot = defineAgent({
 });
 ```
 
-HotCRM est la démonstration complète de ce vocabulaire à l'œuvre : 15 objets, 17 flux, 10 actions, 4 tableaux de bord, 2 copilotes AI, 6 skills, 6 profils de permissions, 5 règles de partage et 4 langues — chaque couche présente, environ **170k tokens**, et l'ensemble tient encore dans une seule fenêtre de contexte d'agent.
+HotCRM est la démonstration complète de ce vocabulaire à l'œuvre : 15 objets, 17 flux, 10 actions, 4 tableaux de bord, 2 copilotes AI, 6 skills, 6 profils de permissions, 5 règles de partage et 4 langues — chaque couche présente, moins de **150k tokens** au total : logique métier sous 100k, plus environ 50k pour l’UI. L'ensemble tient dans une seule fenêtre de contexte d'agent.
 
 ## Ce que ce stack ne règle pas
 
@@ -141,4 +141,4 @@ npm create objectstack@latest client-app && cd client-app
 npx os dev --ui   # l’app tourne — modélisez le premier objet avec votre agent
 ```
 
-Pour les clients qui veulent la plateforme opérée, [ObjectOS](https://www.objectos.ai) est le runtime commercial sur la même définition ouverte — construire et interroger en ligne, gouvernance incluse.
+Pour les clients qui veulent la plateforme opérée, [ObjectOS](https://www.objectos.ai) est la plateforme commerciale de production et d’exploitation sur ObjectStack — construire et interroger en ligne, avec déploiement géré ou privé et gouvernance incluse.

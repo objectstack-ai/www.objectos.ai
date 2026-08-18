@@ -5,16 +5,16 @@ const page = {
     navLabel: 'AI Build & Ask',
     title: 'AI Build & Ask: Create and Query Business Apps in Natural Language',
     description:
-      'AI Build turns a described change into reviewable metadata. AI Ask answers questions over live business data inside user permissions. The open-source ObjectStack brings your own agent via MCP.',
+      'ObjectOS AI Build turns a described change into reviewable ObjectStack metadata. AI Ask answers over live business data inside user permissions; open-source ObjectStack supports your own agent via MCP.',
     eyebrow: 'AI Build & Ask',
     heroTitle: 'Describe the change. Review the diff. Ship the app.',
     lead:
-      'AI builds ObjectOS apps two ways: developers point a coding agent like Claude Code at the source project and it writes every metadata type, previewed in the browser and reviewed as a diff — or business users describe the change in conversation on Cloud. AI Ask answers questions and runs approved actions over live data, always inside the permissions of the person asking.',
+      'Developers build ObjectStack apps by pointing a coding agent like Claude Code at the source project. ObjectOS adds a second path for teams: business users describe the change in conversation on Cloud or Enterprise. Both produce the same typed ObjectStack metadata and run on the same governed runtime; ObjectOS AI Ask answers and acts on live data inside the permissions of the person asking.',
     primary: { label: 'Compare editions and pricing', href: '/en/pricing/' },
     secondary: { label: 'See how agents write metadata', href: '/en/agent-developer/' },
     metrics: [
       { value: '2 paths', label: 'Build with a coding agent in source, or by conversation in the cloud' },
-      { value: '1,792 lines', label: 'The metadata a whole CRM takes — small enough to review' },
+      { value: '<150k tokens', label: 'A complete CRM, including UI, held in one context window' },
       { value: '0 bypasses', label: 'Every AI action runs inside user permissions and audit' },
     ],
     artifact: {
@@ -26,7 +26,7 @@ const page = {
         'Describe: “Track vendor contracts with renewal reminders and an approval for anything over $50k.”',
         'Your AI — a coding agent in source, or the in-app builder — drafts the objects, fields, views, and renewal flow.',
         'Structural changes land in the approval queue as a compact, readable diff.',
-        'You approve — the runtime ships tables, APIs, screens, automations, and audit.',
+        'You approve — the ObjectStack runtime derives and ships tables, APIs, screens, automations, and audit.',
         'AI Ask now answers contract questions for each user, scoped to what they may see.',
       ],
     },
@@ -36,7 +36,7 @@ const page = {
         eyebrow: 'AI Build',
         title: 'Two ways to build — one reviewable definition',
         copy:
-          'Whether the AI works in your repository or in a chat panel, the output is the same compact ObjectStack metadata a human reviews and owns.',
+          'Whether the AI works in your repository or in an ObjectOS chat panel, the output is the same typed ObjectStack metadata a human reviews and owns. A complete CRM is under 150k tokens: business logic — objects, workflows, and permissions — stays under 100k, and UI metadata adds about 50k.',
         items: [
           {
             title: 'In source, with your coding agent',
@@ -44,7 +44,7 @@ const page = {
           },
           {
             title: 'In the cloud, by conversation',
-            body: 'On Cloud and Enterprise, business users describe the change in chat; the in-app builder drafts it as metadata with live preview — Airtable-style ease with runtime governance.',
+            body: 'On ObjectOS Cloud and Enterprise, business users describe the change in chat; the in-app builder drafts it as ObjectStack metadata with live preview — Airtable-style ease with runtime governance.',
           },
           {
             title: 'Visual designers to fine-tune',
@@ -82,7 +82,7 @@ const page = {
         eyebrow: 'Open-source ObjectStack',
         title: 'Bring your own AI, keep the same governance',
         copy:
-          'The open-source ObjectStack has no built-in assistant — by design. Your coding agent writes the same metadata as source files, and any MCP client queries the same governed objects.',
+          'Open-source ObjectStack has no built-in assistant — by design. Your coding agent writes the same metadata as source files, and any MCP client queries the same governed objects through its open runtime.',
         items: [
           {
             title: 'Agent writes source files',
@@ -103,15 +103,15 @@ const page = {
       columns: ['Edition', 'How AI builds', 'How AI answers'],
       rows: [
         ['Open-source ObjectStack', 'Your coding agent edits metadata source files; review as git diffs', 'Any MCP client queries governed objects with your own model'],
-        ['Cloud Team & Business', 'In-app AI Build drafts changes; approvals gate structure', 'In-app AI Ask answers and runs approved actions'],
-        ['Enterprise', 'Same, plus private deployment and bring-your-own-model', 'Same, plus local models and internal identity'],
+        ['ObjectOS Cloud Team & Business', 'In-app AI Build drafts changes; approvals gate structure', 'In-app AI Ask answers and runs approved actions'],
+        ['ObjectOS Enterprise', 'Same, plus private deployment and bring-your-own-model', 'Same, plus local models and internal identity'],
       ],
     },
     faqs: [
       {
         question: 'What stops AI from breaking production?',
         answer:
-          'Three runtime guarantees: structural changes require human approval, every action runs inside the requesting user’s permissions, and everything is audited. The AI can draft quickly precisely because it cannot ship silently.',
+          'The ObjectStack runtime enforces three guarantees: structural changes require human approval, every action runs inside the requesting user’s permissions, and everything is audited. ObjectOS makes that approval and audit loop available in the production product, so AI can draft quickly but cannot ship silently.',
       },
       {
         question: 'Which models does it use?',
