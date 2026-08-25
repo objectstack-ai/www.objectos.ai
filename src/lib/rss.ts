@@ -24,7 +24,13 @@ export async function renderRss(
   const posts = await getPostsInLocale(locale);
   const channelUrl = absoluteUrl(site, blogPath(locale));
   const feedUrl = absoluteUrl(site, feedPath);
-  const lastBuildDate = posts[0]?.entry.data.date ?? new Date();
+  // `lastBuildDate` is "when the channel's content last changed", so a revision
+  // counts even though it does not reorder the feed. `posts` is sorted by
+  // `date`, so posts[0] is not necessarily the most recently *revised* post.
+  const lastBuildDate =
+    posts
+      .map(({ entry }) => entry.data.updated ?? entry.data.date)
+      .reduce<Date | null>((max, d) => (!max || d > max ? d : max), null) ?? new Date();
 
   const items = posts
     .map(({ slug, entry }) => {
@@ -43,7 +49,14 @@ export async function renderRss(
         `<title>${xmlEscape(data.title)}</title>`,
         `<link>${xmlEscape(url)}</link>`,
         `<guid isPermaLink="true">${xmlEscape(url)}</guid>`,
+        // RSS 2.0 `pubDate` means *first publication* and readers dedupe on
+        // it — moving it on a typo fix re-notifies every subscriber. It stays
+        // on `date`. RSS 2.0 has no revision element, so the revision is
+        // reported with Atom's `<updated>` (namespace already declared below).
         `<pubDate>${data.date.toUTCString()}</pubDate>`,
+        ...(data.updated
+          ? [`<atom:updated>${data.updated.toISOString()}</atom:updated>`]
+          : []),
         `<dc:creator>${xmlEscape(data.author)}</dc:creator>`,
         `<description>${xmlEscape(data.description)}</description>`,
         ...categories.map((category) =>
