@@ -6,6 +6,12 @@ import { termBySlug, termHref, termLabel } from '../lib/terms';
 import { CLUSTERS, clusterPath } from '../lib/clusters';
 import { clusterCopy } from '../lib/cluster-i18n';
 import { marketingPagePath } from '../content-pages/registry';
+import VideoEmbed from './VideoEmbed.astro';
+
+// The 90-second overview. Same video and same channel as the docs site
+// homepage — these URLs are identical in every locale.
+const OVERVIEW_VIDEO_ID = 'CX_FlOoOtr0';
+const YOUTUBE_CHANNEL_URL = 'https://www.youtube.com/@objectstack';
 
 interface Props {
   locale: Locale;
@@ -86,30 +92,52 @@ const coverSrc = (cover: unknown): string =>
       <div class="hero-actions">
         <a class="button primary" href={pricingPath(locale)}>{copy.primaryCta} <span>→</span></a>
         <a class="button secondary" href={productTourHref}>{copy.secondaryCta}</a>
+        <a class="button secondary" href={YOUTUBE_CHANNEL_URL} target="_blank" rel="noopener">YouTube</a>
       </div>
       <dl class="proof">
         {copy.proof.map(([title, detail]) => <div><dt>{title}</dt><dd>{detail}</dd></div>)}
       </dl>
     </div>
+  </section>
+
+  <section class="overview-video" aria-label={copy.videoCaption}>
+    <figure>
+      <VideoEmbed
+        videoId={OVERVIEW_VIDEO_ID}
+        title={copy.videoCaption}
+        poster="/images/objectstack-overview-poster.svg"
+        playLabel={copy.videoPlayLabel}
+      />
+      <figcaption>
+        <span class="video-name">{copy.videoCaption}</span>
+        <a class="text-link" href={YOUTUBE_CHANNEL_URL} target="_blank" rel="noopener">
+          {copy.videoMoreLink} <span aria-hidden="true">→</span>
+        </a>
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="positioning" aria-label={copy.positioningKicker}>
+    <p class="section-kicker">{copy.positioningKicker}</p>
+    <h2>{copy.positioningTitle[0]}<br />{lineJoin}{copy.positioningTitle[1]}</h2>
+    <p class="positioning-copy">{copy.positioningCopy}</p>
+    {/* The product diagram used to open the hero. The overview video is the
+        page's first visual now, so this sits below it, illustrating the
+        positioning it belongs to. */}
     <div class="hero-media">
       <img
         src="/images/objectos-home-hero.png"
         alt={copy.imageAlt}
         width="1536"
         height="1024"
-        fetchpriority="high"
+        loading="lazy"
+        decoding="async"
       />
       <div class="media-note">
         <span class="live-dot"></span>
         <span><strong>{copy.imageNoteTitle}</strong>{copy.imageNote}</span>
       </div>
     </div>
-  </section>
-
-  <section class="positioning" aria-label={copy.positioningKicker}>
-    <p class="section-kicker">{copy.positioningKicker}</p>
-    <h2>{copy.positioningTitle[0]}<br />{lineJoin}{copy.positioningTitle[1]}</h2>
-    <p>{copy.positioningCopy}</p>
   </section>
 
   <section class="capability-section" id="capabilities">
@@ -325,16 +353,17 @@ const coverSrc = (cover: unknown): string =>
     font-family: var(--font-display);
     font-weight: 760;
   }
+  /* Single column since the overview video took over as the page's opening
+     visual: the copy block runs full width and the video sits directly under
+     it. No `min-height` floor here on purpose — the old one reserved a
+     viewport's worth of space for the side image and would now do nothing but
+     push the video below the fold. */
   .hero {
-    min-height: min(760px, calc(100vh - 104px));
-    display: grid;
-    grid-template-columns: minmax(0, 0.86fr) minmax(460px, 1.14fr);
-    gap: 2.5rem;
-    align-items: center;
-    padding: 0.5rem 0 3.5rem;
+    padding: 0.5rem 0 2.5rem;
   }
   .hero-copy {
     min-width: 0;
+    max-width: 760px;
   }
   .eyebrow,
   .section-kicker {
@@ -436,6 +465,7 @@ const coverSrc = (cover: unknown): string =>
   .hero-media {
     position: relative;
     isolation: isolate;
+    margin-top: 3rem;
   }
   .hero-media::before {
     content: '';
@@ -486,6 +516,28 @@ const coverSrc = (cover: unknown): string =>
     background: #10b981;
     box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.13);
   }
+  /* The 90-second overview — the first thing under the hero, above every
+     other section. Sized so its top edge clears the fold on a laptop. */
+  .overview-video {
+    max-width: 940px;
+    margin: 0 auto;
+  }
+  .overview-video figure {
+    margin: 0;
+  }
+  .overview-video figcaption {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem 1.15rem;
+    margin-top: 0.95rem;
+    font-size: 0.85rem;
+  }
+  .video-name {
+    color: var(--ink-soft);
+    font-weight: 650;
+  }
   .positioning {
     max-width: 850px;
     padding: 7rem 0 8rem;
@@ -510,7 +562,7 @@ const coverSrc = (cover: unknown): string =>
     letter-spacing: 0;
     margin-bottom: 1.3rem;
   }
-  .positioning > p:last-child,
+  .positioning-copy,
   .ai-copy > p,
   .workflow-intro > p:last-child,
   .security-copy > p:last-child,
@@ -950,8 +1002,6 @@ const coverSrc = (cover: unknown): string =>
   }
   @media (max-width: 900px) {
     .hero {
-      min-height: auto;
-      grid-template-columns: 1fr;
       padding-top: 1.5rem;
     }
     .hero-copy {

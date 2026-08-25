@@ -9,6 +9,17 @@ interface HomeCopy {
   heroLead: string;
   primaryCta: string;
   secondaryCta: string;
+  /**
+   * Copy around the overview video. The video and channel URLs are identical
+   * in every locale; only the wording around them is translated. The English
+   * strings deliberately match the docs site's wording verbatim ("ObjectStack
+   * in 90 Seconds", "More videos on YouTube") so the two sites do not diverge.
+   * The `YouTube` CTA label itself is a brand name and is not translated — it
+   * lives in the component, not here.
+   */
+  videoCaption: string;
+  videoPlayLabel: string;
+  videoMoreLink: string;
   proof: [string, string][];
   imageAlt: string;
   imageNoteTitle: string;
@@ -65,6 +76,9 @@ const zhHans: HomeCopy = {
   heroLead: 'ObjectStack 把整个应用——数据模型、界面、流程和权限——保留为类型化定义：一个完整 CRM 不到 150k token，小到 AI 能在单个上下文窗口里整体读取和推理。ObjectOS 是围绕它打造的商业生产平台：团队用 AI Build & Ask 构建与问询，审阅并批准变更，再带着 SSO、审批和审计部署、运营在我们的云或自己的环境中。',
   primaryCta: '开始使用',
   secondaryCta: '了解工作原理',
+  videoCaption: 'ObjectStack 90 秒总览',
+  videoPlayLabel: '播放视频：ObjectStack 90 秒总览',
+  videoMoreLink: '在 YouTube 上观看更多视频',
   proof: [['单个上下文窗口', '完整 CRM 不到 150k token'], ['人掌控发布', '先审阅、批准，再上线'], ['生产级就绪', 'SSO、权限与审计；云端或自有环境']],
   imageAlt: 'ObjectOS 连接业务数据、应用和 AI Agent 的产品示意图',
   imageNoteTitle: '统一业务对象层',
@@ -143,6 +157,9 @@ const en: HomeCopy = {
   heroLead: 'ObjectStack keeps the whole application — data model, UI, workflows, and permissions — as typed definitions: a complete CRM stays under 150k tokens, small enough for AI to read and reason about in one context window. ObjectOS is the commercial production platform around it: teams use AI Build & Ask, review and approve changes, then deploy and operate with SSO, approvals, and audit — in our cloud or yours.',
   primaryCta: 'Get started',
   secondaryCta: 'See how it works',
+  videoCaption: 'ObjectStack in 90 Seconds',
+  videoPlayLabel: 'Play the video: ObjectStack in 90 Seconds',
+  videoMoreLink: 'More videos on YouTube',
   proof: [['One context window', 'A complete CRM is under 150k tokens'], ['Human-controlled', 'Review and approve what ships'], ['Production-ready', 'SSO, permissions, audit — cloud or yours']],
   imageAlt: 'ObjectOS connecting business data, applications, and AI agents',
   imageNoteTitle: 'Unified business object layer',
@@ -222,6 +239,9 @@ const ja: HomeCopy = {
   heroLead: 'ObjectStack はアプリ全体 — データモデル、UI、ワークフロー、権限 — を型付き定義として保持します。完全な CRM でも 150k トークン未満なので、AI は一つのコンテキストウィンドウで全体を読み、推論できます。ObjectOS はそのための商用プロダクションプラットフォームです。チームは AI Build & Ask で構築と問い合わせを行い、変更をレビューして承認し、SSO、承認、監査を備えて当社クラウドまたは自社環境へデプロイし、運用できます。',
   primaryCta: 'はじめる',
   secondaryCta: '仕組みを見る',
+  videoCaption: 'ObjectStack を 90 秒で',
+  videoPlayLabel: '動画を再生：ObjectStack を 90 秒で',
+  videoMoreLink: 'YouTube でほかの動画を見る',
   proof: [['一つのコンテキスト', '完全な CRM が 150k トークン未満'], ['人がリリースを管理', 'レビューと承認を経てリリース'], ['本番運用に対応', 'SSO・権限・監査、自社環境にも対応']],
   imageAlt: '業務データ、アプリ、AI エージェントを接続する ObjectOS',
   imageNoteTitle: '統一業務オブジェクト層',
@@ -301,6 +321,9 @@ const de: HomeCopy = {
   heroLead: 'ObjectStack hält die gesamte Anwendung — Datenmodell, UI, Workflows und Berechtigungen — als typisierte Definitionen fest. Ein vollständiges CRM bleibt unter 150k Tokens und ist damit klein genug, dass AI es in einem Kontextfenster vollständig lesen und durchdenken kann. ObjectOS ist die kommerzielle Produktionsplattform darum herum: Teams bauen und fragen mit AI Build & Ask, prüfen und genehmigen Änderungen und stellen sie mit SSO, Freigaben und Audit in unserer Cloud oder ihrer eigenen Umgebung bereit und betreiben sie dort.',
   primaryCta: 'Loslegen',
   secondaryCta: 'So funktioniert es',
+  videoCaption: 'ObjectStack in 90 Sekunden',
+  videoPlayLabel: 'Video abspielen: ObjectStack in 90 Sekunden',
+  videoMoreLink: 'Mehr Videos auf YouTube',
   proof: [['Ein Kontextfenster', 'Ein vollständiges CRM unter 150k Tokens'], ['Vom Menschen kontrolliert', 'Prüfen und genehmigen, was live geht'], ['Produktionsbereit', 'SSO, Rechte, Audit — Cloud oder eigene Umgebung']],
   imageAlt: 'ObjectOS verbindet Geschäftsdaten, Anwendungen und AI Agents',
   imageNoteTitle: 'Einheitliche Geschäftsobjektschicht',
@@ -380,6 +403,9 @@ const es: HomeCopy = {
   heroLead: 'ObjectStack conserva toda la aplicación — modelo de datos, UI, workflows y permisos — como definiciones tipadas. Un CRM completo ocupa menos de 150k tokens, lo bastante poco para que la AI lo lea y razone sobre él en una sola ventana de contexto. ObjectOS es la plataforma comercial de producción que lo rodea: los equipos usan AI Build & Ask, revisan y aprueban cambios, y después despliegan y operan con SSO, aprobaciones y auditoría — en nuestra nube o en la suya.',
   primaryCta: 'Empezar',
   secondaryCta: 'Cómo funciona',
+  videoCaption: 'ObjectStack en 90 segundos',
+  videoPlayLabel: 'Reproducir el vídeo: ObjectStack en 90 segundos',
+  videoMoreLink: 'Más vídeos en YouTube',
   proof: [['Una ventana de contexto', 'Un CRM completo ocupa menos de 150k tokens'], ['Control humano', 'Revisa y aprueba lo que se publica'], ['Listo para producción', 'SSO, permisos y auditoría — en tu nube o la nuestra']],
   imageAlt: 'ObjectOS conectando datos, aplicaciones y agentes de AI',
   imageNoteTitle: 'Capa unificada de objetos de negocio',
@@ -459,6 +485,9 @@ const fr: HomeCopy = {
   heroLead: 'ObjectStack conserve toute l’application — modèle de données, UI, workflows et permissions — sous forme de définitions typées. Un CRM complet tient en moins de 150k tokens, assez peu pour que l’AI le lise et raisonne sur l’ensemble dans une seule fenêtre de contexte. ObjectOS est la plateforme commerciale de production qui l’entoure : les équipes utilisent AI Build & Ask, relisent et approuvent les changements, puis déploient et exploitent avec SSO, validations et audit — dans notre cloud ou le leur.',
   primaryCta: 'Commencer',
   secondaryCta: 'Voir comment ça marche',
+  videoCaption: 'ObjectStack en 90 secondes',
+  videoPlayLabel: 'Lire la vidéo : ObjectStack en 90 secondes',
+  videoMoreLink: 'Plus de vidéos sur YouTube',
   proof: [['Une fenêtre de contexte', 'Un CRM complet tient en moins de 150k tokens'], ['Contrôle humain', 'Relire et approuver ce qui part en production'], ['Prêt pour la production', 'SSO, permissions, audit — votre cloud ou le nôtre']],
   imageAlt: 'ObjectOS connectant données métier, applications et agents AI',
   imageNoteTitle: 'Couche unifiée d’objets métier',
@@ -538,6 +567,9 @@ const ko: HomeCopy = {
   heroLead: 'ObjectStack은 데이터 모델, UI, 워크플로, 권한을 포함한 애플리케이션 전체를 타입이 지정된 정의로 유지합니다. 완전한 CRM도 150k 토큰 미만이어서 AI가 하나의 컨텍스트 창에서 전체를 읽고 추론할 수 있습니다. ObjectOS는 이를 위한 상용 프로덕션 플랫폼입니다. 팀은 AI Build & Ask로 구축하고 질문하며, 변경을 검토하고 승인한 뒤 SSO, 승인, 감사를 갖춰 우리의 클라우드나 자체 환경에 배포하고 운영합니다.',
   primaryCta: '시작하기',
   secondaryCta: '작동 방식 보기',
+  videoCaption: 'ObjectStack 90초 살펴보기',
+  videoPlayLabel: '동영상 재생: ObjectStack 90초 살펴보기',
+  videoMoreLink: 'YouTube에서 더 많은 영상 보기',
   proof: [['하나의 컨텍스트 창', '완전한 CRM도 150k 토큰 미만'], ['사람이 배포를 통제', '검토하고 승인한 것만 배포'], ['프로덕션 준비 완료', 'SSO, 권한, 감사 — 클라우드 또는 자체 환경']],
   imageAlt: '비즈니스 데이터, 애플리케이션과 AI 에이전트를 연결하는 ObjectOS',
   imageNoteTitle: '통합 비즈니스 객체 계층',
