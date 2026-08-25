@@ -84,21 +84,25 @@ const coverSrc = (cover: unknown): string =>
 ---
 
 <div class:list={['home', `lang-${locale}`]}>
-  <section class="hero">
-    <div class="hero-copy">
-      <p class="eyebrow"><span></span> {copy.eyebrow}</p>
-      <h1>{copy.hero[0]}<br />{lineJoin}<strong>{copy.hero[1]}</strong></h1>
-      <p class="hero-lead">{copy.heroLead}</p>
-      <div class="hero-actions">
-        <a class="button primary" href={pricingPath(locale)}>{copy.primaryCta} <span>→</span></a>
-        <a class="button secondary" href={productTourHref}>{copy.secondaryCta}</a>
-        <a class="button secondary" href={YOUTUBE_CHANNEL_URL} target="_blank" rel="noopener">YouTube</a>
-      </div>
-    </div>
-  </section>
+  {/* One flat flex column, deliberately: the video, the lead and the CTA row
+      have to be siblings for the phone layout to reorder them with CSS
+      `order` alone. Duplicating the hero markup per breakpoint would be a
+      worse defect than the one the reorder fixes.
 
-  <section class="overview-video" aria-label={copy.videoCaption}>
-    <figure>
+      Source order is the desktop order. On phones and small tablets the media
+      query below reorders to eyebrow, h1, video, lead, CTAs, proof — which is
+      also the more literal reading of "the video plays directly under the
+      headline", since on a phone the lead alone runs about nine lines. */}
+  <section class="hero">
+    <p class="eyebrow"><span></span> {copy.eyebrow}</p>
+    <h1>{copy.hero[0]}<br />{lineJoin}<strong>{copy.hero[1]}</strong></h1>
+    <p class="hero-lead">{copy.heroLead}</p>
+    <div class="hero-actions">
+      <a class="button primary" href={pricingPath(locale)}>{copy.primaryCta} <span>→</span></a>
+      <a class="button secondary" href={productTourHref}>{copy.secondaryCta}</a>
+      <a class="button secondary" href={YOUTUBE_CHANNEL_URL} target="_blank" rel="noopener">YouTube</a>
+    </div>
+    <figure class="hero-video">
       <VideoEmbed
         videoId={OVERVIEW_VIDEO_ID}
         title={copy.videoCaption}
@@ -112,9 +116,6 @@ const coverSrc = (cover: unknown): string =>
         </a>
       </figcaption>
     </figure>
-    {/* The proof strip sits below the video, not in the hero: in the hero it
-        pushed the video a further ~140px down the page, and it reads just as
-        well as a caption to the claim the video makes. */}
     <dl class="proof">
       {copy.proof.map(([title, detail]) => <div><dt>{title}</dt><dd>{detail}</dd></div>)}
     </dl>
@@ -361,26 +362,42 @@ const coverSrc = (cover: unknown): string =>
      it. No `min-height` floor here on purpose — the old one reserved a
      viewport's worth of space for the side image and would now do nothing but
      push the video below the fold. */
+  /* Flex column so the phone breakpoint can reorder these six children with
+     `order` alone. Centred, like the docs site hero: left-aligned copy in a
+     single column left ~680px of a 1440px viewport empty where the side image
+     used to be, and put the text on a different axis from the video. */
   .hero {
+    display: flex;
+    flex-direction: column;
     padding: 0.5rem 0 2.5rem;
-  }
-  /* Centred, like the docs site hero. Left-aligned copy in a single column
-     left ~680px of a 1440px viewport empty where the side image used to be,
-     and put the text on a different axis from the centred video below it. */
-  .hero-copy {
-    min-width: 0;
-    max-width: 760px;
-    margin: 0 auto;
     text-align: center;
   }
-  .hero-copy .eyebrow {
-    justify-content: center;
-  }
-  .hero-copy .hero-lead {
+  .hero > .eyebrow,
+  .hero > h1 {
+    width: 100%;
+    max-width: 760px;
     margin-inline: auto;
   }
-  .hero-copy .hero-actions {
+  .hero > .eyebrow {
     justify-content: center;
+  }
+  .hero > .hero-lead {
+    margin-inline: auto;
+  }
+  .hero > .hero-actions {
+    justify-content: center;
+  }
+  /* Wider than the copy column, and the gap the old separate video section
+     used to get from the hero's bottom padding. */
+  .hero-video,
+  .hero > .proof {
+    width: 100%;
+    max-width: 940px;
+    margin-inline: auto;
+  }
+  .hero-video {
+    margin-top: 2.5rem;
+    margin-bottom: 0;
   }
   .eyebrow,
   .section-kicker {
@@ -536,16 +553,13 @@ const coverSrc = (cover: unknown): string =>
     background: #10b981;
     box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.13);
   }
-  /* The 90-second overview — the first thing under the hero, above every
-     other section. Sized so its top edge clears the fold on a laptop. */
-  .overview-video {
-    max-width: 940px;
-    margin: 0 auto;
+  /* The 90-second overview. It is a `figure` in the hero's flex column now,
+     so its width and spacing live with the other hero children above. */
+  .hero-video {
+    margin-left: auto;
+    margin-right: auto;
   }
-  .overview-video figure {
-    margin: 0;
-  }
-  .overview-video figcaption {
+  .hero-video figcaption {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -1024,8 +1038,34 @@ const coverSrc = (cover: unknown): string =>
     .hero {
       padding-top: 1.5rem;
     }
-    .hero-copy {
+    .hero > .eyebrow,
+    .hero > h1 {
       max-width: 680px;
+    }
+    /* Phones and small tablets: the video moves directly under the headline,
+       ahead of the lead and the CTA row. On a phone the lead alone runs about
+       nine lines, which pushed the video off the screen entirely; nothing above
+       the video here but the eyebrow and the headline. Source order is
+       unchanged, so this costs no duplicated markup. */
+    .hero > .eyebrow {
+      order: 1;
+    }
+    .hero > h1 {
+      order: 2;
+    }
+    .hero-video {
+      order: 3;
+      margin-top: 0.25rem;
+      margin-bottom: 2rem;
+    }
+    .hero > .hero-lead {
+      order: 4;
+    }
+    .hero > .hero-actions {
+      order: 5;
+    }
+    .hero > .proof {
+      order: 6;
     }
     .workflow {
       grid-template-columns: 1fr;
@@ -1056,6 +1096,19 @@ const coverSrc = (cover: unknown): string =>
   @media (max-width: 640px) {
     .hero h1 {
       font-size: 2.7rem;
+    }
+    /* Three buttons wrapping freely left "YouTube" stranded alone on a second
+       row, centred under the other two, which reads as unfinished. A 2-up grid
+       with the primary spanning the full width fills both rows exactly. */
+    .hero-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .hero-actions .button {
+      width: 100%;
+    }
+    .hero-actions .button.primary {
+      grid-column: 1 / -1;
     }
     .home.lang-de .hero h1,
     .home.lang-fr .hero h1,
