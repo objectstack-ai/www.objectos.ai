@@ -11,6 +11,7 @@ import {
 import { getUsedTerms } from '../lib/posts';
 import { termHref, groupMeta, type TermGroup } from '../lib/terms';
 import { marketingPagePath } from '../content-pages/registry';
+import { glossaryIndexPath } from '../glossary/registry';
 import Logo from './Logo.astro';
 
 interface Props {
@@ -39,6 +40,7 @@ const trustCenterHref = marketingPagePath(locale, 'trust-center');
 const agentGuideHref = marketingPagePath(locale, 'agent-developer');
 const templatesHref = marketingPagePath(locale, 'templates');
 const storiesHref = marketingPagePath(locale, 'customer-stories');
+const glossaryHref = glossaryIndexPath(locale);
 
 const DOCS_URL = 'https://docs.objectos.ai';
 const GITHUB_URL = 'https://github.com/objectstack-ai/objectstack';
@@ -46,6 +48,7 @@ const GITHUB_URL = 'https://github.com/objectstack-ai/objectstack';
 const inBlog = pathname.startsWith(`/${locale}/blog`);
 const onBlogHome = pathname === blogHref;
 const inPricing = pathname === pricingHref;
+const inGlossary = pathname.startsWith(glossaryHref);
 
 // Topic terms feed the Resources menu (only those with content in this locale).
 const topicTerms = (await getUsedTerms('topic', locale)).filter((term) => !term.parent);
@@ -110,11 +113,12 @@ const groups: NavGroup[] = [
   {
     id: 'resources',
     label: t.siteNav.resources,
-    active: inBlog || pathname === storiesHref,
+    active: inBlog || inGlossary || pathname === storiesHref,
     sections: [
       {
         items: [
           { label: t.backToList, href: blogHref, active: onBlogHome },
+          { label: t.siteNav.glossary, href: glossaryHref, active: inGlossary },
           ...topicTerms.map((term) => {
             const href = termHref(locale, term);
             return { label: term.label[locale], href, active: onTopic(href) };

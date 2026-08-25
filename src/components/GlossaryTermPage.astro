@@ -1,0 +1,272 @@
+---
+import { getMarketingPage, marketingPagePath } from '../content-pages/registry';
+import { getGlossaryTerm, glossaryIndexPath, glossaryTermPath } from '../glossary/registry';
+import { glossaryUi } from '../glossary/ui';
+import type { GlossaryTerm } from '../glossary/types';
+import { postPath, type Locale } from '../lib/i18n';
+import { getPostsInLocale } from '../lib/posts';
+
+interface Props {
+  term: GlossaryTerm;
+  locale: Locale;
+}
+
+const { term, locale } = Astro.props;
+const ui = glossaryUi(locale);
+
+// Cross-links resolve in the reader's locale and silently drop anything that
+// does not exist there — an untranslated article is not a broken promise.
+const related = term.relatedTerms
+  .map((slug) => getGlossaryTerm(locale, slug))
+  .filter((entry): entry is GlossaryTerm => Boolean(entry));
+
+const pages = term.pageSlugs
+  .map((slug) => getMarketingPage(locale, slug))
+  .filter((page): page is NonNullable<typeof page> => Boolean(page));
+
+const postsInLocale = await getPostsInLocale(locale);
+const postBySlug = new Map(postsInLocale.map((post) => [post.slug, post]));
+const articles = term.articleSlugs
+  .map((slug) => postBySlug.get(slug))
+  .filter((post): post is NonNullable<typeof post> => Boolean(post));
+
+const hasUsage = pages.length > 0 || articles.length > 0;
+---
+
+<article class="glossary-term">
+  <nav class="crumbs" aria-label={ui.eyebrow}>
+    <a href={glossaryIndexPath(locale)}>← {ui.backToIndex}</a>
+  </nav>
+
+  <header class="term-head">
+    <p class="eyebrow">{ui.termEyebrow}</p>
+    <h1>{term.term}</h1>
+    <p class="definition">{term.definition}</p>
+    {
+      term.alsoKnownAs && term.alsoKnownAs.length > 0 && (
+        <p class="aka">
+          <span class="aka-label">{ui.alsoKnownAsLabel}</span>
+          {term.alsoKnownAs.map((alias) => (
+            <span class="chip">{alias}</span>
+          ))}
+        </p>
+      )
+    }
+  </header>
+
+  <section class="explanation" aria-labelledby="explanation-title">
+    <h2 id="explanation-title">{ui.explanationLabel}</h2>
+    {term.explanation.map((paragraph) => <p>{paragraph}</p>)}
+  </section>
+
+  {
+    related.length > 0 && (
+      <section class="related" aria-labelledby="related-title">
+        <h2 id="related-title">{ui.relatedLabel}</h2>
+        <ul class="link-grid">
+          {related.map((entry) => (
+            <li>
+              <a href={glossaryTermPath(locale, entry.slug)}>
+                <strong>{entry.term}</strong>
+                <span>{entry.definition}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+
+  {
+    hasUsage && (
+      <section class="used-in" aria-labelledby="used-in-title">
+        <h2 id="used-in-title">{ui.usedInLabel}</h2>
+        <p class="section-lead">{ui.usedInLead}</p>
+        {pages.length > 0 && (
+          <div class="usage-block">
+            <h3>{ui.pagesLabel}</h3>
+            <ul class="link-grid">
+              {pages.map((page) => (
+                <li>
+                  <a href={marketingPagePath(locale, page.slug)}>
+                    <strong>{page.navLabel}</strong>
+                    <span>{page.description}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {articles.length > 0 && (
+          <div class="usage-block">
+            <h3>{ui.articlesLabel}</h3>
+            <ul class="link-grid">
+              {articles.map((post) => (
+                <li>
+                  <a href={postPath(locale, post.slug)}>
+                    <strong>{post.entry.data.title}</strong>
+                    <span>{post.entry.data.description}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </section>
+    )
+  }
+</article>
+
+<style>
+  .glossary-term {
+    --glossary-accent: #087f5b;
+    max-width: 860px;
+  }
+  .crumbs {
+    padding-bottom: 1.4rem;
+    font-size: 0.84rem;
+  }
+  .crumbs a {
+    color: var(--ink-soft);
+    text-decoration: none;
+  }
+  .crumbs a:hover {
+    color: var(--ink);
+  }
+  .eyebrow {
+    margin: 0 0 0.8rem;
+    color: var(--glossary-accent);
+    font-size: 0.75rem;
+    font-weight: 760;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  h1 {
+    margin: 0 0 1.2rem;
+    font-family: var(--font-display);
+    font-size: clamp(2.1rem, 4.4vw, 3.3rem);
+    line-height: 1.08;
+    letter-spacing: 0;
+    overflow-wrap: break-word;
+  }
+  .definition {
+    margin: 0;
+    padding: 1.05rem 1.2rem;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--glossary-accent);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 1.06rem;
+    line-height: 1.75;
+  }
+  .aka {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 1rem 0 0;
+  }
+  .aka-label {
+    color: var(--muted);
+    font: 700 0.68rem/1 var(--font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .chip {
+    padding: 0.24rem 0.6rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--surface-sunk);
+    color: var(--ink-soft);
+    font-size: 0.79rem;
+  }
+  .explanation,
+  .related,
+  .used-in {
+    margin-top: 2.75rem;
+    padding-top: 2.5rem;
+    border-top: 1px solid var(--line);
+  }
+  h2 {
+    margin: 0 0 1rem;
+    font-family: var(--font-display);
+    font-size: clamp(1.45rem, 2.6vw, 1.9rem);
+    line-height: 1.2;
+    letter-spacing: 0;
+  }
+  h3 {
+    margin: 0 0 0.7rem;
+    color: var(--muted);
+    font: 700 0.7rem/1 var(--font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .explanation p {
+    margin: 0 0 1.05rem;
+    color: var(--ink-soft);
+    font-size: 1rem;
+    line-height: 1.85;
+  }
+  .explanation p:last-child {
+    margin-bottom: 0;
+  }
+  .section-lead {
+    margin: -0.35rem 0 1.4rem;
+    color: var(--ink-soft);
+    font-size: 0.94rem;
+  }
+  .usage-block + .usage-block {
+    margin-top: 1.6rem;
+  }
+  .link-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 0.8rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .link-grid li {
+    min-width: 0;
+  }
+  .link-grid a {
+    display: grid;
+    gap: 0.35rem;
+    height: 100%;
+    padding: 0.95rem 1.05rem;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    text-decoration: none;
+  }
+  .link-grid a:hover {
+    border-color: color-mix(in srgb, var(--glossary-accent) 45%, var(--line));
+  }
+  .link-grid strong {
+    color: var(--ink);
+    font-size: 0.98rem;
+    line-height: 1.35;
+    overflow-wrap: break-word;
+  }
+  .link-grid span {
+    color: var(--ink-soft);
+    font-size: 0.85rem;
+    line-height: 1.62;
+  }
+  @media (max-width: 640px) {
+    .definition {
+      padding: 0.95rem 1rem;
+      font-size: 1rem;
+    }
+    .explanation,
+    .related,
+    .used-in {
+      margin-top: 2.1rem;
+      padding-top: 1.9rem;
+    }
+    .link-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>

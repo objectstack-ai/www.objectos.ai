@@ -1,0 +1,145 @@
+---
+import { getGlossaryTerms, glossaryTermPath } from '../glossary/registry';
+import { glossaryUi } from '../glossary/ui';
+import type { Locale } from '../lib/i18n';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const ui = glossaryUi(locale);
+const terms = getGlossaryTerms(locale);
+---
+
+<div class="glossary-index">
+  <header class="head">
+    <p class="eyebrow">{ui.eyebrow}</p>
+    <h1>{ui.indexHeading}</h1>
+    <p class="lead">{ui.indexLead}</p>
+    <p class="count">{ui.termCount(terms.length)}</p>
+  </header>
+
+  {
+    terms.length === 0 ? (
+      <p class="empty">{ui.empty}</p>
+    ) : (
+      <ul class="term-grid">
+        {terms.map((term) => (
+          <li>
+            <a href={glossaryTermPath(locale, term.slug)}>
+              <h2>
+                {term.term}
+                <span class="arrow" aria-hidden="true">→</span>
+              </h2>
+              <p>{term.definition}</p>
+            </a>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+</div>
+
+<style>
+  .glossary-index {
+    --glossary-accent: #087f5b;
+  }
+  .head {
+    max-width: 760px;
+    padding: 0.5rem 0 2.75rem;
+  }
+  .eyebrow {
+    margin: 0 0 0.85rem;
+    color: var(--glossary-accent);
+    font-size: 0.75rem;
+    font-weight: 760;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  h1 {
+    margin: 0 0 1.1rem;
+    font-family: var(--font-display);
+    font-size: clamp(2.1rem, 4.4vw, 3.4rem);
+    line-height: 1.1;
+    letter-spacing: 0;
+    overflow-wrap: break-word;
+  }
+  .lead {
+    margin: 0;
+    max-width: 68ch;
+    color: var(--ink-soft);
+    font-size: 1.03rem;
+    line-height: 1.8;
+  }
+  .count {
+    margin: 1.1rem 0 0;
+    color: var(--muted);
+    font: 700 0.72rem/1 var(--font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .empty {
+    color: var(--muted);
+  }
+  .term-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1rem;
+    margin: 0;
+    padding: 2.25rem 0 0;
+    border-top: 1px solid var(--line);
+    list-style: none;
+  }
+  .term-grid li {
+    min-width: 0;
+  }
+  .term-grid a {
+    display: block;
+    height: 100%;
+    padding: 1.15rem 1.2rem 1.3rem;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    text-decoration: none;
+  }
+  .term-grid a:hover {
+    border-color: color-mix(in srgb, var(--glossary-accent) 45%, var(--line));
+  }
+  .term-grid h2 {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.6rem;
+    margin: 0 0 0.55rem;
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-size: 1.12rem;
+    line-height: 1.3;
+    letter-spacing: 0;
+    overflow-wrap: break-word;
+  }
+  .arrow {
+    flex: none;
+    color: var(--glossary-accent);
+    font-size: 0.95rem;
+  }
+  .term-grid p {
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+    line-height: 1.7;
+  }
+  @media (max-width: 640px) {
+    .head {
+      padding-bottom: 2rem;
+    }
+    .lead {
+      font-size: 0.97rem;
+    }
+    .term-grid {
+      grid-template-columns: minmax(0, 1fr);
+      padding-top: 1.75rem;
+    }
+  }
+</style>

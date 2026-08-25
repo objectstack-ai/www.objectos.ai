@@ -7,6 +7,7 @@ const ROOT = cwd();
 const DIST = path.join(ROOT, 'dist');
 const SITE = 'https://www.objectos.ai';
 const LOCALES = ['en', 'zh-Hans', 'zh-Hant', 'ja', 'de', 'es', 'fr', 'ko'];
+const issues = [];
 
 // Marketing pages rendered from fallback content are intentionally
 // canonicalized to the source locale and noindexed (see [cluster].astro),
@@ -29,6 +30,36 @@ for (const dirent of await readdir(CONTENT_PAGES, { withFileTypes: true })) {
 for (const locales of marketingContentLocales.values()) {
   if (locales.has('zh-Hans')) locales.add('zh-Hant');
 }
+// Glossary term pages follow exactly the same fallback rule as marketing pages
+// (see src/pages/[lang]/glossary/), so the expectations are derived the same
+// way: from which locales actually have an authored file per slug. The glossary
+// is a first-class page type here, not an optional extra — an empty or missing
+// content tree is an error, so this coverage cannot silently become a no-op.
+const CONTENT_GLOSSARY = path.join(ROOT, 'content', 'glossary');
+const glossaryContentLocales = new Map();
+const glossaryLocales = new Set();
+try {
+  for (const dirent of await readdir(CONTENT_GLOSSARY, { withFileTypes: true })) {
+    if (!dirent.isDirectory()) continue;
+    for (const entry of await readdir(path.join(CONTENT_GLOSSARY, dirent.name))) {
+      if (!entry.endsWith('.ts')) continue;
+      const slug = entry.replace(/\.ts$/, '');
+      if (!glossaryContentLocales.has(slug)) glossaryContentLocales.set(slug, new Set());
+      glossaryContentLocales.get(slug).add(dirent.name);
+      glossaryLocales.add(dirent.name);
+    }
+  }
+} catch {
+  issues.push('Missing content/glossary: the glossary surface has no authored content');
+}
+// zh-Hant glossary terms are derived from zh-Hans at build time (registry
+// deepS2t), so they count as first-class localized pages too.
+for (const locales of glossaryContentLocales.values()) {
+  if (locales.has('zh-Hans')) locales.add('zh-Hant');
+}
+if (glossaryLocales.has('zh-Hans')) glossaryLocales.add('zh-Hant');
+const GLOSSARY_SLUGS = [...glossaryContentLocales.keys()].sort();
+
 const CLUSTER_SLUGS = [
   'ai-native-app-platform',
   'legacy-system-modernization',
@@ -39,7 +70,6 @@ const CLUSTER_SLUGS = [
 const CLUSTER_PATHS = LOCALES.flatMap((locale) =>
   CLUSTER_SLUGS.map((slug) => `/${locale}/${slug}/`)
 );
-const issues = [];
 
 async function readDist(file) {
   try {
@@ -66,6 +96,11 @@ function requireContains(file, body, pattern, message) {
   if (!ok) issues.push(`${file}: ${message}`);
 }
 
+function requireExcludes(file, body, pattern, message) {
+  const present = typeof pattern === 'string' ? body.includes(pattern) : pattern.test(body);
+  if (present) issues.push(`${file}: ${message}`);
+}
+
 const robots = await readDist('robots.txt');
 requireContains(
   'robots.txt',
@@ -85,6 +120,35 @@ const llms = await readDist('llms.txt');
 requireContains('llms.txt', llms, '# ObjectOS', 'missing title');
 requireContains('llms.txt', llms, '## English Articles', 'missing English article section');
 requireContains('llms.txt', llms, '## Simplified Chinese Articles', 'missing Simplified Chinese article section');
+requireContains('llms.txt', llms, '## Glossary', 'missing glossary section');
+requireContains(
+  'llms.txt',
+  llms,
+  '## Simplified Chinese Glossary',
+  'missing Simplified Chinese glossary section'
+);
+if (GLOSSARY_SLUGS.length === 0) {
+  issues.push('content/glossary: no glossary terms found — the glossary surface is empty');
+}
+for (const locale of ['en', 'zh-Hans']) {
+  requireContains(
+    'llms.txt',
+    llms,
+    `${SITE}/${locale}/glossary/`,
+    `missing ${locale} glossary index`
+  );
+  requireContains(
+    'sitemap-0.xml',
+    sitemap,
+    `${SITE}/${locale}/glossary/`,
+    `missing ${locale} glossary index`
+  );
+  for (const slug of GLOSSARY_SLUGS) {
+    const termUrl = `${SITE}/${locale}/glossary/${slug}/`;
+    requireContains('llms.txt', llms, termUrl, `missing glossary term ${termUrl}`);
+    requireContains('sitemap-0.xml', sitemap, termUrl, `missing glossary term ${termUrl}`);
+  }
+}
 for (const clusterPath of CLUSTER_PATHS) {
   requireContains('llms.txt', llms, `${SITE}${clusterPath}`, `missing cluster page ${clusterPath}`);
   requireContains('sitemap-0.xml', sitemap, `${SITE}${clusterPath}`, `missing cluster page ${clusterPath}`);
@@ -110,6 +174,78 @@ for (const clusterPath of CLUSTER_PATHS) {
   requireContains(file, html, '"@type":"ItemList"', 'missing reading path ItemList JSON-LD');
 }
 
+// Glossary pages carry the same locale guarantees as every other page type:
+// per-page canonical, noindex on untranslated fallbacks, and hreflang only for
+// locales where the term really exists.
+for (const locale of LOCALES) {
+  const indexFile = `${locale}/glossary/index.html`;
+  const indexHtml = await readDist(indexFile);
+  const indexIsFallback = !glossaryLocales.has(locale);
+  const indexCanonical = indexIsFallback ? `${SITE}/en/glossary/` : `${SITE}/${locale}/glossary/`;
+  requireContains(indexFile, indexHtml, '"@type":"DefinedTermSet"', 'missing DefinedTermSet JSON-LD');
+  requireContains(
+    indexFile,
+    indexHtml,
+    `<link rel="canonical" href="${indexCanonical}">`,
+    'missing expected canonical URL'
+  );
+  if (indexIsFallback) {
+    requireContains(
+      indexFile,
+      indexHtml,
+      '<meta name="robots" content="noindex, nofollow">',
+      'fallback-content glossary index must be noindexed'
+    );
+    requireExcludes(
+      indexFile,
+      indexHtml,
+      `hreflang="${locale}" href="${SITE}/${locale}/glossary/"`,
+      'fallback-content glossary index must not advertise itself as an hreflang equivalent'
+    );
+  }
+
+  for (const slug of GLOSSARY_SLUGS) {
+    const file = `${locale}/glossary/${slug}/index.html`;
+    const html = await readDist(file);
+    const contentLocales = glossaryContentLocales.get(slug);
+    const isFallback = !contentLocales.has(locale);
+    const canonical = isFallback
+      ? `${SITE}/en/glossary/${slug}/`
+      : `${SITE}/${locale}/glossary/${slug}/`;
+    requireContains(file, html, '"@type":"DefinedTerm"', 'missing DefinedTerm JSON-LD');
+    requireContains(file, html, '"@type":"BreadcrumbList"', 'missing BreadcrumbList JSON-LD');
+    requireContains(
+      file,
+      html,
+      `<link rel="canonical" href="${canonical}">`,
+      'missing expected canonical URL'
+    );
+    if (isFallback) {
+      requireContains(
+        file,
+        html,
+        '<meta name="robots" content="noindex, nofollow">',
+        'fallback-content glossary term must be noindexed'
+      );
+      requireExcludes(
+        file,
+        html,
+        `hreflang="${locale}" href="${SITE}/${locale}/glossary/${slug}/"`,
+        'fallback-content glossary term must not advertise itself as an hreflang equivalent'
+      );
+    }
+    // Every locale that really has the term must be advertised as an equivalent.
+    for (const equivalent of contentLocales) {
+      requireContains(
+        file,
+        html,
+        `hreflang="${equivalent}" href="${SITE}/${equivalent}/glossary/${slug}/"`,
+        `missing hreflang for real equivalent ${equivalent}`
+      );
+    }
+  }
+}
+
 const htmlFiles = (await walk(DIST))
   .filter((file) => file.endsWith('.html'))
   .map((file) => path.relative(DIST, file).split(path.sep).join('/'))
@@ -118,19 +254,38 @@ const htmlFiles = (await walk(DIST))
 for (const file of htmlFiles) {
   const html = await readDist(file);
   const expectedPath = `/${file.replace(/index\.html$/, '')}`;
+  // Glossary paths are matched first: `<locale>/glossary/index.html` also
+  // satisfies the two-segment marketing pattern, and falling through to it
+  // would compute the wrong canonical for the fallback locales.
+  const glossaryTermMatch = file.match(/^([^/]+)\/glossary\/([^/]+)\/index\.html$/);
+  const glossaryIndexMatch = file.match(/^([^/]+)\/glossary\/index\.html$/);
   const marketingMatch = file.match(/^([^/]+)\/([^/]+)\/index\.html$/);
-  const contentLocales =
-    marketingMatch && LOCALES.includes(marketingMatch[1])
-      ? marketingContentLocales.get(marketingMatch[2])
-      : undefined;
-  const isFallbackMarketing = Boolean(contentLocales && !contentLocales.has(marketingMatch[1]));
-  const canonicalPath = isFallbackMarketing
-    ? `/${FALLBACK_LOCALE}/${marketingMatch[2]}/`
-    : expectedPath;
+
+  let canonicalPath = expectedPath;
+  let isFallbackContent = false;
+  if (glossaryTermMatch && LOCALES.includes(glossaryTermMatch[1])) {
+    const [, locale, slug] = glossaryTermMatch;
+    const contentLocales = glossaryContentLocales.get(slug);
+    if (contentLocales && !contentLocales.has(locale)) {
+      isFallbackContent = true;
+      canonicalPath = `/${FALLBACK_LOCALE}/glossary/${slug}/`;
+    }
+  } else if (glossaryIndexMatch && LOCALES.includes(glossaryIndexMatch[1])) {
+    if (!glossaryLocales.has(glossaryIndexMatch[1])) {
+      isFallbackContent = true;
+      canonicalPath = `/${FALLBACK_LOCALE}/glossary/`;
+    }
+  } else if (marketingMatch && LOCALES.includes(marketingMatch[1])) {
+    const contentLocales = marketingContentLocales.get(marketingMatch[2]);
+    if (contentLocales && !contentLocales.has(marketingMatch[1])) {
+      isFallbackContent = true;
+      canonicalPath = `/${FALLBACK_LOCALE}/${marketingMatch[2]}/`;
+    }
+  }
   const canonical = `${SITE}${canonicalPath}`;
   requireContains(file, html, `<link rel="canonical" href="${canonical}">`, 'missing expected canonical URL');
   requireContains(file, html, `<meta property="og:url" content="${canonical}">`, 'missing expected Open Graph URL');
-  if (isFallbackMarketing) {
+  if (isFallbackContent) {
     requireContains(
       file,
       html,
