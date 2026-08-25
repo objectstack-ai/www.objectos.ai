@@ -49,11 +49,13 @@ The binding is not declared at the top of the flow. It lives on the start node's
 | # | The engine checks | Resolves to |
 | --- | --- | --- |
 | 1 | `config.triggerType` is a string beginning `record-` | `record_change` |
-| 2 | `config.triggerType` is an array containing a `record-` token | `record_change` — routed there on purpose, so it is refused loudly at bind time instead of vanishing |
+| 2 | `config.triggerType` is an array containing a `record-` token | `record_change` — deliberately, so it is refused loudly |
 | 3 | `config.timeRelative` is an object | `time_relative` |
 | 4 | `config.schedule` is set, or the flow declares `type: 'schedule'` | `schedule` |
 | 5 | the flow declares `type: 'api'`, or `config.triggerType` is `'api'` | `api` |
 | — | none of the above | no binding — a manual or screen flow |
+
+Row 2 is worth reading twice. An unsupported array form is routed to the record-change trigger *precisely so that it fails* — the trigger names the flow and refuses it at bind time. Left to fall through the chain it would resolve to nothing at all and become a silent manual flow, which is the outcome the whole table exists to prevent.
 
 Check 3 sits before check 4 deliberately. A time-relative flow *also* carries a `schedule` — that is its sweep cadence — so without the precedence it would bind to the plain schedule trigger and fire once with no record instead of once per matching record. A subtle wrong-but-green outcome, prevented by four lines of ordering.
 
@@ -175,12 +177,12 @@ The honest framing is not which style is more modern. Both miss things, in oppos
 
 | Style | Fires | Misses |
 | --- | --- | --- |
-| Event-driven (`record_change`) | exactly when the fact changes | anything that becomes true without a write — every date-based rule |
-| Scheduled (`schedule`) | on cadence, whether or not anything happened | a window the platform was down for; there is no replay |
-| Sweep (`time_relative`) | once per matching record, per sweep day | records beyond the per-sweep cap, and matches outside the declared window |
-| Inbound (`api`) | on the sender's schedule | nothing — but it may fire twice, so idempotency is yours to author |
+| Event-driven (`record_change`) | when the fact changes | anything that becomes true without a write |
+| Scheduled (`schedule`) | on cadence, regardless | a window the platform was down for — no replay |
+| Sweep (`time_relative`) | once per matching record | records beyond the per-sweep cap |
+| Inbound (`api`) | on the sender's schedule | nothing — but it may fire twice |
 
-Date-based rules belong to neither of the first two, which is precisely why the sweep exists as its own trigger type rather than as a documented pattern. When a platform lacks it, teams rebuild it badly, one contract-renewal cron job at a time.
+The date-based rule is the one that catches teams out: it becomes true without anyone touching the record, so an event-driven trigger never sees it, and hand-rolling it as a scheduled range query is a chore every team repeats. That is precisely why the sweep exists as its own trigger type rather than as a documented pattern. When a platform lacks it, teams rebuild it badly, one contract-renewal cron job at a time.
 
 ## One gate, every entry point
 
@@ -223,7 +225,7 @@ The rule family exists because of a real evaluation on 2026-07-17 in which a rec
 
 | Finding | What it catches | Severity |
 | --- | --- | --- |
-| `flow-trigger-unroutable` | a `record_change` flow whose start-node `triggerType` routes nowhere — off-grammar like `onCreate`, or missing entirely | error |
+| `flow-trigger-unroutable` | a `record_change` flow whose `triggerType` routes nowhere — off-grammar, or missing | error |
 | `flow-trigger-unknown-event` | a token outside the closed `record-…` grammar | error |
 | `flow-time-relative-descriptor-invalid` | a `timeRelative` descriptor that does not parse | error |
 | `flow-time-relative-descriptor-unroutable` | a `timeRelative` that is not an object at all, such as `timeRelative: 'daily'` | error |
