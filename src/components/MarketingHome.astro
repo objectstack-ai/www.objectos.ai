@@ -420,7 +420,16 @@ const coverSrc = (cover: unknown): string =>
     background: currentColor;
   }
   .hero h1 {
-    font-size: clamp(3.1rem, 5.4vw, 5rem);
+    /* Sized by whichever axis is tighter. The headline was sized off width
+       alone, so a 1366x768 laptop got a 74px two-line headline — ~216px, the
+       single largest thing between the top of the page and the video. The
+       `8vh` term is self-limiting: 8vh reaches the 5rem ceiling at 1000px of
+       viewport height, so at every height where the desktop reading order is
+       kept this computes to exactly what it computed before, and the size
+       meets the old value continuously rather than stepping at a breakpoint.
+       (`vh` is the large viewport height, so a collapsing mobile URL bar does
+       not resize it — and phones take the fixed 2.7rem below anyway.) */
+    font-size: clamp(3.1rem, min(5.4vw, 8vh), 5rem);
     line-height: 1.01;
     letter-spacing: 0;
     margin-bottom: 1.4rem;
@@ -1034,19 +1043,24 @@ const coverSrc = (cover: unknown): string =>
     color: #172b26;
     background: white;
   }
-  @media (max-width: 900px) {
-    .hero {
-      padding-top: 1.5rem;
-    }
-    .hero > .eyebrow,
-    .hero > h1 {
-      max-width: 680px;
-    }
-    /* Phones and small tablets: the video moves directly under the headline,
-       ahead of the lead and the CTA row. On a phone the lead alone runs about
-       nine lines, which pushed the video off the screen entirely; nothing above
-       the video here but the eyebrow and the headline. Source order is
-       unchanged, so this costs no duplicated markup. */
+  /* The video moves directly under the headline, ahead of the lead and the CTA
+     row. Two independent triggers, one rule — the markup and the source order
+     are untouched, so this still costs no duplicated DOM:
+
+     - NARROW (`max-width: 900px`). On a phone the lead alone runs about nine
+       lines and pushed the video off the screen entirely.
+     - SHORT (`max-height: 1040px`). A laptop is wide but short — 1366x768 and
+       1440x900 machines give ~625px and ~750px of actual viewport — so they
+       never entered the width trigger and kept the desktop stack: eyebrow,
+       headline, a six-line lead and the CTA row, ~746px before the video
+       begins. Measured on the unreordered layout, the frame starts at 746px
+       (en) / 763px (de) and is 529px tall, so half of it clears the fold only
+       from ~1028px of viewport height upward; 1040px is the first round number
+       past that. Above it the desktop reading order is kept and the video is
+       still 56%+ visible — a 1920x1200 desktop is deliberately outside this
+       rule. Below it the desktop order cannot show the video at all, which is
+       the defect. */
+  @media (max-width: 900px), (max-height: 1040px) {
     .hero > .eyebrow {
       order: 1;
     }
@@ -1066,6 +1080,15 @@ const coverSrc = (cover: unknown): string =>
     }
     .hero > .proof {
       order: 6;
+    }
+  }
+  @media (max-width: 900px) {
+    .hero {
+      padding-top: 1.5rem;
+    }
+    .hero > .eyebrow,
+    .hero > h1 {
+      max-width: 680px;
     }
     .workflow {
       grid-template-columns: 1fr;
