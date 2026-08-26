@@ -1,0 +1,160 @@
+---
+/**
+ * Click-to-play YouTube facade.
+ *
+ * Deliberately NOT a bare `<iframe>`. A raw embed pulls YouTube's player
+ * bundle — script, frame and cookies — on every single homepage visit, which
+ * costs Core Web Vitals on the one page this site most needs to rank. Until
+ * the viewer actually clicks, this renders a locally served poster and a
+ * button, and the page makes no request to any YouTube-owned host at all.
+ *
+ * The poster is committed to `public/` rather than pulled from YouTube's
+ * thumbnail endpoint (`i.ytimg.com`) on purpose: that endpoint is a
+ * third-party request on first paint, so using it would defeat the whole
+ * point of the facade while still looking like one.
+ *
+ * The frame is a fixed 16/9 box — the same shape as the player that replaces
+ * the poster — so clicking play swaps the contents without moving anything
+ * below it on the page.
+ */
+interface Props {
+  /** Video id — the part after `youtu.be/`. */
+  videoId: string;
+  /** Video title. Used as the iframe's accessible title. */
+  title: string;
+  /** Poster shown until the viewer clicks play. Served from this origin. */
+  poster: string;
+  /** Accessible label for the play button, already localized. */
+  playLabel: string;
+}
+
+const { videoId, title, poster, playLabel } = Astro.props;
+---
+
+<div class="video-embed" data-video-embed data-video-id={videoId} data-video-title={title}>
+  <button type="button" class="video-play" aria-label={playLabel}>
+    <img src={poster} alt="" width="1600" height="900" loading="eager" decoding="async" />
+    <span class="video-scrim" aria-hidden="true"></span>
+    <span class="video-badge" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="34" height="34" aria-hidden="true" focusable="false">
+        <path d="M8 5.14v13.72a1 1 0 0 0 1.52.86l11.14-6.86a1 1 0 0 0 0-1.72L9.52 4.28A1 1 0 0 0 8 5.14Z" fill="currentColor" />
+      </svg>
+    </span>
+  </button>
+</div>
+
+<style>
+  .video-embed {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+    border-radius: 10px;
+    background: #0f172a;
+    box-shadow: 0 34px 86px -48px rgba(19, 78, 58, 0.78);
+  }
+  .video-play {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    color: inherit;
+    font: inherit;
+  }
+  .video-play img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .video-scrim {
+    position: absolute;
+    inset: 0;
+    background: rgba(2, 12, 8, 0.12);
+    transition: background 0.16s ease;
+  }
+  .video-play:hover .video-scrim,
+  .video-play:focus-visible .video-scrim {
+    background: rgba(2, 12, 8, 0.3);
+  }
+  .video-badge {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 84px;
+    height: 84px;
+    transform: translate(-50%, -50%);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.95);
+    color: #0f172a;
+    box-shadow: 0 18px 40px -18px rgba(2, 12, 8, 0.85);
+    transition: transform 0.16s ease;
+  }
+  /* optical centring: the triangle's mass sits left of the glyph's box */
+  .video-badge svg {
+    margin-left: 5px;
+  }
+  .video-play:hover .video-badge,
+  .video-play:focus-visible .video-badge {
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+  .video-embed :global(iframe) {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+  @media (max-width: 640px) {
+    .video-badge {
+      width: 62px;
+      height: 62px;
+    }
+    .video-badge svg {
+      width: 26px;
+      height: 26px;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .video-scrim,
+    .video-badge {
+      transition: none;
+    }
+    .video-play:hover .video-badge,
+    .video-play:focus-visible .video-badge {
+      transform: translate(-50%, -50%);
+    }
+  }
+</style>
+
+<script>
+  // Swap the poster for the real player on click. Nothing above this line ever
+  // touches a YouTube-owned host, so the homepage stays free of the third-party
+  // player until the viewer asks for it.
+  document.querySelectorAll<HTMLElement>('[data-video-embed]').forEach((embed) => {
+    const button = embed.querySelector('button');
+    button?.addEventListener('click', () => {
+      const videoId = embed.dataset.videoId;
+      if (!videoId) return;
+      const frame = document.createElement('iframe');
+      // youtube-nocookie.com: no tracking cookie until playback actually starts.
+      frame.src = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?autoplay=1&rel=0`;
+      frame.title = embed.dataset.videoTitle ?? '';
+      frame.allow =
+        'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+      frame.referrerPolicy = 'strict-origin-when-cross-origin';
+      frame.allowFullscreen = true;
+      embed.replaceChildren(frame);
+      frame.focus();
+    });
+  });
+</script>
