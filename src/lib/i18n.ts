@@ -95,6 +95,7 @@ interface Strings {
     agentGuide: string;
     templates: string;
     referenceStories: string;
+    glossary: string;
   };
   getStarted: string;
   skipToContent: string;
@@ -137,6 +138,7 @@ const en: Strings = {
     agentGuide: 'Agent guide',
     templates: 'Templates',
     referenceStories: 'Reference stories',
+    glossary: 'Glossary',
   },
   getStarted: 'Get started',
   skipToContent: 'Skip to content',
@@ -179,6 +181,7 @@ const zhHans: Strings = {
     agentGuide: 'Agent 开发指南',
     templates: '模板',
     referenceStories: '参考案例',
+    glossary: '术语表',
   },
   getStarted: '开始使用',
   skipToContent: '跳到正文',
@@ -221,6 +224,7 @@ const ja: Strings = {
     agentGuide: 'エージェント開発ガイド',
     templates: 'テンプレート',
     referenceStories: '導入事例',
+    glossary: '用語集',
   },
   getStarted: 'はじめる',
   skipToContent: '本文へ移動',
@@ -263,6 +267,7 @@ const de: Strings = {
     agentGuide: 'Agent-Leitfaden',
     templates: 'Vorlagen',
     referenceStories: 'Referenzberichte',
+    glossary: 'Glossar',
   },
   getStarted: 'Loslegen',
   skipToContent: 'Zum Inhalt springen',
@@ -305,6 +310,7 @@ const es: Strings = {
     agentGuide: 'Guía para agentes',
     templates: 'Plantillas',
     referenceStories: 'Casos de referencia',
+    glossary: 'Glosario',
   },
   getStarted: 'Empezar',
   skipToContent: 'Saltar al contenido',
@@ -347,6 +353,7 @@ const fr: Strings = {
     agentGuide: 'Guide agent',
     templates: 'Modèles',
     referenceStories: 'Cas de référence',
+    glossary: 'Glossaire',
   },
   getStarted: 'Commencer',
   skipToContent: 'Aller au contenu',
@@ -389,6 +396,7 @@ const ko: Strings = {
     agentGuide: '에이전트 가이드',
     templates: '템플릿',
     referenceStories: '레퍼런스 사례',
+    glossary: '용어집',
   },
   getStarted: '시작하기',
   skipToContent: '본문으로 건너뛰기',
@@ -432,6 +440,7 @@ const toHant = (s: Strings): Strings => ({
     agentGuide: s2t(s.siteNav.agentGuide),
     templates: s2t(s.siteNav.templates),
     referenceStories: s2t(s.siteNav.referenceStories),
+    glossary: s2t(s.siteNav.glossary),
   },
   getStarted: s2t(s.getStarted),
   skipToContent: s2t(s.skipToContent),
