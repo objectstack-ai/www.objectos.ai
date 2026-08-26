@@ -14,6 +14,12 @@ import {
 import { CLUSTERS, clusterPath } from '../lib/clusters';
 import { clusterCopy } from '../lib/cluster-i18n';
 import { getMarketingPages, marketingPagePath } from '../content-pages/registry';
+import {
+  getGlossaryTerms,
+  glossaryIndexPath,
+  glossaryTermPath,
+} from '../glossary/registry';
+import { glossaryUi } from '../glossary/ui';
 
 const absoluteUrl = (site: URL | string | undefined, path: string): string => {
   const base = site ? site.toString() : 'https://www.objectos.ai/';
@@ -26,6 +32,22 @@ async function postLines(locale: Locale, site: URL | undefined): Promise<string[
     ({ slug, entry }) =>
       `- [${entry.data.title}](${absoluteUrl(site, postPath(locale, slug))}): ${entry.data.description}`
   );
+}
+
+/**
+ * Definitions are the highest-value payload this file can carry: a glossary
+ * entry is a self-contained sentence an answer engine can lift verbatim. Each
+ * line is `term -> URL -> one-sentence definition`, preceded by the index.
+ */
+function glossaryLines(locale: Locale, site: URL | undefined): string[] {
+  const ui = glossaryUi(locale);
+  return [
+    `- [${ui.indexTitle}](${absoluteUrl(site, glossaryIndexPath(locale))}): ${ui.indexLead}`,
+    ...getGlossaryTerms(locale).map(
+      (term) =>
+        `- [${term.term}](${absoluteUrl(site, glossaryTermPath(locale, term.slug))}): ${term.definition}`
+    ),
+  ];
 }
 
 export const GET: APIRoute = async ({ site }) => {
@@ -46,8 +68,17 @@ export const GET: APIRoute = async ({ site }) => {
     ),
     `- [Security](${absoluteUrl(site, securityPath('en'))}): Data residency, permissions, approvals, audit logs, and self-hosted deployment boundaries.`,
     `- [Pricing](${absoluteUrl(site, pricingPath('en'))}): Open-source ObjectStack and ObjectOS Cloud and Enterprise plans.`,
+    `- [Glossary](${absoluteUrl(site, glossaryIndexPath('en'))}): One-sentence definitions of the vocabulary this site uses, each linked to the pages and articles that apply it.`,
     `- [Articles](${absoluteUrl(site, blogPath('en'))}): Practical writing on AI-native software, enterprise AI agents, integration, modernization, and governance.`,
     `- [Documentation](https://docs.objectos.ai/): Product and developer documentation.`,
+    '',
+    '## Glossary',
+    '',
+    ...glossaryLines('en', site),
+    '',
+    '## Simplified Chinese Glossary',
+    '',
+    ...glossaryLines('zh-Hans', site),
     '',
     '## Topic Cluster Pages',
     '',

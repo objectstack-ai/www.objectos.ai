@@ -1,0 +1,84 @@
+---
+import Base from '../../../layouts/Base.astro';
+import GlossaryIndex from '../../../components/GlossaryIndex.astro';
+import {
+  getGlossaryIndexSourceLocale,
+  getGlossaryTerms,
+  glossaryIndexAlternates,
+  glossaryIndexPath,
+  glossaryTermPath,
+} from '../../../glossary/registry';
+import { glossaryUi } from '../../../glossary/ui';
+import { homePath, htmlLang, LOCALES, segToLocale, ui as siteUi } from '../../../lib/i18n';
+
+export function getStaticPaths() {
+  return LOCALES.map((locale) => ({ params: { lang: locale } }));
+}
+
+const locale = segToLocale(Astro.params.lang!)!;
+const ui = glossaryUi(locale);
+const t = siteUi[locale];
+const terms = getGlossaryTerms(locale);
+
+// Same rule as marketing pages: a locale with no authored content renders the
+// English copy, canonicalizes to the English URL, and is not indexed.
+const sourceLocale = getGlossaryIndexSourceLocale(locale);
+const isFallback = sourceLocale !== locale;
+const canonical = glossaryIndexPath(sourceLocale);
+
+const site = Astro.site?.toString().replace(/\/$/, '') ?? '';
+const absoluteUrl = (href: string): string =>
+  site ? new URL(href, `${site}/`).toString() : new URL(href, Astro.url).toString();
+
+const setUrl = absoluteUrl(canonical);
+const title = `${ui.indexTitle} · ${t.siteName}`;
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'DefinedTermSet',
+    '@id': setUrl,
+    name: ui.indexTitle,
+    description: ui.indexLead,
+    url: setUrl,
+    inLanguage: htmlLang(sourceLocale),
+    hasDefinedTerm: terms.map((term) => ({
+      '@type': 'DefinedTerm',
+      '@id': absoluteUrl(glossaryTermPath(sourceLocale, term.slug)),
+      name: term.term,
+      description: term.definition,
+      url: absoluteUrl(glossaryTermPath(sourceLocale, term.slug)),
+      inDefinedTermSet: setUrl,
+    })),
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: t.siteName,
+        item: absoluteUrl(homePath(locale)),
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: ui.indexTitle,
+        item: setUrl,
+      },
+    ],
+  },
+];
+---
+
+<Base
+  {title}
+  description={ui.indexLead}
+  {locale}
+  {canonical}
+  noindex={isFallback}
+  alternates={glossaryIndexAlternates()}
+  {jsonLd}>
+  <GlossaryIndex {locale} />
+</Base>

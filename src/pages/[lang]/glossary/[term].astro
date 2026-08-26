@@ -1,0 +1,107 @@
+---
+import Base from '../../../layouts/Base.astro';
+import GlossaryTermPage from '../../../components/GlossaryTermPage.astro';
+import {
+  getGlossaryTerm,
+  getGlossaryTerms,
+  getGlossaryTermSourceLocale,
+  glossaryIndexPath,
+  glossaryTermAlternates,
+  glossaryTermPath,
+} from '../../../glossary/registry';
+import { glossaryUi } from '../../../glossary/ui';
+import type { GlossaryTerm } from '../../../glossary/types';
+import { homePath, htmlLang, LOCALES, segToLocale, ui as siteUi, type Locale } from '../../../lib/i18n';
+
+export function getStaticPaths() {
+  const paths = [];
+  for (const locale of LOCALES) {
+    for (const term of getGlossaryTerms(locale)) {
+      paths.push({ params: { lang: locale, term: term.slug }, props: { locale, slug: term.slug } });
+    }
+  }
+  return paths;
+}
+
+type Props = { locale: Locale; slug: string };
+
+const { slug } = Astro.props as Props;
+const locale = segToLocale(Astro.params.lang!)!;
+const ui = glossaryUi(locale);
+const t = siteUi[locale];
+
+// getStaticPaths only emits slugs the registry can resolve, so this is total.
+const term = getGlossaryTerm(locale, slug) as GlossaryTerm;
+
+// Untranslated terms render the English copy, canonicalize to the English URL,
+// and are noindexed — identical to the marketing-page fallback rule.
+const sourceLocale = getGlossaryTermSourceLocale(locale, slug) ?? locale;
+const isFallback = sourceLocale !== locale;
+const canonical = glossaryTermPath(sourceLocale, slug);
+
+const site = Astro.site?.toString().replace(/\/$/, '') ?? '';
+const absoluteUrl = (href: string): string =>
+  site ? new URL(href, `${site}/`).toString() : new URL(href, Astro.url).toString();
+
+const termUrl = absoluteUrl(canonical);
+const setUrl = absoluteUrl(glossaryIndexPath(sourceLocale));
+const title = `${term.title} · ${t.siteName}`;
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'DefinedTerm',
+    '@id': termUrl,
+    name: term.term,
+    // The quotable sentence — this is what an answer engine lifts.
+    description: term.definition,
+    url: termUrl,
+    inLanguage: htmlLang(sourceLocale),
+    termCode: term.slug,
+    ...(term.alsoKnownAs && term.alsoKnownAs.length > 0
+      ? { alternateName: term.alsoKnownAs }
+      : {}),
+    inDefinedTermSet: {
+      '@type': 'DefinedTermSet',
+      '@id': setUrl,
+      name: ui.indexTitle,
+      url: setUrl,
+    },
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: t.siteName,
+        item: absoluteUrl(homePath(locale)),
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: ui.indexTitle,
+        item: setUrl,
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: term.term,
+        item: termUrl,
+      },
+    ],
+  },
+];
+---
+
+<Base
+  {title}
+  description={term.description}
+  {locale}
+  {canonical}
+  noindex={isFallback}
+  alternates={glossaryTermAlternates(slug)}
+  {jsonLd}>
+  <GlossaryTermPage {term} {locale} />
+</Base>
