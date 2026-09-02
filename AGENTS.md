@@ -43,6 +43,94 @@
 - When adding or editing published articles, run `pnpm content:lint`, `pnpm check`, and `pnpm build`.
 - For visual/content changes, verify at least one affected article and the blog list in the in-app browser. Check ordering, cover rendering, body image duplication, and obvious layout issues.
 
+## Publishing cadence
+
+**Target: two posts per week. Never more than one post going live in a day.**
+
+Measured justification — an audit of the English corpus at `676ef13` found 38 posts
+spread across nine dates:
+
+| Date | Posts |
+|:--|--:|
+| 2026-06-05 | 14 |
+| 2026-06-16 | 9 |
+| 2026-06-24 | 5 |
+| 2026-06-03 / 06-04 | 3 each |
+| 05-30 · 06-12 · 07-22 · 07-23 | 1 each |
+
+28 of 38 posts landed on three days, and then the site published nothing for 33 days.
+That shape costs on four counts: fourteen structurally similar posts in one day is the
+pattern Google's scaled-content-abuse policy describes (and writing rule 9 above
+forbids it independently); crawl frequency follows observed publishing rhythm, so a
+dump-then-silence site gets crawled like a dead one; publishing 14 posts at once makes
+any ranking movement unattributable to any topic; and posts published simultaneously
+cannot link to each other, so internal links never compound.
+
+- **Two slots a week** (e.g. Tuesday and Thursday), one post per slot.
+- **Merge time is publish time.** The site is a static build deployed on push to `main`
+  (`.github/workflows/cloudflare-pages.yml`), so a merged post is live within one CI
+  run. Cadence is therefore enforced **at the merge**: write and review a post whenever
+  it is ready, approve it, and merge it on its slot day. Do not batch-merge a backlog.
+  A stand-down or a "merge everything" instruction does not override the cadence — the
+  seat raises the conflict instead of merging through it, which is how the #128 cluster
+  happened.
+- **A queue of approved posts is the healthy state**, not a backlog to flush. Several
+  finished posts waiting is a reason to keep the cadence, not to spend it in one day.
+- **Forward-only.** Never rewrite the `date` of an already-published post to simulate a
+  drip. Those posts really were published then; changing `date` falsifies the record,
+  breaks any external reference, and fixes nothing — the crawl history already happened.
+  The one exception is not an author's or the seat's call: rewriting `date` takes a
+  maintainer ruling recorded on the card (precedent: #128, 2026-09-02 — a cluster of six
+  posts that all landed on one day, spread backward by maintainer instruction).
+
+### `date` vs `updated` — two different facts
+
+`date` is the **first-publication** date and is immutable. `updated` (optional) records a
+later substantive revision.
+
+- Refreshing a published article sets `updated`. It never touches `date`.
+- `updated` must be **≥** `date`. Both the collection schema (`src/content.config.ts`)
+  and `pnpm content:lint` reject a violation as a **blocking error**, not a warning.
+- What `updated` changes: it renders as a separate "Updated …" line on the article, and
+  becomes `dateModified` in the BlogPosting JSON-LD (with `date` as `datePublished`),
+  `article:modified_time`, and `<atom:updated>` on the RSS item. A post with no `updated`
+  still emits `dateModified` — equal to `datePublished`, which is what schema.org means
+  by a document that has never been revised.
+- **Sort order and RSS `pubDate` deliberately stay on `date`.** A revision must not
+  reorder the blog or re-notify every feed subscriber; "recently revised" is not
+  "recently published". The channel's `lastBuildDate` does account for revisions, since
+  that element means "when the channel's content last changed".
+- Set `updated` for a **substantive** revision — new sections, corrected claims,
+  refreshed numbers. Not for a typo fix.
+
+### Scheduled publishing — considered and deferred (2026-08-25)
+
+`status` stays `published | archived`. A `scheduled` status (or a `publish_at` date the
+build filters on) was considered and **deliberately not implemented**, for one
+disqualifying reason:
+
+**Nothing would ever publish it.** The deploy workflow runs only on `push` to `main`, on
+`pull_request`, and on manual `workflow_dispatch`. There is no scheduled rebuild. A
+build-time filter on a future date would hold a post until the next *unrelated* push to
+`main` — a day later, a week later, or never. That is precisely the "silently invisible
+forever" failure a scheduled state exists to prevent, and shipping the filter without
+the rebuild would be worse than not having it: authors would mark posts scheduled, merge
+them, and watch nothing happen.
+
+Doing it properly is three coupled parts, not one field:
+
+1. a `schedule:` cron in the deploy workflow (a daily rebuild, and the deploy cost that
+   comes with it);
+2. the filter itself — schema, `content-lint`, `STATUS_COLOR`, the `noindex` rule, and
+   the `status` strings in all eight locales; and
+3. **a report of what is being held.** A scheduled post must be listed by
+   `pnpm content:lint` with its release date, so a post that never goes live fails a
+   gate instead of living only in someone's memory.
+
+At two posts a week, holding a merge for a day or two is not a real cost, and the queue
+is already visible as open PRs. Revisit when the cadence is actually running and
+merge-day scheduling is measurably in the way; land part 1 before part 2.
+
 ## Localization
 
 - `zh-Hant` content is generated from `zh-Hans` with `pnpm gen:zh-hant`; do not hand-edit generated Traditional Chinese files unless the user explicitly asks for manual localization.

@@ -172,7 +172,8 @@ export const EscalateBreachedCases = defineFlow({
     checklistTitle: 'An automation review should confirm',
     checklist: [
       'Every flow has a named owner and a readable purpose.',
-      'Waiting states have timeouts and escalation paths.',
+      'Approval steps declare an SLA — who it escalates to, and what happens on breach.',
+      'Timer waits pair with a companion sweep or approval gate; a wait node will not wake early on a deadline.',
       'External calls go through the webhook outbox, not ad-hoc fetches.',
       'Failure paths are drawn in the flow, not implied.',
       'Flow changes arrive as diffs with an approval trail.',
