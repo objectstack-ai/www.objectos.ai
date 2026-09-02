@@ -32,7 +32,14 @@ const blog = defineCollection({
       title: z.string(),
       description: z.string(),
       author: z.string().default('ObjectStack Team'),
+
+      // `date` and `updated` are two different facts and must never be
+      // conflated. `date` is when the article was FIRST published and is
+      // immutable — external references, RSS `pubDate` and the crawl history
+      // all point at it. `updated` records a later substantive revision.
+      // Refreshing a post sets `updated`; it never rewrites `date`.
       date: z.coerce.date(),
+      updated: z.coerce.date().optional(),
 
       // Publishing lifecycle — `astro check` fails on an invalid value.
       status: z
@@ -52,7 +59,22 @@ const blog = defineCollection({
 
       // Where this article has been published externally.
       channels: z.array(channel).default([]),
-    }),
+    })
+      // An `updated` that precedes `date` is not a typo to tolerate — it is a
+      // claim that the article was revised before it existed. Reject it here,
+      // at the producer, so no renderer has to guess which of the two is real.
+      .superRefine((data, ctx) => {
+        if (data.updated && data.updated.getTime() < data.date.getTime()) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['updated'],
+            message:
+              `updated (${data.updated.toISOString().slice(0, 10)}) is earlier than ` +
+              `date (${data.date.toISOString().slice(0, 10)}); ` +
+              `\`date\` is the first-publication date and must not be rewritten when refreshing.`,
+          });
+        }
+      }),
 });
 
 export const collections = { blog };

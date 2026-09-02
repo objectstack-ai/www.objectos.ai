@@ -58,6 +58,9 @@ title: ${title}
 description: ""
 author: ObjectStack Team
 date: ${today}
+# "date" is the FIRST-publication date — never rewrite it. When you refresh a
+# published article, uncomment "updated" instead (it must be >= date).
+# updated: ${today}
 status: published
 # Topic (main axis): ai-agents | app-building | integration-data | automation | modernization | governance | customer-stories
 topic: ai-agents

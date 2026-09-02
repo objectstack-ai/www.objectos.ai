@@ -16,6 +16,13 @@ const { data, slug, locale, alternates } = Astro.props;
 const t = ui[locale];
 const dateStr = data.date.toISOString().slice(0, 10);
 const displayDate = formatDate(locale, data.date);
+// `updated` is optional: most posts have never been revised. When it is absent
+// the article's last modification IS its publication, which is what the
+// structured data below must say — `dateModified` is not optional in
+// schema.org's BlogPosting the way the frontmatter field is.
+const updatedStr = data.updated ? data.updated.toISOString().slice(0, 10) : null;
+const updatedDisplay = data.updated ? formatDate(locale, data.updated) : null;
+const modifiedIso = (data.updated ?? data.date).toISOString();
 const coverSrc =
   typeof data.cover === 'string'
     ? data.cover
@@ -47,7 +54,7 @@ const jsonLd = [
     headline: data.title,
     description: data.description,
     datePublished: data.date.toISOString(),
-    dateModified: data.date.toISOString(),
+    dateModified: modifiedIso,
     author: {
       '@type': 'Organization',
       name: data.author,
@@ -102,7 +109,7 @@ const jsonLd = [
   type="article"
   noindex={!isPublicPost(data)}
   publishedTime={data.date.toISOString()}
-  modifiedTime={data.date.toISOString()}
+  modifiedTime={modifiedIso}
   author={data.author}
   jsonLd={jsonLd}
   {locale}
@@ -137,6 +144,16 @@ const jsonLd = [
         </span>
         <span class="dot">·</span>
         <time datetime={dateStr}>{displayDate}</time>
+        {
+          updatedStr && (
+            <>
+              <span class="dot">·</span>
+              <time class="updated" datetime={updatedStr}>
+                {t.updated} {updatedDisplay}
+              </time>
+            </>
+          )
+        }
         <span class="dot">·</span>
         <span>{t.by} {data.author}</span>
       </div>
@@ -250,6 +267,10 @@ const jsonLd = [
     }
     .dot {
       color: var(--muted);
+    }
+    .updated {
+      color: var(--ink-soft);
+      font-weight: 600;
     }
     h1 {
       font-family: var(--font-display);
