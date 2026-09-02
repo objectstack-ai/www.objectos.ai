@@ -25,6 +25,9 @@ const term = {
     'typed-metadata',
     'application-metadata',
     'governed-runtime',
+    'ai-agent-runtime',
+    'semantic-layer',
+    'declared-vs-enforced',
   ],
   articleSlugs: [
     'ai-ontology-open-protocol',

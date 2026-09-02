@@ -25,6 +25,9 @@ const term = {
     'application-definition-vs-runtime',
     'definition-layer',
     'governed-runtime',
+    'vibe-coding',
+    'comprehension-debt',
+    'reviewable-diff',
   ],
   articleSlugs: [
     'metadata-not-code-generation',

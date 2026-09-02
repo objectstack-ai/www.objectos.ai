@@ -25,6 +25,9 @@ const term = {
     'typed-metadata',
     'application-metadata',
     'governed-runtime',
+    'ontology',
+    'semantic-layer',
+    'approval-workflow',
   ],
   articleSlugs: [
     'ai-ontology-open-protocol',

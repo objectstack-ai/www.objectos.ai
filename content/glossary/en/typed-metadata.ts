@@ -24,6 +24,9 @@ const term = {
     'metadata-driven-development',
     'application-definition-vs-runtime',
     'definition-layer',
+    'declared-vs-enforced',
+    'object-type-and-action-type',
+    'reviewable-diff',
   ],
   articleSlugs: [
     'business-app-in-16k-tokens',
