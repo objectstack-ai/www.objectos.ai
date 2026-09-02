@@ -139,7 +139,8 @@ merge-day scheduling is measurably in the way; land part 1 before part 2.
 - **Browser-verify every content or visual PR before it merges** at 1366×625, 1440×750,
   1512×830, 1920×945, 390×844 and 360×800; scroll lazy images into view before judging and
   **look at** the screenshots. Render each new SVG at native size — a `fill` presentation
-  attribute loses to a stylesheet class, so dark-on-dark text passes every gate.
+  attribute loses to a stylesheet class, and text with neither inherits the dark default, so
+  dark-on-dark text passes every gate.
 - **A visual defect is work, not a note** (maintainer, 2026-08-26).
 - **Merge time is publish time.** Never batch-merge posts; `date` is rewritten only by an
   explicit maintainer ruling recorded on the card.
