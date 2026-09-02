@@ -294,6 +294,62 @@ for (const locale of LOCALES) {
   }
 }
 
+// The language switcher answers a different question from hreflang: it should
+// offer the reader the same page in the locale they pick, fallback locales
+// included, because those URLs are really built and render fine. Narrowing the
+// hreflang set must not narrow the switcher — before `navAlternates` existed,
+// one prop fed both and a reader on /ja/mcp/ who picked German landed on /de/.
+// Header.astro renders the switcher twice (desktop `menu-item`, mobile
+// `drawer-lang`); both are checked, since fixing only one is the likely defect.
+const SWITCHER_ANCHOR = /class="((?:menu-item|drawer-lang)[^"]*)" href="([^"]+)" data-lang="([^"]+)"/g;
+
+function checkSwitcher(file, html, locale, pathFor) {
+  const anchors = [...html.matchAll(SWITCHER_ANCHOR)];
+  // Two switchers x every locale. A markup change that drops the attributes
+  // would otherwise turn this whole check into a silent no-op.
+  if (anchors.length !== LOCALES.length * 2) {
+    issues.push(
+      `${file}: expected ${LOCALES.length * 2} language-switcher links, found ${anchors.length}`
+    );
+    return;
+  }
+  let active = 0;
+  for (const [, className, href, lang] of anchors) {
+    if (href !== pathFor(lang)) {
+      issues.push(
+        `${file}: language switcher sends ${lang} to ${href}, not ${pathFor(lang)} — ` +
+          'the switcher must offer the same page in the chosen locale'
+      );
+    }
+    if (!className.includes('active')) continue;
+    active += 1;
+    if (lang !== locale) {
+      issues.push(`${file}: language switcher marks ${lang} active on a ${locale} page`);
+    }
+    if (href !== pathFor(locale)) {
+      issues.push(
+        `${file}: active language-switcher entry points at ${href}, not the page being read`
+      );
+    }
+  }
+  if (active !== 2) {
+    issues.push(`${file}: expected 1 active language-switcher entry per switcher, found ${active}`);
+  }
+}
+
+for (const locale of LOCALES) {
+  for (const slug of MARKETING_SLUGS) {
+    if (marketingContentLocales.get(slug).has(locale)) continue;
+    const file = `${locale}/${slug}/index.html`;
+    checkSwitcher(file, await readDist(file), locale, (lang) => `/${lang}/${slug}/`);
+  }
+  for (const slug of GLOSSARY_SLUGS) {
+    if (glossaryContentLocales.get(slug).has(locale)) continue;
+    const file = `${locale}/glossary/${slug}/index.html`;
+    checkSwitcher(file, await readDist(file), locale, (lang) => `/${lang}/glossary/${slug}/`);
+  }
+}
+
 const htmlFiles = (await walk(DIST))
   .filter((file) => file.endsWith('.html'))
   .map((file) => path.relative(DIST, file).split(path.sep).join('/'))

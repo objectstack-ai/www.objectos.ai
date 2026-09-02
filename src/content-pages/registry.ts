@@ -132,3 +132,25 @@ export const marketingPageAlternates = (
       marketingPagePath(locale, slug),
     ])
   );
+
+/**
+ * Language-switcher targets — a different question from `hreflang`.
+ *
+ * The switcher should offer the reader the same page in the locale they pick,
+ * including the locales that render fallback content: those URLs are really
+ * built (`getStaticPaths` emits them from `getMarketingPages`), they read fine,
+ * and they are the page the reader asked for. Sending them to the locale home
+ * instead loses their place. So this filters on `getMarketingPage`, which
+ * resolves through the English fallback — deliberately the opposite of
+ * `marketingPageAlternates` above, which must name authored locales only
+ * because an hreflang annotation claims the target is indexable.
+ */
+export const marketingPageNavTargets = (
+  slug: string
+): Partial<Record<Locale, string>> =>
+  Object.fromEntries(
+    LOCALES.filter((locale) => Boolean(getMarketingPage(locale, slug))).map((locale) => [
+      locale,
+      marketingPagePath(locale, slug),
+    ])
+  );

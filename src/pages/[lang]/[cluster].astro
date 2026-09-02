@@ -6,6 +6,7 @@ import {
   getMarketingPages,
   getMarketingPageSourceLocale,
   marketingPageAlternates,
+  marketingPageNavTargets,
   marketingPagePath,
 } from '../../content-pages/registry';
 import type { MarketingPage } from '../../content-pages/types';
@@ -49,6 +50,9 @@ let description: string;
 let canonical: string | undefined;
 let noindex = false;
 let alternates: Partial<Record<Locale, string>>;
+// Only set where the switcher's targets differ from the hreflang set — i.e.
+// marketing pages, which are built in every locale but authored in some.
+let navAlternates: Partial<Record<Locale, string>> | undefined;
 let jsonLd: Record<string, unknown>[];
 let relatedPosts: LocalePost[] = [];
 
@@ -64,6 +68,7 @@ if (props.kind === 'marketing') {
   canonical = canonicalPath;
   noindex = sourceLocale !== currentLocale;
   alternates = marketingPageAlternates(page.slug);
+  navAlternates = marketingPageNavTargets(page.slug);
   jsonLd = [
     {
       '@context': 'https://schema.org',
@@ -189,6 +194,7 @@ if (props.kind === 'marketing') {
   {canonical}
   {noindex}
   {alternates}
+  {navAlternates}
   jsonLd={jsonLd}>
   {
     props.kind === 'marketing' ? (
