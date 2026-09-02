@@ -95,7 +95,7 @@ export const Order = ObjectSchema.create({
         eyebrow: 'Built for AI',
         title: 'Designed to be written by agents, reviewed by people',
         copy:
-          'Every ObjectStack capability above is metadata-driven, which is exactly what makes the application AI-writable: a whole-context definition, readable diffs, and runtime enforcement. ObjectOS adds the in-app AI and production experience for teams.',
+          'Every ObjectStack capability above is defined as metadata, which is what makes metadata driven development work when the author is an AI: a whole-context definition, readable diffs, and runtime enforcement. ObjectOS adds the in-app AI and production experience for teams.',
         items: [
           {
             title: 'AI Build & Ask',

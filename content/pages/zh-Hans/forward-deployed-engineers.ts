@@ -5,7 +5,7 @@ const page = {
     navLabel: '面向 FDE',
     title: 'FDE(前沿部署工程师)工具箱：本体优先的开源技术栈',
     description:
-      'ObjectStack 为 FDE 提供开放、类型化目标格式与受治理运行时，让应用本体归客户所有；ObjectOS 是可选的商业生产运营平台。',
+      'ObjectStack 为 FDE 提供开放目标格式与受治理运行时，让开放业务本体归客户所有；ObjectOS 是可选的商业生产运营平台。',
     eyebrow: '面向前沿部署工程师',
     heroTitle: '像最强的 FDE 团队那样交付，并交出他们从不交出的东西：本体。',
     lead:

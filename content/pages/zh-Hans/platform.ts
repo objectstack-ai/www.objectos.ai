@@ -95,7 +95,7 @@ export const Order = ObjectSchema.create({
         eyebrow: '为 AI 而设计',
         title: '让 Agent 来写，让人来审',
         copy:
-          '上面每一项 ObjectStack 能力都由元数据驱动——这正是应用可被 AI 编写的原因：整体可装入上下文的定义、可读 diff 与运行时强制执行。ObjectOS 则为团队增加产品内 AI 与生产运营体验。',
+          '上面每一项 ObjectStack 能力都以元数据定义——这正是「元数据驱动开发」在作者是 AI 时依然成立的原因：整体可装入上下文的定义、可读 diff 与运行时强制执行。ObjectOS 则为团队增加产品内 AI 与生产运营体验。',
         items: [
           {
             title: 'AI Build & Ask',
