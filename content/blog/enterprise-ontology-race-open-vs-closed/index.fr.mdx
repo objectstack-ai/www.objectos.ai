@@ -1,8 +1,9 @@
 ---
 title: "Ontologie d'entreprise ouverte : qui doit posséder la couche sémantique du métier ?"
-description: "L'IA d'entreprise a besoin d'une couche de définition lisible par machine. Si clients, commandes et actifs restent définis dans des silos de plateforme, aucun agent ne voit l'entreprise complète."
+description: "Entre nov. 2025 et août 2026, cinq plateformes ont livré une couche sémantique métier et la plupart ont ouvert une voie de lecture MCP, en gardant la définition à l'intérieur. Protocole ouvert, définition fermée."
 author: ObjectStack Team
 date: 2026-06-16T17:00:00+08:00
+updated: 2026-09-02T18:00:00+08:00
 status: published
 topic: governance
 audience: business
@@ -12,160 +13,185 @@ cover: ./cover-en.svg
 tags:
   - Ontologie
   - Couche sémantique
-  - Microsoft Fabric
+  - MCP
+  - Fabric IQ
+  - Unity Catalog
+  - Snowflake
   - Palantir
+  - Looker
 ---
 
-**En bref :** La couche de définition métier dont dépendent vos applications, vos agents, vos auditeurs — et désormais plusieurs fournisseurs — ne devrait appartenir à aucune plateforme. Elle devrait être une couche neutre que vous conservez dans votre propre dépôt.
+**En bref :** quand cet article a paru en juin 2026, il demandait qui posséderait la couche sémantique du métier. La course a depuis été courue : **cinq plateformes en ont livré une en neuf mois.** Et elles ont fait quelque chose que personne n'avait prévu : elles ont ouvert la *voie d'accès* à leur ontologie via MCP tout en gardant la *définition* à l'intérieur. Appelons cela **protocole ouvert, définition fermée**. Un agent peut désormais lire cinq ontologies qu'il ne peut pas emporter. Cela rend la question de la propriété plus aiguë, pas plus faible, et la réponse ne change pas : la couche de définition dont dépendent à la fois vos applications, vos agents, vos auditeurs et vos fournisseurs devrait être une couche neutre que vous détenez dans votre propre dépôt.
 
-Commençons par l'histoire d'une entreprise qui a perdu un client à cause de cela. Les détails ont été anonymisés, mais chaque étape vous est probablement familière.
+Commençons par la façon dont une entreprise a perdu un client exactement là-dessus. Les détails sont anonymisés, mais vous avez probablement déjà vu chaque étape.
 
-Yuanfeng est un fabricant d'équipements industriels, plusieurs milliards de chiffre d'affaires annuel, des milliers de clients. En 2024, il a misé son socle de données sur Microsoft et bâti dans Fabric une ontologie propre : ce qu'est un « client », quels « équipements » lui sont rattachés, quels « tickets d'intervention » dépendent de chaque « équipement » — le tout défini avec une parfaite netteté. Cette année-là, il était le cas d'école cité en boucle au sommet des fournisseurs.
+Yuanfeng, le nom que nous donnerons à ce fabricant d'équipements industriels, réalise quelques milliards de chiffre d'affaires annuel et sert quelques milliers de clients. En 2024, il a misé son socle de données sur Microsoft et construit dans Fabric une ontologie propre : ce qu'est un « client », quels « équipements » se rattachent à un client, quels « ordres de travail » se rattachent à chaque équipement. Cette année-là, il est devenu le cas modèle répété dans les conférences fournisseurs.
 
-En 2026, trois choses se sont abattues sur Yuanfeng presque simultanément :
+En 2026, trois choses ont frappé Yuanfeng presque en même temps :
 
-- l'équipe data science a voulu faire tourner une série de prédictions de renouvellement avec Gemini, parce que sur ce cas précis il était effectivement plus précis ;
-- le service conformité a reçu notification que les données des clients européens devaient rester dans l'UE et ne plus transiter par le cloud américain ;
-- une acquisition s'est conclue, apportant toute une organisation commerciale de plusieurs milliers de clients tournant sur Salesforce.
+- L'équipe data science voulait faire tourner un lot de prédictions de renouvellement sur Gemini, parce que dans ce scénario précis c'était réellement plus précis ;
+- La conformité a été informée que les données clients de l'UE devaient rester dans l'UE et ne pouvaient plus toucher le cloud américain ;
+- Une acquisition s'est conclue, apportant toute une organisation commerciale — plusieurs milliers de clients — tournant sur Salesforce.
 
-Yuanfeng s'est donc retrouvé avec **trois « clients »** : un dans Fabric, un dans Salesforce, et un troisième dans l'environnement européen isolé pour la conformité.
+Yuanfeng s'est donc retrouvé avec **trois « clients »** : un dans Fabric, un dans Salesforce, et un de plus dans l'environnement européen isolé pour conformité.
 
-Le tournant de l'histoire s'est joué sur un grand compte stratégique, le « groupe H ». Un jour, le directeur commercial a demandé à l'agent : « Quel est le risque de non-renouvellement du groupe H l'an prochain ? » L'agent a répondu : « Faible. » — car il était branché sur l'ontologie Fabric, où les commandes récentes du groupe H étaient saines et les chiffres flatteurs.
+Le tournant est venu sur un compte clé que nous appellerons Groupe H. Un jour, le directeur commercial a demandé à un agent : « Quel est le risque de non-renouvellement du Groupe H l'an prochain ? » L'agent a répondu : « Faible. » Il lisait l'ontologie Fabric, où les commandes récentes du Groupe H paraissaient saines et les chiffres étaient jolis.
 
-Mais ce que l'agent ne voyait pas, c'était ceci : dans la fiche Salesforce (issue de l'acquisition), le groupe H avait escaladé deux fois en six mois une réclamation jusqu'au niveau exécutif ; et dans l'environnement européen isolé, traînait un litige de recouvrement vieux de 90 jours. Trois jeux de données rattachés à trois « clients » qui s'ignoraient mutuellement, **et aucune couche ne savait qu'il s'agissait en réalité du même groupe H**.
+Mais ce que l'agent ne voyait pas : dans les enregistrements Salesforce (apportés par l'acquisition), le Groupe H avait escaladé des réclamations au niveau de la direction deux fois en six mois ; dans l'environnement UE isolé, un litige de paiement en retard de 90 jours restait ouvert. Trois jeux de données appartenaient à trois « clients » qui s'ignoraient mutuellement, et **aucune couche nulle part ne savait qu'il s'agissait du même Groupe H**.
 
-Un trimestre plus tard, le groupe H est parti, plusieurs millions de pertes annuelles. La conclusion du post-mortem était d'une lucidité à faire taire la salle : l'agent n'avait techniquement commis aucune erreur — la donnée qu'il voyait indiquait bel et bien un risque faible. Le fautif n'était pas le modèle, c'était la définition du « client » sous ses pieds, découpée en trois morceaux.
+Un trimestre plus tard, le Groupe H est parti — des millions de perte annuelle. La conclusion du post-mortem était assez crue pour faire taire la salle : l'agent ne s'était pas techniquement trompé. La tranche de données qu'il voyait montrait réellement un risque faible. Ce qui était faux, ce n'était pas le modèle. C'était la définition de « client » sous ses pieds, découpée en trois.
 
-Ce n'est pas une bévue de Yuanfeng. C'est la conséquence inévitable de confier « la définition de son métier » à la garde d'une plateforme — et chaque plateforme ne garde que sa propre part.
+Ce n'était pas simplement une erreur de Yuanfeng. C'est le résultat prévisible de confier « la définition de votre métier » à une plateforme, quand chaque plateforme ne protège et ne comprend que sa propre tranche.
 
-## Pas un cas isolé : tout le monde se rue sur cette couche
+## La course que cet article nommait a maintenant été courue
 
-Si la situation de Yuanfeng est si répandue, c'est parce que tout le secteur converge vers la même couche.
+Quand ce texte a paru pour la première fois, les concurrents étaient encore une prévision. Ils sont désormais un fait établi. Entre novembre 2025 et août 2026, cinq plateformes ont livré une couche sémantique métier :
 
-Il y a peu, « couche sémantique métier / ontologie » semblait encore être surtout le vocabulaire propre à Palantir. Aujourd'hui, les grandes plateformes cloud, data et IA parlent toutes de couches sémantiques, de graphes de connaissances et de définitions métier lisibles par machine. Microsoft pousse Fabric IQ, Google met le graphe de connaissances d'entreprise sur la table, et Palantir continue de vendre Foundry en l'arrimant à l'IA opérationnelle.
+| Plateforme | Ce qui a été livré | Quand |
+| --- | --- | --- |
+| **Microsoft Fabric IQ** | Un élément Ontology plus une charge de travail d'agents complète — Graph, Data Agent, Operations Agent — en préversion publique, accessible à tout agent via des endpoints Ontology MCP publics | Ignite, nov. 2025 ; étendu avec règles et automatisation à FabCon Atlanta, mars 2026 |
+| **Snowflake** | Semantic View Autopilot, GA — rédige les vues sémantiques à partir de votre historique de requêtes et de vos actifs BI au lieu de demander à un comité de définir « chiffre d'affaires » depuis zéro | 3 févr. 2026 |
+| **Google** | Looker BI Agents ancrés dans la couche sémantique de Looker, et Dataplex renommé Knowledge Catalog, qui transforme les métadonnées du catalogue en graphe sémantique avec une API de contexte pour agents | Cloud Next '26, avr. 2026 |
+| **Databricks Unity Catalog** | Business Semantics, GA — vues de métriques gouvernées et métadonnées d'agents définies une fois au niveau de la couche de données, l'implémentation centrale étant ouverte dans Apache Spark | Data + AI Summit, juin 2026 |
+| **Palantir Foundry** | Ontology MCP est passé en GA sur toutes les installations Foundry — types d'objets, types d'actions et fonctions exposés à tout client MCP comme outils appelables | Semaine du 16 juin 2026 |
 
-Pourquoi maintenant, précisément ? Parce que l'agent a crevé l'abcès. La décennie de pipelines de données ne s'est souciée que de « où coule la donnée », pas vraiment de « ce que cette donnée signifie » — de toute façon, l'humain rattrapait en bout de chaîne. L'agent n'a pas ce filet humain : face à des dizaines de tables et à des champs « client » aux définitions discordantes, soit il répond faux (comme pour le groupe H), soit il n'ose pas répondre. Beaucoup de pilotes d'agents meurent en grande partie sur cette couche manquante.
+Deux choses à dire tout haut sur ce tableau avant de poursuivre l'argument.
 
-Le jugement des trois géants est donc juste, et hautement convergent : **pour que l'IA entre de façon fiable dans l'entreprise, il faut d'abord une couche de définition métier lisible par la machine et gouvernée.** Cela ne se discute plus. Ce qui mérite vraiment d'être débattu, c'est la question suivante : à qui doit appartenir cette couche.
+**Cet article n'est pas l'endroit pour les comparer case par case.** Capacité par capacité, chaque cellule sourcée à la documentation du fournisseur lui-même, c'est un autre texte : [Fabric IQ vs Palantir vs Unity Catalog vs Snowflake](/en/blog/enterprise-ontology-platform-comparison/). Il tranche lesquelles modélisent des *actions* plutôt que de seulement décrire le métier, la ligne qui décide le plus. Lisez-le si vous choisissez. Lisez celui-ci si vous décidez de ce qu'il faut posséder.
 
-## Trois bonnes directions, trois verrous différents
+**Ce sont les dates qui font l'argument, pas les listes de fonctionnalités.** Neuf mois, cinq plateformes, cinq décisions indépendantes selon lesquelles cette même couche valait d'être construite. Plus personne n'a besoin d'être convaincu que l'IA en entreprise exige une couche de définition métier lisible par machine et gouvernée. Cette moitié de la question est close.
 
-En étalant les trois solutions côte à côte, on tombe sur un point commun gênant.
+Une clarification appartient toujours ici, car les trois mots en jeu sont couramment employés comme synonymes et ne le sont pas : [ontology vs semantic layer vs knowledge graph](/en/blog/ontology-vs-semantic-layer-vs-knowledge-graph/) fixe ce que chacun peut et ne peut pas répondre. La discussion sur la propriété ci-dessous suppose que vous avez déjà décidé de quelle couche vous parlez.
 
-| | Où réside l'ontologie | Qui peut la lire | Pouvez-vous l'emporter |
-| --- | --- | --- | --- |
-| Palantir Foundry | Dans la plateforme Palantir | Ingénieurs sur site + outils de la plateforme | Lié à la plateforme, migrer = tout refaire |
-| Microsoft Fabric IQ | Dans OneLake / Fabric | Écosystème 365 et Fabric | Lié à la pile Microsoft |
-| Graphe de connaissances Google | Dans Google Cloud | Écosystème Vertex et GCP | Lié à la pile Google |
+## Le retournement : protocole ouvert, définition fermée
 
-Soyons justes : chacun fait du très bon travail sur son propre terrain. La qualité de modélisation ontologique de Palantir est réellement élevée ; Microsoft soude la couche sémantique dans OneLake et 365, ce qui, pour une entreprise 100 % Microsoft, se fait presque sans la moindre friction ; et Google a un vrai savoir-faire sur l'échelle des données et le raisonnement sur graphe. Tous vous aident à mettre votre métier au clair — puis verrouillent cette clarté dans leur propre plateforme.
+Voici la partie qui n'a pas tourné comme prévu, et c'est le changement le plus important depuis juin.
 
-Les vétérans de l'IT auront ici un réflexe : encore du verrouillage fournisseur, vieux problème.
+Les plateformes ne sont pas restées murées. Elles se sont ouvertes — via MCP. Fabric IQ expose des endpoints Ontology MCP publics. Palantir a rendu Ontology MCP généralement disponible sur toutes les installations Foundry la semaine même où cet article a paru pour la première fois. Snowflake fournit un serveur MCP managé. Google a placé une API de contexte devant Knowledge Catalog. Sur les quatre plateformes du comparatif lié, **trois exposent leur couche sémantique aux agents via MCP**.
 
-Mais cette fois, le verrouillage n'est pas le plus inquiétant. Cette fois, il y a un nouveau problème, bien pire. Avant de le démonter, il faut d'abord exposer sérieusement le scénario par lequel les plateformes fermées **gagnent** — car il n'est pas faible.
+À première vue, on dirait que la réponse ouverte est arrivée d'elle-même. Ce n'est pas le cas, et la distinction mérite d'être précise :
 
-## D'abord, le scénario gagnant des plateformes fermées
+> **MCP normalise la façon dont un agent *atteint* votre ontologie. Il ne normalise rien quant à qui la *détient*.**
 
-Crier « l'ouverture, c'est bien » relève de la prédication, pas de l'analyse. Les plateformes fermées ont quatre cartes maîtresses bien réelles :
+Un endpoint MCP est une voie de lecture, pas un titre de propriété. Votre agent obtient un moyen propre, gouverné et neutre d'interroger une définition qui vit toujours sur la plateforme d'un autre, qui est toujours versionnée par son train de livraisons, et qui part toujours avec lui quand vous partez. Le protocole est ouvert. La définition est fermée. **Protocole ouvert, définition fermée.**
 
-**Premièrement, la qualité de modélisation.** Digérer vingt ans de systèmes pourris accumulés par une grande entreprise pour en faire une ontologie propre et cohérente est une ingénierie extrêmement lourde. Palantir aligne, concept par concept, grâce à ses ingénieurs sur site ; à court terme, aucune communauté open source ne peut rivaliser sur la qualité. Une ontologie, mal bâtie, vaut moins que pas d'ontologie du tout.
+Cela compte parce que les deux se confondent précisément dans la direction qui coûte cher. « N'importe quel agent peut la lire » sonne comme de la portabilité. C'est l'inverse : c'est ce qui rend confortable le fait de *ne pas* être portable.
 
-**Deuxièmement, un responsable qui répond de tout.** En cas de pépin, il y a quelqu'un qui décroche le téléphone, un SLA, un contrat qui couvre. Pour un DSI, « un fournisseur unique qui porte la responsabilité de toute la couche » a une valeur en soi — c'est le fameux *one throat to choke*.
+## Pourquoi cela aggrave la fragmentation au lieu de l'atténuer
 
-**Troisièmement, beaucoup d'entreprises sont effectivement « presque tout chez un seul ».** Si la majorité de votre activité tient dans un seul écosystème, alors « le meilleur de l'écosystème » peut être l'optimum réel, et les bénéfices de l'ouverture peuvent rester théoriques.
+Avec la dépendance à un fournisseur unique, votre définition métier reste au moins **une copie complète** — vous ne pouvez simplement pas la déplacer. Douloureux, mais entier.
 
-**Quatrièmement, la profondeur d'intégration.** Au sein du même écosystème, données, identités et permissions sont déjà là ; le sale boulot épargné se compte en hommes-mois.
+Cinq plateformes détenant chacune sa propre ontologie produisent autre chose : **la fragmentation.** Le « client » de Yuanfeng n'était pas seulement enfermé ; il était découpé en trois et rangé dans trois plateformes qui s'ignoraient. Deux mécanismes empêchent cela de se soigner tout seul, et MCP vient d'en ajouter un troisième.
 
-Ces quatre cartes sont réelles. La conclusion n'est donc pas « les plateformes fermées sont des pièges » — pour les entreprises qui remplissent leurs prémisses, elles sont souvent la bonne réponse. Le problème surgit chez les entreprises comme Yuanfeng : leurs prémisses, justement, **sont en train de se dissiper**.
+**La première couche, ce sont les incitations.** Vous pourriez penser : il suffit que l'ontologie de Microsoft comprenne le « client » de Salesforce. Ce ne sera pas si simple, car l'ontologie de chaque fournisseur fait partie de ses douves. Si Microsoft unifiait unilatéralement sa sémantique du « client » avec celle d'un rival, il aiderait ce rival à déplacer ses données plus facilement et réduirait sa propre différenciation. **L'unification est stratégiquement peu attrayante pour chaque concurrent de la course.** Ce n'est pas un simple oubli technique ; c'est un comportement de plateforme rationnel.
 
-## Cette fois, le scénario a une nouvelle faille : la fragmentation
+**La deuxième couche est technique.** Même en écartant les incitations, l'alignement sémantique entre ontologies est difficile : le « client » du système A égale-t-il l'« Account » du système B ? Les définitions de champs, les cycles de vie, les règles de déduplication et les critères de « même entité » diffèrent d'un système à l'autre. L'IA ne peut pas non plus déduire cela de façon fiable. Les agents se trompent précisément parce que cette couche de définition déterminée manque. Retour au Groupe H : laissez l'agent deviner si « ces trois enregistrements sont la même entreprise », et le coût de l'erreur est exactement la perte de l'histoire.
 
-Avec le verrouillage d'un fournisseur unique, votre définition métier reste au moins **une seule pièce complète**, simplement intransportable. Douloureux, mais complet.
+**La troisième couche est nouvelle, et c'est la plus gênante : MCP abaisse le coût de tolérer la fragmentation.** Avant, câbler un agent sur cinq couches sémantiques déconnectées faisait assez mal pour que quelqu'un finisse par faire remonter le problème et que le projet de réconciliation obtienne un budget. Aujourd'hui, ce sont cinq enregistrements d'endpoints en une après-midi. L'agent tiendra volontiers cinq outils qui répondent différemment à « qui est ce client », et il répondra avec assurance depuis celui qu'il a atteint en premier. **La douleur d'intégration qui forçait autrefois la réconciliation a été supprimée ; la fragmentation contre laquelle elle mettait en garde, non.**
 
-Trois géants construisant simultanément des ontologies fermées fabriquent tout autre chose : la **fragmentation**. Le « client » de Yuanfeng n'est pas verrouillé, il est découpé en trois, chaque part gisant dans une des trois plateformes qui s'ignorent. C'est bien plus pénible que le verrouillage, et c'est pénible à juste titre — deux mécanismes font qu'il est peu probable que cela se résorbe tout seul :
+En une ligne : **vous pensiez acheter cinq outils ; vous avez en réalité acheté cinq sources de vérité qui s'ignorent, désormais commodément adressables.** Plus il y a de systèmes, d'acquisitions et d'isolement pour conformité, plus cette fragmentation devient sévère. L'ère des agents en amplifie le coût, car un humain peut encore réconcilier à la main entre plusieurs systèmes, si pénible soit-ce, alors qu'un agent en est incapable : il lui faut une couche de définition déterminée et cohérente entre systèmes avant de pouvoir raisonner.
 
-**Premier mécanisme : l'intérêt.** Vous vous direz peut-être : il suffirait que l'ontologie de Microsoft comprenne le « client » de Salesforce, non ? Non, car aucun acteur n'a d'incitation à le faire. L'ontologie de chacun est sa douve. Si Microsoft unifiait de lui-même la sémantique « client » entre lui et Salesforce, il aiderait de ses propres mains son concurrent à déplacer ses données plus facilement et se banaliserait lui-même. **Unifier est, pour chaque concurrent, un acte d'automutilation.** Ce n'est pas une négligence technique, c'est un choix rationnel — alors compter sur l'un d'eux pour réparer la fragmentation est illusoire.
+Pour éviter la fragmentation, la définition de votre métier ne peut pas appartenir entièrement à une plateforme qui concourt dans la course. Il lui faut être une couche neutre : une définition que vous détenez vous-même et que les outils de différents fournisseurs peuvent lire. Les plateformes fermées peinent structurellement à fournir cela, car elles sont concurrentes de la course et ne peuvent pas être en même temps arbitres neutres.
 
-**Second mécanisme : la technique.** Même en mettant l'intérêt de côté, l'alignement sémantique inter-ontologies est en soi un problème non résolu : le « client » du système A est-il égal au « Account » du système B ? La définition des champs, le cycle de vie, les règles de dédoublonnage, ce qui compte comme « même entité » — tout diffère de part et d'autre. Et l'IA ne peut pas le faire automatiquement de façon fiable — au contraire, c'est précisément l'absence de cette couche de définition certaine qui fait que les agents se trompent. Retour au groupe H : laisser l'agent deviner tout seul si « ces trois fiches sont la même entreprise », c'est risquer ces millions le jour où il devine faux.
+## D'abord, le scénario par lequel les plateformes fermées gagnent
 
-En une phrase : **vous pensiez avoir acheté trois outils, vous avez en réalité acheté trois « sources de vérité » qui s'ignorent.** Plus il y a de systèmes, d'acquisitions, d'isolations de conformité, plus cette fragmentation s'aggrave — et l'ère de l'agent en amplifie justement le coût, car le cerveau humain peut encore aligner tant bien que mal trois systèmes à la main, mais pas l'agent : il lui faut une couche de définition certaine et cohérente entre systèmes pour raisonner.
+Si tout ce que vous savez faire est répéter « l'ouvert c'est bien », c'est du prêche, pas de l'analyse. Les plateformes fermées tiennent quatre vraies cartes, et les neuf derniers mois en ont renforcé deux.
 
-Pour empêcher la fragmentation, il n'y a logiquement qu'une issue : **la définition du métier ne peut appartenir à aucune des plateformes en lice ; elle doit être une couche neutre** — une définition que vous détenez vous-même et que les outils des trois peuvent lire. Les plateformes fermées ne peuvent structurellement pas l'offrir : elles sont les concurrentes de la course, elles ne peuvent pas être en même temps l'arbitre.
+**Premièrement, la qualité de modélisation.** Transformer vingt ans de complexité d'entreprise accumulée en une ontologie propre et cohérente est une ingénierie lourde. Palantir l'aligne concept par concept avec des ingénieurs sur site, à un niveau que les communautés open source n'égalent pas vite. Avec une ontologie, mal la construire peut être pire que ne pas la construire. Ce modèle sur site a sa propre économie, et elle voyage moins bien que l'intitulé de poste — [pourquoi copier le modèle forward-deployed construit un cabinet de conseil](/en/blog/forward-deployed-engineer-trap/) démonte ce qui doit exister en dessous pour que le travail se capitalise.
 
-## Comment savoir si vous êtes en train d'être fragmenté
+**Deuxièmement, une seule partie responsable.** Quand quelque chose casse, quelqu'un décroche, il y a un SLA, et il y a un contrat derrière. Pour un DSI, « un fournisseur porte la responsabilité de toute la couche » a une valeur réelle.
 
-Ce n'est pas abstrait, il y a des symptômes précoces très concrets. Confrontez-vous aux points suivants ; si trois ou plus s'appliquent, la fragmentation est déjà à l'œuvre dans votre entreprise :
+**Troisièmement, beaucoup d'entreprises sont vraiment « pour l'essentiel sur une seule pile ».** Si 80 % de votre activité vit déjà dans un écosystème, alors « le meilleur au sein de l'écosystème » peut littéralement être votre meilleure option. Les bénéfices de l'ouverture sont plus difficiles à exploiter si votre activité n'est pas transverse.
 
-1. Un même « client / commande / équipement » a des définitions différentes selon les systèmes, ne correspond pas d'un système à l'autre, et il faut tout réconcilier à la main à chaque reporting.
-2. Quand vous posez à l'agent une question transversale, soit il reste vague, soit il n'a raison qu'à moitié (il a vu un système, pas l'autre).
-3. Chaque intégration d'un nouveau système vous oblige à réapprendre à l'IA « ce que c'est, ce que signifient les champs ».
-4. Une acquisition remonte à plus d'un an et les données de référence des deux côtés ne sont toujours pas réellement fusionnées : chacun reporte de son côté.
-5. La conformité exige d'isoler une certaine catégorie de données, si bien que la même entité se retrouve stockée en plusieurs exemplaires qui s'ignorent.
+**Quatrièmement — et cette carte s'est renforcée — le problème du démarrage à froid.** L'Autopilot de Snowflake rédige le modèle sémantique à partir de l'historique de requêtes que vous avez déjà ; Fabric IQ laisse des experts métier écrire l'ontologie dans un outil visuel sans code plutôt que d'attendre les ingénieurs data. Les deux attaquent le vrai obstacle, qui n'a jamais été la technologie mais le comité de modélisation de six mois. Un format ouvert vous tend un fichier et une page blanche.
 
-Avant de perdre le groupe H, Yuanfeng en cochait quatre sur cinq. À l'époque, on les traitait comme des « tâches de gouvernance des données à faire », sans réaliser que c'était une mine que l'agent finirait tôt ou tard par faire exploser.
+Les quatre cartes sont réelles. La conclusion n'est donc pas « les plateformes fermées sont toutes des pièges ». Pour les entreprises confortablement installées dans un écosystème, elles sont souvent la bonne réponse. Le problème apparaît chez les entreprises comme Yuanfeng : la prémisse expire.
 
-## D'abord une douche froide : l'ouverture n'est pas une formule magique
+## Comment savoir que vous êtes en train d'être fragmenté
 
-Il faut s'arrêter ici honnêtement, sinon cela devient du baratin de camelot.
+Ce n'est pas abstrait ; il y a des symptômes précoces concrets. Confrontez-vous à la liste ci-dessous. Si trois ou plus sont vrais, la fragmentation est déjà en cours chez vous.
 
-Premièrement, **remplacer la définition par un protocole ouvert ne fusionnera pas automatiquement les trois « clients » de Yuanfeng en un seul.** La modélisation sémantique, le dédoublonnage, l'alignement des définitions restent à faire — il n'y a pas de formule magique sur cette partie, méfiez-vous de quiconque le prétend. Ce que l'ouverture change réellement, c'est **la propriété** de ce sale boulot : la définition que vous alignez aujourd'hui à la sueur de votre front est inscrite dans votre propre dépôt, et non sédimentée dans le back-office d'une plateforme. L'an prochain, quand vous changerez de modèle, de cloud, ou serez racheté, ce que vous referez, ce sont les connecteurs, pas la définition elle-même.
+1. Le même « client / commande / équipement » est défini différemment selon les systèmes et ne se rapproche pas ; chaque rapport exige un recollage manuel.
+2. Vous posez à un agent une question transverse et il louvoie ou n'a raison qu'à moitié (il a vu un système, manqué l'autre).
+3. Chaque fois que vous branchez un nouveau système, vous devez réapprendre à l'IA « ce que c'est » et « ce que signifient les champs ».
+4. Une acquisition s'est conclue il y a plus d'un an et les données de référence des deux côtés n'ont toujours pas vraiment fusionné ; chaque côté remonte sa propre version.
+5. La conformité impose d'isoler une classe de données, si bien que la même entité existe en plusieurs copies qui ne se reconnaissent pas.
+6. On a donné à votre agent plus d'un outil de couche sémantique, et personne n'a écrit lequel l'emporte quand ils se contredisent.
 
-Deuxièmement, **l'« ouverture » en soi ne garantit pas non plus la victoire.** Historiquement, pour qu'un standard ouvert l'emporte vraiment, il faut souvent en plus une implémentation de référence suffisamment bonne et un écosystème actif — un protocole simplement publié mais que personne ne rend utilisable peut tout aussi bien tomber à l'eau. Choisir l'ouvert, c'est donc parier que « quelqu'un le rendra solide » : un jugement assorti d'un risque d'exécution, pas une victoire garantie.
+Avant que Yuanfeng ne perde le Groupe H, quatre des cinq premiers étaient vrais. À l'époque, ils étaient classés en « chantiers de gouvernance des données », et personne n'y voyait des risques qu'un agent finirait par exposer. Le sixième est l'ajout de 2026, et c'est celui qui arrive sans bruit, parce qu'ajouter le deuxième endpoint ressemble à un progrès.
 
-Mais notez bien le poids de ces deux douches froides : elles disent que « l'ouvert demande aussi des efforts et comporte aussi des risques », pas que « le fermé est meilleur ». En comparaison, le risque baissier de verrouiller sa définition métier dans une plateforme — c'est-à-dire la fragmentation à la Yuanfeng — est bien plus grand et bien plus difficile à inverser. Aucun des deux côtés n'est gratuit ; simplement, l'un des deux garde l'actif le plus crucial entre vos propres mains.
+## Un peu d'eau froide : l'ouvert n'est pas une baguette magique, et le domaine se normalise
 
-## Les couches dont tout le monde dépend finissent souvent neutres
+Arrêtons-nous ici honnêtement, sinon cela devient un argumentaire commercial. Il y a trois contrepoids légitimes, et le troisième est nouveau.
 
-Cette régularité n'est pas neuve en soi, mais elle mérite d'être illustrée par de nouveaux exemples, car elle se reproduit sans cesse.
+Premièrement, **échanger la définition contre un protocole ouvert ne fusionne pas automatiquement les trois « clients » de Yuanfeng en un seul.** La modélisation sémantique, la déduplication et l'alignement des définitions restent à faire. Il n'y a pas de baguette magique ici, et ne croyez personne qui en promet une. Ce que l'ouvert change vraiment, c'est la **propriété** de ce travail difficile : la définition que vous alignez aujourd'hui est écrite dans votre propre dépôt, pas enfouie dans le back-office d'une plateforme. L'an prochain, quand vous changerez de modèle, de cloud, ou serez racheté, ce que vous refaites c'est la connexion, pas la définition elle-même.
 
-La « couche de définition » dont dépend tout un écosystème tend à devenir neutre. L'exemple le plus ancien est SQL : les éditeurs de bases de données se sont entretués dans un océan rouge, mais le langage de requête lui-même est public. Plus récents et plus parlants encore, ces deux-là : **OpenTelemetry** — la définition des données de l'observabilité, que tous les éditeurs de supervision viennent brancher, hébergée par la CNCF neutre, sans que personne puisse la monopoliser ; et le **LSP (Language Server Protocol)** — ouvert par Microsoft lui-même, et c'est justement parce qu'il est ouvert qu'il a été adopté par tous les éditeurs et est devenu le standard de fait.
+Deuxièmement, **« ouvert » en soi ne garantit pas de gagner.** Historiquement, pour qu'un standard ouvert s'impose, il faut en général aussi une bonne implémentation de référence et un écosystème actif. Publier un protocole que personne ne rend agréable à utiliser ne suffira pas. Choisir l'ouvert, c'est donc parier que quelqu'un le construira bien. C'est un risque d'exécution, pas une victoire garantie.
 
-Le cas du LSP est particulièrement savoureux, car c'est une chose que Microsoft a prouvée **de ses propres mains** : ouvrir la couche de définition et gagner sa vie sur la meilleure implémentation rapporte plus que de la verrouiller. La couche sémantique métier est de la même nature — elle sera demain dépendue **simultanément** par vos applications, vos agents, votre système d'audit, plus les outils des trois fournisseurs. Une couche dont dépendent autant de parties ne peut logiquement pas rester durablement la propriété privée de l'une d'elles. Soit elle devient neutre, soit elle continue de produire des fragmentations à la Yuanfeng.
+Troisièmement — et c'est l'argument le plus fort contre la position de cet article — **les fournisseurs normalisent eux-mêmes la couche de définition.** Snowflake a cofondé l'Open Semantic Interchange avec Salesforce, dbt Labs, BlackRock et RelationalAI ; l'initiative est entrée à l'Apache Incubator en juillet 2026 sous le nom d'**Apache Ossie**, avec plus de 50 organisations membres dont Databricks, Oracle et Collibra. Databricks ouvre séparément le code de son implémentation de vues de métriques dans Apache Spark. C'est réel, et plus rapide que ce que réussissent la plupart des efforts de couche neutre ; soutenir aujourd'hui que les plateformes fermées ne convergeront jamais, c'est argumenter contre les faits.
 
-## À quoi ressemble cette couche neutre
+Mais regardez bien où cette convergence s'arrête. Ossie couvre la sémantique **analytique** — métriques, dimensions, relations. Les actions et les permissions sont hors périmètre. Autrement dit, la moitié de votre ontologie qui *décrit* le métier devient portable, tandis que la moitié qui le *change* — les opérations, qui a le droit de les exécuter, et ce qui est écrit au journal d'audit — reste propriétaire. Ce n'est pas un petit reliquat. C'est la moitié qui décide si un agent peut faire quoi que ce soit, et exactement la moitié où la fragmentation coûte le plus cher.
 
-Après tout cela, jetons un œil à l'objet concret ; l'essentiel n'est pas la syntaxe, mais **où elle réside, si on peut l'emporter, et si elle permet de récupérer la fragmentation**.
+Aucun de ces trois points ne dit que le fermé est meilleur. Ils disent que l'ouvert demande aussi des efforts, porte aussi des risques, et qu'on vient partiellement à sa rencontre. Mettez cela en balance avec l'inconvénient d'enfermer la définition de votre métier dans une plateforme, puis de la fragmenter entre cinq. Aucun camp n'est gratuit ; l'un des deux garde l'actif central entre vos mains.
 
-Supposons que Yuanfeng ait d'emblée bâti son « client » en une définition neutre : il aurait pu brancher chacun des trois systèmes comme source de données, les modéliser en objets, puis les aligner en un seul « client » gouverné grâce à une clé partagée — le numéro fiscal :
+## Les couches dont tout le monde dépend finissent neutres
+
+Le schéma lui-même n'est pas nouveau, mais il mérite d'être raconté avec des exemples frais, car il se reproduit sans cesse.
+
+La « couche de définition » dont tout un écosystème dépend collectivement tend à devenir neutre. L'exemple le plus ancien est SQL : les éditeurs de bases de données se sont livré une concurrence féroce, et pourtant le langage de requête lui-même est resté public. Deux exemples plus récents : **OpenTelemetry**, le standard de données d'observabilité hébergé par la CNCF neutre, et **LSP (le Language Server Protocol)**, ouvert par Microsoft et adopté par de nombreux éditeurs justement parce qu'il était ouvert.
+
+L'exemple de LSP est particulièrement utile parce que Microsoft a lui-même prouvé le schéma : ouvrir la couche de définition et se battre sur la meilleure implémentation peut créer plus de valeur que de verrouiller la couche. Notez toutefois ce que LSP a réellement ouvert — le *protocole* et la *définition de ce qu'un serveur de langage doit fournir*. Pour les ontologies, MCP a fait la première moitié. Apache Ossie tente la seconde moitié pour la partie analytique. Pour la partie qui agit, personne ne l'a encore fait.
+
+Une couche dont dépendent simultanément vos applications, vos agents, vos systèmes d'audit et les outils de cinq fournisseurs ne peut pas rester privée chez l'un d'eux sans continuer à produire le genre de fragmentation qu'a subi Yuanfeng.
+
+## À quoi ressemble la couche neutre
+
+Après tout cela, regardons la chose réelle. Le point n'est pas la syntaxe ; c'est **où vit la définition, si vous pouvez l'emporter, et si elle peut rattraper la fragmentation.**
+
+Supposons que Yuanfeng ait dès le départ construit « client » comme une définition neutre : brancher les trois systèmes comme sources de données, modéliser chacun en objets, puis les aligner en un seul « client » gouverné par une clé partagée (le numéro fiscal) — une déclaration dans votre propre dépôt qui est la source unique de vérité :
 
 ```ts
 export const Customer = ObjectSchema.create({
   name: 'crm_customer',
-  label: 'Client',
+  label: 'Customer',
   fields: {
-    name: Field.text({ label: 'Nom du client', required: true }),
-    tax_id: Field.text({ label: 'N° SIREN' }), // une clé partagée pour aligner « le même client » entre les systèmes
+    name: Field.text({ label: 'Customer name', required: true }),
+    tax_id: Field.text({ label: 'Tax ID' }), // clé partagée pour aligner « le même client » entre systèmes
   },
 });
 ```
 
-Cette définition réside dans votre dépôt Git : diffable, revisible, migrable. Ce qu'elle permet ensuite est l'essentiel — transformer le « transportable » en une action démontrable, pas en une promesse :
+Cette définition vit dans votre dépôt Git : diffable, relisable, migrable. Ce qu'elle peut faire ensuite est le nœud — transformer « portable » en une action démontrable, pas en une promesse :
 
 ```bash
-git add crm/*.ts          # la définition entre dans votre dépôt : auditable, réversible
-os start   # la même définition tourne sur votre propre infrastructure
-# puis pointez-y n'importe quel modèle — Claude, GPT, Gemini, le runtime ne change pas
+git add crm/*.ts          # La définition est dans votre gestion de versions : auditable, réversible
+os start   # La même définition, tournant sur votre propre infrastructure
+# Puis pointez n'importe quel modèle dessus — Claude, GPT, Gemini — le runtime ne change pas
 ```
 
-Reposons maintenant la question fatidique : « Quel est le risque de renouvellement du groupe H l'an prochain ? » L'agent fait face à **un seul** « client » unifié, doté de permissions et d'un audit : commandes saines, mais grevées de deux réclamations escaladées au niveau exécutif et d'un litige de recouvrement à 90 jours — il répondra « risque élevé, intervention anticipée recommandée ». Même modèle, même question ; simplement parce que la définition sous ses pieds n'est plus fragmentée, la conclusion passe de « plusieurs millions perdus » à « alerte un trimestre à l'avance ».
+Reposez maintenant la question critique : « Quel est le risque de non-renouvellement du Groupe H l'an prochain ? » L'agent voit désormais **un** « client » unifié, avec permissions et audit : des commandes saines, superposées à deux réclamations remontées à la direction et à un litige de paiement de 90 jours. Il répond : « Risque élevé ; intervention précoce recommandée. » Même modèle, même question. Parce que la définition en dessous n'est plus fragmentée, la conclusion passe de « des millions perdus » à « alerté un trimestre entier à l'avance ».
 
-C'est la répartition des rôles entre ObjectStack et ObjectOS, et c'est sa réponse à cette course :
+Le point sur MCP s'applique ici aussi, et dans la direction qui compte : cette même définition est ce que le runtime sert aux agents sous forme d'outils gouvernés, de sorte que la voie de lecture est ouverte *et* que la définition est la vôtre. C'est l'argument que [pourquoi la définition et le runtime devraient tous deux être ouverts](/fr/blog/ai-ontology-open-protocol/) développe en entier.
 
-- **ObjectStack** — le protocole de définition ouvert et le runtime auto-hébergé open source (Apache 2.0) : la définition réside dans votre dépôt, tout agent peut la lire, et le runtime la valide et l'exécute avec permissions et audit ;
-- **ObjectOS** — la plateforme commerciale de production et l'expérience opérée optionnelles pour la même application ObjectStack — cloud ou self-managed — qui ajoutent construction AI dans le navigateur, déploiement et exploitation sans remplacer la définition ni le runtime ouverts sous-jacents.
+C'est la division du travail entre ObjectStack et ObjectOS, et sa réponse à cette course :
 
-La définition et le runtime auto-hébergé restent ouverts et neutres ; l'expérience commerciale de production est le terrain de concurrence des produits. Le même rapport qu'entre SQL et les éditeurs de bases de données, ou entre le LSP et les éditeurs de code.
+- **ObjectStack** — une **open business ontology** (ontologie métier ouverte) : le protocole de définition ouvert et le runtime auto-hébergé open source (Apache 2.0). La définition vit dans votre dépôt, l'agent de n'importe quel fournisseur peut la lire, et le runtime la valide et l'exécute avec permissions et audit ;
+- **ObjectOS** — la plateforme de production commerciale optionnelle et l'expérience opérée pour cette même application ObjectStack — cloud ou auto-gérée — qui ajoute la construction par IA dans le navigateur, le déploiement et l'exploitation, sans remplacer la définition ni le runtime ouverts en dessous.
+
+La définition et le runtime auto-hébergé restent ouverts et neutres ; l'expérience de production commerciale est là où les produits se concurrencent. C'est la même relation que SQL entretient avec les éditeurs de bases de données, et LSP avec les éditeurs de code.
+
+Et pour être honnête sur l'échange : sur la profondeur de modélisation, le démarrage à froid et la sémantique analytique à l'échelle d'un entrepôt, les plateformes ci-dessus sont en avance, et l'[article comparatif](/en/blog/enterprise-ontology-platform-comparison/) dit en détail où. Ce qui diffère ici est plus étroit que « meilleur » — la définition est un fichier ordinaire dans votre dépôt sous licence ouverte, et le runtime qui l'applique, c'est vous qui l'hébergez.
 
 ## Conclusion
 
-Ce n'est pas une question idéologique « ouvert ou fermé ». C'est un problème d'arithmétique plus froid : **quand votre combinaison de fournisseurs finira par changer — multi-modèle, multi-cloud, acquisitions, isolation de conformité, elle changera forcément — à ce moment-là, qui tient entre ses mains la définition de votre métier ?**
+Ce n'est pas une question idéologique d'« ouvert c'est bien » ou « fermé c'est bien ». C'est une question d'architecture plus froide : **quand votre combinaison de fournisseurs changera — adoption multi-modèles, stratégie multi-cloud, acquisition, isolement de conformité — qui détiendra la définition de votre métier ?**
 
-Les trois géants ont prouvé, à coups d'argent comptant, que cette couche valait la peine d'être bâtie. Mais ils ont du même coup posé ce problème d'arithmétique devant chaque entreprise. Les trois « clients » de Yuanfeng ne sont pas un accident technique, ils sont le coût inévitable d'avoir cédé la définition ; et ce groupe H mal classé en « risque faible » n'est que la première facture.
+Il y a neuf mois, cette question était hypothétique, parce que le domaine n'avait encore rien livré. C'est fait. Cinq plateformes ont prouvé que la couche valait d'être construite, puis la plupart ont ouvert une porte d'entrée sur une maison qui ne vous appartient pas. Un endpoint MCP sur l'ontologie d'un autre est une chose réellement utile — ce n'est simplement pas la même chose que posséder la définition, et c'est dans l'écart entre les deux qu'est passé le Groupe H de Yuanfeng.
 
-Une couche dont tout le monde dépend appartient rarement durablement à un seul fournisseur. Cette fois, il n'y a pas de raison solide pour que la couche sémantique fasse exception.
+Une couche dont tout le monde dépend reste rarement longtemps chez une seule entreprise. Il n'y a aucune raison que celle-ci fasse exception.
 
 ```bash
 npm i -g @objectstack/cli && os start
 ```
 
-Définissez votre premier objet métier, faites venir ses données de vos deux systèmes existants, puis `git commit` dans votre propre dépôt — à cet instant, la définition de votre métier vous revient, au lieu de rester dans le back-office de l'un d'eux.
+Définissez votre premier objet métier, faites venir ses données de deux systèmes existants, puis faites-en un `git commit` dans votre propre dépôt. À cet instant, la définition de votre métier est de retour entre vos mains, pas dans le back-office de quelqu'un d'autre.
