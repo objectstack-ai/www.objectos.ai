@@ -9,7 +9,7 @@ const page = {
     eyebrow: 'Agent developer',
     heroTitle: 'Do not teach every developer to hand-write apps. Teach your agent the target format.',
     lead:
-      'ObjectStack is the open, typed metadata target format and runtime designed for the agent as writer and the human as reviewer. A complete CRM including UI fits under 150k tokens, so an agent can hold the whole app in one context; Strict TypeScript, Zod schemas, and a validation gate catch invalid output before it reaches the runtime.',
+      'ObjectStack is the open target format and runtime for AI-written enterprise software, designed for the agent as writer and the human as reviewer. A complete CRM including UI fits under 150k tokens, so an agent can hold the whole app in one context; Strict TypeScript, Zod schemas, and a validation gate catch invalid output before it reaches the runtime.',
     primary: { label: 'Read the docs', href: 'https://docs.objectos.ai' },
     secondary: { label: 'See template patterns', href: '/en/templates/' },
     metrics: [

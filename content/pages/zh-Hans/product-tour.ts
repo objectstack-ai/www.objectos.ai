@@ -9,7 +9,7 @@ const page = {
     eyebrow: '产品导览',
     heroTitle: '从一句需求，到一个受治理的应用。',
     lead:
-      'ObjectStack 是 AI 编写企业软件的开放、类型化目标格式与运行时：Agent 编写紧凑的元数据，人审阅 diff，运行时派生可重复的应用表面。ObjectOS 是用于构建、部署与运营这些应用的商业生产平台。',
+      'ObjectStack 是 AI 编写企业软件的开放目标格式与运行时：Agent 编写紧凑的元数据，人审阅 diff，运行时派生可重复的应用表面。ObjectOS 是用于构建、部署与运营这些应用的商业生产平台。',
     primary: { label: '把你的 Agent 指向 ObjectStack', href: '/en/agent-developer/' },
     secondary: { label: '查看信任模型', href: '/en/trust-center/' },
     metrics: [

@@ -5,7 +5,7 @@ const page = {
     navLabel: 'For FDEs',
     title: 'Forward-Deployed Engineer Tools: An Ontology-First, Open-Source Stack',
     description:
-      'ObjectStack gives FDEs an open, typed target format and governed runtime for client-owned app ontologies; ObjectOS is the optional commercial platform for production operations.',
+      'ObjectStack gives FDEs an open target format and governed runtime for a client-owned open business ontology; ObjectOS is the optional commercial platform for production operations.',
     eyebrow: 'For forward-deployed engineers',
     heroTitle: 'Ship like the best FDE teams. Hand over what they never do: the ontology.',
     lead:
