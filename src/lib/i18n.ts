@@ -108,6 +108,8 @@ interface Strings {
   alsoOn: string;
   references: string;
   by: string;
+  /** Prefix for the revision date, e.g. "Updated 25 Aug 2026". */
+  updated: string;
   empty: string;
   relatedTitle: string;
   status: Record<StatusKey, string>;
@@ -151,6 +153,7 @@ const en: Strings = {
   alsoOn: 'Also published on',
   references: 'References',
   by: 'By',
+  updated: 'Updated',
   empty: 'No articles yet.',
   relatedTitle: 'Related articles',
   status: { published: 'Published', archived: 'Archived' },
@@ -194,6 +197,7 @@ const zhHans: Strings = {
   alsoOn: '同步发布于',
   references: '参考链接',
   by: '作者',
+  updated: '更新于',
   empty: '还没有文章。',
   relatedTitle: '相关文章',
   status: { published: '已发布', archived: '已归档' },
@@ -237,6 +241,7 @@ const ja: Strings = {
   alsoOn: '同時掲載',
   references: '参考リンク',
   by: '著者',
+  updated: '更新日',
   empty: '記事はまだありません。',
   relatedTitle: '関連記事',
   status: { published: '公開済み', archived: 'アーカイブ済み' },
@@ -280,6 +285,7 @@ const de: Strings = {
   alsoOn: 'Auch veröffentlicht auf',
   references: 'Referenzen',
   by: 'Von',
+  updated: 'Aktualisiert',
   empty: 'Noch keine Artikel.',
   relatedTitle: 'Ähnliche Artikel',
   status: { published: 'Veröffentlicht', archived: 'Archiviert' },
@@ -323,6 +329,7 @@ const es: Strings = {
   alsoOn: 'También publicado en',
   references: 'Referencias',
   by: 'Por',
+  updated: 'Actualizado',
   empty: 'Aún no hay artículos.',
   relatedTitle: 'Artículos relacionados',
   status: { published: 'Publicado', archived: 'Archivado' },
@@ -366,6 +373,7 @@ const fr: Strings = {
   alsoOn: 'Également publié sur',
   references: 'Références',
   by: 'Par',
+  updated: 'Mis à jour',
   empty: 'Aucun article pour le moment.',
   relatedTitle: 'Articles liés',
   status: { published: 'Publié', archived: 'Archivé' },
@@ -409,6 +417,7 @@ const ko: Strings = {
   alsoOn: '동시 게시',
   references: '참고 링크',
   by: '작성자',
+  updated: '업데이트',
   empty: '아직 글이 없습니다.',
   relatedTitle: '관련 글',
   status: { published: '게시됨', archived: '보관됨' },
@@ -458,6 +467,7 @@ const toHant = (s: Strings): Strings => ({
   alsoOn: s2t(s.alsoOn),
   references: s2t(s.references),
   by: s2t(s.by),
+  updated: s2t(s.updated),
   empty: s2t(s.empty),
   relatedTitle: s2t(s.relatedTitle),
   status: {

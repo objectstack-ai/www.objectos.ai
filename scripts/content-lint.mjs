@@ -95,6 +95,13 @@ function bodyImageRefs(body) {
   return refs;
 }
 
+// YAML parses a bare `2026-06-05` into a Date, so echoing the raw value back
+// prints a full JS date string. Report the calendar day the author wrote.
+function ymd(value) {
+  const d = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(d.getTime()) ? String(value) : d.toISOString().slice(0, 10);
+}
+
 function addIssue(issues, file, data, severity, message) {
   issues.push({
     file,
@@ -445,6 +452,32 @@ for (const file of files) {
       addIssue(issues, rel, data, 'error', `Invalid date: ${data.date}`);
     } else if (date > today) {
       addIssue(issues, rel, data, 'warn', `Date is in the future: ${data.date}`);
+    }
+  }
+
+  // `updated` = a later substantive revision. `date` stays the first-publication
+  // date; refreshing an article must never rewrite it. This mirrors the schema
+  // refinement in src/content.config.ts so the failure lands at the earlier,
+  // more readable gate (this script runs before `astro build`).
+  if (data.updated !== undefined && data.updated !== null && data.updated !== '') {
+    const updated = new Date(data.updated);
+    if (Number.isNaN(updated.getTime())) {
+      addIssue(issues, rel, data, 'error', `Invalid updated: ${data.updated}`);
+    } else {
+      if (updated > today) {
+        addIssue(issues, rel, data, 'warn', `Updated is in the future: ${ymd(data.updated)}`);
+      }
+      const date = data.date ? new Date(data.date) : null;
+      if (date && !Number.isNaN(date.getTime()) && updated < date) {
+        addIssue(
+          issues,
+          rel,
+          data,
+          'error',
+          `updated (${ymd(data.updated)}) is earlier than date (${ymd(data.date)}); ` +
+            '`date` is the first-publication date and must not be rewritten when refreshing'
+        );
+      }
     }
   }
 
