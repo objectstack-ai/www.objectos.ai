@@ -1,8 +1,9 @@
 ---
 title: "Quels outils utilisent les forward-deployed engineers ? Un stack ouvert, ontologie d’abord"
-description: "Cinq problèmes du travail forward-deployed : intégration, revues de sécurité, besoins changeants, patterns non réutilisés et passation qui érode la confiance. Un stack d’ontologie ouvert y répond."
+description: "Ce qu’un forward-deployed engineer construit réellement sur un déploiement de 60–180 jours, les cinq douleurs qui définissent le métier, et pourquoi la vague d’imitateurs de 2026 a copié le rôle mais pas le substrat."
 author: ObjectStack Team
 date: 2026-07-23
+updated: 2026-09-02T10:00:00+08:00
 status: published
 topic: ai-agents
 audience: developer
@@ -16,11 +17,29 @@ tags:
   - Palantir
 ---
 
-**La version courte :** l’ingénierie forward-deployed est le rôle qui croît le plus vite dans l’AI d’entreprise — recrutement en hausse d’environ 1 000 % sur un an, OpenAI engageant 4 Md$ dans une société de déploiement dédiée. Le playbook qui fonctionne est la méthode **ontologie d’abord** de Palantir. Mais demandez à un FDE en poste à quoi ressemble vraiment sa semaine, et vous entendrez cinq douleurs récurrentes : la plomberie dévore l’engagement, les démos meurent en revue de sécurité, les besoins changent plus vite que le code, les patterns ne capitalisent jamais d’un client à l’autre, et la passation empoisonne la relation. Cet article les passe en revue toutes les cinq, concrètement, et montre comment un stack ouvert, ontologie d’abord, élimine chacune — pour finir sur la question qui, selon nous, définira la prochaine vague du rôle : **la passation d’ontologie**. L’ontologie du client sort-elle de l’engagement en fichiers ouverts et typés dans *son* dépôt — ou comme levier de renouvellement dans la plateforme d’un autre ?
+**La version courte :** l’ingénierie forward-deployed est le rôle qui croît le plus vite dans l’AI d’entreprise — offres d’emploi en hausse de 1 165 % sur un an selon le décompte de Live Data Technologies, relayé par la marketplace de recrutement Paraform — et en 2026, OpenAI, Anthropic, AWS et Microsoft ont chacun monté leur propre organisation forward-deployed. Le playbook qu’ils copient tous est la méthode **ontologie d’abord** de Palantir. Cet article traite les deux choses que les contenus de recrutement ne couvrent jamais : **ce qu’un FDE construit réellement** sur un déploiement de 60 à 180 jours, et pourquoi la vague d’imitateurs a copié le rôle mais pas le substrat en dessous. Entre les deux, les cinq douleurs récurrentes de ce métier sur un stack artisanal — la plomberie dévore l’engagement, les démos meurent en revue de sécurité, les besoins changent plus vite que le code, les patterns ne capitalisent jamais d’un client à l’autre, la passation empoisonne la relation — et comment un stack ouvert, ontologie d’abord, élimine chacune. Il finit sur la question qui, selon nous, définira la prochaine vague du rôle : **la passation d’ontologie**. L’ontologie du client sort-elle de l’engagement en fichiers ouverts et typés dans *son* dépôt — ou comme levier de renouvellement dans la plateforme d’un autre ?
 
 ## Le métier que personne ne décrit honnêtement
 
-Les offres d’emploi parlent d’« ambiguïté 0→1 » et de bandes de 300–550K $ ([Perspective AI](https://getperspective.ai/blog/2026-fde-hiring-trends-what-1000-job-posts-reveal), [TechTarget](https://www.techtarget.com/searchenterpriseai/feature/The-rise-of-the-AI-forward-deployed-engineer)). Le vrai métier consiste à faire fonctionner l’AI à l’intérieur des murs de quelqu’un d’autre : ses données, ses permissions, son service conformité, sa définition du « suffisant ». Palantir a codifié la méthode il y a des années : ses AI FDE **construisent d’abord une ontologie propre au client avant de livrer toute application LLM** et consacrent 30 à 40 % de la semaine à la découverte ([guide AI FDE de Palantir](https://www.palantir.com/docs/foundry/ai-fde/overview)). La méthode est bonne. C’est l’outillage en dessous qui décide où part vraiment la semaine. Cinq douleurs, une par une.
+Les offres d’emploi parlent d’« ambiguïté 0→1 » et de bandes de 300–550K $ ([Perspective AI](https://getperspective.ai/blog/2026-fde-hiring-trends-what-1000-job-posts-reveal), [TechTarget](https://www.techtarget.com/searchenterpriseai/feature/The-rise-of-the-AI-forward-deployed-engineer)). Le vrai métier consiste à faire fonctionner l’AI à l’intérieur des murs de quelqu’un d’autre : ses données, ses permissions, son service conformité, sa définition du « suffisant ». Palantir a codifié la méthode il y a des années : ses AI FDE **construisent d’abord une ontologie propre au client avant de livrer toute application LLM** et consacrent 30 à 40 % de la semaine à la découverte ([guide AI FDE de Palantir](https://www.palantir.com/docs/foundry/ai-fde/overview)). La méthode est bonne. C’est l’outillage en dessous qui décide où part vraiment la semaine.
+
+## Ce qu’un forward deployed engineer construit réellement
+
+Un déploiement dure environ **60 à 180 jours** et produit quatre artefacts avant la passation, dans un ordre fixe, car chacun est l’entrée du suivant. C’est précisément la partie qu’aucune offre d’emploi ne décrit :
+
+| Jour du déploiement | Ce qui s’écrit réellement | Terminé quand |
+|---|---|---|
+| **0–15 · Adaptateurs d’ingestion** | Un adaptateur par système source — leur ERP, leur outil de ticketing, le tableur qui est secrètement la source de vérité. Les chemins de lecture d’abord : connecter, pas migrer. | Un objet métier à l’écran affiche une vraie ligne sortie de leur système ce matin. |
+| **15–45 · Résolution d’entités** | La moitié ingrate que personne ne montre en démo. « Client », ce sont quatre clés différentes dans quatre systèmes : vous écrivez les règles de rapprochement, les règles de survivance, et l’identifiant que l’ontologie considère comme canonique. | Deux enregistrements de la même société fusionnent — et le responsable des opérations du client est d’accord pour dire qu’ils le devaient. |
+| **30–60 · Cartographie des permissions** | Leur organigramme traduit en rôles, ensembles de permissions, partage au niveau ligne et règles de champ, y compris les champs que trois personnes seulement peuvent voir. | La revue de sécurité devient une lecture de fichier au lieu d’une réunion : un relecteur peut désigner qui voit quoi. |
+| **45–90 · Les premiers flux** | Deux ou trois processus de bout en bout — une chaîne d’approbation, une file de triage, un renouvellement — avec les actions, les vues et les notifications autour. | Quelqu’un qui ne travaille pas pour vous accomplit une vraie journée de travail dans l’app. |
+| **90–180 · Passation** | Données d’amorçage, fixtures de recette, libellés traduits, l’app packagée et une checklist de revue que leur équipe peut réellement dérouler. | Leurs propres ingénieurs livrent un changement sans vous appeler. |
+
+Notez ce que les quatre premières lignes ont en commun : aucune n’est du code applicatif au sens habituel. Ce sont des *définitions* — ce qui existe, ce qui compte comme la même chose, qui a le droit de faire quoi, comment le travail circule. Sur un stack artisanal, chacune s’exprime pourtant en code, et c’est exactement pour cela que les douleurs ci-dessous mordent.
+
+**Le déploiement numéro deux est l’endroit où le modèle paie ou échoue.** Rien dans ce tableau n’est aussi spécifique au client qu’on le ressent sur le moment. La résolution d’entités pour « client » est structurellement le même problème chez le client suivant avec d’autres clés ; une chaîne d’approbation a la même forme avec d’autres seuils et un autre rôle approbateur. Le deuxième engagement n’a donc qu’un seul chiffre à mesurer — appelons-le le **taux de renommage** : la part du déploiement deux qui est un *renommage* de définitions typées que vous possédez déjà, plutôt qu’une réécriture. Dans une base de code artisanale, ce taux est proche de zéro et personne ne le remarque, car le déploiement deux est livré quand même ; il coûte simplement ce qu’a coûté le premier. En métadonnées typées, il est dénombrable, parce que la surface est finie : un engagement de la taille de HotCRM, ce sont 15 objets, 17 flux, 10 actions, 6 profils de permissions et 5 règles de partage. Vous pouvez littéralement lister ce dont hérite le client suivant.
+
+Voilà le métier. Le reste de cet article, ce sont les cinq douleurs récurrentes qui rendent chaque ligne de ce tableau plus difficile qu’elle ne devrait l’être — et ce qui les élimine.
 
 ## Douleur 1 — La semaine une, c’est toujours la plomberie
 
@@ -119,6 +138,29 @@ export const ServiceCopilot = defineAgent({
 
 HotCRM est la démonstration complète de ce vocabulaire à l'œuvre : 15 objets, 17 flux, 10 actions, 4 tableaux de bord, 2 copilotes AI, 6 skills, 6 profils de permissions, 5 règles de partage et 4 langues — chaque couche présente, moins de **150k tokens** au total : logique métier sous 100k, plus environ 50k pour l’UI. L'ensemble tient dans une seule fenêtre de contexte d'agent.
 
+## La vague d’imitateurs de 2026 a copié le rôle, pas le substrat
+
+En une seule année, le secteur a décidé que c’est ainsi que l’AI d’entreprise se livre. Chacune de ces lignes est un engagement daté, pris par l’entreprise elle-même — c’est ce qui le rend citable :
+
+| 2026 | L’engagement | Annoncé par |
+|---|---|---|
+| **Mai** | OpenAI lance une société de déploiement détenue majoritairement, avec plus de **4 Md$** engagés, en acquérant au passage le cabinet Tomoro et environ 150 forward-deployed engineers | [OpenAI](https://openai.com/index/openai-launches-the-deployment-company/) |
+| **11 juin** | Anthropic et DXC annoncent une alliance pluriannuelle pour former **des dizaines de milliers** d’ingénieurs forward-deployed certifiés Claude, au sein des systèmes que DXC exploite déjà pour des banques, des compagnies aériennes et des assureurs | [Anthropic](https://www.anthropic.com/news/dxc-anthropic-alliance) |
+| **30 juin** | AWS engage **1 Md$** dans une unité de forward-deployed engineering, avec des pods de cinq à six ingénieurs installés chez le client | [CNBC](https://www.cnbc.com/2026/06/30/aws-amazon-ai-forward-deployed-engineers.html) |
+| **2 juillet** | Microsoft monte Frontier — **2,5 Md$ et 6 000 employés** — pour le même travail | [CNBC](https://www.cnbc.com/2026/07/02/microsoft-commits-2point5-billion-6000-employees-ai-implementation-unit.html) |
+
+Deux autres chiffres circulent avec cette vague et méritent que leur provenance soit énoncée plutôt que répétée. Les **+1 165 % d’offres FDE sur un an** sont le décompte de Live Data Technologies, relayé par [Paraform](https://www.paraform.com/blog/forward-deployed-engineer-demand-quadrupled) — une marketplace de recrutement dont le métier est le recrutement de FDE — et il compte des offres, pas des postes pourvus. L’**« équipe de 1 000 FDE » de Salesforce** vient du [blog de Salesforce](https://www.salesforce.com/blog/forward-deployed-engineer/) : une déclaration d’intention, pas un effectif publié. Les deux sont vrais dans la direction, aucun n’est audité.
+
+Vient maintenant la partie qui compte pour le travail. Chaque engagement du tableau est libellé en **ingénieurs et en dollars**. Aucun n’est libellé dans ce qui décide si le déploiement deux coûte moins cher que le premier : *ce dans quoi la production de l’ingénieur atterrit.* La méthode de Palantir fonctionne parce que le FDE écrit dans une ontologie propre au client et que l’application en est dérivée — le substrat est le produit, et les ingénieurs sont la façon dont il atteint un client. Recrutez la même personne dans une organisation sans substrat : de l’extérieur, le travail restera identique pendant environ un an.
+
+La question utile à poser à toute organisation forward-deployed — celle que vous rejoignez, celle chez qui vous achetez, ou celle que vous montez — n’est donc pas combien d’ingénieurs elle compte. Ce sont trois questions sur le substrat :
+
+1. **Quand l’ingénieur s’en va, dans quel fichier le travail a-t-il atterri ?** Un ticket, un notebook et un service sur mesure ne sont pas une réponse ; une définition typée dans le dépôt du client, si.
+2. **Le client peut-il la lire sans vous ?** Si la définition n’est lisible que dans la console d’un éditeur, le client loue sa propre ontologie — et meilleur est votre travail, plus c’est profond.
+3. **Qu’est-ce que le déploiement deux a hérité du premier ?** Demandez la liste. Si personne ne peut la produire, le taux de renommage est nul.
+
+La réponse de cet article aux trois questions est la même, et c’est la raison du cadrage ontologie d’abord de tout ce qui précède : l’artefact est une **ontologie métier ouverte** — objets, flux et permissions typés dans le dépôt du client, sous Apache-2.0 — que le client peut lire, garder et confier à ses propres agents de code. Copier le rôle est un plan de recrutement et prend un trimestre. Copier le substrat suppose de le rendre assez ouvert pour qu’un client veuille le garder : une décision produit que presque personne, dans la vague de 2026, n’a prise.
+
 ## Ce que ce stack ne règle pas
 
 Rendons justice aux alternatives : **la fédération de données et les pipelines analytiques à l’échelle Foundry** restent le terrain de Palantir — si l’engagement consiste à fusionner des pétaoctets entre quarante systèmes legacy, c’est une autre classe d’outil. **La conduite du changement** ne se règle avec aucun stack. Et un client déjà standardisé sur une plateforme fermée peut rationnellement y rester. L’affirmation est plus étroite : pour la couche applicative du travail forward-deployed — modéliser un métier et livrer des apps gouvernées dessus — les cinq douleurs ci-dessus sont désormais éliminables, et l’ontologie peut être transmise au lieu d’être retenue en otage.
@@ -130,6 +172,7 @@ Rendons justice aux alternatives : **la fédération de données et les pipeline
 3. Permissions prudentes par défaut ; tout changement d’autorité explicite dans le diff.
 4. Transmettre le dépôt, l’artefact compilé et une checklist de revue — pas un login vers votre tenant.
 5. Laisser MCP activé pour que l’AI du client opère l’app dans le cadre de ses permissions.
+6. Au déploiement deux, compter le taux de renommage. Si rien n’a été repris, le problème est le substrat, pas l’engagement.
 
 ## Essayez la boucle
 
