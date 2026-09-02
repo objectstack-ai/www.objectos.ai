@@ -534,6 +534,101 @@ for (const file of files) {
   }
 }
 
+// ─── Every published post has an English original ─────────────────────────
+//
+// English is the source language; every other locale is a translation of it,
+// and `src/pages/[lang]/blog/[...slug].astro` builds only the locales that have
+// a file. So a directory publishing `index.zh-Hans.mdx` with no `index.mdx` is
+// not a partly-translated post — it is a post that does not exist in the
+// primary market at all, and nothing else notices: the site builds clean, the
+// Chinese pages render, and the gap is visible only to someone counting files.
+// An audit at 676ef13 found eight posts in exactly that state.
+//
+// The rule keys on PUBLISHED locale files rather than on file presence, so a
+// draft or archived translation written before the English original is fine —
+// only a *live* post with no English original is a violation. It reuses the
+// blog registry built above rather than walking the tree again.
+//
+// Opt-out: `noEnglishOriginal: "<reason>"` on the published locale file, for a
+// post whose argument is already covered by a different English page (writing
+// the original would ship a competitor to a live page for one intent). The
+// reason is mandatory — an exemption without one is a gap wearing the costume
+// of a decision — and every honoured exemption is printed, so an exempt post
+// cannot quietly become an invisible one.
+const EXEMPT_FIELD = 'noEnglishOriginal';
+const honouredExemptions = new Set();
+
+const publishedTranslations = new Map();
+for (const post of posts) {
+  if (post.data.status !== 'published' || post.locale === 'en') continue;
+  const group = publishedTranslations.get(post.slug) ?? [];
+  group.push(post);
+  publishedTranslations.set(post.slug, group);
+}
+
+for (const slug of [...publishedTranslations.keys()].sort()) {
+  // `readBlogRegistry` records 'en' exactly when `index.mdx` is on disk. The
+  // question here is whether the English original EXISTS, not what status it
+  // carries: an archived English original is a deliberate retirement, not drift.
+  if (registries.blog.get(slug)?.has('en')) continue;
+
+  const group = publishedTranslations.get(slug).sort((a, b) => a.file.localeCompare(b.file));
+  let exempt = false;
+  for (const post of group) {
+    const reason = post.data[EXEMPT_FIELD];
+    if (reason === undefined || reason === null) continue;
+    if (typeof reason !== 'string' || reason.trim() === '') {
+      addIssue(
+        issues,
+        post.file,
+        post.data,
+        'error',
+        `${EXEMPT_FIELD} must carry the reason as a non-empty string, e.g. ` +
+          `${EXEMPT_FIELD}: "covered in English by /en/blog/<other-slug>/" — an exemption ` +
+          `with no reason records nothing, so it is not honoured`
+      );
+      continue;
+    }
+    exempt = true;
+    // zh-Hant is generated from zh-Hans (`pnpm gen:zh-hant` copies the whole
+    // file), so an opt-out written once appears on both; identical reasons
+    // collapse to one line here, and genuinely different reasons both print.
+    honouredExemptions.add(`content/blog/${slug} — ${reason.trim()}`);
+  }
+  if (exempt) continue;
+
+  const localeFiles = group.map((post) => path.basename(post.path)).join(', ');
+  addIssue(
+    issues,
+    group[0].file,
+    group[0].data,
+    'error',
+    `content/blog/${slug}/ publishes ${localeFiles} but has no index.mdx; English is the ` +
+      `source language and the blog route builds only the locales that have a file, so ` +
+      `this post is absent from the primary market while looking fine everywhere else — ` +
+      `write the English original at content/blog/${slug}/index.mdx, or, if its argument ` +
+      `is already covered by another English page, record why on the published locale ` +
+      `file with ${EXEMPT_FIELD}: "<reason>"`
+  );
+}
+
+// An opt-out on a post that DOES have an English original is a stale claim: the
+// frontmatter says "deliberately no English page" next to the English page.
+// Not blocking — the post is correct — but it must not rot unseen.
+for (const post of posts) {
+  const reason = post.data[EXEMPT_FIELD];
+  if (reason === undefined || reason === null) continue;
+  if (!registries.blog.get(post.slug)?.has('en')) continue;
+  addIssue(
+    issues,
+    post.file,
+    post.data,
+    'warn',
+    `${EXEMPT_FIELD} is stale: content/blog/${post.slug}/index.mdx exists, so this post ` +
+      `has an English original and the exemption records nothing — remove the field`
+  );
+}
+
 // ─── Glossary cross-references ────────────────────────────────────────────
 //
 // `src/components/GlossaryTermPage.astro` maps every `relatedTerms`,
@@ -657,6 +752,13 @@ const blocking = issues.filter(
 );
 
 const checked = `${posts.length} file${posts.length === 1 ? '' : 's'}, ${terms.length} glossary term${terms.length === 1 ? '' : 's'}`;
+
+// Print before the issue list and before the clean-run early exit: an exemption
+// suppresses a blocking error, so it has to be visible on a passing run too —
+// that is the whole difference between a documented decision and a silent gap.
+for (const exemption of [...honouredExemptions].sort()) {
+  console.log(`honoured exemption: ${exemption}`);
+}
 
 if (issues.length === 0) {
   console.log(`✓ content lint passed (${checked} checked)`);
