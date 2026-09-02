@@ -46,6 +46,20 @@ const blog = defineCollection({
         .enum(['published', 'archived'])
         .default('published'),
 
+      // Opt-out from the "every published post has an English original" gate in
+      // `scripts/content-lint.mjs`. English is the source language, so a live
+      // translation with no `index.mdx` is normally drift — a post missing from
+      // the primary market while the site builds clean. The one legitimate case
+      // is a post whose argument is already covered by a different English page,
+      // where writing the original would ship a competitor to a live page for a
+      // single intent. Set it on the published locale file.
+      //
+      // `.min(1)` is the point of the field: the reason is what turns an
+      // exemption into a decision someone can audit later, and content-lint
+      // prints every exemption it honours so an exempt post cannot quietly
+      // become an invisible one. An exemption with no reason is just a gap.
+      noEnglishOriginal: z.string().min(1).optional(),
+
       // The canonical (original) URL — point every reprint back here for SEO.
       canonical_url: z.string().url().optional(),
 
