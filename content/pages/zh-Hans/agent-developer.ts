@@ -9,7 +9,7 @@ const page = {
     eyebrow: 'Agent 开发指南',
     heroTitle: '别教每个开发者手写应用。教你的 Agent 目标格式。',
     lead:
-      'ObjectStack 是面向“Agent 编写、人审阅”设计的开放类型化元数据目标格式与运行时。完整 CRM 全应用（含 UI）小于 150k tokens，Agent 能在一个上下文里掌握全局；Strict TypeScript、Zod schema 与 validation gate 会在无效输出进入运行时前将其拦下。',
+      'ObjectStack 是 AI 编写企业软件的开放目标格式与运行时，面向“Agent 编写、人审阅”设计。完整 CRM 全应用（含 UI）小于 150k tokens，Agent 能在一个上下文里掌握全局；Strict TypeScript、Zod schema 与 validation gate 会在无效输出进入运行时前将其拦下。',
     primary: { label: '阅读文档', href: 'https://docs.objectos.ai' },
     secondary: { label: '查看模板模式', href: '/en/templates/' },
     metrics: [

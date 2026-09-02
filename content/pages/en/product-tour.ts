@@ -9,7 +9,7 @@ const page = {
     eyebrow: 'Product tour',
     heroTitle: 'From one request to a governed application.',
     lead:
-      'ObjectStack is the open, typed target format and runtime for AI-written enterprise software: an agent writes compact metadata, a person reviews the diff, and the runtime derives the repeatable application surfaces. ObjectOS is the commercial production platform for building, deploying, and operating those apps.',
+      'ObjectStack is the open target format and runtime for AI-written enterprise software: an agent writes compact metadata, a person reviews the diff, and the runtime derives the repeatable application surfaces. ObjectOS is the commercial production platform for building, deploying, and operating those apps.',
     primary: { label: 'Point your agent at ObjectStack', href: '/en/agent-developer/' },
     secondary: { label: 'Review the trust model', href: '/en/trust-center/' },
     metrics: [
