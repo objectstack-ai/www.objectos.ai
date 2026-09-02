@@ -71,11 +71,17 @@ cannot link to each other, so internal links never compound.
   (`.github/workflows/cloudflare-pages.yml`), so a merged post is live within one CI
   run. Cadence is therefore enforced **at the merge**: write and review a post whenever
   it is ready, approve it, and merge it on its slot day. Do not batch-merge a backlog.
+  A stand-down or a "merge everything" instruction does not override the cadence — the
+  seat raises the conflict instead of merging through it, which is how the #128 cluster
+  happened.
 - **A queue of approved posts is the healthy state**, not a backlog to flush. Several
   finished posts waiting is a reason to keep the cadence, not to spend it in one day.
 - **Forward-only.** Never rewrite the `date` of an already-published post to simulate a
   drip. Those posts really were published then; changing `date` falsifies the record,
   breaks any external reference, and fixes nothing — the crawl history already happened.
+  The one exception is not an author's or the seat's call: rewriting `date` takes a
+  maintainer ruling recorded on the card (precedent: #128, 2026-09-02 — a cluster of six
+  posts that all landed on one day, spread backward by maintainer instruction).
 
 ### `date` vs `updated` — two different facts
 
