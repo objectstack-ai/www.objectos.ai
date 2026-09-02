@@ -21,9 +21,9 @@ tags:
 
 ## Two keynotes, two weeks apart, one claim
 
-Snowflake opened Summit 26 in San Francisco on June 1, 2026 with a keynote from CEO Sridhar Ramaswamy. Databricks opened Data + AI Summit at Moscone on June 15 with a keynote from CEO Ali Ghodsi, organised around four words: context, control, cost, choice. Both arrived at the same position from the main stage — frontier models are no longer the scarce input; your business context is — and both shipped a product line named for it. Snowflake put a governed semantic layer inside its catalog and called the result Horizon Context. Databricks announced Genie Ontology, a continuously learned context layer feeding its agent products.
+Snowflake opened Summit 26 in San Francisco on June 1, 2026 with a keynote from CEO Sridhar Ramaswamy. Two weeks later Databricks opened Data + AI Summit at Moscone, where CEO Ali Ghodsi built the opening keynote around four words: context, control, cost, choice. Both arrived at the same position from the main stage — frontier models are no longer the scarce input, your business context is — and both shipped a product line named for it. Snowflake put a governed semantic layer inside its catalog and called the result Horizon Context. Databricks announced Genie Ontology, a continuously learned context layer feeding its agent products.
 
-A note on sourcing, because it changes how much weight these sentences can carry: what follows characterises the framing of those keynotes and uses each vendor's own product names. It does not quote either keynote, because the vendors' own materials were not reachable from where this was written, and a paraphrase repeated from a conference recap is not a source. Anything below that depends on a specific claim is stated as *what the product does*, which is checkable in the vendors' documentation, rather than *what someone said on stage*, which is not checkable here.
+A note on sourcing, because it decides how much weight those two sentences can carry. The paragraph above characterises the framing of each keynote and uses each vendor's own product names; it deliberately quotes neither, because a stage line relayed through a conference recap is not a source. Everything after this point is therefore stated as *what the product does* — checkable against the vendors' own documentation — rather than *what someone said on stage*, which is the version that mutates every time it is retold.
 
 Why simultaneously? Not coincidence, and not entirely conviction either. Two things are true at once and it is worth holding both:
 
@@ -56,7 +56,7 @@ That is survivable for reads. It is disqualifying for writes, for one reason tha
 
 ## The read/write asymmetry nobody priced in
 
-Start with what actually happens on each path, because the industry priced them as though they were mirror images.
+Grounding and actions get discussed as two halves of one problem. They are not symmetric, and the industry priced them as though they were. Start with what actually happens on each path.
 
 A **read** is: a question, a context layer that supplies meaning, a query executed under row-level and field-level policy, an answer. One layer you own, enforcement in the query itself, and the worst case is a wrong answer that a human notices.
 
@@ -76,11 +76,11 @@ Here is the count, using a table this site has published before. [The ObjectOS a
 | 6 | The business audit entry | No | Logs the call | Yes |
 | 7 | Owner confirmation where policy says so | No | Can force a pause | Yes — and decides *when* |
 
-**One column has a yes in every row, and it is not either of the two you bought.** The context layer enforces none of the seven. The gateway enforces a version of two. All seven are ultimately supplied by the destination.
+**One column has a yes in every row, and it is neither of the two you bought.** The context layer enforces none of the seven. The gateway enforces a version of two. All seven are ultimately supplied by the destination.
 
 That is what borrowed enforcement means, and why it deserves a name: the write half of your agent architecture is governed by rules you did not write, cannot inspect from the agent side, and did not choose when you chose the context layer. It works exactly as well as the destination does. Point the same agent at Salesforce and at a Delta table, and the governance of the write differs by everything, while the diagram on the slide looks identical.
 
-The related failure mode — an agent's tools written *beside* your business logic instead of *from* it, drifting apart in one direction — the action-tools piece named **the second write path**. Borrowed enforcement is the layer above it: even when nobody hand-writes a tool, routing writes through connectors means every guarantee is the destination's, and it is worth knowing which destinations have any.
+The action-tools piece named the related failure mode — an agent's tools written *beside* your business logic instead of *from* it, drifting in one direction — **the second write path**. Borrowed enforcement sits one layer above that: even when nobody hand-writes a tool, routing writes through connectors means every guarantee is the destination's, and most teams have never enumerated which of their destinations have any.
 
 ## Four questions a retrieval path never has to answer
 
@@ -112,7 +112,7 @@ The narrower claim this article defends is this: the *value case* being sold —
 
 ## What a context layer needs before an agent can be trusted to write
 
-Five properties, in roughly the order you would have to acquire them. They are all answerable by reading definitions, which is the point — a property you can only assess by running the system is not one you can review before shipping.
+Five properties an enterprise AI context layer would need, in roughly the order you would have to acquire them. All five are answerable by reading definitions, which is the point — a property you can only assess by running the system is not one you can review before shipping.
 
 1. **Verbs, declared.** The layer must be able to name operations, not only entities, metrics and terms. If your context model cannot express "convert lead" as a first-class object, it can never govern one. This is the property that separates a semantic layer from an application definition, and almost nothing marketed as a context layer has it.
 2. **Preconditions attached to the verb, not to the table.** The rule that decides whether this operation may run now travels with the operation, and is enforced by whatever executes it — not restated in a prompt, a gateway policy and a UI predicate that will disagree within two quarters.
@@ -134,11 +134,13 @@ There is a fast way to find out where you stand, and it is more useful than an a
 
 ## Where this leaves the definition layer
 
-If a rule has to be declared to be enforced, and a write needs five of them, then the artifact that governs an agent's writes is not a semantic model of your data. It is a definition of your application: objects, permissions, and the operations that may be performed on them, with the preconditions and the confirmation policy and the audit attached to the operation itself.
+If a rule has to be declared to be enforced, and all five properties above are declarations, then the artifact that governs an agent's writes is not a semantic model of your data. It is a definition of your application: objects, permissions, and the operations that may be performed on them, with the preconditions and the confirmation policy and the audit attached to the operation itself.
 
 That is the bet ObjectStack makes. The typed metadata is an **open business ontology** — a versioned definition you keep in your own repository under Apache 2.0 — and it carries verbs. An Action is one object that produces both the button a person clicks and the tool an agent calls, so permission, validation, transaction and audit are enforced once, for both. Exposing one to an agent is a few lines of metadata that default to off. [The action-tools piece](/en/blog/objectos-action-tools/) walks through what that costs to author and what it buys.
 
 The reason to care is not elegance. It is that the application is increasingly written by an AI, and the only durable check on that is whether a human can [review AI generated code](/en/blog/ai-wrote-your-app-dare-to-merge/) as a small diff before it ships. An inferred context layer offers nothing to review. A declared operation is a few lines someone signs.
+
+So the useful next step is not a migration. Point your coding agent at the [ObjectStack spec](https://github.com/objectstack-ai/objectstack) and have it declare one operation your team already performs by hand, with its permissions, its precondition and its confirmation policy attached. What comes back is the review surface this whole article is arguing for — small enough to read in a minute, and the same object the button would use.
 
 ```bash
 npm i -g @objectstack/cli && os start
