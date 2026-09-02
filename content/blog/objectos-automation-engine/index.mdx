@@ -80,7 +80,7 @@ Two details are worth stealing even if you never use ObjectStack:
 - **A run status vocabulary that admits reality.** `pending`, `running`, `paused`, `completed`, `failed`, `cancelled`, `timed_out`, `retrying`. Systems that collapse this to success/failure cannot express "waiting on a human since Tuesday," which is the state most business processes spend most of their life in.
 - **Attribution for runs with no human behind them.** A scheduled sweep has no user. Rather than leave the audit row blank or borrow someone's identity, an elevated run stamps its data operations with the flow itself as the acting principal — `svc:flow:<flow_name>`. You can always answer "who changed this record" with something truthful.
 
-By default a flow runs **as the user who triggered it**, so its reads and writes respect that user's row-level security. Elevation is a declared choice (`runAs: 'system'`), not an accident of where the code runs — and a run that declares `user` but resolves no triggering user has its data operations refused rather than quietly falling back to elevated.
+By default a flow runs **as the user who triggered it**, so its reads and writes respect that user's [row-level security](/en/glossary/row-level-security/). Elevation is a declared choice (`runAs: 'system'`), not an accident of where the code runs — and a run that declares `user` but resolves no triggering user has its data operations refused rather than quietly falling back to elevated.
 
 ## What this looks like as metadata your agent can write
 
@@ -183,7 +183,7 @@ Being useful requires being honest about the edges.
 
 - **A plain `wait` node has no timeout.** It resumes on its timer or on a named signal; there is no deadline that fails or advances it early. Deadline behaviour lives on the approval node's SLA escalation, or in a scheduled sweep that goes looking for stuck records. If your design says "if nothing happens in 48 hours, move on," put it behind one of those two — do not assume the wait will rescue you.
 - **Terminal run history is bounded, not archival.** Completed and failed runs are retained under a per-flow cap and an age sweep (by default, the most recent hundred per flow and thirty days). Suspended runs are live state and are never pruned. If your regulator wants seven years of automation history, export it — the platform keeps an operations window, not an archive.
-- **An engine does not fix a bad process.** Modelling a broken approval chain in metadata gives you a legible broken approval chain. That is genuinely better than an illegible one, but it is not the same as an improvement.
+- **An engine does not fix a bad process.** Modelling a broken [approval chain](/en/glossary/approval-workflow/) in metadata gives you a legible broken approval chain. That is genuinely better than an illegible one, but it is not the same as an improvement.
 
 ## How to evaluate an AI automation engine
 
@@ -207,22 +207,22 @@ This page is the hub for four narrower questions. Each of them is a decision poi
 
 ### The trigger model — many entry points, one process
 
-Record changes, schedules, manual buttons, webhooks and API calls are all legitimate ways to start a flow. The problem is never having several entry points; it is letting each one grow its own copy of the business rules. The engine's job is to converge them onto one governed process after the entry.
+Record changes, schedules, manual buttons, webhooks and API calls are all legitimate ways to start a flow. The problem is never having several entry points; it is letting each one grow its own copy of the business rules. The engine's job is to converge them onto one governed process after the entry. [Which trigger types the engine actually resolves](/en/blog/automation-trigger-model/) takes that apart, starting with the flow that is published, active, and wired to nothing.
 
 ### Pause, resume, and approvals
 
-Waiting for a person, a document, a clock, or an external callback are four flavours of the same capability. How an engine models them decides whether approvals are part of your process or a separate island your process has to be reconciled with.
+Waiting for a person, a document, a clock, or an external callback are four flavours of the same capability. How an engine models them decides whether approvals are part of your process or a separate island your process has to be reconciled with. [What a long-running approval has to survive](/en/blog/automation-pause-resume-approvals/) makes the case that pausing is the easy half and the door out of the wait is the design decision.
 
 ### Cross-system flows
 
-CRM, ERP, contracts and finance all show up in the same process. Reliability there is not "we connected more APIs" — it is whether outbound calls, retries, failure paths and compensation are governed nodes inside the flow, with delivery backed by a durable outbox rather than a fire-and-forget fetch.
+CRM, ERP, contracts and finance all show up in the same process. Reliability there is not "we connected more APIs" — it is whether outbound calls, retries, failure paths and compensation are governed nodes inside the flow, with delivery backed by a durable outbox rather than a fire-and-forget fetch. [Connector failure handling in a governed process](/en/blog/automation-cross-system-flows/) is about the half you cannot observe once a step leaves your runtime, and why an unmeasured effect must never be reported as a zero.
 
 ### Governed flow changes
 
-Natural language lowers the cost of changing a process, which means the bottleneck moves to review. Every edit has to become reviewable, validatable, publishable and reversible metadata — including the question of what happens to the runs that are already in flight when the new version ships. Validation matters more than generation.
+Natural language lowers the cost of changing a process, which means the bottleneck moves to review. Every edit has to become reviewable, validatable, publishable and reversible metadata — including the question of what happens to the runs that are already in flight when the new version ships. Validation matters more than generation. [How to review an AI-edited flow before it ships](/en/blog/automation-governed-flow-changes/) follows one sentence through to the diff, the publish gate and the mixed-version run.
 
 ## Point your agent at it
 
 If you want to test this rather than read about it: give your coding agent the ObjectStack rule file and the flow specification, describe a process from your own business in one paragraph, and read what comes back. You are not evaluating whether the AI can write automation — it can. You are evaluating whether the artifact it produced is one you would sign your name to, and whether the runtime underneath will tell you what it did afterwards.
 
-That is the whole bet: AI writes the flow, a human reviews a small diff, and the engine decides, waits, and leaves the receipt.
+That is the whole bet: AI writes the flow, a human reviews a [small diff](/en/glossary/reviewable-diff/), and the engine decides, waits, and leaves the receipt.

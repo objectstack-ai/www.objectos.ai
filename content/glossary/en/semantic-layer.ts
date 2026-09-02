@@ -23,8 +23,10 @@ const term = {
     'governed-runtime',
   ],
   articleSlugs: [
+    'ontology-vs-semantic-layer-vs-knowledge-graph',
     'why-ai-agent-pilots-fail-four-layers',
     'enterprise-ontology-race-open-vs-closed',
+    'context-bottleneck-read-half',
     'ai-ontology-open-protocol',
   ],
   pageSlugs: ['analytics', 'data-modeling', 'platform'],

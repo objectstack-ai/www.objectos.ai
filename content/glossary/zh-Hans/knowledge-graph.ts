@@ -22,6 +22,7 @@ const term = {
     'typed-metadata',
   ],
   articleSlugs: [
+    'ontology-vs-semantic-layer-vs-knowledge-graph',
     'enterprise-ontology-race-open-vs-closed',
     'ai-ontology-open-protocol',
     'crm-ai-understands-customers',

@@ -23,6 +23,7 @@ const term = {
   ],
   articleSlugs: [
     'mcp-governed-tool-layer',
+    'ontology-mcp-agent-tools',
     'objectos-action-tools',
     'ai-agent-business-data-security-boundaries',
   ],
