@@ -16,10 +16,22 @@ import Logo from './Logo.astro';
 
 interface Props {
   locale: Locale;
+  /** Real per-locale equivalents — the hreflang set. */
   alternates?: Partial<Record<Locale, string>>;
+  /**
+   * Where the language switcher should send a reader, which is not the same
+   * question as hreflang. A page type with a fallback design (marketing,
+   * glossary) has real URLs in every locale — they render English content,
+   * canonicalized and noindexed — and the switcher should take the reader to
+   * the same page in the locale they picked. hreflang must still list only the
+   * authored locales, so the two maps differ. Defaults to `alternates`, which
+   * is right for page types with no fallback (blog, topics).
+   */
+  navAlternates?: Partial<Record<Locale, string>>;
 }
 
-const { locale, alternates = {} } = Astro.props;
+const { locale, alternates = {}, navAlternates } = Astro.props;
+const switcherTargets = navAlternates ?? alternates;
 const t = ui[locale];
 const pathname = Astro.url.pathname;
 
@@ -231,7 +243,7 @@ const menus = (
             LOCALES.map((l) => (
               <a
                 class:list={['menu-item', { active: l === locale }]}
-                href={alternates[l] ?? homePath(l)}
+                href={switcherTargets[l] ?? homePath(l)}
                 data-lang={l}
                 role="menuitem">
                 {LANG_NATIVE[l]}
@@ -355,7 +367,7 @@ const menus = (
           LOCALES.map((l) => (
             <a
               class:list={['drawer-lang', { active: l === locale }]}
-              href={alternates[l] ?? homePath(l)}
+              href={switcherTargets[l] ?? homePath(l)}
               data-lang={l}>
               {LANG_NATIVE[l]}
             </a>

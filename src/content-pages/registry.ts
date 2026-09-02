@@ -111,7 +111,41 @@ export const getMarketingPageSourceLocale = (
 export const marketingPagePath = (locale: Locale, slug: string): string =>
   `/${locale}/${slug}/`;
 
+/**
+ * hreflang targets for a page — real equivalents only, never fallback pages.
+ *
+ * Filters on `localizedPage`, not `getMarketingPage`: the latter falls back to
+ * English, so every locale would pass for any slug authored in English and the
+ * page would advertise `hreflang` for the very URLs this same code path marks
+ * `noindex, nofollow` and canonicalizes back to the source locale. An hreflang
+ * annotation claims the target is a real, indexable equivalent; pointing one at
+ * a noindexed URL contradicts that. Derived zh-Hant counts as authored — the
+ * s2t pages are injected into `RAW_PAGES_BY_LOCALE` above, so `localizedPage`
+ * finds them. Same rule as `glossaryTermAlternates`.
+ */
 export const marketingPageAlternates = (
+  slug: string
+): Partial<Record<Locale, string>> =>
+  Object.fromEntries(
+    LOCALES.filter((locale) => Boolean(localizedPage(locale, slug))).map((locale) => [
+      locale,
+      marketingPagePath(locale, slug),
+    ])
+  );
+
+/**
+ * Language-switcher targets — a different question from `hreflang`.
+ *
+ * The switcher should offer the reader the same page in the locale they pick,
+ * including the locales that render fallback content: those URLs are really
+ * built (`getStaticPaths` emits them from `getMarketingPages`), they read fine,
+ * and they are the page the reader asked for. Sending them to the locale home
+ * instead loses their place. So this filters on `getMarketingPage`, which
+ * resolves through the English fallback — deliberately the opposite of
+ * `marketingPageAlternates` above, which must name authored locales only
+ * because an hreflang annotation claims the target is indexable.
+ */
+export const marketingPageNavTargets = (
   slug: string
 ): Partial<Record<Locale, string>> =>
   Object.fromEntries(

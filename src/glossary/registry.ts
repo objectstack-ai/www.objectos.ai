@@ -7,11 +7,9 @@ import type { GlossaryTerm } from './types';
  * of authored TypeScript modules, derive zh-Hant from zh-Hans, and fall back
  * to English for locales that have no authored file yet.
  *
- * One deliberate difference from the marketing registry: `glossaryTermAlternates`
- * lists only locales where the term really exists. The marketing version filters
- * on `getMarketingPage`, which falls back to English and therefore reports every
- * locale as an equivalent — including the noindexed fallback pages. Advertising a
- * noindexed URL as an hreflang equivalent is what this file avoids.
+ * `glossaryTermAlternates` lists only locales where the term really exists, so a
+ * noindexed fallback page is never advertised as an hreflang equivalent.
+ * `marketingPageAlternates` now follows the same rule; the two registries agree.
  */
 
 const FALLBACK_LOCALE: Locale = 'en';
@@ -125,3 +123,23 @@ export const glossaryIndexAlternates = (): Partial<Record<Locale, string>> =>
   Object.fromEntries(
     GLOSSARY_LOCALES.map((locale) => [locale, glossaryIndexPath(locale)])
   );
+
+/**
+ * Language-switcher targets — a different question from `hreflang`. Every
+ * locale really has this term page built (fallback locales render the English
+ * copy, canonicalized and noindexed), so the switcher offers the same term in
+ * the locale the reader picked instead of dropping them on the locale home.
+ * Resolves through the fallback on purpose; `glossaryTermAlternates` above must
+ * not, because hreflang claims the target is indexable.
+ */
+export const glossaryTermNavTargets = (slug: string): Partial<Record<Locale, string>> =>
+  Object.fromEntries(
+    LOCALES.filter((locale) => Boolean(getGlossaryTerm(locale, slug))).map((locale) => [
+      locale,
+      glossaryTermPath(locale, slug),
+    ])
+  );
+
+/** Language-switcher targets for the index — every locale, fallbacks included. */
+export const glossaryIndexNavTargets = (): Partial<Record<Locale, string>> =>
+  Object.fromEntries(LOCALES.map((locale) => [locale, glossaryIndexPath(locale)]));

@@ -17,8 +17,17 @@ interface Props {
   modifiedTime?: string;
   author?: string;
   jsonLd?: Record<string, unknown> | Record<string, unknown>[];
-  /** Real per-locale equivalents of this page — for hreflang + the toggle. */
+  /** Real per-locale equivalents of this page — the hreflang set. */
   alternates?: Partial<Record<Locale, string>>;
+  /**
+   * Where the language switcher sends a reader, when that differs from the
+   * hreflang set. Page types with a fallback design (marketing, glossary)
+   * render at every locale URL, so the switcher should offer the same page in
+   * the chosen locale even where the content falls back to English; hreflang
+   * must still name only the authored locales. Omit it and the switcher uses
+   * `alternates`, which is correct for page types with no fallback.
+   */
+  navAlternates?: Partial<Record<Locale, string>>;
 }
 
 const {
@@ -34,6 +43,7 @@ const {
   author,
   jsonLd,
   alternates,
+  navAlternates,
 } = Astro.props;
 const t = ui[locale];
 
@@ -130,7 +140,7 @@ const jsonLdHtml = (value: Record<string, unknown>) =>
   </head>
   <body>
     <a class="skip-link" href="#main-content">{t.skipToContent}</a>
-    <Header {locale} {alternates} />
+    <Header {locale} {alternates} {navAlternates} />
     <main id="main-content" tabindex="-1">
       <slot />
     </main>
