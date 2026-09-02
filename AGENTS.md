@@ -67,6 +67,8 @@ any ranking movement unattributable to any topic; and posts published simultaneo
 cannot link to each other, so internal links never compound.
 
 - **Two slots a week** (e.g. Tuesday and Thursday), one post per slot.
+- **An agent's `date` is its planned slot.** A post an agent writes carries the slot date
+  it will occupy, never stacks onto a day another post holds, and merges on that day.
 - **Merge time is publish time.** The site is a static build deployed on push to `main`
   (`.github/workflows/cloudflare-pages.yml`), so a merged post is live within one CI
   run. Cadence is therefore enforced **at the merge**: write and review a post whenever
@@ -130,6 +132,17 @@ Doing it properly is three coupled parts, not one field:
 At two posts a week, holding a merge for a day or two is not a real cost, and the queue
 is already visible as open PRs. Revisit when the cadence is actually running and
 merge-day scheduling is measurably in the way; land part 1 before part 2.
+
+## Working in this repo with agents
+
+- **At most five agent worktrees run concurrently on this repo** (maintainer, 2026-09-02).
+- **Browser-verify every content or visual PR before it merges** at 1366×625, 1440×750,
+  1512×830, 1920×945, 390×844 and 360×800; scroll lazy images into view before judging and
+  **look at** the screenshots. Render each new SVG at native size — a `fill` presentation
+  attribute loses to a stylesheet class, so dark-on-dark text passes every gate.
+- **A visual defect is work, not a note** (maintainer, 2026-08-26).
+- **Merge time is publish time.** Never batch-merge posts; `date` is rewritten only by an
+  explicit maintainer ruling recorded on the card.
 
 ## Localization
 
