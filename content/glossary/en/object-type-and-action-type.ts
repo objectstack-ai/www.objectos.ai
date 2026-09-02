@@ -22,7 +22,13 @@ const term = {
     'mcp',
     'governed-tool-layer',
   ],
-  articleSlugs: ['objectos-action-tools', 'mcp-governed-tool-layer', 'ai-ontology-open-protocol'],
+  articleSlugs: [
+    'objectos-action-tools',
+    'mcp-governed-tool-layer',
+    'ontology-mcp-agent-tools',
+    'enterprise-ontology-platform-comparison',
+    'ai-ontology-open-protocol',
+  ],
   pageSlugs: ['data-modeling', 'automation', 'mcp'],
 } satisfies GlossaryTerm;
 

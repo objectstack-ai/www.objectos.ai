@@ -27,6 +27,8 @@ const term = {
   articleSlugs: [
     'ai-ontology-open-protocol',
     'enterprise-ontology-race-open-vs-closed',
+    'ontology-vs-semantic-layer-vs-knowledge-graph',
+    'enterprise-ontology-platform-comparison',
     'objectos-action-tools',
   ],
   pageSlugs: ['data-modeling', 'platform', 'ai'],
