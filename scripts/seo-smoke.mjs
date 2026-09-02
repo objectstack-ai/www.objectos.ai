@@ -350,6 +350,80 @@ for (const locale of LOCALES) {
   }
 }
 
+// `lastmod` is the one field in the sitemap protocol that carries freshness,
+// and it is also the only consumer where a *revision* belongs: `date` drives
+// sort order and RSS `pubDate` (a revision must not reorder the blog or
+// re-notify subscribers), while `lastmod` answers "did this change?" and so
+// tracks `updated ?? date`. The sitemap shipped zero `lastmod` elements for
+// months and nothing noticed, because this script only ever checked it for
+// URLs. Both halves below are load-bearing:
+//   * every blog-post URL carries a `lastmod` equal to its `updated ?? date`;
+//   * every other URL carries none. There is no meaningful content date for a
+//     locale home, blog index, topic hub, marketing, cluster, glossary or
+//     legal page, and build time is not a substitute — a `lastmod` that moves
+//     on every deploy for every URL teaches crawlers the field is meaningless
+//     on this site, which is worse than omitting it.
+// The expected dates are read from the same frontmatter map `astro.config.mjs`
+// serializes from, so what this asserts is that the built sitemap really
+// reflects the content tree. It is imported here rather than at the top of the
+// file to keep this check one self-contained block.
+const { readPostLastmods } = await import('./lib/post-dates.mjs');
+const postLastmods = readPostLastmods(ROOT);
+// W3C datetime, the only format the sitemap protocol allows for lastmod:
+// a complete date, optionally with a time that carries an explicit zone.
+const W3C_DATETIME = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2}))?$/;
+const sitemapEntries = [...sitemap.matchAll(/<url>([\s\S]*?)<\/url>/g)].map(([, entry]) => ({
+  loc: entry.match(/<loc>([^<]*)<\/loc>/)?.[1],
+  lastmod: entry.match(/<lastmod>([^<]*)<\/lastmod>/)?.[1],
+}));
+if (sitemapEntries.length === 0) {
+  issues.push(
+    'sitemap-0.xml: parsed no url entries — every lastmod check below would be a silent no-op'
+  );
+}
+let postEntriesChecked = 0;
+for (const { loc, lastmod } of sitemapEntries) {
+  if (!loc) {
+    issues.push('sitemap-0.xml: found a url entry with no loc');
+    continue;
+  }
+  const expected = postLastmods.get(new URL(loc).pathname);
+  if (!expected) {
+    if (lastmod !== undefined) {
+      issues.push(
+        `sitemap-0.xml: ${loc} carries lastmod ${lastmod}, but it has no content date — ` +
+          'a page with nothing meaningful to report must not report a synthetic one'
+      );
+    }
+    continue;
+  }
+  postEntriesChecked += 1;
+  if (lastmod === undefined) {
+    issues.push(
+      `sitemap-0.xml: blog post ${loc} has no lastmod (expected ${expected.toISOString()})`
+    );
+    continue;
+  }
+  if (!W3C_DATETIME.test(lastmod)) {
+    issues.push(`sitemap-0.xml: blog post ${loc} has lastmod "${lastmod}", not a W3C datetime`);
+    continue;
+  }
+  // Compare instants, not strings: "2026-06-05" and "2026-06-05T00:00:00.000Z"
+  // are the same moment and both are valid here.
+  if (Date.parse(lastmod) !== expected.getTime()) {
+    issues.push(
+      `sitemap-0.xml: blog post ${loc} has lastmod ${lastmod}, ` +
+        `expected ${expected.toISOString()} (updated ?? date)`
+    );
+  }
+}
+if (postEntriesChecked === 0) {
+  issues.push(
+    'sitemap-0.xml: no blog-post URL matched the frontmatter date map — ' +
+      'an empty match is a failure, not a pass'
+  );
+}
+
 const htmlFiles = (await walk(DIST))
   .filter((file) => file.endsWith('.html'))
   .map((file) => path.relative(DIST, file).split(path.sep).join('/'))
