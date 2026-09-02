@@ -3,6 +3,7 @@ title: 既存の業務システムを移行せずに AI-native にする
 description: すでに動いているデータベースに ObjectOS を接続し、コーディングエージェントでテーブルをオブジェクトとしてモデル化すれば、元のシステムを壊さず、権限の下で実データに AI を載せられます。
 author: ObjectStack Team
 date: 2026-05-30
+updated: 2026-09-02T10:00:00+08:00
 status: published
 topic: integration-data
 audience: general
@@ -120,7 +121,9 @@ datasourceMapping: [
 
 上の流れは、データソース、オブジェクト別ルーティング、ObjectQL のプッシュダウン、AI エージェント層で**今日**動きます。オブジェクトモデリングは、接続済み schema に対してコーディングエージェントが行います。
 
-より豊かな turn-key federation、つまり一回の schema import、外部所有 schema へのバインド、組み込みの書き込み安全ゲートは [ADR-0015](https://github.com/objectstack-ai/objectstack/blob/main/docs/adr/0015-external-datasource-federation.md) で設計中です。
+より豊かな turn-key federation、つまり一回の schema import、外部所有 schema へのバインド、組み込みの書き込み安全ゲートは、すでに出荷済みです。[ADR-0015](https://github.com/objectstack-ai/objectstack/blob/main/docs/adr/0015-external-datasource-federation.md) は **Accepted**（バックエンド・REST・CLI 実装済み）、ランタイム側は [ADR-0062](https://github.com/objectstack-ai/objectstack/blob/main/docs/adr/0062-external-datasource-runtime.md) が規範です。
+
+`os datasource list-tables <name>` がリモートのテーブルを列挙し、`os datasource introspect <name> --table <table>` が実テーブルからオブジェクトの下書きを生成します。データソースに `schemaMode: 'external'` を置けば ObjectStack はそのデータベースに DDL を実行せず、宣言が実際の列と食い違えば起動が diff とともに失敗します（`validation: { onMismatch: 'fail' }`）。書き込みには 2 つのファイルでの 2 回のオプトインが要ります —— データソースの `external.allowWrites: true` と、オブジェクトの `external.writable: true`。どちらか一方でも閉じていれば insert・update・delete は拒否されます。これらのゲートは federation のものであり、ObjectStack が管理するデータベースでは read-only は今もデータベースの `GRANT` です。ADR-0015 に残っているのは federation の Studio UI と、SQL 方言ドライバの拡充です。
 
 ## よくある質問
 

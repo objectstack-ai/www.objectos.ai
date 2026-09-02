@@ -4,6 +4,7 @@ title: 給現有系統加 AI：連線資料庫，而不是先遷移
 description: 把 ObjectOS 連到已經執行的資料庫，讓 agent 把關鍵資料表建模為物件，再在你的許可權和伺服器邊界內疊加 AI 能力；原系統繼續執行，AI 走受控物件層。
 author: ObjectStack Team
 date: 2026-05-30
+updated: 2026-09-02T10:00:00+08:00
 status: published
 topic: integration-data
 audience: general
@@ -195,11 +196,33 @@ Postgres 上以 `SELECT … WHERE …` 執行，並基於真實、當前的資�
 感知能力的 ObjectQL 下推，以及 AI Agent 層。物件的建模由一個編碼 Agent 針對
 你已連線的 schema 完成 —— 與 `hotcrm` 的物件被編寫出來的方式相同。
 
-一套更豐富的**開箱即用聯邦（turn-key federation）**體驗 —— 一步式 schema
-匯入、繫結到外部擁有的 schema、內建的寫入安全閘門 —— 正在
+那套更豐富的**開箱即用聯邦（turn-key federation）體驗** —— 一步式 schema
+匯入、繫結到外部擁有的 schema、內建的寫入安全閘門 —— 已經交付。
 [ADR-0015](https://github.com/objectstack-ai/objectstack/blob/main/docs/adr/0015-external-datasource-federation.md)
-下積極設計（狀態：*Proposed*）。隨著它落地，我們會寫更多內容。在那之前，
-有文件記載的路徑 —— 連線、建模、繫結、查詢 —— 才是受支援的路徑。
+現在是 **Accepted**（後端、REST 與 CLI 均已實現），
+[ADR-0062](https://github.com/objectstack-ai/objectstack/blob/main/docs/adr/0062-external-datasource-runtime.md)
+則是其執行時那一半的規範決策。具體來說：
+
+- **schema 匯入是一條命令，而不是一個專案。**
+  `os datasource list-tables <name>` 列出遠端的表，
+  `os datasource introspect <name> --table <table>` 從活的表生成物件草稿 ——
+  列、型別、外部索引鍵。草稿依然是你自己評審並提交的普通原始碼。
+- **繫結到你並不擁有的 schema，是一次宣告。** 在資料來源上設定
+  `schemaMode: 'external'`，ObjectStack 就不會對那個資料庫執行任何 DDL；每個
+  物件通過 `external.remoteName` / `remoteSchema` / `columnMap` 指明自己的遠端
+  表。宣告與真實的列不一致時，啟動會帶著 diff 失敗
+  （`validation: { onMismatch: 'fail' }`；起草階段可以用 `validate-only` 只告警），
+  `os datasource validate <name>` 則按需檢查。
+- **寫入需要兩次分別開啟，落在兩個檔案裡。** 資料來源上的
+  `external.allowWrites: true`，**以及**物件上的 `external.writable: true`。
+  任一道閘門關著，insert、update、delete 都會被拒絕。
+
+這些閘門屬於聯邦：它們回答的是*這個資料庫歸誰所有*，因此只作用於外部資料來源，
+不作用於 ObjectStack 自己管理的資料來源。對於 ObjectStack 擁有的資料庫，只讀
+依然是資料庫層的 `GRANT` —— 與下面常見問題裡寫的完全一致。
+
+ADR-0015 上仍未完成的，是聯邦的 Studio 介面，以及更多 SQL 方言的驅動。無論
+如何，本文走的這條路徑 —— 連線、建模、繫結、查詢 —— 沒有變化，也依然受支援。
 
 ## 常見問題
 

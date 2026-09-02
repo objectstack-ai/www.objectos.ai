@@ -3,6 +3,7 @@ title: Haz que tu sistema de negocio existente sea AI-native sin migrarlo
 description: Conecta ObjectOS a la base de datos que ya usas, deja que un agente de código modele las tablas como objetos y pon AI sobre datos reales, bajo tus permisos y sin tocar el sistema original.
 author: ObjectStack Team
 date: 2026-05-30
+updated: 2026-09-02T10:00:00+08:00
 status: published
 topic: integration-data
 audience: general
@@ -118,7 +119,9 @@ Cuando alguien pregunta por oportunidades que se salieron de Q2, el agente no co
 
 ## Entregado y en camino
 
-Este flujo funciona **hoy** con datasources, routing por objeto, pushdown de ObjectQL y la capa de agentes. Una federación más turn-key, con importación de schema, binding a schemas externos y compuertas de seguridad para escritura, está en diseño en [ADR-0015](https://github.com/objectstack-ai/objectstack/blob/main/docs/adr/0015-external-datasource-federation.md).
+Este flujo funciona **hoy** con datasources, routing por objeto, pushdown de ObjectQL y la capa de agentes. La federación turn-key —importación de schema en un paso, binding a schemas externos y compuertas de seguridad para escritura— ya está entregada: [ADR-0015](https://github.com/objectstack-ai/objectstack/blob/main/docs/adr/0015-external-datasource-federation.md) está **Accepted** (backend, REST y CLI implementados) y [ADR-0062](https://github.com/objectstack-ai/objectstack/blob/main/docs/adr/0062-external-datasource-runtime.md) es la decisión canónica de su mitad de runtime.
+
+`os datasource list-tables <name>` enumera las tablas remotas y `os datasource introspect <name> --table <table>` genera un borrador de objeto desde la tabla viva. Con `schemaMode: 'external'` la plataforma no ejecuta DDL contra esa base de datos, y una declaración que no coincide con las columnas reales hace fallar el arranque con un diff (`validation: { onMismatch: 'fail' }`). Escribir exige dos opt-ins en dos archivos: `external.allowWrites: true` en el datasource **y** `external.writable: true` en el objeto; si falta uno, se rechazan inserts, updates y deletes. Esas compuertas son de la federación: en una base de datos que ObjectStack gestiona, read-only sigue siendo un `GRANT` de base de datos. En ADR-0015 quedan pendientes la UI de Studio y drivers para más dialectos SQL.
 
 ## Preguntas frecuentes
 

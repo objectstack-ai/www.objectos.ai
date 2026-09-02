@@ -3,6 +3,7 @@ title: Bestehende Geschäftssysteme AI-native machen, ohne Migration
 description: Verbinden Sie ObjectOS mit der Datenbank, die bereits läuft, lassen Sie einen Coding-Agenten Tabellen als Objekte modellieren und setzen Sie AI auf echte Daten, unter Ihren Berechtigungen und ohne das Ursprungssystem anzufassen.
 author: ObjectStack Team
 date: 2026-05-30
+updated: 2026-09-02T10:00:00+08:00
 status: published
 topic: integration-data
 audience: general
@@ -120,7 +121,9 @@ dann lädt der Agent nicht die ganze Tabelle in einen Prompt. Er erzeugt eine Ob
 
 ## Geliefert und in Arbeit
 
-Dieser Ablauf funktioniert **heute** mit Datasources, objektbezogenem Routing, ObjectQL Pushdown und der AI-Agent-Schicht. Eine reichere turn-key Federation mit Schema-Import, Bindung an externe Schemas und eingebauten Write-Safety-Gates ist in [ADR-0015](https://github.com/objectstack-ai/objectstack/blob/main/docs/adr/0015-external-datasource-federation.md) in aktiver Gestaltung.
+Dieser Ablauf funktioniert **heute** mit Datasources, objektbezogenem Routing, ObjectQL Pushdown und der AI-Agent-Schicht. Die reichere turn-key Federation mit Schema-Import, Bindung an extern gehaltene Schemas und eingebauten Write-Safety-Gates ist inzwischen ausgeliefert: [ADR-0015](https://github.com/objectstack-ai/objectstack/blob/main/docs/adr/0015-external-datasource-federation.md) ist **Accepted** (Backend, REST und CLI implementiert), die Laufzeithälfte regelt [ADR-0062](https://github.com/objectstack-ai/objectstack/blob/main/docs/adr/0062-external-datasource-runtime.md).
+
+`os datasource list-tables <name>` listet die entfernten Tabellen, `os datasource introspect <name> --table <table>` erzeugt daraus einen Objektentwurf aus der echten Tabelle. `schemaMode: 'external'` erklärt, dass ObjectStack in dieser Datenbank kein DDL ausführt; weicht eine Deklaration von den echten Spalten ab, scheitert der Boot mit einem Diff (`validation: { onMismatch: 'fail' }`). Schreibzugriffe verlangen zwei Opt-ins in zwei Dateien: `external.allowWrites: true` auf der Datasource **und** `external.writable: true` auf dem Objekt — fehlt eines, werden Inserts, Updates und Deletes abgelehnt. Diese Gates gehören zur Federation; bei einer von ObjectStack verwalteten Datenbank bleibt read-only ein `GRANT` in der Datenbank. Offen sind auf ADR-0015 noch die Studio-UI und Treiber für weitere SQL-Dialekte.
 
 ## Häufige Fragen
 
