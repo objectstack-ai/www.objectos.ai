@@ -378,9 +378,8 @@ const coverSrc = (cover: unknown): string =>
     max-width: 760px;
     margin-inline: auto;
   }
-  .hero > .eyebrow {
-    justify-content: center;
-  }
+  /* No `justify-content` for the eyebrow: it is inline content now (see the
+     `.eyebrow` rule below), centred by the hero's own `text-align: center`. */
   .hero > .hero-lead {
     margin-inline: auto;
   }
@@ -407,16 +406,32 @@ const coverSrc = (cover: unknown): string =>
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
+  /* The rule is a lead-in glued to the first word, not a column of its own.
+     As a flex row the rule and the text were two flex items: the text item
+     took all the remaining width and centred itself inside it, so the moment
+     the eyebrow wrapped — every locale at ≤390px, measured — the rule was
+     stranded at the far left, 37-55px from the nearest word and floating at
+     the vertical middle of the two lines, reading as a stray mark rather than
+     a lead-in. Laid out as inline content instead, the rule stays on the
+     first line immediately before the first word, wherever `text-align:
+     center` puts that line.
+
+     This is deliberately not a phone-only override. At ≥414px, where the
+     eyebrow is a single line in every locale, inline flow reproduces the flex
+     row's geometry: same 8.8px gap (`margin-right` replaces the `gap`), rule
+     centred on the line to within 0.06px, and the eyebrow box the same height
+     — which is what keeps the video below it from moving. */
   .eyebrow {
-    display: flex;
-    align-items: center;
-    gap: 0.55rem;
+    display: block;
     margin-bottom: 1.35rem;
     overflow-wrap: anywhere;
   }
   .eyebrow span {
+    display: inline-block;
     width: 26px;
     height: 1px;
+    margin-right: 0.55rem;
+    vertical-align: middle;
     background: currentColor;
   }
   .hero h1 {
@@ -1147,8 +1162,27 @@ const coverSrc = (cover: unknown): string =>
     .hero-media::before {
       inset: -10px 12px 18px -10px;
     }
+    /* One column on phones. Three columns survive down here only by getting
+       narrower than their own content: measured at 390px each column is
+       ~114px (en) / ~112px (de), which breaks every `dt` onto two lines and
+       runs the `dd` to three — "Human-controlled" hyphenates, and `de` is
+       worse than `en` at every width. The `gap: 0.5rem` this replaces was
+       already a symptom: it existed only to squeeze a third column into a
+       phone, so with the third column gone it has nothing left to do, and
+       the value below is a row gap separating three stacked entries.
+
+       640px is this file's existing phone breakpoint rather than a new
+       number, and the strip has no good in-between state — with exactly
+       three items a 2-up grid strands the third on its own row. Measured
+       across 360-900px, three columns stop being cramped at ~600px in the
+       worst-case locale (`de`: every `dt` on one line, every `dd` within
+       two), so the last width that keeps them is comfortable, not marginal.
+
+       The strip is the last child in both the source order and the phone
+       reorder, so this moves nothing above it — the video included. */
     .proof {
-      gap: 0.5rem;
+      grid-template-columns: 1fr;
+      gap: 0.9rem;
     }
     .positioning,
     .capability-section,
