@@ -1,0 +1,218 @@
+---
+title: "How to Self-Host an AI App Platform: ObjectStack from Install to Verified"
+description: "A walkthrough of self-hosting the open-source ObjectStack runtime: the compiled-artifact model, the database driver everyone misses, how to prove the install is correct, and what you are now on call for."
+author: ObjectStack Team
+date: 2026-09-15T10:00:00+08:00
+status: published
+topic: governance
+audience: it
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Self-hosted
+  - Deployment
+  - Docker
+  - PostgreSQL
+  - Open Source
+---
+
+**The short version:** self-hosting ObjectStack is one process against one database. You compile your app into a single JSON artifact with `os build`, hand that artifact to `os start` or to the official runtime image, point `OS_DATABASE_URL` at a Postgres you operate, and pin two secrets. On an empty database the first boot creates its own schema — 68 tables in the app I built for this article — and serves the Console, the REST API, and an MCP endpoint under your permissions. All of it is Apache-2.0, with no license callback and no vendor account. What you take on in exchange is upgrades, backups, and a pager.
+
+Why the runtime should be yours is argued elsewhere: [the general case](/en/blog/self-hosted-ai-app-platform/), and [the same case against Power Platform](/en/blog/power-platform-lock-in-dataverse-self-host/). This page assumes you have decided, and wants to give you the procedure, the failure modes, and an honest bill.
+
+Every command below was run against ObjectStack 17.2.0 on Node 22 and PostgreSQL 16. Where something could not be run, the text says so.
+
+## What you are actually deploying
+
+The mental model matters more than any single command, because it makes the rest predictable.
+
+An ObjectStack app is not a codebase you deploy. It is **typed metadata** — objects, fields, permissions, flows, views — that `os build` compiles into one file, `dist/objectstack.json`. That file is the whole application definition; the runtime is generic and knows nothing about your business until it reads it:
+
+```
+objectstack.config.ts ──(os build, in CI)──▶ dist/objectstack.json ──(os start, on your server)──▶ running app
+```
+
+Two consequences fall out, and both are load-bearing for operations.
+
+First, **the artifact is small and the runtime is large**. The one-object app I compiled here produced a 2.2 KB artifact. Booting it against an empty Postgres created 68 tables — my one object plus the platform's own: `sys_audit_log`, `sys_api_key`, `sys_business_unit`, and the rest. You ship kilobytes; the runtime brings the governed platform with it.
+
+Second, **deploys are file swaps**. No build on the server, no migration script to sequence by hand. Replace the artifact, restart, and the runtime reconciles the schema. Roll back by restoring the previous artifact.
+
+That metadata is also your [open business ontology](/en/glossary/ontology/) — a versioned definition of your objects, permissions, and flows that lives in your repository and outlives any one host. Self-hosting makes that ownership operational rather than theoretical: you hold the definition *and* the thing that runs it.
+
+![What runs where in a self-hosted ObjectStack deployment: your infrastructure holds the artifact, runtime, database, files, and identity, while only minimal approved context leaves for an external model API](./what-runs-where-en.svg)
+
+## The boundary: ObjectStack vs ObjectOS
+
+A self-hosting guide has to get this exactly right: the two names are easy to blur, and the blur always favours the vendor.
+
+| | ObjectStack | ObjectOS |
+|:---|:---|:---|
+| What it is | The open framework and production runtime | A commercial platform for the same apps |
+| License | Apache-2.0 | Commercial; no open-source edition |
+| How you build | Your repo, your coding agent, metadata as files reviewed as diffs | In the browser, Build & Ask, on a governed platform |
+| Self-hosting it | This article | Cloud, or Enterprise operating the runtime in your infrastructure |
+
+The important claim, stated plainly: **everything in this walkthrough is the open stack.** The runtime, the Console, permissions, RLS, audit, and the MCP server are all in the Apache-2.0 repository and the official image. No commercial license is required to run any of it in production, and the runtime needs no telemetry or license callback to operate.
+
+ObjectOS is the optional commercial layer on the same definitions — in-app AI building, SSO, managed deployment, support. Choosing it decides who operates the thing, not what the runtime is allowed to do. Self-hosting does not put you on a crippled community edition; it is the same runtime, operated by you.
+
+## Prerequisites
+
+- **Node 22 or newer.** The CLI declares `>=22.0.0` and will not run on older.
+- **A database you operate.** Postgres is the standard choice. MySQL, MongoDB, SQLite, and Turso are supported with real caveats — MongoDB is single-tenant only, and MySQL cannot enforce two of the integrity guarantees the other engines do. Check [Drivers](https://objectstack.ai/docs/data-modeling/drivers) before choosing anything else.
+- **Somewhere to put files**, if your app takes uploads. The default local driver writes into the runtime's home directory, which is wrong for containers.
+- **A secret manager.** You are about to generate two keys you must not lose.
+
+## Step 1 — Scaffold and compile
+
+```bash
+npm create objectstack@latest my-app && cd my-app
+npx os build
+```
+
+The scaffolder writes `objectstack.config.ts`, a starter object, an `AGENTS.md` so your coding agent starts with the protocol's rules loaded, plus a `Dockerfile` and a `docker-compose.yml`. `os build` (an alias of `os compile`) validates the metadata and emits the artifact:
+
+```
+✓ Build complete (76ms)
+  Data: 1 Objects  2 Fields
+  Runtime: 3 plugins
+  Artifact: dist/objectstack.json (2.2 KB)
+```
+
+If validation fails, it fails here — before any server exists. That is the point of a compile step: the gate rejects metadata that would break at runtime, and in the agent-authored workflow the agent fixes it before you see a diff.
+
+## Step 2 — Install the database driver
+
+This is the step that catches people, so it gets its own heading.
+
+The SQL driver treats `pg`, `mysql2`, and `tedious` as **optional peer dependencies**. npm does not install optional peers, so a fresh project has SQLite and MongoDB support but *no* Postgres driver. Point it at Postgres anyway and the boot stops dead:
+
+```
+✗ datasource 'default': connect failed — Knex: run
+$ npm install pg --save
+Cannot find module 'pg'
+```
+
+The failure is loud and names its own fix — the runtime refuses to start rather than quietly falling back to a SQLite file, which is the correct behaviour and worth appreciating the day it saves you. Install the driver:
+
+```bash
+pnpm add pg     # or: npm install pg
+```
+
+The same applies to `mysql2` for MySQL and `@objectstack/driver-turso` for Turso. If you are building a container image, make sure the driver lands in the **runtime** layer, not just the build layer — the official image ships the CLI and nothing else, so an image that copies in only the artifact has no driver either.
+
+## Step 3 — Pin the four values that matter
+
+Everything else has a workable default. These do not:
+
+| Variable | What happens without it |
+|:---|:---|
+| `OS_DATABASE_URL` | Data silently lands in a SQLite file in the runtime's home directory — fine on one box, wrong in a container that will be replaced. |
+| `OS_AUTH_SECRET` | The auth routes are **silently skipped** and the server runs unauthenticated. |
+| `OS_SECRET_KEY` | On ephemeral filesystems the auto-minted key is lost on restart, and everything previously encrypted with it becomes undecryptable. |
+| `OS_PORT` | `os start` fails loudly on a busy port — it never shifts like the dev server. Keep it in sync with your proxy upstream. |
+
+Generate the secrets once and put them in your secret manager the same day:
+
+```bash
+OS_AUTH_SECRET=$(openssl rand -hex 32)
+OS_SECRET_KEY=$(openssl rand -hex 32)
+```
+
+Read that `OS_AUTH_SECRET` row again. A missing session secret does not crash the server — it removes authentication and keeps serving. That is the most dangerous misconfiguration on this page, and why the verification below checks it directly instead of trusting a healthy-looking boot.
+
+## Step 4 — Start it
+
+```bash
+OS_DATABASE_URL="postgres://user:pass@db-host:5432/myapp" \
+OS_AUTH_SECRET=... OS_SECRET_KEY=... OS_PORT=8080 \
+OS_ARTIFACT_PATH="$PWD/dist/objectstack.json" \
+npx os start
+```
+
+A healthy boot announces what it resolved, which is the first thing to read:
+
+```
+✓ Server is ready
+  ➜  API:       http://localhost:8080/
+  ➜  Console:   http://localhost:8080/_console/
+  ➜  MCP:       http://localhost:8080/api/v1/mcp
+  Mode:    production
+  Driver:  SqlDriver(pg)  → postgres://127.0.0.1:5432/myapp
+  Tenancy: single
+  Plugins: 33 loaded
+```
+
+`Driver:` is the line to check. If it says SQLite when you meant Postgres, your `OS_DATABASE_URL` did not take effect, and you will not find out any other way until the box is replaced.
+
+The artifact also boots on its own. I copied `objectstack.json` into an empty directory with no project source and no `node_modules`, ran the CLI there, and it reported `No objectstack.config.ts found — booting from artifact (default host)` and came up normally. The artifact really is the app.
+
+### Containers, the standard path
+
+The project ships an official multi-arch image, `ghcr.io/objectstack-ai/objectstack`, whose tag always equals the `@objectstack/cli` version inside it. The scaffolded `Dockerfile` builds the artifact in one stage and copies it onto that image; the scaffolded `docker-compose.yml` brings up the app plus a Postgres with a healthcheck. Pin the exact `X.Y.Z` tag in production, not `latest`.
+
+**I could not run the container path while writing this** — the machine I verified on had no Docker daemon, so the compose stack and the image boot are the only steps here I did not execute. Everything above them was run end to end. Follow [Self-Hosted Deployment](https://objectstack.ai/docs/deployment/self-hosting) for container, Kubernetes, and reverse-proxy specifics, and apply the Step 2 driver note to your image build.
+
+## How to verify the install is correct
+
+A boot that prints no errors is not a verified install. Five checks, each failing differently:
+
+**1. The process is alive.**
+
+```bash
+curl -fsS http://localhost:8080/api/v1/health
+{"success":true,"data":{"status":"ok","version":"17.2.0","uptime":42.2}}
+```
+
+**2. It is ready for traffic.** Use this one, not `/health`, as the readiness probe in an orchestrator — liveness and readiness are different questions.
+
+```bash
+curl -fsS http://localhost:8080/api/v1/ready
+{"success":true,"data":{"status":"ready","state":"running"}}
+```
+
+**3. The schema actually landed in *your* database.** This is what catches a driver silently resolving to SQLite:
+
+```sql
+SELECT count(*) FROM information_schema.tables WHERE table_schema='public';
+-- 68
+```
+
+**4. Authentication is switched on.** The check that catches a missing `OS_AUTH_SECRET`. An unauthenticated data request must be refused:
+
+```bash
+curl -s http://localhost:8080/api/v1/data/note
+{"error":"UNAUTHENTICATED","message":"Authentication is required to access this endpoint."}
+```
+
+A `200` with records here means your server is open to the internet. Treat it as an incident, not a configuration preference.
+
+**5. Claim the admin account before anyone else does.** A fresh production database has no users, and **the first account to register becomes the bootstrap admin**. Open the root URL and sign up immediately after the first deploy, before the URL is shared. The production server seeds no default credentials — the demo account you may know from `os dev` exists only on empty development databases.
+
+## What you just took on
+
+Self-hosting does not buy convenience. Here is the honest bill.
+
+**Two upgrade clocks, and only one of them is yours.** This is the piece teams model wrong, so name it. The *platform runtime* moves on the project's cadence: you move the image tag and restart. Your *metadata app* moves on yours: edit source, rebuild. They are independent — a platform move does not rewrite your app, and republishing your app does not move the runtime. But one hard limit couples them: **the metadata conversion window is one major wide.** The runtime reads metadata authored against the previous major and converts it on load; fall *two* majors behind and that stops working. The failure mode this creates is a deployment nobody touches for a year — a calendar problem, not a technical one.
+
+**Backups are a two-part unit, and half of it is not in the database.** Every stored secret is encrypted under `OS_SECRET_KEY`, so a perfect `pg_dump` restored without the original key leaves those values permanently undecryptable. Escrow the key the day you generate it and treat key-plus-database as one backup artifact. Your authored metadata needs no runtime backup — it is in Git, rebuildable with `os build` — so the real surface is the database, the uploaded files, and the secrets. Then rehearse the restore, because an untested backup is a belief.
+
+**On-call is now a name on a rota.** Nobody else is watching the box: TLS and reverse proxy, availability and capacity, security baselines and CVE response, and the observability wiring. Be specific about that last one, because the project is — the runtime deliberately does **not** bundle an OpenTelemetry SDK, does **not** expose a Prometheus `/metrics` endpoint, and does **not** ship an audit-log immutability layer. It gives you the hooks and the recipe; the endpoint, the TLS conventions, and the append-only storage are yours to wire. If `sys_audit_log` will be evidence in a compliance conversation, its durability is your design problem.
+
+None of this is unusual for infrastructure you own. It is only surprising if you arrived expecting a managed platform with the price removed.
+
+## When not to do this
+
+- **You have no database on-call.** The runtime is one process and genuinely easy to run. Postgres in production is the real commitment, and it is the one that pages at 3am.
+- **Your requirement was data residency, not operations.** Residency and isolation are also reachable through a vendor operating the runtime inside your infrastructure. Self-hosting is the maximal answer to that question, not the only one.
+- **You are still evaluating.** Do that on SQLite or a managed Postgres, where a wrong turn costs nothing.
+
+Self-hosting is the right default when the runtime will hold real business operations, when the network is isolated, or when exit cost is explicitly part of the decision. It is overhead when none of those are true yet.
+
+## Start it the way you will run it
+
+The fastest way to get this right is not to type any of it yourself. Point your coding agent at the ObjectStack skills bundle the scaffolder installed and describe the app; the agent writes the metadata, the validation gate rejects what would fail at runtime, and you review a diff instead of a codebase. Then connect that same agent to the running deployment over MCP at `/api/v1/mcp`, where it operates the app under the same permissions, RLS, and audit as any human user — the property that makes an AI-operable deployment safe to self-host at all.
+
+The definition stays in your repository. The runtime stays on your infrastructure. The bill is upgrades, backups, and a pager — and now you know it before you sign for it.
