@@ -61,7 +61,7 @@ ObjectOS is the optional commercial layer on the same definitions — in-app AI 
 ## Prerequisites
 
 - **Node 22 or newer.** The CLI declares `>=22.0.0` and will not run on older.
-- **A database you operate.** Postgres is the standard choice. MySQL, MongoDB, SQLite, and Turso are supported with real caveats — MongoDB is single-tenant only, and MySQL cannot enforce two of the integrity guarantees the other engines do. Check [Drivers](https://objectstack.ai/docs/data-modeling/drivers) before choosing anything else.
+- **A database you operate.** Postgres is the standard choice. MySQL, MongoDB, SQLite, and Turso are supported with real caveats — MongoDB refuses to boot in a multi-tenant deployment at all, and MySQL cannot enforce two integrity guarantees the other engines do — it has no conflict target on upsert, and a unique index on a long text column is bounded by key length. Check [Data Sources](https://docs.objectos.ai/docs/configure/data-sources) before choosing anything else.
 - **Somewhere to put files**, if your app takes uploads. The default local driver writes into the runtime's home directory, which is wrong for containers.
 - **A secret manager.** You are about to generate two keys you must not lose.
 
@@ -75,9 +75,14 @@ npx os build
 The scaffolder writes `objectstack.config.ts`, a starter object, an `AGENTS.md` so your coding agent starts with the protocol's rules loaded, plus a `Dockerfile` and a `docker-compose.yml`. `os build` (an alias of `os compile`) validates the metadata and emits the artifact:
 
 ```
-✓ Build complete (76ms)
+✓ Build complete (173ms)
+
   Data: 1 Objects  2 Fields
+  UI: 0 Apps
+  Logic: 0 Flows
+  Security: 0 Positions  0 Permissions
   Runtime: 3 plugins
+
   Artifact: dist/objectstack.json (2.2 KB)
 ```
 
@@ -105,23 +110,25 @@ The same applies to `mysql2` for MySQL and `@objectstack/driver-turso` for Turso
 
 ## Step 3 — Pin the four values that matter
 
-Everything else has a workable default. These do not:
+`os start` is built to boot with none of these set, and that is exactly why they are easy to miss. Each one has a default that is reasonable on one developer box and wrong on a server that will be replaced:
 
 | Variable | What happens without it |
 |:---|:---|
 | `OS_DATABASE_URL` | Data silently lands in a SQLite file in the runtime's home directory — fine on one box, wrong in a container that will be replaced. |
-| `OS_AUTH_SECRET` | The auth routes are **silently skipped** and the server runs unauthenticated. |
-| `OS_SECRET_KEY` | On ephemeral filesystems the auto-minted key is lost on restart, and everything previously encrypted with it becomes undecryptable. |
+| `OS_AUTH_SECRET` | `os start` mints one and persists it to `<home>/auth-secret` (mode `0600`). Authentication still works — but on an ephemeral filesystem the next boot mints a *different* one and every existing session is invalidated. Run two replicas and each mints its own, so a session issued by one is rejected by the other. |
+| `OS_SECRET_KEY` | Same shape, worse ending: auto-minted and persisted, so on an ephemeral filesystem the key is lost on restart and everything previously encrypted with it becomes undecryptable. Set `OS_CLUSTER_DRIVER` and the runtime stops auto-minting and fails loudly instead — a multi-node deploy must be handed one shared key. |
 | `OS_PORT` | `os start` fails loudly on a busy port — it never shifts like the dev server. Keep it in sync with your proxy upstream. |
 
-Generate the secrets once and put them in your secret manager the same day:
+Read the two middle rows again, because they fail in the least useful way available: not at boot, and not visibly. A server started with neither secret comes up clean, authenticates correctly, and passes every check in the next section. You find out weeks later — when a routine restart signs out every user at once, or when a second replica goes in and sessions start flapping between nodes, or when a restored backup turns out to hold secrets nothing can decrypt. These two variables are not there to make the first boot work. They are there to make the *second* one work.
+
+Generate them once and put them in your secret manager the same day:
 
 ```bash
 OS_AUTH_SECRET=$(openssl rand -hex 32)
 OS_SECRET_KEY=$(openssl rand -hex 32)
 ```
 
-Read that `OS_AUTH_SECRET` row again. A missing session secret does not crash the server — it removes authentication and keeps serving. That is the most dangerous misconfiguration on this page, and why the verification below checks it directly instead of trusting a healthy-looking boot.
+Those four decide whether a deployment survives its second boot. The rest of the environment contract — cluster settings, tenancy posture, observability, and the names that have been retired — is documented in [Environment Variables](https://docs.objectos.ai/docs/reference/environment-variables), which is versioned with the runtime in a way this page is not.
 
 ## Step 4 — Start it
 
@@ -147,13 +154,15 @@ A healthy boot announces what it resolved, which is the first thing to read:
 
 `Driver:` is the line to check. If it says SQLite when you meant Postgres, your `OS_DATABASE_URL` did not take effect, and you will not find out any other way until the box is replaced.
 
-The artifact also boots on its own. I copied `objectstack.json` into an empty directory with no project source and no `node_modules`, ran the CLI there, and it reported `No objectstack.config.ts found — booting from artifact (default host)` and came up normally. The artifact really is the app.
+The artifact also boots on its own, which is the claim worth testing yourself. Copy `objectstack.json` into an empty directory with no project source and no `node_modules`, point the CLI at it, and the runtime announces `No objectstack.config.ts found — booting from artifact (default host)...` and proceeds to serve it. The artifact really is the app.
+
+Two details that will cost you a few minutes if nobody says them. `npx os start` only resolves inside a project that already has the CLI in `node_modules`; from a bare directory you need the package name, `npx @objectstack/cli@<version> start`, or a global install. And a CLI installed that way is a *fresh* install — so it has no `pg` either, and the boot ends in exactly the Step 2 error. The driver has to be resolvable from wherever the runtime actually runs, which is the same rule as the container layer, wearing different clothes.
 
 ### Containers, the standard path
 
 The project ships an official multi-arch image, `ghcr.io/objectstack-ai/objectstack`, whose tag always equals the `@objectstack/cli` version inside it. The scaffolded `Dockerfile` builds the artifact in one stage and copies it onto that image; the scaffolded `docker-compose.yml` brings up the app plus a Postgres with a healthcheck. Pin the exact `X.Y.Z` tag in production, not `latest`.
 
-**I could not run the container path while writing this** — the machine I verified on had no Docker daemon, so the compose stack and the image boot are the only steps here I did not execute. Everything above them was run end to end. Follow [Self-Hosted Deployment](https://objectstack.ai/docs/deployment/self-hosting) for container, Kubernetes, and reverse-proxy specifics, and apply the Step 2 driver note to your image build.
+**The container path is the one part of this article I did not execute** — the machine I verified on had no Docker daemon. Everything above it was run end to end. What I did do is read the image's own build definition, which is public and in the framework repository: it installs `@objectstack/cli` globally and nothing else, runs as a non-root `node` user, presets `OS_ARTIFACT_PATH=/srv/app/objectstack.json` and `OS_PORT=8080`, sets `NODE_ENV=production`, and declares a `HEALTHCHECK` against `/api/v1/health`. That is where the Step 2 warning comes from and why it is not a guess: a globally installed CLI has no `pg`, so an image that copies in only your artifact will fail to connect exactly as it did above. Follow the [deployment guides](https://docs.objectos.ai/docs/deploy) for Docker, Kubernetes, and air-gapped specifics.
 
 ## How to verify the install is correct
 
@@ -163,7 +172,7 @@ A boot that prints no errors is not a verified install. Five checks, each failin
 
 ```bash
 curl -fsS http://localhost:8080/api/v1/health
-{"success":true,"data":{"status":"ok","version":"17.2.0","uptime":42.2}}
+{"success":true,"data":{"status":"ok","timestamp":"2026-09-15T09:12:41.107Z","version":"17.2.0","uptime":60.93}}
 ```
 
 **2. It is ready for traffic.** Use this one, not `/health`, as the readiness probe in an orchestrator — liveness and readiness are different questions.
@@ -180,16 +189,22 @@ SELECT count(*) FROM information_schema.tables WHERE table_schema='public';
 -- 68
 ```
 
-**4. Authentication is switched on.** The check that catches a missing `OS_AUTH_SECRET`. An unauthenticated data request must be refused:
+**4. The anonymous gate is live.** An unauthenticated data request must be refused — `401`, with a machine-readable code and not merely a status:
 
 ```bash
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8080/api/v1/data/note
+401
 curl -s http://localhost:8080/api/v1/data/note
-{"error":"UNAUTHENTICATED","message":"Authentication is required to access this endpoint."}
+{"error":"UNAUTHENTICATED","code":"UNAUTHENTICATED","message":"Authentication is required to access this endpoint."}
 ```
 
 A `200` with records here means your server is open to the internet. Treat it as an incident, not a configuration preference.
 
-**5. Claim the admin account before anyone else does.** A fresh production database has no users, and **the first account to register becomes the bootstrap admin**. Open the root URL and sign up immediately after the first deploy, before the URL is shared. The production server seeds no default credentials — the demo account you may know from `os dev` exists only on empty development databases.
+Be clear about what this check does *not* prove: it passes whether or not you set `OS_AUTH_SECRET`, because the runtime mints one either way. It verifies the gate, not the key. And if you script it, assert the `code` field — `/data` and `/meta` answer with this flat shape, while dispatcher-served routes wrap the same denial as `{"success":false,"error":{"code":…}}`. Read the envelope the endpoint you called actually declares; a tolerant reader that accepts either is exactly where a future envelope regression would hide.
+
+**5. Claim the admin account before anyone else does.** A fresh production database has no users, and on a single-tenant deployment — the default, and what the banner's `Tenancy: single` line confirms — **the first account to register is promoted to platform admin**. Open the root URL and sign up immediately after the first deploy, before the URL is shared. The production server seeds no default credentials; the demo account you may know from `os dev` exists only on empty development databases.
+
+If you are deploying a walled multi-tenant posture instead, that path is deliberately gone: you must name the owner in `OS_PLATFORM_OWNER_EMAIL`, and the runtime refuses to start without it — precisely so that whoever reaches the sign-up endpoint first cannot collect cross-tenant admin.
 
 ## What you just took on
 
@@ -199,7 +214,9 @@ Self-hosting does not buy convenience. Here is the honest bill.
 
 **Backups are a two-part unit, and half of it is not in the database.** Every stored secret is encrypted under `OS_SECRET_KEY`, so a perfect `pg_dump` restored without the original key leaves those values permanently undecryptable. Escrow the key the day you generate it and treat key-plus-database as one backup artifact. Your authored metadata needs no runtime backup — it is in Git, rebuildable with `os build` — so the real surface is the database, the uploaded files, and the secrets. Then rehearse the restore, because an untested backup is a belief.
 
-**On-call is now a name on a rota.** Nobody else is watching the box: TLS and reverse proxy, availability and capacity, security baselines and CVE response, and the observability wiring. Be specific about that last one, because the project is — the runtime deliberately does **not** bundle an OpenTelemetry SDK, does **not** expose a Prometheus `/metrics` endpoint, and does **not** ship an audit-log immutability layer. It gives you the hooks and the recipe; the endpoint, the TLS conventions, and the append-only storage are yours to wire. If `sys_audit_log` will be evidence in a compliance conversation, its durability is your design problem.
+**On-call is now a name on a rota.** Nobody else is watching the box: TLS and reverse proxy, availability and capacity, security baselines and CVE response, and the observability wiring. Be precise about that last one, because the shape surprises people in both directions. Telemetry export is **built in but off**: the exporter defaults to `noop`, and setting `OS_OBS_EXPORTER=otlp` with an `OS_OTLP_ENDPOINT` pushes OTLP/HTTP straight to your collector — no SDK to install, and in fact no `@opentelemetry` package anywhere in the dependency tree. What does *not* exist is a Prometheus `/metrics` endpoint to scrape. The model is push, not pull, so if your monitoring expects to scrape a target, that adapter is the piece you write.
+
+**Audit is half-done for you, and the remaining half is the half that matters legally.** `sys_audit_log` is declared append-only, so the platform refuses edits and deletes through the API and no permission grant re-opens them. What that cannot do is defend the rows against anything holding the database credential — a direct `UPDATE` is still a direct `UPDATE`. If that log is going to be evidence in a compliance conversation, then WORM storage, off-box shipping, or cryptographic chaining is your design problem, not the runtime's. Knowing which half you were given is the difference between an audit trail and a belief about one.
 
 None of this is unusual for infrastructure you own. It is only surprising if you arrived expecting a managed platform with the price removed.
 
