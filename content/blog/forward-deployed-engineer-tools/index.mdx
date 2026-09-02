@@ -1,8 +1,9 @@
 ---
 title: "What Tools Do Forward-Deployed Engineers Use? An Ontology-First Open Stack"
-description: "Five pains define forward-deployed work: plumbing eats week one, demos die in security review, requirements outrun code, patterns never compound, and the handover poisons trust. An ontology-first open stack removes each one."
+description: "What forward deployed engineers actually build across a 60–180 day deployment, the five pains that define the work, and why the 2026 copycat wave copied the role but not the substrate underneath it."
 author: ObjectStack Team
 date: 2026-07-23
+updated: 2026-09-02T10:00:00+08:00
 status: published
 topic: ai-agents
 audience: developer
@@ -16,11 +17,29 @@ tags:
   - Palantir
 ---
 
-**The short version:** forward-deployed engineering is the fastest-growing role in enterprise AI — hiring up roughly 1,000% year over year, OpenAI committing $4B to a dedicated deployment company. The playbook that works is Palantir's **ontology-first** method. But ask a working FDE about their actual week and you hear five recurring pains: plumbing eats the engagement, demos die in security review, requirements change faster than code, patterns never compound across clients, and the handover poisons the relationship. This article goes through all five, concretely, and shows how an open, ontology-first stack removes each one — ending with the question we think defines the next wave of this role: **the ontology handover**. Does the client's ontology leave the engagement as typed, open files in *their* repo, or as renewal leverage in someone else's platform?
+**The short version:** forward-deployed engineering is the fastest-growing role in enterprise AI — job postings up 1,165% year over year by Live Data Technologies' count, relayed by the recruiting marketplace Paraform — and in 2026 OpenAI, Anthropic, AWS and Microsoft each stood up a forward-deployed organisation of their own. The playbook all of them are copying is Palantir's **ontology-first** method. This article is about the two things the recruiting content never covers: **what an FDE actually builds** across a 60–180 day deployment, and why the copycat wave copied the role but not the substrate underneath it. In between are the five recurring pains of doing this work on a hand-built stack — plumbing eats the engagement, demos die in security review, requirements change faster than code, patterns never compound across clients, the handover poisons the relationship — and how an open, ontology-first stack removes each one. It ends on the question we think defines the next wave of this role: **the ontology handover**. Does the client's ontology leave the engagement as typed, open files in *their* repo, or as renewal leverage in someone else's platform?
 
 ## The job nobody describes honestly
 
-The job postings talk about "0→1 ambiguity" and $300K–$550K comp bands ([Perspective AI](https://getperspective.ai/blog/2026-fde-hiring-trends-what-1000-job-posts-reveal), [TechTarget](https://www.techtarget.com/searchenterpriseai/feature/The-rise-of-the-AI-forward-deployed-engineer)). Several of those postings are pre-sales roles that were renamed in 2026 because the new title recruits better, so it is worth knowing [what separates an FDE from a solutions engineer, a solutions architect and a consultant](/en/blog/forward-deployed-engineer-vs-solutions-architect/) before reading five pains into a job you would not actually be doing. The actual job is making AI work inside someone else's walls: their data, their permissions, their compliance office, their definition of "good enough." Palantir codified the method years ago — their AI FDEs **front-load a customer-specific ontology before shipping any LLM application** and spend 30–40% of the week on discovery ([Palantir's AI FDE guidance](https://www.palantir.com/docs/foundry/ai-fde/overview)). The method is right. The tooling underneath it is where the week actually goes. Five pains, one by one.
+The job postings talk about "0→1 ambiguity" and $300K–$550K comp bands ([Perspective AI](https://getperspective.ai/blog/2026-fde-hiring-trends-what-1000-job-posts-reveal), [TechTarget](https://www.techtarget.com/searchenterpriseai/feature/The-rise-of-the-AI-forward-deployed-engineer)). Several of those postings are pre-sales roles that were renamed in 2026 because the new title recruits better, so it is worth knowing [what separates an FDE from a solutions engineer, a solutions architect and a consultant](/en/blog/forward-deployed-engineer-vs-solutions-architect/) before reading five pains into a job you would not actually be doing. The actual job is making AI work inside someone else's walls: their data, their permissions, their compliance office, their definition of "good enough." Palantir codified the method years ago — their AI FDEs **front-load a customer-specific ontology before shipping any LLM application** and spend 30–40% of the week on discovery ([Palantir's AI FDE guidance](https://www.palantir.com/docs/foundry/ai-fde/overview)). The method is right. The tooling underneath it is where the week actually goes.
+
+## What a forward deployed engineer actually builds
+
+A deployment runs roughly **60–180 days** and produces four artifacts before the handover, in a fixed order, because each one is the input to the next. This is the part the job postings never describe:
+
+| Deployment day | What actually gets written | Done when |
+|---|---|---|
+| **0–15 · Ingestion adapters** | One adapter per source system — their ERP, their ticketing tool, the spreadsheet that is secretly the source of truth. Read paths first: connect, don't migrate. | A business object on screen shows a real row that came out of their system this morning. |
+| **15–45 · Entity resolution** | The unglamorous half nobody demos. "Customer" is four different keys in four systems: you write the match rules, the survivorship rules, and the identifier the ontology treats as canonical. | Two records that are the same company merge — and their ops lead agrees they should have. |
+| **30–60 · Permission mapping** | Their org chart translated into roles, permission sets, row-level sharing and field-level rules, including the fields only three people may ever see. | Security review is a file read instead of a meeting: a reviewer can point at who can see what. |
+| **45–90 · The first workflows** | Two or three processes end to end — an approval chain, a triage queue, a renewal — with the actions, views and notifications around them. | Someone who does not work for you finishes a real day's work in the app. |
+| **90–180 · Handover** | Seed data, acceptance fixtures, translated labels, the packaged app, and a review checklist their team can actually run. | Their own engineers ship a change without calling you. |
+
+Note what the first four rows have in common: none of them is application code in the usual sense. They are *definitions* — of what exists, of what counts as the same thing, of who may do what, of how work moves. On a hand-built stack each one is nevertheless expressed as code, which is exactly why the pains below bite.
+
+**Deployment number two is where the model pays or fails.** Nothing in that table is as client-specific as it feels while you are doing it. Entity resolution for "customer" is structurally the same problem at the next client with different keys; an approval chain is the same shape with different thresholds and a different approver role. So the second engagement has one number worth measuring — call it the **rename ratio**: the share of deployment two that is a *rename* of typed definitions you already own, versus a rewrite. In a hand-built codebase the rename ratio is close to zero and nobody notices, because deployment two still ships; it just costs what deployment one cost. In typed metadata it is countable, because the surface is finite: a HotCRM-shaped engagement is 15 objects, 17 flows, 10 actions, 6 permission profiles and 5 sharing rules. You can literally list what the next client inherits.
+
+That is the job. The rest of this article is the five recurring pains that make each row of that table harder than it should be — and what removes them.
 
 ## Pain 1 — Week one is always plumbing
 
@@ -119,6 +138,31 @@ export const ServiceCopilot = defineAgent({
 
 HotCRM is the full demonstration of this vocabulary in use: 15 objects, 17 flows, 10 actions, 4 dashboards, 2 AI copilots, 6 skills, 6 permission profiles, 5 sharing rules, and 4 languages — every layer present, under **150k tokens** in total: business logic under 100k, with roughly 50k more for UI. The whole thing fits in a single agent context window.
 
+## The 2026 copycat wave copied the role, not the substrate
+
+Within a single year the industry decided this is how enterprise AI gets delivered. Each of these is a dated commitment from the company that made it, which is what makes it worth quoting at all:
+
+| 2026 | The commitment | Announced by |
+|---|---|---|
+| **May** | OpenAI launched a majority-owned deployment company with over **$4B** committed, acquiring the consultancy Tomoro and roughly 150 forward-deployed engineers with it | [OpenAI](https://openai.com/index/openai-launches-the-deployment-company/) |
+| **11 June** | Anthropic and DXC announced a multi-year alliance to train **tens of thousands** of Claude-certified forward-deployed engineers, working inside the systems DXC already runs for banks, airlines and insurers | [Anthropic](https://www.anthropic.com/news/dxc-anthropic-alliance) |
+| **30 June** | AWS committed **$1B** to a forward-deployed engineering unit, embedding pods of five or six engineers at a time inside customers | [CNBC](https://www.cnbc.com/2026/06/30/aws-amazon-ai-forward-deployed-engineers.html) |
+| **2 July** | Microsoft stood up Frontier — **$2.5B and 6,000 employees** — to do the same work | [CNBC](https://www.cnbc.com/2026/07/02/microsoft-commits-2point5-billion-6000-employees-ai-implementation-unit.html) |
+
+Two other numbers circulate with this wave and deserve their provenance stated rather than repeated. The **+1,165% year-over-year growth in FDE job postings** is Live Data Technologies' count, relayed by [Paraform](https://www.paraform.com/blog/forward-deployed-engineer-demand-quadrupled) — a recruiting marketplace whose business is FDE hiring — and it counts postings, not filled roles. **Salesforce's "team of 1,000 FDEs"** comes from [Salesforce's own blog](https://www.salesforce.com/blog/forward-deployed-engineer/): a statement of intent, not a headcount disclosure. Both are directionally real and neither is audited.
+
+Now the part that matters for anyone doing the work. Every commitment in that table is denominated in **engineers and dollars**. Not one of them is denominated in the thing that decides whether deployment two costs less than deployment one: *what the engineer's output gets written into.* Palantir's method works because the FDE writes into a customer-specific ontology and the application is derived from it — the substrate is the product, and the engineers are how it reaches a customer. Hire the identical person into an organisation with no substrate and the work still looks the same from outside for about a year.
+
+So the useful question to ask any forward-deployed organisation — the one you are joining, buying from, or building — is not how many engineers it has. It is three questions about the substrate:
+
+1. **When the engineer rolls off, which file did the work land in?** A ticket, a notebook and a bespoke service are not an answer; a typed definition in the customer's repository is.
+2. **Can the customer read it without you?** If the definition is only legible inside a vendor console, the customer is renting their own ontology back, and the better your work the deeper that goes.
+3. **What did deployment two inherit from deployment one?** Ask for the list. If nobody can produce one, the rename ratio is zero.
+
+This article's answer to all three is the same, and it is why the ontology-first framing runs through everything above: the artifact is an **open business ontology** — typed objects, flows and permissions in the client's own repository under Apache-2.0 — which the client can read, keep, and hand to their own coding agents. Copying the role is a hiring plan and takes a quarter. Copying the substrate means making it open enough that a customer would keep it, and that is a product decision almost nobody in the 2026 wave has made.
+
+*The business-side version of this argument — revenue per employee, blended gross margin, and how a product company drifts into consultancy economics without ever deciding to — is the companion piece: [why copying Palantir builds a consultancy](/en/blog/forward-deployed-engineer-trap/).*
+
 ## What this stack does not fix
 
 Steelmanning the alternatives: **Foundry-scale data federation and analytics pipelines** are Palantir's home turf — if the engagement is about fusing petabytes across forty legacy systems, that's a different tool class. **Organizational change management** — getting people to actually use the thing — no stack fixes. And a client already standardized on a closed platform may rationally stay. The claim is narrower: for the application layer of forward-deployed work — modeling a business and shipping governed apps on it — the five pains above are now removable, and the ontology can be handed over instead of held hostage.
@@ -130,6 +174,7 @@ Steelmanning the alternatives: **Foundry-scale data federation and analytics pip
 3. Default permissions conservative; make every authority change explicit in the diff.
 4. Hand over the repo, the compiled artifact, and a review checklist — not a login to your tenant.
 5. Leave MCP enabled so the client's own AI operates the app under their permissions.
+6. At deployment two, count the rename ratio. If nothing carried over, the problem is the substrate, not the engagement.
 
 ## Try the loop
 
