@@ -535,12 +535,66 @@ const jsonLd = [
         border-radius: 6px;
         font-size: 0.78rem;
       }
+      /* The table itself is the scroll container here (`display: block` +
+         `overflow-x: auto`), so wide tables scroll instead of clipping and the
+         page keeps `documentElement.scrollWidth === viewport`. What that costs
+         is the affordance: a phone draws an OVERLAY scrollbar, which is
+         invisible until a gesture is already in progress, so a reader who never
+         swipes never learns the right-hand columns exist. The cut-off column at
+         the edge is indistinguishable from a clipped table. The two rules below
+         are the signal, not the scrolling. */
       .prose table {
         display: block;
         max-width: 100%;
         overflow-x: auto;
         font-size: 0.82rem;
         white-space: nowrap;
+        /* Keep a horizontal swipe that reaches the end of the table from
+           chaining into the page/browser behind it. */
+        overscroll-behavior-x: contain;
+      }
+      /* Affordance 1 — a scrollbar that is always drawn, not just mid-gesture.
+         Styling ::-webkit-scrollbar opts the container out of overlay
+         scrollbars on iOS Safari and Blink, which is the whole point.
+         ⚠️ Do NOT add `scrollbar-width`/`scrollbar-color` to `.prose table`:
+         Chrome 121+ drops ::-webkit-scrollbar customization entirely on any
+         element that sets either one, which would silently give the overlay
+         scrollbar back. A scrollbar only renders when the content overflows,
+         so short tables are unaffected. */
+      .prose table::-webkit-scrollbar {
+        height: 6px;
+      }
+      .prose table::-webkit-scrollbar-track {
+        background: color-mix(in srgb, var(--surface-sunk) 70%, transparent);
+        border-radius: 999px;
+      }
+      .prose table::-webkit-scrollbar-thumb {
+        background: color-mix(in srgb, var(--ink) 32%, transparent);
+        border-radius: 999px;
+      }
+      /* Affordance 2 — fade the trailing edge while there is more table to the
+         right. Driven by the container's own scroll position so it clears
+         exactly at the end of the scroll: a fade that is always on is a false
+         signal, and telling a reader there is more table when there is not is
+         the same defect in the other direction.
+         The fade lives ONLY in the keyframes, never in the base rule. When a
+         table is narrow enough not to overflow, its scroll timeline is inactive
+         and the effect is not applied at all (`mask-image` computes to `none`)
+         — a fade declared in the base rule would instead be stuck on for every
+         table that does not scroll. */
+      @supports (animation-timeline: scroll(self inline)) {
+        .prose table {
+          animation: prose-table-edge-fade linear both;
+          animation-timeline: scroll(self inline);
+        }
+      }
+      @keyframes prose-table-edge-fade {
+        from {
+          mask-image: linear-gradient(to right, #000 calc(100% - 34px), transparent);
+        }
+        to {
+          mask-image: linear-gradient(to right, #000 100%, transparent);
+        }
       }
     }
   </style>
