@@ -172,7 +172,8 @@ export const EscalateBreachedCases = defineFlow({
     checklistTitle: '自动化评审应确认',
     checklist: [
       '每条流程都有明确的负责人和一句读得懂的用途。',
-      '等待状态配有超时与升级路径。',
+      '审批步骤声明 SLA——升级给谁、超时后如何处理。',
+      '定时等待要配上巡检任务或审批网关；等待节点本身不会在到点时自动唤醒。',
       '对外调用走 Webhook outbox，而不是临时 fetch。',
       '失败路径画在流程里，而不是心照不宣。',
       '流程变更以 diff 形式到达，带审批轨迹。',
