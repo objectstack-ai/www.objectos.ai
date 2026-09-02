@@ -6,11 +6,15 @@
 
 import { readdir, readFile, access } from 'node:fs/promises';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { cwd, argv, exit } from 'node:process';
 import yaml from 'js-yaml';
 
 const ROOT = cwd();
 const BLOG = path.join(ROOT, 'content', 'blog');
+const GLOSSARY = path.join(ROOT, 'content', 'glossary');
+const PAGES = path.join(ROOT, 'content', 'pages');
+const CLUSTERS_MODULE = path.join(ROOT, 'src', 'lib', 'clusters.ts');
 const args = new Set(argv.slice(2));
 const onlyPublished = args.has('--published');
 const today = new Date();
@@ -106,6 +110,281 @@ function addIssue(issues, file, data, severity, message) {
     message,
   });
 }
+
+// ─── Internal cross-links ──────────────────────────────────────────────────
+//
+// Nothing else in the gate chain resolves an internal link target: `astro check`
+// type-checks components, and the SEO smoke test only inspects pages that were
+// built — a link to a page that never existed is invisible to both. So a typo in
+// a body link or in a glossary `relatedTerms` slug reaches production as a 404
+// (blog) or as a cross-link that silently renders as nothing (glossary).
+//
+// Both surfaces resolve against the same registries, built once below from the
+// authored trees. The rule mirrors what the site actually builds, which differs
+// per surface and is the whole reason locale severity is not uniform:
+//
+//   * blog       — `src/pages/[lang]/blog/[...slug].astro` emits paths only for
+//                  locales that have a file. No fallback: a link to a locale
+//                  with no `index.<locale>.mdx` is a hard 404, so it is an error.
+//   * glossary   — `src/glossary/registry.ts` falls back to English, so an
+//                  untranslated locale renders a real (noindexed, canonicalized)
+//                  page. Missing translation is a warning; a slug authored in no
+//                  locale at all is not built anywhere and is an error.
+//   * marketing  — `src/content-pages/registry.ts`, same fallback rule as the
+//                  glossary.
+//   * cluster    — `src/lib/clusters.ts`, built for every locale unconditionally.
+
+/** URL segments under `/<locale>/` that are pages rather than content slugs. */
+const STATIC_ROUTES = new Set([
+  'blog',
+  'glossary',
+  'pricing',
+  'privacy',
+  'refunds',
+  'rss.xml',
+  'security',
+  'terms',
+]);
+
+/** Locale-less routes: `src/pages/*` plus whatever `public/` copies verbatim. */
+const ROOT_ROUTES = new Set(['llms.txt', 'rss.xml']);
+
+/** `content/blog/<slug>/index.mdx` + `index.<locale>.mdx` -> slug -> locales. */
+async function readBlogRegistry() {
+  const bySlug = new Map();
+  for (const entry of await readdir(BLOG, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const locales = new Set();
+    for (const file of await readdir(path.join(BLOG, entry.name))) {
+      const match = file.match(/^index(?:\.([A-Za-z-]+))?\.mdx$/);
+      if (match) locales.add(match[1] ?? 'en');
+    }
+    if (locales.size > 0) bySlug.set(entry.name, locales);
+  }
+  return bySlug;
+}
+
+/** `content/<tree>/<locale>/<slug>.ts` -> slug -> locales. */
+async function readLocaleTree(dir) {
+  const bySlug = new Map();
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    for (const file of await readdir(path.join(dir, entry.name))) {
+      if (!file.endsWith('.ts')) continue;
+      const slug = file.slice(0, -3);
+      const locales = bySlug.get(slug) ?? new Set();
+      locales.add(entry.name);
+      bySlug.set(slug, locales);
+    }
+  }
+  return bySlug;
+}
+
+async function readClusterSlugs() {
+  try {
+    const module = await import(pathToFileURL(CLUSTERS_MODULE).href);
+    return new Set(module.CLUSTERS.map((cluster) => cluster.slug));
+  } catch (error) {
+    console.error(
+      `✗ content lint could not read cluster slugs from src/lib/clusters.ts, so ` +
+        `/<locale>/<cluster>/ links cannot be resolved.\n` +
+        `  This script imports that module directly, which needs Node type ` +
+        `stripping (Node 22.18+) and type-only imports in the module.\n` +
+        `  ${error.message}`
+    );
+    exit(1);
+  }
+}
+
+/**
+ * Locale segments the site routes. Derived from the authored trees rather than
+ * hard-coded, so adding a locale needs no edit here: a locale is routable
+ * exactly when it has content. zh-Hant is the one derived locale — the glossary
+ * and marketing registries generate it from zh-Hans (s2t) instead of files.
+ */
+function routableLocales(...registries) {
+  const locales = new Set();
+  for (const registry of registries) {
+    for (const set of registry.values()) for (const locale of set) locales.add(locale);
+  }
+  if (locales.has('zh-Hans')) locales.add('zh-Hant');
+  return locales;
+}
+
+/** Does a locale-fallback registry (glossary, marketing) serve this locale? */
+function fallbackLocaleState(locales, locale) {
+  const derived = locale === 'zh-Hant' && locales.has('zh-Hans');
+  if (locales.has(locale) || derived) return 'authored';
+  return locales.has('en') ? 'fallback' : 'unbuilt';
+}
+
+const blogLocaleFile = (locale) => (locale === 'en' ? 'index.mdx' : `index.${locale}.mdx`);
+
+/**
+ * Code samples are not links. Strip fenced blocks and inline spans before
+ * scanning so a documented URL in a snippet is never resolved.
+ */
+function stripCode(body) {
+  return body.replace(/^ {0,3}(`{3,}|~{3,})[\s\S]*?^ {0,3}\1/gm, '').replace(/`[^`\n]*`/g, '');
+}
+
+/** Absolute internal links in a body: `[text](/en/blog/x/)` and `href="/en/..."`. */
+function internalLinks(body) {
+  const links = [];
+  const source = stripCode(body);
+  const markdown = /(?<!!)\[([^\]]*)]\((\/[^)\s]*)(?:\s+"[^"]*")?\)/g;
+  for (const match of source.matchAll(markdown)) {
+    links.push({ text: match[1], href: match[2] });
+  }
+  const attribute = /\bhref=["'](\/[^"'\s]*)["']/g;
+  for (const match of source.matchAll(attribute)) {
+    links.push({ text: match[1], href: match[1] });
+  }
+  return links;
+}
+
+/** Files `public/` serves at the site root, e.g. `/images/hero.png`. */
+async function readPublicAssets(dir, prefix = '') {
+  const assets = new Set();
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const name = `${prefix}${entry.name}`;
+    if (entry.isDirectory()) {
+      for (const nested of await readPublicAssets(path.join(dir, entry.name), `${name}/`)) {
+        assets.add(nested);
+      }
+    } else if (entry.isFile()) {
+      assets.add(name);
+    }
+  }
+  return assets;
+}
+
+/**
+ * Resolve one absolute internal link against the registries.
+ * Returns null when the link resolves, otherwise `{ severity, reason }`.
+ */
+function resolveInternalLink(href, registries) {
+  const clean = href.split('#')[0].split('?')[0];
+  const segments = clean.split('/').filter(Boolean);
+  if (segments.length === 0) return null; // "/" — the locale-picking root page
+  const [locale, ...rest] = segments;
+  if (!registries.locales.has(locale)) {
+    const relative = segments.join('/');
+    if (ROOT_ROUTES.has(relative) || registries.publicAssets.has(relative)) return null;
+    return {
+      severity: 'error',
+      reason:
+        `"${locale}" is not a routable locale segment; ` +
+        `expected one of ${[...registries.locales].sort().join(', ')}`,
+    };
+  }
+  if (rest.length === 0) return null; // locale home
+  if (rest.length === 1 && STATIC_ROUTES.has(rest[0])) return null;
+
+  if (rest[0] === 'blog') {
+    // Topic hubs come from `src/lib/terms.ts`, which this script cannot import
+    // (it value-imports extensionless modules that only Vite resolves), so the
+    // shape is recognized but the slug is not resolved. Tracked separately.
+    if (rest[1] === 'topics') return null;
+    if (rest.length !== 2) {
+      return { severity: 'error', reason: 'not a blog post URL (/<locale>/blog/<slug>/)' };
+    }
+    const slug = rest[1];
+    const locales = registries.blog.get(slug);
+    if (!locales) {
+      return {
+        severity: 'error',
+        reason: `no post directory content/blog/${slug}/ — create it, or fix the slug`,
+      };
+    }
+    if (!locales.has(locale)) {
+      return {
+        severity: 'error',
+        reason:
+          `content/blog/${slug}/${blogLocaleFile(locale)} does not exist, and the blog ` +
+          `route builds only the locales that have a file, so this URL 404s — ` +
+          `translate the post or link ${`/${[...locales].sort().join('|')}/blog/${slug}/`}`,
+      };
+    }
+    return null;
+  }
+
+  if (rest[0] === 'glossary') {
+    if (rest.length !== 2) {
+      return { severity: 'error', reason: 'not a glossary term URL (/<locale>/glossary/<slug>/)' };
+    }
+    const slug = rest[1];
+    const locales = registries.glossary.get(slug);
+    if (!locales) {
+      return {
+        severity: 'error',
+        reason: `no term file content/glossary/*/${slug}.ts — create it, or fix the slug`,
+      };
+    }
+    const state = fallbackLocaleState(locales, locale);
+    if (state === 'unbuilt') {
+      return {
+        severity: 'error',
+        reason:
+          `the term is authored only in ${[...locales].sort().join(', ')}, and the glossary ` +
+          `registry falls back to English only, so this URL is never built`,
+      };
+    }
+    if (state === 'fallback') {
+      return {
+        severity: 'warn',
+        reason:
+          `content/glossary/${locale}/${slug}.ts does not exist, so this URL renders the ` +
+          `noindexed English fallback`,
+      };
+    }
+    return null;
+  }
+
+  if (rest.length === 1 && registries.clusters.has(rest[0])) return null;
+
+  if (rest.length === 1) {
+    const slug = rest[0];
+    const locales = registries.pages.get(slug);
+    if (!locales) {
+      return {
+        severity: 'error',
+        reason:
+          `no marketing page content/pages/*/${slug}.ts and no cluster with that slug ` +
+          `in src/lib/clusters.ts — create one, or fix the slug`,
+      };
+    }
+    const state = fallbackLocaleState(locales, locale);
+    if (state === 'unbuilt') {
+      return {
+        severity: 'error',
+        reason:
+          `the page is authored only in ${[...locales].sort().join(', ')}, and the marketing ` +
+          `registry falls back to English only, so this URL is never built`,
+      };
+    }
+    if (state === 'fallback') {
+      return {
+        severity: 'warn',
+        reason:
+          `content/pages/${locale}/${slug}.ts does not exist, so this URL renders the ` +
+          `noindexed English fallback`,
+      };
+    }
+    return null;
+  }
+
+  return { severity: 'error', reason: 'not a route this site builds' };
+}
+
+const registries = {
+  blog: await readBlogRegistry(),
+  glossary: await readLocaleTree(GLOSSARY),
+  pages: await readLocaleTree(PAGES),
+  clusters: await readClusterSlugs(),
+  publicAssets: await readPublicAssets(path.join(ROOT, 'public')),
+};
+registries.locales = routableLocales(registries.blog, registries.glossary, registries.pages);
 
 const files = await walk(BLOG);
 const posts = [];
@@ -230,6 +509,19 @@ for (const file of files) {
     addIssue(issues, rel, data, 'error', `Cover image is duplicated in article body: ${data.cover}`);
   }
 
+  for (const link of internalLinks(body)) {
+    const miss = resolveInternalLink(link.href, registries);
+    if (miss) {
+      addIssue(
+        issues,
+        rel,
+        data,
+        miss.severity,
+        `Dangling internal link [${link.text}](${link.href}): ${miss.reason}`
+      );
+    }
+  }
+
   const seenBodyImages = new Map();
   for (const ref of bodyImageRefs(body)) {
     const count = seenBodyImages.get(ref) ?? 0;
@@ -238,6 +530,91 @@ for (const file of files) {
   for (const [ref, count] of seenBodyImages) {
     if (count > 1) {
       addIssue(issues, rel, data, 'error', `Body image is repeated ${count} times: ${ref}`);
+    }
+  }
+}
+
+// ─── Glossary cross-references ────────────────────────────────────────────
+//
+// `src/components/GlossaryTermPage.astro` maps every `relatedTerms`,
+// `pageSlugs` and `articleSlugs` entry through a registry lookup and filters
+// the misses out before render — correct at runtime (an untranslated article is
+// not a broken promise) and invisible at authoring time, so a permanently
+// misspelled slug produces a passing build and a cross-link that never appears.
+//
+// `articleSlugs` is deliberately existence-only: dropping an article that is
+// untranslated in the current locale is the intended behaviour, so the question
+// is "does this slug name a post at all", not "does it resolve in every locale".
+const terms = [];
+for (const locale of await readdir(GLOSSARY, { withFileTypes: true })) {
+  if (!locale.isDirectory()) continue;
+  for (const file of await readdir(path.join(GLOSSARY, locale.name))) {
+    if (!file.endsWith('.ts')) continue;
+    const full = path.join(GLOSSARY, locale.name, file);
+    const rel = path.relative(ROOT, full);
+    const fileSlug = file.slice(0, -3);
+    let term;
+    try {
+      term = (await import(pathToFileURL(full).href)).default;
+    } catch (error) {
+      addIssue(issues, rel, { status: 'published' }, 'error', `Cannot load term: ${error.message}`);
+      continue;
+    }
+    // The registry keys terms by `term.slug` and drops any file whose slug does
+    // not match its filename, so a mismatch removes the term from the site as
+    // silently as a dangling cross-link — and would make the slug set this
+    // check resolves against wrong.
+    if (term.slug !== fileSlug) {
+      addIssue(
+        issues,
+        rel,
+        { status: 'published' },
+        'error',
+        `Term slug "${term.slug}" does not match its filename "${fileSlug}.ts"; ` +
+          `the glossary registry drops the file, so the term is never published`
+      );
+    }
+    terms.push({ file: rel, locale: locale.name, term });
+  }
+}
+
+for (const { file, term } of terms) {
+  const crossRefs = [
+    {
+      key: 'relatedTerms',
+      values: term.relatedTerms,
+      resolves: (slug) => registries.glossary.has(slug),
+      remedy: (slug) => `add content/glossary/*/${slug}.ts, or fix the slug`,
+    },
+    {
+      key: 'articleSlugs',
+      values: term.articleSlugs,
+      resolves: (slug) => registries.blog.has(slug),
+      remedy: (slug) => `add content/blog/${slug}/, or fix the slug`,
+    },
+    {
+      key: 'pageSlugs',
+      values: term.pageSlugs,
+      resolves: (slug) => registries.pages.has(slug),
+      remedy: (slug) => `add content/pages/*/${slug}.ts, or fix the slug`,
+    },
+  ];
+  for (const { key, values, resolves, remedy } of crossRefs) {
+    if (!Array.isArray(values)) {
+      addIssue(issues, file, { status: 'published' }, 'error', `Missing required field: ${key}`);
+      continue;
+    }
+    for (const slug of values) {
+      if (!resolves(slug)) {
+        addIssue(
+          issues,
+          file,
+          { status: 'published' },
+          'error',
+          `Dangling ${key} slug "${slug}": nothing resolves it, so the cross-link is ` +
+            `dropped before render — ${remedy(slug)}`
+        );
+      }
     }
   }
 }
@@ -279,8 +656,10 @@ const blocking = issues.filter(
     (issue.status === 'published' || issue.status === 'unknown')
 );
 
+const checked = `${posts.length} file${posts.length === 1 ? '' : 's'}, ${terms.length} glossary term${terms.length === 1 ? '' : 's'}`;
+
 if (issues.length === 0) {
-  console.log(`✓ content lint passed (${posts.length} file${posts.length === 1 ? '' : 's'} checked)`);
+  console.log(`✓ content lint passed (${checked} checked)`);
   exit(0);
 }
 
@@ -300,4 +679,4 @@ if (blocking.length > 0) {
   exit(1);
 }
 
-console.log(`\n✓ content lint passed (${posts.length} files checked)`);
+console.log(`\n✓ content lint passed (${checked} checked)`);
