@@ -19,7 +19,13 @@ const term = {
     'approval chain',
     'multi-step approval',
   ],
-  relatedTerms: ['audit-trail', 'permission-model', 'governed-runtime'],
+  relatedTerms: [
+    'audit-trail',
+    'permission-model',
+    'governed-runtime',
+    'reviewable-diff',
+    'declared-vs-enforced',
+  ],
   articleSlugs: [
     'automation-pause-resume-approvals',
     'objectos-automation-engine',

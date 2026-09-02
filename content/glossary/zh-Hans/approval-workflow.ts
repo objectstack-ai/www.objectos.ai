@@ -14,7 +14,13 @@ const term = {
     '对任何审批引擎都值得追问的是：它的截止时间住在哪里？在这里，诚实的答案是范围很窄。流程里的 wait 节点完全没有超时：曾经有两个键声称有，两个都被退役了，而不是留着当一句运行时并不兑现的承诺。升级只存在于审批节点上，而且是逐节点的 SLA，不是一个全局定时服务。设置 timeoutHours，一次扫描会找出自创建起超过该小时数仍处于待决的请求并逐个升级，每个请求一生只升级一次，执行配置的 action——notify、reassign、auto_approve 或 auto_reject——escalateTo 指向一个用户或一个会展开成当前持有者的岗位，而升级的审计行先写，于是崩溃或重跑的扫描不会重复触发。由此得到的设计结论值得直说：如果某一步必须有时限，就把它建模成一个带 SLA 的审批，或者从流程外部驱动那个截止时间。一个光秃秃的 wait 会耐心地、正确地、永远等下去。',
   ],
   alsoKnownAs: ['审批流', '签核流程', '审批链', '多级审批'],
-  relatedTerms: ['audit-trail', 'permission-model', 'governed-runtime'],
+  relatedTerms: [
+    'audit-trail',
+    'permission-model',
+    'governed-runtime',
+    'reviewable-diff',
+    'declared-vs-enforced',
+  ],
   articleSlugs: [
     'automation-pause-resume-approvals',
     'objectos-automation-engine',

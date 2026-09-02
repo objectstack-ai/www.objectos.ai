@@ -14,7 +14,13 @@ const term = {
     '有一条设计规则值得借走，无论你用不用这个平台：合规界面上绝不能出现一个自己并不填充的列。一个空单元格会被读成「已采集，且什么都没发生」，而不是「根本没采集」——这两种误读里，前者危险得多。所以没有写入方的审计动作、没有写入方的列，都是从账本里删掉，而不是留在那里冒充一次并不存在的采集。另一条规则是账本只有一本、不是两本：Agent 的动作与人的动作由同一个运行时记录在同一个地方，用同一套筛选、同一种 diff。这正是「审阅 AI 与审阅人是同一件事」得以成立的原因——而它成立的前提，是那一行由运行时来写，不是由 Agent 来写。',
   ],
   alsoKnownAs: ['审计日志', '审计记录', '操作日志', '合规账本'],
-  relatedTerms: ['approval-workflow', 'row-level-security', 'governed-runtime'],
+  relatedTerms: [
+    'approval-workflow',
+    'row-level-security',
+    'governed-runtime',
+    'governed-tool-layer',
+    'ai-agent-runtime',
+  ],
   articleSlugs: [
     'eu-ai-act-runtime-audit',
     'when-ai-agent-deletes-production-database',

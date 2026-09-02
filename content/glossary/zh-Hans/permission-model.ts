@@ -14,7 +14,13 @@ const term = {
     '「只做加法、没有拒绝」是一条实打实的约束，选它是为了可审阅性，不是为了表达力。因为授权只会做加法，「这个人为什么能看到这个」的答案就是列出授予它的那几个权限集——一份有限、可读的清单；而在一个允许拒绝的模型里，同一个问题需要在可能相隔数年、由不同人写下的规则之间推理优先级。同一个性质也让 AI Agent 无需为它另发明一套东西就能被治理：Agent 以登录用户的身份行动，按那个用户的权限集解析，于是不存在一个需要单独推理其权限的特权服务身份——审阅「Agent 能做什么」与审阅「这个人能做什么」，是同一件事。',
   ],
   alsoKnownAs: ['访问控制模型', '授权模型', '权限集模型', 'RBAC 模型'],
-  relatedTerms: ['row-level-security', 'approval-workflow', 'governed-runtime'],
+  relatedTerms: [
+    'row-level-security',
+    'approval-workflow',
+    'governed-runtime',
+    'declared-vs-enforced',
+    'agent-guardrails',
+  ],
   articleSlugs: [
     'objectos-agent-permission-boundaries',
     'ai-agent-business-data-security-boundaries',

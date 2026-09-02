@@ -19,7 +19,13 @@ const term = {
     'permission set model',
     'RBAC model',
   ],
-  relatedTerms: ['row-level-security', 'approval-workflow', 'governed-runtime'],
+  relatedTerms: [
+    'row-level-security',
+    'approval-workflow',
+    'governed-runtime',
+    'declared-vs-enforced',
+    'agent-guardrails',
+  ],
   articleSlugs: [
     'objectos-agent-permission-boundaries',
     'ai-agent-business-data-security-boundaries',

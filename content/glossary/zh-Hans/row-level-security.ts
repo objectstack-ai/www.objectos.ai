@@ -14,7 +14,13 @@ const term = {
     '最后这种情形正是安全审阅者该盯住的，因为它从元数据上看不出来：一条读起来像「按范围授权」、行为上却是「一律拒绝」的规则，而编写时点没有任何东西指向那一行。ObjectStack 的答案是一道编译期可执行性关卡——validateRlsPredicateEnforceability 在构建时遍历每一条声明的 using 与 check，把任何永远不会生效的谓词当作错误拒绝掉。这道关卡值得信任的关键在于：它不去建模运行时的行为、也不去做模式匹配，而是拿同一份输入去调用运行时自己的判定过程 isSupportedRlsExpression——编译器判断一条被丢弃的策略究竟是编写错误还是有意跳过时，问的正是同一个函数。于是「被 linter 拒绝」和「被丢弃、无强制」是同一个布尔值，二者不可能漂移开。这就是该向任何平台索要的那件东西。不是问「你们支持行级安全吗」——人人都说支持。要问的是：你们的构建能不能拒绝一条会悄无声息什么都不做的安全规则？',
   ],
   alsoKnownAs: ['RLS', '记录级安全', '行级访问控制', '行级权限'],
-  relatedTerms: ['permission-model', 'audit-trail', 'governed-runtime'],
+  relatedTerms: [
+    'permission-model',
+    'audit-trail',
+    'governed-runtime',
+    'declared-vs-enforced',
+    'governed-tool-layer',
+  ],
   articleSlugs: [
     'objectos-agent-permission-boundaries',
     'ai-agent-business-data-security-boundaries',

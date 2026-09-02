@@ -14,7 +14,13 @@ const term = {
     'One design rule is worth borrowing whether or not you use this platform: a compliance screen must never show a column it does not populate. A blank cell reads as "captured, and nothing happened" rather than "not captured", which is the more dangerous of the two misreadings, so audit actions with no writer and columns with no writer have been removed from the ledger rather than left standing as evidence of a capture that never occurred. The other rule is that there is one ledger, not two: agent actions and human actions are recorded by the same runtime in the same place, with the same filters and the same diffs. That is what makes reviewing the AI the same job as reviewing people — and it holds only because the runtime writes the row, not the agent.',
   ],
   alsoKnownAs: ['audit log', 'audit history', 'activity log', 'compliance ledger'],
-  relatedTerms: ['approval-workflow', 'row-level-security', 'governed-runtime'],
+  relatedTerms: [
+    'approval-workflow',
+    'row-level-security',
+    'governed-runtime',
+    'governed-tool-layer',
+    'ai-agent-runtime',
+  ],
   articleSlugs: [
     'eu-ai-act-runtime-audit',
     'when-ai-agent-deletes-production-database',

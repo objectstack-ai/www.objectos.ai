@@ -14,7 +14,13 @@ const term = {
     'That last case is the one a security reviewer should press on, because it is invisible from the metadata: a rule that reads as scoped access and behaves as a blanket refusal, with nothing at authoring time pointing at the responsible line. ObjectStack’s answer is a compile-time enforceability gate — validateRlsPredicateEnforceability runs over every declared using and check at build time and rejects, as an error, any predicate that would never enforce. What makes the gate trustworthy is that it does not model the runtime or pattern-match for it: it calls the runtime’s own decision procedure, isSupportedRlsExpression, on the same input the compiler consults, so "rejected by the linter" and "dropped with no enforcement" are the same boolean and cannot drift apart. This is the artifact to ask any platform for. Not "do you support row-level security" — everyone says yes. Ask whether the build can reject a security rule that would silently do nothing.',
   ],
   alsoKnownAs: ['RLS', 'record-level security', 'row-level access control', 'row filtering'],
-  relatedTerms: ['permission-model', 'audit-trail', 'governed-runtime'],
+  relatedTerms: [
+    'permission-model',
+    'audit-trail',
+    'governed-runtime',
+    'declared-vs-enforced',
+    'governed-tool-layer',
+  ],
   articleSlugs: [
     'objectos-agent-permission-boundaries',
     'ai-agent-business-data-security-boundaries',
