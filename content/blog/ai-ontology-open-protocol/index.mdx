@@ -1,8 +1,9 @@
 ---
 title: "Enterprise AI Ontology: Why the Definition and Runtime Should Be Open"
-description: "Enterprise AI needs a governed semantic layer. ObjectStack keeps both the typed application definition and portable runtime open; ObjectOS sells the production experience around them."
+description: "Ontology MCP went GA in June 2026 — the vendors made the agent interface an open protocol themselves. Definitions are following. The runtime is the layer nobody opened, and that is where portability actually lives."
 author: ObjectStack Team
 date: 2026-06-12
+updated: 2026-09-02T10:00:00+08:00
 status: published
 topic: governance
 audience: business
@@ -11,10 +12,11 @@ industries: []
 cover: ./cover-en.svg
 tags:
   - Ontology
+  - MCP
   - Palantir
 ---
 
-**The short version:** Palantir proved AI needs a governed business semantic layer to enter the enterprise — but that layer should be an open, typed application definition with a portable open-source runtime, not a file format that still depends on one vendor's engine. Open the definition and the execution substrate; charge for the operated production experience.
+**The short version:** this post argued in June 2026 that both the typed application definition and the runtime that executes it should be open. The industry has since conceded parts of that argument on its own. Palantir's Ontology MCP went generally available the week of 16 June 2026 — four days after this published — making an ontology's objects and actions callable by any agent over an open protocol; in August, Palantir began moving ontology definitions into a versioned repository. Three layers decide portability — **interface**, **definition**, **runtime** — and 2026 opened the first, started opening the second, and left the third exactly where it was. The runtime is **the last closed layer**, and it is the half of this argument still worth having.
 
 Let me start with a story you have probably watched happen.
 
@@ -62,7 +64,9 @@ Ask an agent today to "build a customer management system," and it will most lik
 
 This creates something that didn't exist before: **for developer-facing technology, public protocol text and open-source code are now the distribution channel itself.** The more open a protocol is — the more it gets discussed, the more code there is to learn from — the better the next generation of models understands it, and the more agents default to it. The loop feeds itself.
 
-A closed platform cannot enter this loop. Its ontology format, action semantics, and permission model sit behind documentation walls and contracts. Models can't learn it; agents can't self-serve their way into it. It can be selected by a procurement process, but it cannot be *chosen by an agent*. As more software gets written by agents, that stops being a marketing problem. It's **absence from the channel**.
+A closed platform has two ways out of that. The expensive one is to open the format, so models learn it and agents reach for it unprompted. The cheap one is to keep the format closed and **adopt an open protocol at the edge** — agents can then call the platform even though they still cannot learn it.
+
+When this post first ran, it claimed a closed platform simply could not enter the loop. Within a week that was too strong: the incumbents took the cheap way out, and it worked. What survives is the narrower claim, and it is the one that matters — **an interface an agent can call is not a definition an agent can learn from, and neither one is a runtime you can take with you.** What the incumbents actually did about that — and the one thing they did not do — is below.
 
 ## Wait, Haven't Closed Platforms Won Before?
 
@@ -77,6 +81,36 @@ The pattern is remarkably consistent: **the portable substrate an ecosystem depe
 A business semantic layer is a textbook case. Your object model, permission rules, approval flows, and the runtime semantics that enforce them will be depended on by your applications, your agents, and your audit systems. The more things depend on that substrate, the less either half should live inside one vendor's platform. The definitions should be readable, version-controlled files in your repository, and a compatible runtime should be self-hostable and replaceable. An open file that only one paid engine can execute is not actually portable.
 
 Enterprises spent twenty years liberating their **data** from one closed system after another. They should not spend the AI era locking up something even more fundamental — **the definition of the business itself** — all over again.
+
+## Ontology MCP Opened the Interface. The Runtime Stayed Shut.
+
+That pattern got tested almost immediately, and the result is better evidence than the prediction was.
+
+Four days after this post first published, **Palantir's Ontology MCP became generally available across Foundry enrollments, beginning the week of 16 June 2026** ([Palantir's documentation](https://www.palantir.com/docs/foundry/ontology-mcp/overview)). Object types, action types and functions are projected into [Model Context Protocol](/en/glossary/mcp/) tools, so any MCP-compatible agent can read the ontology and set its workflows in motion with no integration code written per agent framework. Microsoft is previewing the same interface on Fabric IQ. How that projection works — and why the read half and the write half of an ontology behave nothing alike once exposed — is the subject of [Ontology MCP and agent tools](/en/blog/ontology-mcp-agent-tools/), and is not restated here.
+
+Then, in August, Palantir shipped ontology-as-code in beta: object types, links, interfaces and actions declared in TypeScript in a monorepo, those code definitions being the source of truth. [The cell-by-cell platform comparison](/en/blog/enterprise-ontology-platform-comparison/) sets that beside what Microsoft, Databricks and Snowflake shipped over the same nine months.
+
+Put the two moves together and the substrate argument from the last section holds — but not for the reason it was written. The substrate is opening. It is opening because **the incumbents opened it themselves, in the order that cost them least**:
+
+| Layer | What it is | Where 2026 left it |
+| --- | --- | --- |
+| **Interface** | How an agent calls the ontology | **Open.** MCP, adopted by the platform vendors themselves |
+| **Definition** | The objects, actions and permissions | **Opening in form.** Declared as code in a repository — still materialised onto one vendor's platform |
+| **Runtime** | What executes an action and enforces the rules | **Unmoved.** No vendor shipped one you can run somewhere else |
+
+Read the third row slowly, because it is the entire argument.
+
+An open interface makes an ontology **callable**. Definitions in a repository make it **readable and reviewable**. Neither one makes it **runnable anywhere else**. The comparison post states the limit in a single clause worth quoting: portability of the definition is not portability of the system — a monorepo of ontology code still materialises onto a Foundry enrollment. And because the tool surface is *projected from* the definition, whoever runs the projection decides what the tools are. A definition file does not execute anything by itself.
+
+That is the number this refresh turns on. Apply Palantir's documented projection rule to a mid-sized application — 12 object types, 30 action types, 6 exposed functions — and you get **37 MCP tools speaking an open protocol, with exactly one engine underneath that can answer any of them.** The interface became portable. The dependency did not move an inch.
+
+![Three layers decide portability: the interface opened via MCP, the definition is opening as code in a repository, and the runtime — the layer that enforces permissions, transactions and audit — did not move](./three-layers-open-2026-en.svg)
+
+**The strongest objection, stated fairly:** most of what a team wants from portability is now on the table. You can read your model, review it as a diff, point any agent at it, and — for analytical semantics — exchange it through a vendor-neutral spec that reached the Apache Incubator in 2026. If your ontology only ever answers questions, that is close enough to enough, and this post would be dishonest to pretend otherwise.
+
+The answer is the same line that separates a [semantic layer](/en/glossary/semantic-layer/) from an ontology to begin with: it holds right up until something has to *happen*. The moment an exposed action changes a record, everything you actually care about — the permission check, the transaction, the approval above a threshold, the [audit trail](/en/glossary/audit-trail/) row — is a property of the engine, not of the file and not of the protocol. You can export the sentence. You cannot export the enforcement.
+
+Call that gap **the last closed layer**. It is not an accusation; it is a description of where the category stopped. Two of the three layers opened in nine months, largely under their own momentum. The third did not move at all — because it is the one layer a platform business cannot open without changing what it sells.
 
 ## What This "Definition" Actually Looks Like
 
@@ -122,18 +156,20 @@ Three consequences follow directly:
 
 Now the argument closes on itself.
 
-The ontology judgment is correct — Palantir proved it for the whole industry. But the healthy form of this layer in the AI era is not "open definitions, exclusive paid engine." It is: **the typed business definition and a portable governed runtime belong to the open ecosystem; the paid product is the operated production experience around them.**
+The ontology judgment is correct — Palantir proved it for the whole industry. When this post first ran, "open definitions, exclusive paid engine" was a failure mode worth warning about in advance. Nine months later it is not a warning. It is a fair description of where the category settled, reached one reasonable decision at a time by vendors who opened everything except the part they sell. That makes the alternative easier to state, not harder: **the typed business definition and a portable governed runtime belong to the open ecosystem; the paid product is the operated production experience around them.**
 
 That is the division of labor between ObjectStack and ObjectOS:
 
-- **ObjectStack** is the open, typed application definition and open-source runtime (Apache 2.0). Objects, relationships, permissions, flows, APIs, UI, and AI tools are defined once in your repository; the runtime derives the database, REST API, rendered UI, and MCP server, then enforces permissions and audit on every call. Both the definition and the engine are diffable, self-hostable, and portable.
+- **ObjectStack** is an **open business ontology**: the typed application definition together with the open-source runtime that executes it (Apache 2.0). Objects, relationships, permissions, flows, APIs, UI, and AI tools are defined once in your repository; the runtime derives the database, REST API, rendered UI, and MCP server, then enforces permissions and audit on every call. Both the definition and the engine are diffable, self-hostable, and portable — the second half being the one the rest of the category left closed.
 - **ObjectOS** is the commercial production platform around those same ObjectStack applications. It sells the browser-based Build and Ask experience, team review and approval, managed cloud or private deployment operations, SSO, enterprise controls, and support. It is not a closed execution engine that takes the ontology back out of your hands.
 
 On one side: an application definition and portable runtime any team or agent can understand, self-host, and take with them. On the other: the production experience enterprises genuinely pay for — collaborative authoring, approvals, hosting, private deployment, SSO, support, upgrades, and operational accountability. The application and its baseline runtime are yours. Operating them reliably for a team is the business.
 
 ## Closing
 
-That AI pilot that died in month nine never lost to model capability. It lost to the absence of a semantic layer a security team could sign off on. The industry has spent years proving how much that layer is worth. The next job is making sure it stops being a luxury reserved for the largest enterprises.
+That AI pilot that died in month nine never lost to model capability. It lost to the absence of a semantic layer a security team could sign off on. The industry has spent years proving how much that layer is worth, and 2026 spent nine months proving something narrower and more useful: **the parts of it that were cheap to open are now open.** The interface is a public protocol. The definition is a file you can read. What is left is the engine that turns the second into the first and enforces the rules while it does — and on that layer, nothing opened.
+
+So the question this post asked in June has a sharper form now. Not "should the ontology be open?" — that is settled, and the vendors settled it. It is: **when the last closed layer is the one that executes your business rules, whose engine do you want that to be?**
 
 If you want to test whether any of this is real:
 
