@@ -7,11 +7,9 @@ import type { GlossaryTerm } from './types';
  * of authored TypeScript modules, derive zh-Hant from zh-Hans, and fall back
  * to English for locales that have no authored file yet.
  *
- * One deliberate difference from the marketing registry: `glossaryTermAlternates`
- * lists only locales where the term really exists. The marketing version filters
- * on `getMarketingPage`, which falls back to English and therefore reports every
- * locale as an equivalent — including the noindexed fallback pages. Advertising a
- * noindexed URL as an hreflang equivalent is what this file avoids.
+ * `glossaryTermAlternates` lists only locales where the term really exists, so a
+ * noindexed fallback page is never advertised as an hreflang equivalent.
+ * `marketingPageAlternates` now follows the same rule; the two registries agree.
  */
 
 const FALLBACK_LOCALE: Locale = 'en';

@@ -246,6 +246,54 @@ for (const locale of LOCALES) {
   }
 }
 
+// Marketing pages carry the same locale guarantees as glossary pages: per-page
+// canonical, noindex on untranslated fallbacks, and hreflang only for locales
+// where the page really exists. The canonical half is covered by the generic
+// sweep below; the hreflang half is asserted only here. Marketing pages are a
+// first-class surface, so an empty content tree is an error, not a silent no-op.
+const MARKETING_SLUGS = [...marketingContentLocales.keys()].sort();
+if (MARKETING_SLUGS.length === 0) {
+  issues.push('content/pages: no marketing pages found — the marketing surface is empty');
+}
+for (const locale of LOCALES) {
+  for (const slug of MARKETING_SLUGS) {
+    const file = `${locale}/${slug}/index.html`;
+    const html = await readDist(file);
+    const contentLocales = marketingContentLocales.get(slug);
+    if (!contentLocales.has(locale)) {
+      requireContains(
+        file,
+        html,
+        '<meta name="robots" content="noindex, nofollow">',
+        'fallback-content marketing page must be noindexed'
+      );
+    }
+    // A locale with no authored file renders fallback content and is noindexed,
+    // so no page of this slug may name it as an hreflang equivalent — least of
+    // all the fallback page itself.
+    for (const other of LOCALES) {
+      if (contentLocales.has(other)) continue;
+      requireExcludes(
+        file,
+        html,
+        `hreflang="${other}" href="${SITE}/${other}/${slug}/"`,
+        other === locale
+          ? 'fallback-content marketing page must not advertise itself as an hreflang equivalent'
+          : `must not advertise noindexed fallback locale ${other} as an hreflang equivalent`
+      );
+    }
+    // Every locale that really has the page must be advertised as an equivalent.
+    for (const equivalent of contentLocales) {
+      requireContains(
+        file,
+        html,
+        `hreflang="${equivalent}" href="${SITE}/${equivalent}/${slug}/"`,
+        `missing hreflang for real equivalent ${equivalent}`
+      );
+    }
+  }
+}
+
 const htmlFiles = (await walk(DIST))
   .filter((file) => file.endsWith('.html'))
   .map((file) => path.relative(DIST, file).split(path.sep).join('/'))
