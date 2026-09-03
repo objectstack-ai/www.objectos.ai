@@ -11,6 +11,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { cwd, argv, exit } from 'node:process';
 import yaml from 'js-yaml';
+import { splitFrontmatter as splitFence } from './lib/frontmatter.mjs';
 
 const ROOT = cwd();
 const BLOG = path.join(ROOT, 'content', 'blog');
@@ -286,17 +287,22 @@ async function walk(dir) {
   return files;
 }
 
+// The fence itself is split by `scripts/lib/frontmatter.mjs`, shared with the
+// sitemap's `lastmod` reader so the two cannot drift into accepting different
+// files. The wording below stays here: this gate's messages are read by its
+// callers, so the helper reports what went wrong and this function says it.
 function splitFrontmatter(source, file) {
-  if (!source.startsWith('---\n')) {
-    throw new Error(`${file} does not start with YAML frontmatter`);
-  }
-  const end = source.indexOf('\n---', 4);
-  if (end === -1) {
-    throw new Error(`${file} has no closing frontmatter fence`);
+  const split = splitFence(source);
+  if (!split.ok) {
+    throw new Error(
+      split.reason === 'no-opening-fence'
+        ? `${file} does not start with YAML frontmatter`
+        : `${file} has no closing frontmatter fence`
+    );
   }
   return {
-    raw: source.slice(4, end),
-    body: source.slice(end + 4).trim(),
+    raw: split.raw,
+    body: split.body.trim(),
   };
 }
 
