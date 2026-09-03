@@ -15,6 +15,7 @@ const BLOG = path.join(ROOT, 'content', 'blog');
 const GLOSSARY = path.join(ROOT, 'content', 'glossary');
 const PAGES = path.join(ROOT, 'content', 'pages');
 const CLUSTERS_MODULE = path.join(ROOT, 'src', 'lib', 'clusters.ts');
+const TERMS_MODULE = path.join(ROOT, 'src', 'lib', 'term-data.ts');
 const args = new Set(argv.slice(2));
 const onlyPublished = args.has('--published');
 const today = new Date();
@@ -133,6 +134,10 @@ function addIssue(issues, file, data, severity, message) {
 //   * marketing  — `src/content-pages/registry.ts`, same fallback rule as the
 //                  glossary.
 //   * cluster    — `src/lib/clusters.ts`, built for every locale unconditionally.
+//   * topic hub  — `src/lib/term-data.ts` crossed with the published posts.
+//                  `src/pages/[lang]/blog/topics/[...slug].astro` emits a hub
+//                  only for a term some post in that locale carries, so a real
+//                  term nobody has written about 404s exactly like a typo does.
 
 /** URL segments under `/<locale>/` that are pages rather than content slugs. */
 const STATIC_ROUTES = new Set([
@@ -194,6 +199,83 @@ async function readClusterSlugs() {
     );
     exit(1);
   }
+}
+
+/**
+ * Topic hubs — `/<locale>/blog/topics/<slugPath>/`, one page per term the site
+ * has content for. Two separate facts decide whether such a URL exists, so the
+ * registry carries both:
+ *
+ *   * the term list and its nesting, from `src/lib/term-data.ts`. This script
+ *     imports the module and calls its own `termSlugPath`, so the gate and the
+ *     route cannot disagree about where a hub lives — re-deriving the slug list
+ *     by text-matching a TypeScript file is exactly the tolerant re-parse a gate
+ *     must not do. That module deliberately has no value imports; see its header.
+ *   * which terms have content in which locale. `getStaticPaths` emits a hub
+ *     only for the terms `getAllUsedTerms(locale)` returns, and a topic hub also
+ *     aggregates its children's articles (`articleHasTerm`, src/lib/posts.ts).
+ *
+ * Keyed on PUBLISHED posts whatever `--published` says: `astro build` exposes
+ * published posts only (`shouldExposePost`), so a link asks what production
+ * serves, not what `astro dev` additionally renders.
+ */
+async function readTermHubs() {
+  let module;
+  try {
+    module = await import(pathToFileURL(TERMS_MODULE).href);
+  } catch (error) {
+    console.error(
+      `✗ content lint could not read the term list from src/lib/term-data.ts, so ` +
+        `/<locale>/blog/topics/<slug>/ links cannot be resolved.\n` +
+        `  This script imports that module directly, which needs Node type ` +
+        `stripping (Node 22.18+) and a module with no value imports — an ` +
+        `extensionless specifier like './i18n' resolves under Vite only.\n` +
+        `  ${error.message}`
+    );
+    exit(1);
+  }
+  const { RAW_TERMS: terms, termSlugPath } = module;
+
+  const usedByLocale = new Map();
+  for (const file of await walk(BLOG)) {
+    let data;
+    try {
+      data = yaml.load(splitFrontmatter(await readFile(file, 'utf8'), file).raw) ?? {};
+    } catch {
+      continue; // malformed frontmatter is reported by the main pass
+    }
+    if (data.status !== 'published') continue;
+    const locale = localeFromFile(file);
+    const used = usedByLocale.get(locale) ?? new Set();
+    for (const slug of [
+      data.topic,
+      data.audience,
+      ...(Array.isArray(data.solutions) ? data.solutions : []),
+      ...(Array.isArray(data.industries) ? data.industries : []),
+    ]) {
+      if (typeof slug === 'string' && slug !== '') used.add(slug);
+    }
+    usedByLocale.set(locale, used);
+  }
+
+  const childSlugs = new Map();
+  for (const term of terms) {
+    if (term.group !== 'topic' || !term.parent) continue;
+    childSlugs.set(term.parent, [...(childSlugs.get(term.parent) ?? []), term.slug]);
+  }
+
+  const byPath = new Map(); // hub path -> locales the site builds it in
+  const pathBySlug = new Map(); // term slug -> its one canonical hub path
+  for (const term of terms) {
+    const owned = [term.slug, ...(childSlugs.get(term.slug) ?? [])];
+    const locales = new Set();
+    for (const [locale, used] of usedByLocale) {
+      if (owned.some((slug) => used.has(slug))) locales.add(locale);
+    }
+    byPath.set(termSlugPath(term), locales);
+    pathBySlug.set(term.slug, termSlugPath(term));
+  }
+  return { byPath, pathBySlug };
 }
 
 /**
@@ -260,6 +342,71 @@ async function readPublicAssets(dir, prefix = '') {
 }
 
 /**
+ * One `/<locale>/blog/topics/<slugPath>/` hub link. The path is a single
+ * segment for a top-level term and `<parent>/<slug>` for a nested topic, which
+ * is why a flat slug set is not enough to answer this: `governance/automation`
+ * spells two real terms and names no page.
+ */
+function resolveTopicHub(locale, segments, hubs) {
+  const example = [...hubs.byPath]
+    .filter(([, locales]) => locales.has(locale))
+    .map(([hubPath]) => hubPath)
+    .sort()[0];
+  const suggestion = example ? `, e.g. /${locale}/blog/topics/${example}/` : '';
+
+  if (segments.length === 0) {
+    return {
+      severity: 'error',
+      reason:
+        `there is no topic index page — the route builds one page per term, so link a ` +
+        `specific hub${suggestion}`,
+    };
+  }
+
+  const slugPath = segments.join('/');
+  const built = hubs.byPath.get(slugPath);
+  if (!built) {
+    const leaf = segments[segments.length - 1];
+    const canonical = hubs.pathBySlug.get(leaf);
+    if (canonical) {
+      return {
+        severity: 'error',
+        reason:
+          `the term "${leaf}" exists but its hub is /${locale}/blog/topics/${canonical}/ — ` +
+          `a topic is nested under a parent only when it declares one in ` +
+          `src/lib/term-data.ts, and "${slugPath}" is not a path the route builds`,
+      };
+    }
+    return {
+      severity: 'error',
+      reason:
+        `no term "${leaf}" in src/lib/term-data.ts, so no hub page exists at this URL — ` +
+        `fix the slug, or add the term${suggestion}`,
+    };
+  }
+
+  if (built.size === 0) {
+    return {
+      severity: 'error',
+      reason:
+        `the term "${slugPath}" is declared but no published post carries it, and the hub ` +
+        `route builds a page only for terms with content, so this URL 404s in every locale`,
+    };
+  }
+  if (!built.has(locale)) {
+    return {
+      severity: 'error',
+      reason:
+        `no published post in ${locale} carries the term "${slugPath}", and the hub route ` +
+        `builds only the locales that have content, so this URL 404s — link ` +
+        `/${[...built].sort().join('|')}/blog/topics/${slugPath}/, or translate a post ` +
+        `that carries the term`,
+    };
+  }
+  return null;
+}
+
+/**
  * Resolve one absolute internal link against the registries.
  * Returns null when the link resolves, otherwise `{ severity, reason }`.
  */
@@ -282,10 +429,7 @@ function resolveInternalLink(href, registries) {
   if (rest.length === 1 && STATIC_ROUTES.has(rest[0])) return null;
 
   if (rest[0] === 'blog') {
-    // Topic hubs come from `src/lib/terms.ts`, which this script cannot import
-    // (it value-imports extensionless modules that only Vite resolves), so the
-    // shape is recognized but the slug is not resolved. Tracked separately.
-    if (rest[1] === 'topics') return null;
+    if (rest[1] === 'topics') return resolveTopicHub(locale, rest.slice(2), registries.termHubs);
     if (rest.length !== 2) {
       return { severity: 'error', reason: 'not a blog post URL (/<locale>/blog/<slug>/)' };
     }
@@ -382,6 +526,7 @@ const registries = {
   glossary: await readLocaleTree(GLOSSARY),
   pages: await readLocaleTree(PAGES),
   clusters: await readClusterSlugs(),
+  termHubs: await readTermHubs(),
   publicAssets: await readPublicAssets(path.join(ROOT, 'public')),
 };
 registries.locales = routableLocales(registries.blog, registries.glossary, registries.pages);
