@@ -3,6 +3,7 @@ title: 마이그레이션 없이 기존 비즈니스 시스템을 AI-native로 �
 description: 이미 운영 중인 데이터베이스에 ObjectOS를 연결하고, 코딩 에이전트가 테이블을 객체로 모델링하게 하면 원래 시스템을 건드리지 않고도 권한 아래에서 실제 데이터에 AI를 적용할 수 있습니다.
 author: ObjectStack Team
 date: 2026-05-30
+updated: 2026-09-02T10:00:00+08:00
 status: published
 topic: integration-data
 audience: general
@@ -118,7 +119,9 @@ datasourceMapping: [
 
 ## 이미 제공되는 것과 예정된 것
 
-위 흐름은 datasource, 객체별 라우팅, ObjectQL pushdown, AI 에이전트 레이어로 **오늘** 동작합니다. 한 단계 schema import, 외부 소유 schema 바인딩, 내장 write-safety gate 같은 더 풍부한 turn-key federation은 [ADR-0015](https://github.com/objectstack-ai/objectstack/blob/main/docs/adr/0015-external-datasource-federation.md)에서 설계 중입니다.
+위 흐름은 datasource, 객체별 라우팅, ObjectQL pushdown, AI 에이전트 레이어로 **오늘** 동작합니다. 한 단계 schema import, 외부 소유 schema 바인딩, 내장 write-safety gate 같은 더 풍부한 turn-key federation은 이미 출시되었습니다. [ADR-0015](https://github.com/objectstack-ai/objectstack/blob/main/docs/adr/0015-external-datasource-federation.md)는 **Accepted**(백엔드·REST·CLI 구현 완료)이고, 런타임 절반은 [ADR-0062](https://github.com/objectstack-ai/objectstack/blob/main/docs/adr/0062-external-datasource-runtime.md)가 규범입니다.
+
+`os datasource list-tables <name>`으로 원격 테이블을 나열하고, `os datasource introspect <name> --table <table>`으로 실제 테이블에서 객체 초안을 생성합니다. datasource에 `schemaMode: 'external'`을 두면 ObjectStack은 그 데이터베이스에 DDL을 실행하지 않으며, 선언이 실제 컬럼과 어긋나면 부팅이 diff와 함께 실패합니다(`validation: { onMismatch: 'fail' }`). 쓰기는 두 파일에서 두 번 켜야 합니다 — datasource의 `external.allowWrites: true`와 객체의 `external.writable: true`. 둘 중 하나라도 꺼져 있으면 insert·update·delete가 거부됩니다. 이 gate는 federation의 것이며, ObjectStack이 관리하는 데이터베이스에서 읽기 전용은 여전히 데이터베이스 `GRANT`입니다. ADR-0015에 남은 것은 federation의 Studio UI와 더 많은 SQL 방언 드라이버입니다.
 
 ## 자주 묻는 질문
 

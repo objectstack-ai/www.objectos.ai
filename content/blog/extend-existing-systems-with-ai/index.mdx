@@ -3,6 +3,7 @@ title: "Add AI to Existing Systems Without Migration: Connect Your Database"
 description: Connect ObjectOS to the database you already run, let a coding agent model the tables as objects, and put AI on real data under your permissions, on your servers, with the original system untouched.
 author: ObjectStack Team
 date: 2026-05-30
+updated: 2026-09-02T10:00:00+08:00
 status: published
 topic: integration-data
 audience: general
@@ -218,12 +219,39 @@ per-object routing, capability-aware ObjectQL pushdown, and the AI agent
 layer. The object modeling is done with a coding agent against your
 connected schema — the same way the `hotcrm` objects were authored.
 
-A richer, **turn-key federation** experience — one-step schema import,
-binding to externally owned schemas, and built-in write-safety gates — is
-in active design under
+The richer **turn-key federation** experience — one-step schema import,
+binding to externally owned schemas, and built-in write-safety gates — has
+since shipped.
 [ADR-0015](https://github.com/objectstack-ai/objectstack/blob/main/docs/adr/0015-external-datasource-federation.md)
-(status: *Proposed*). We'll write more as it lands. Until then, the
-documented path — connect, model, bind, query — is the supported one.
+is **Accepted** (backend, REST and CLI implemented), and
+[ADR-0062](https://github.com/objectstack-ai/objectstack/blob/main/docs/adr/0062-external-datasource-runtime.md)
+is the canonical decision for its runtime half. Concretely:
+
+- **Schema import is a command, not a project.**
+  `os datasource list-tables <name>` enumerates the remote tables, and
+  `os datasource introspect <name> --table <table>` generates an object draft
+  — columns, types, keys — from the live table. The draft is still ordinary
+  source you review and commit.
+- **Binding to a schema you don't own is a declaration.** Set
+  `schemaMode: 'external'` on the datasource and ObjectStack runs no DDL
+  against that database; each object names its remote table through
+  `external.remoteName` / `remoteSchema` / `columnMap`. A declaration that
+  disagrees with the real columns fails the boot with a diff
+  (`validation: { onMismatch: 'fail' }`, or `validate-only` to warn while you
+  are still drafting), and `os datasource validate <name>` checks it on
+  demand.
+- **Writes take two opt-ins, in two files.** `external.allowWrites: true` on
+  the datasource *and* `external.writable: true` on the object. With either
+  gate off, inserts, updates and deletes are rejected.
+
+Those gates belong to federation: they answer *who owns this database*, so
+they apply to an external datasource and not to one ObjectStack manages. For
+a database ObjectStack owns, read-only is still a database `GRANT` — exactly
+as the FAQ below describes.
+
+What remains open on ADR-0015 is the Studio UI for federation and drivers for
+more SQL dialects. Either way the path this article walks — connect, model,
+bind, query — is unchanged and supported.
 
 ## Frequently asked
 

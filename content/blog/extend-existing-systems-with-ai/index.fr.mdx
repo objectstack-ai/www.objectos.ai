@@ -3,6 +3,7 @@ title: Rendre votre système métier existant AI-native sans migration
 description: Connectez ObjectOS à la base de données que vous exploitez déjà, laissez un agent de code modéliser les tables comme des objets et mettez l'AI sur des données réelles, sous vos permissions et sans toucher au système d'origine.
 author: ObjectStack Team
 date: 2026-05-30
+updated: 2026-09-02T10:00:00+08:00
 status: published
 topic: integration-data
 audience: general
@@ -118,7 +119,9 @@ Quand un utilisateur demande quelles opportunités sont sorties de Q2, l'agent n
 
 ## Ce qui existe et ce qui arrive
 
-Ce flux fonctionne **aujourd'hui** avec les datasources, le routing par objet, le pushdown ObjectQL et la couche d'agents. Une expérience de fédération plus turn-key, import de schema, binding à des schemas externes et garde-fous d'écriture, est en conception dans [ADR-0015](https://github.com/objectstack-ai/objectstack/blob/main/docs/adr/0015-external-datasource-federation.md).
+Ce flux fonctionne **aujourd'hui** avec les datasources, le routing par objet, le pushdown ObjectQL et la couche d'agents. L'expérience de fédération turn-key — import de schema en une étape, binding à des schemas externes et garde-fous d'écriture intégrés — est désormais livrée : [ADR-0015](https://github.com/objectstack-ai/objectstack/blob/main/docs/adr/0015-external-datasource-federation.md) est **Accepted** (backend, REST et CLI implémentés) et [ADR-0062](https://github.com/objectstack-ai/objectstack/blob/main/docs/adr/0062-external-datasource-runtime.md) porte sa moitié runtime.
+
+`os datasource list-tables <name>` liste les tables distantes, `os datasource introspect <name> --table <table>` génère un brouillon d'objet depuis la table réelle. `schemaMode: 'external'` déclare qu'ObjectStack n'exécute aucun DDL sur cette base, et une déclaration qui diverge des vraies colonnes fait échouer le démarrage avec un diff (`validation: { onMismatch: 'fail' }`). Écrire demande deux opt-ins dans deux fichiers : `external.allowWrites: true` sur la datasource **et** `external.writable: true` sur l'objet ; si l'un manque, les inserts, updates et deletes sont rejetés. Ces garde-fous appartiennent à la fédération : sur une base gérée par ObjectStack, le read-only reste un `GRANT` au niveau de la base. Restent ouverts dans ADR-0015 l'UI Studio et les drivers pour d'autres dialectes SQL.
 
 ## Questions fréquentes
 
