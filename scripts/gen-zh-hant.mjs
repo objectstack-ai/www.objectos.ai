@@ -9,9 +9,16 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import * as OpenCC from 'opencc-js';
+import { CONVERSION_CASES, s2t, unresolvedLocatives } from '../src/lib/zhconvert.ts';
 
-const convert = OpenCC.Converter({ from: 'cn', to: 'twp' });
+// The conversion itself — the preset, the two shadowed phrase entries and the
+// locative repair — lives in `src/lib/zhconvert.ts`, because the site derives
+// its Traditional UI strings, term labels, glossary and marketing pages from the
+// same rules. Read that file before changing how anything converts; it explains
+// why each override exists and why Node can load it. Node imports it directly
+// via type stripping, which is why the specifier carries its `.ts` extension.
+const convert = s2t;
+
 
 // Pure-ASCII marker so OpenCC never touches it and includes() is reliable.
 const MARKER =
@@ -164,18 +171,36 @@ function splitFrontmatter(source) {
   return { head: match[0], body: source.slice(match[0].length) };
 }
 
-// ─── Fixture: the scoped rewrite, pinned ───────────────────────────────────
+// ─── Fixtures: the scoped rewrite and the conversion, pinned ───────────────
 //
-// This repo has no test runner, and the property worth pinning is a negative
-// one — a link is rewritten, an identical string inside code is not — which a
-// later edit to the patterns above would break silently in generated output no
-// one reads. So the cases run on every `pnpm dev` and `pnpm build`, off a stub
-// registry where `known` is built and `ghost` is not. Pure string work; the
-// generator prints nothing unless a case fails.
+// This repo has no test runner, and the properties worth pinning are negative
+// ones — a link is rewritten, an identical string inside code is not; 权限 comes
+// out 權限 while a genuine 许可权 is left alone — which a later edit to the
+// patterns above, or an opencc-js upgrade that reshuffles the phrase
+// dictionaries, would break silently in output no one reads.
+//
+// This script is where both sets run, because `pnpm dev` and `pnpm build` both
+// execute it before Astro starts: the link cases are this file's own, and the
+// conversion cases come from `src/lib/zhconvert.ts`, which the site itself
+// converts with. Pinning them here means a bad conversion fails the build before
+// a single MDX file is written or a single page is served — which is the failure
+// this round exists to prevent, since the conversion now reaches the nav,
+// glossary and marketing routes as well as the corpus.
+//
+// The link cases run off a stub registry where `known` is built and `ghost` is
+// not. Pure string work; the generator prints nothing unless a case fails.
 function selfTest() {
+  const failures = [];
+  const check = (label, run, cases) => {
+    for (const [input, expected] of cases) {
+      const actual = run(input);
+      if (actual !== expected) failures.push({ label, input, expected, actual });
+    }
+  };
+
   const stub = (rest) =>
     rest === '' || rest === '/' || rest === '/blog/known/' || rest === '/glossary/known/';
-  const cases = [
+  check('link-rewrite', (input) => rewriteBodyLinks(input, stub, () => {}), [
     // A body link is rewritten…
     ['[标题](/zh-Hans/blog/known/)', '[标题](/zh-Hant/blog/known/)'],
     ['<a href="/zh-Hans/blog/known/">x</a>', '<a href="/zh-Hant/blog/known/">x</a>'],
@@ -200,15 +225,18 @@ function selfTest() {
       '[a](/zh-Hans/blog/known/)\n```\n/zh-Hans/blog/known/\n```\n[b](/zh-Hans/blog/known/)',
       '[a](/zh-Hant/blog/known/)\n```\n/zh-Hans/blog/known/\n```\n[b](/zh-Hant/blog/known/)',
     ],
-  ];
-  const failures = [];
-  for (const [input, expected] of cases) {
-    const actual = rewriteBodyLinks(input, stub, () => {});
-    if (actual !== expected) failures.push({ input, expected, actual });
-  }
+  ]);
+
+  // The conversion cases live beside the rules they pin, in
+  // `src/lib/zhconvert.ts`, because that module is what both the site and this
+  // generator convert with. Running them here is what makes them run at all:
+  // `pnpm dev` and `pnpm build` both execute this script before Astro starts.
+  check('conversion', convert, CONVERSION_CASES);
+
   if (failures.length > 0) {
-    console.error('✗ gen-zh-hant: link-rewrite fixture failed');
-    for (const { input, expected, actual } of failures) {
+    console.error('✗ gen-zh-hant: fixture failed');
+    for (const { label, input, expected, actual } of failures) {
+      console.error(`  [${label}]`);
       console.error(`  in:       ${JSON.stringify(input)}`);
       console.error(`  expected: ${JSON.stringify(expected)}`);
       console.error(`  actual:   ${JSON.stringify(actual)}`);
@@ -226,6 +254,7 @@ let made = 0;
 let kept = 0;
 let relinked = 0;
 const skipped = [];
+const locatives = [];
 for (const slug of slugs) {
   const src = path.join(BLOG, slug, 'index.zh-Hans.mdx');
   const out = path.join(BLOG, slug, 'index.zh-Hant.mdx');
@@ -251,6 +280,7 @@ for (const slug of slugs) {
   );
   if (localized !== body) relinked++;
   const converted = `${head}${localized}`.replace(/^---\n/, `---\n${MARKER}\n`);
+  for (const ctx of unresolvedLocatives(converted)) locatives.push({ file: rel, ctx });
   await writeFile(out, converted, 'utf8');
   made++;
 }
@@ -266,4 +296,14 @@ if (skipped.length > 0) {
       `Traditional build, and a manufactured 404 is worse than a cross-locale link:`
   );
   for (const { file, href } of skipped) console.warn(`    ${file}: ${href}`);
+}
+
+if (locatives.length > 0) {
+  console.warn(
+    `⚠ zh-Hant: ${locatives.length} 里 the locative whitelist did not claim. ` +
+      `Each is either a genuine 里 (add it to GENUINE_LI to quiet this line) or a ` +
+      `straddled locative that belongs in LOCATIVE_LI — a wrong 裡 is invisible to ` +
+      `the reader who would catch it, so neither list guesses:`
+  );
+  for (const { file, ctx } of locatives) console.warn(`    ${file}: …${ctx}…`);
 }
