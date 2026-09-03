@@ -1,8 +1,9 @@
 ---
 title: "Open vs. Closed Enterprise Ontologies: Who Owns the Business Semantic Layer?"
-description: "Microsoft, Google, and Palantir are each building enterprise semantic layers. The risk is fragmentation: your customer, order, and device definitions split across platforms."
+description: "Five platforms shipped a business semantic layer between Nov 2025 and Aug 2026, and most opened an MCP read path while keeping the definition inside. Protocol-open, definition-closed — and the ownership question got sharper."
 author: ObjectStack Team
 date: 2026-06-16T17:00:00+08:00
+updated: 2026-09-02T18:00:00+08:00
 status: published
 topic: governance
 audience: business
@@ -12,11 +13,15 @@ cover: ./cover-en.svg
 tags:
   - Ontology
   - Semantic layer
-  - Microsoft Fabric
+  - MCP
+  - Fabric IQ
+  - Unity Catalog
+  - Snowflake
   - Palantir
+  - Looker
 ---
 
-**The short version:** The business-definition layer that your apps, agents, auditors, and vendors all depend on should not belong to any one platform. It should be a neutral layer you hold in your own repository.
+**The short version:** when this post first ran in June 2026 it asked who would own the business semantic layer. The race has since been run: **five platforms shipped one in nine months.** They also did something nobody predicted — they opened the *access path* to their ontology over MCP while keeping the *definition* inside. Call it **protocol-open, definition-closed**. An agent can now read five ontologies it cannot move. That makes the ownership question sharper, not weaker, and the answer is unchanged: the definition layer your apps, agents, auditors, and vendors all depend on should be a neutral layer you hold in your own repository.
 
 Start with how one company lost a customer over exactly this. The details are anonymized, but you have probably seen every step before.
 
@@ -38,39 +43,59 @@ A quarter later, H Group churned — millions in annual loss. The post-mortem wa
 
 This was not simply a Yuanfeng mistake. It is the predictable result of handing "the definition of your business" to a platform for safekeeping, when each platform only protects and understands its own slice.
 
-## Not an Isolated Case: Everyone Is Racing for This Layer
+## The Race Named in This Post Has Now Been Run
 
-Yuanfeng's predicament is common precisely because the whole industry is rushing toward the same layer at once.
+When this piece first published, the entrants were still a forecast. They are now a matter of record. Between November 2025 and August 2026, five platforms shipped a business semantic layer:
 
-A year ago, "business semantic layer" and "ontology" were still heavily associated with Palantir. Now the category is broadening. Analysts talk about semantic layers and knowledge graphs as infrastructure for agentic AI, and the major platform vendors are moving in: Microsoft with Fabric, Google with enterprise knowledge graph capabilities, and Palantir with Foundry and AIP.
+| Platform | What it shipped | When |
+| --- | --- | --- |
+| **Microsoft Fabric IQ** | An Ontology item plus a full agent workload — Graph, Data Agent, Operations Agent — in public preview, reachable by any agent over public Ontology MCP endpoints | Ignite, Nov 2025; expanded with rules and automation at FabCon Atlanta, Mar 2026 |
+| **Snowflake** | Semantic View Autopilot, GA — it drafts semantic views from your existing query history and BI assets instead of asking a committee to define "revenue" from scratch | Feb 3, 2026 |
+| **Google** | Looker BI Agents grounded in the Looker semantic layer, and Dataplex rebranded as Knowledge Catalog, which turns catalog metadata into a semantic graph with a context API for agents | Cloud Next '26, Apr 2026 |
+| **Databricks Unity Catalog** | Business Semantics, GA — governed metric views and agent metadata defined once at the data layer, with the core implementation being open sourced into Apache Spark | GA in 2026; Business Glossary and Domains at Data + AI Summit, Jun 2026 |
+| **Palantir Foundry** | Ontology MCP reached GA across all Foundry enrollments — object types, action types and functions exposed to any MCP client as callable tools | Week of Jun 16, 2026 |
 
-Why now? Because agents exposed the weakness. The data pipelines of the last decade cared mostly about *where the data flowed*, not enough about *what the data meant*. There was always a human as the backstop. Agents have no such backstop: confronted with dozens of tables and "customer" fields defined a dozen different ways, they either answer incorrectly, as with H Group, or do not dare answer at all. Many agent pilots fail to reach production because this layer is missing.
+Two things about that table are worth saying out loud before the argument continues.
 
-So the three giants' judgment is right, and remarkably aligned: **for AI to reliably enter the enterprise, there must first be a layer of machine-readable, governed business definition.** That point no longer needs arguing. What does need arguing is the next question: who should own this layer?
+**This post is not the place to compare them cell by cell.** Capability-by-capability, sourced to each vendor's own documentation, is a separate piece: [Fabric IQ vs Palantir vs Unity Catalog vs Snowflake](/en/blog/enterprise-ontology-platform-comparison/). It settles which of them model *actions* rather than only describing the business, which is the row that decides the most. Read it if you are choosing. Read this one if you are deciding what to own.
 
-One clarification belongs before that question, because the three words in play here are routinely used as synonyms and are not: [ontology vs semantic layer vs knowledge graph](/en/blog/ontology-vs-semantic-layer-vs-knowledge-graph/) pins down what each one can and cannot answer. The ownership argument below assumes you have already decided which layer you mean.
+**The dates make the argument, not the feature lists.** Nine months, five platforms, five independent decisions that the same layer was worth building. Nobody needs convincing any more that AI in the enterprise requires a machine-readable, governed layer of business definition. That half of the question is closed.
 
-## Three Right Directions, Three Different Locks
+One clarification still belongs here, because the three words in play are routinely used as synonyms and are not: [ontology vs semantic layer vs knowledge graph](/en/blog/ontology-vs-semantic-layer-vs-knowledge-graph/) pins down what each one can and cannot answer. The ownership argument below assumes you have already decided which layer you mean.
 
-Lay the three approaches side by side and you find an awkward common thread.
+## The Twist: Protocol-Open, Definition-Closed
 
-| | Where the ontology lives | Who can read it | Can you take it with you |
-| --- | --- | --- | --- |
-| Palantir Foundry | Inside the Palantir platform | On-site engineers + platform tooling | Bound to the platform; migration = rebuild |
-| Microsoft Fabric IQ | Inside OneLake / Fabric | The 365 and Fabric ecosystems | Bound to the Microsoft stack |
-| Google enterprise knowledge graph | Inside Google Cloud | The Vertex and GCP ecosystems | Bound to the Google stack |
+Here is the part that did not go the way anyone expected, and it is the single most important thing that changed since June.
 
-The field has widened since, and the details are now checkable cell by cell rather than by reputation: [Fabric IQ vs Palantir vs Unity Catalog vs Snowflake](/en/blog/enterprise-ontology-platform-comparison/) sources each capability to the vendor's own documentation, including the row that decides the most — which of them model actions rather than only describing the business.
+The platforms did not stay walled. They opened up — over MCP. Fabric IQ exposes public Ontology MCP endpoints. Palantir made Ontology MCP generally available across every Foundry enrollment the same week this post first published. Snowflake ships a managed MCP server. Google put a context API in front of Knowledge Catalog. Of the four platforms in the linked comparison, **three expose their semantic layer to agents over MCP**.
 
-To be fair, each one does well on its own turf. Palantir's ontology modeling quality is genuinely high. Microsoft connects the semantic layer with OneLake and Microsoft 365, which can be very smooth for an all-Microsoft company. Google has real depth in data scale and graph reasoning. They all help you organize your business more clearly, and then keep that clarity inside their own platform.
+At a glance that looks like the open answer arriving on its own. It isn't, and the distinction is worth being precise about:
 
-An experienced IT leader reading this might say: vendor lock-in again, same old problem.
+> **MCP standardises how an agent *reaches* your ontology. It standardises nothing about who *holds* it.**
 
-But this time the main concern is not only lock-in. There is a worse problem: fragmentation. Before taking it apart, we should lay out the playbook by which closed platforms **win**, because it is not weak.
+An MCP endpoint is a read path, not a title deed. Your agent gets a clean, governed, vendor-neutral way to ask questions of a definition that still lives in someone else's platform, still gets versioned by their release train, and still leaves with them when you leave. The protocol is open. The definition is closed. **Protocol-open, definition-closed.**
+
+This matters because the two are easy to confuse in exactly the direction that costs money. "Any agent can read it" sounds like portability. It is the opposite of portability: it is the thing that makes *not* being portable comfortable.
+
+## Why That Makes Fragmentation Worse, Not Better
+
+With single-vendor lock-in, at least your business definition is still **one complete copy** — you just can't move it. Painful, but whole.
+
+Five platforms each holding their own ontology produces something else: **fragmentation.** Yuanfeng's "customer" was not merely locked up; it was sliced into three and stored in three mutually unaware platforms. Two mechanisms prevent that from healing on its own, and MCP has now added a third.
+
+**The first layer is incentives.** You might think: just let Microsoft's ontology understand Salesforce's "customer," problem solved. It will not be that simple, because each vendor's ontology is part of its moat. If Microsoft unilaterally unified its "customer" semantics with a rival's, it would help that rival move data more smoothly and reduce its own differentiation. **Unification is strategically unattractive for every contestant in the race.** This is not only technical oversight; it is rational platform behavior.
+
+**The second layer is technical.** Even setting incentives aside, cross-ontology semantic alignment is hard: does System A's "customer" equal System B's "Account"? The field definitions, lifecycles, deduplication rules, and criteria for "the same entity" all differ across systems. AI cannot reliably infer this automatically either. Agents make mistakes precisely because this layer of definite definition is missing. Back to H Group: let the agent guess whether "these three records are the same company," and the cost of guessing wrong is exactly the loss in the story.
+
+**The third layer is new, and it is the uncomfortable one: MCP lowers the cost of tolerating fragmentation.** Before, wiring an agent into five disconnected semantic layers was painful enough that somebody eventually escalated it and the reconciliation project got funded. Now it is five endpoint registrations in an afternoon. The agent will happily hold five tools that each answer "who is this customer" differently, and it will answer confidently from whichever one it reached first. **The integration pain that used to force the reconciliation has been removed; the fragmentation it was warning about has not.**
+
+Put together in one line: **you thought you bought five tools; you actually bought five mutually unaware sources of truth, now conveniently addressable.** The more systems, the more acquisitions, and the more compliance isolation, the more severe this fragmentation becomes. The agent era amplifies the cost, because a human can still manually reconcile across systems, however painfully, while an agent needs one definite, cross-system-consistent layer of definition before it can reason.
+
+To avoid fragmentation, the definition of your business cannot belong entirely to a platform competing in the race. It needs to be a neutral layer: a definition you hold yourself, that different vendors' tools can read. Closed platforms structurally struggle to provide this, because they are contestants in the race and cannot also be neutral referees.
 
 ## First, the Playbook by Which Closed Platforms Win
 
-If all you can do is repeat "open is good," that is preaching, not analysis. Closed platforms hold four real cards.
+If all you can do is repeat "open is good," that is preaching, not analysis. Closed platforms hold four real cards, and the last nine months strengthened two of them.
 
 **First, modeling quality.** Turning twenty years of accumulated enterprise complexity into a clean, self-consistent ontology is heavy engineering. Palantir aligns it one concept at a time with on-site engineers, at a quality open-source communities cannot match quickly. With an ontology, building it badly can be worse than not building it at all. That on-site model has economics of its own, and they travel less easily than the job title does — [why copying the forward-deployed model builds a consultancy](/en/blog/forward-deployed-engineer-trap/) works through what has to exist underneath it before the work compounds.
 
@@ -78,23 +103,9 @@ If all you can do is repeat "open is good," that is preaching, not analysis. Clo
 
 **Third, a lot of companies really are "basically on one stack."** If 80% of your business already lives in one ecosystem, then "best within the ecosystem" may literally be the best option for you. The benefits of openness are harder to use if your business is not cross-system.
 
-**Fourth, integration depth.** Within one ecosystem, data, identity, and permissions are all already there; the dirty work it spares you is measured in person-months.
+**Fourth — and this one got stronger — the cold-start problem.** Snowflake's Autopilot drafts the semantic model from query history you already have; Fabric IQ lets business experts author the ontology in a no-code visual tool instead of waiting on data engineers. Both attack the real obstacle, which was never the technology but the six-month modeling committee. An open format hands you a file and a blank page.
 
 All four cards are real. So the conclusion is not "closed platforms are all traps." For companies that sit comfortably inside one ecosystem, they are often the right answer. The problem shows up in companies like Yuanfeng: the premise expires.
-
-## This Time, the Playbook Has a New Weakness: Fragmentation
-
-With single-vendor lock-in, at least your business definition is still **one complete copy** — you just can't move it. Painful, but whole.
-
-Three giants each building closed ontologies produces something else: **fragmentation.** Yuanfeng's "customer" was not merely locked up; it was sliced into three and stored in three mutually unaware platforms. This can be more painful than lock-in, because two mechanisms prevent it from healing on its own.
-
-**The first layer is incentives.** You might think: just let Microsoft's ontology understand Salesforce's "customer," problem solved. It will not be that simple, because each vendor's ontology is part of its moat. If Microsoft unilaterally unified its "customer" semantics with Salesforce's, it would help a rival move data more smoothly and reduce its own differentiation. **Unification is strategically unattractive for every contestant in the race.** This is not only technical oversight; it is rational platform behavior.
-
-**The second layer is technical.** Even setting incentives aside, cross-ontology semantic alignment is hard: does System A's "customer" equal System B's "Account"? The field definitions, lifecycles, deduplication rules, and criteria for "the same entity" all differ across systems. AI cannot reliably infer this automatically either. Agents make mistakes precisely because this layer of definite definition is missing. Back to H Group: let the agent guess whether "these three records are the same company," and the cost of guessing wrong is exactly the loss in the story.
-
-Put together in one line: **you thought you bought three tools; you actually bought three mutually unaware sources of truth.** The more systems, the more acquisitions, and the more compliance isolation, the more severe this fragmentation becomes. The agent era amplifies the cost because a human can still manually reconcile across three systems, however painfully, while an agent needs one definite, cross-system-consistent layer of definition before it can reason.
-
-To avoid fragmentation, the definition of your business cannot belong entirely to a platform competing in the race. It needs to be a neutral layer: a definition you hold yourself, that different vendors' tools can read. Closed platforms structurally struggle to provide this, because they are contestants in the race and cannot also be neutral referees.
 
 ## How to Tell You're Being Fragmented
 
@@ -105,18 +116,23 @@ This is not abstract; it has concrete early symptoms. Check yourself against the
 3. Every time you connect a new system, you have to re-teach the AI "what this is" and "what the fields mean."
 4. An acquisition closed over a year ago and the two sides' master data still has not truly merged; each side reports its own version.
 5. Compliance requires isolating a class of data, so the same entity is forced into several copies, none recognizing the other.
+6. Your agent has been given more than one semantic-layer tool, and nobody has written down which one wins when they disagree.
 
-Before Yuanfeng lost H Group, four of these five were true. At the time, they were filed as "data governance to-dos," and no one realized they were risks an agent would eventually expose.
+Before Yuanfeng lost H Group, four of the first five were true. At the time, they were filed as "data governance to-dos," and no one realized they were risks an agent would eventually expose. The sixth is the 2026 addition, and it is the one that arrives quietly, because adding the second endpoint feels like progress.
 
-## First, Some Cold Water: Open Is Not a Silver Bullet
+## Some Cold Water: Open Is Not a Silver Bullet, and the Field Is Standardising
 
-Pause here, because otherwise this turns into a sales pitch.
+Pause here, because otherwise this turns into a sales pitch. There are three honest counterweights, and the third is new.
 
 First, **swapping the definition for an open protocol does not automatically merge Yuanfeng's three "customers" into one.** The semantic modeling, deduplication, and definition alignment still need to be done. There is no silver bullet here, and do not believe anyone who claims one. What open really changes is the **ownership** of this hard work: the definition you align today is written in your own repository, not buried in a platform backend. Next year, when you switch models, switch clouds, or get acquired, what you rebuild is the connection, not the definition itself.
 
 Second, **"open" itself does not guarantee winning.** Historically, for an open standard to prevail, it usually also needs a good reference implementation and an active ecosystem. Publishing a protocol that no one makes pleasant to use will not be enough. So choosing open is a bet that someone will build it well. That is an execution risk, not a guaranteed win.
 
-But note what these limits actually say: open also takes effort and carries risk. They do not say closed is always better. By comparison, the downside risk of locking your business definition into one platform, and then fragmenting it across several platforms, is larger and harder to reverse. Neither side is free; one of them keeps the core asset in your own hands.
+Third — and this is the strongest argument against the position in this post — **the vendors are standardising the definition layer themselves.** Snowflake co-founded the Open Semantic Interchange with Salesforce, dbt Labs, BlackRock and RelationalAI; the initiative entered the Apache Incubator in July 2026 as **Apache Ossie**, with 50-plus member organizations including Databricks, Oracle and Collibra. Databricks is separately open sourcing its metric-view implementation into Apache Spark. That is real, it is faster than most neutral-layer efforts manage, and anyone arguing the closed platforms will never converge is now arguing against evidence.
+
+But look carefully at where that convergence stops. Ossie covers **analytical** semantics — metrics, dimensions, relationships. Actions and permissions are not in scope. So the half of your ontology that *describes* the business is becoming portable, while the half that *changes* it — the operations, who may run them, and what gets written to the audit log — stays proprietary. That is not a small remainder. It is the half that decides whether an agent can do anything, and it is exactly the half where fragmentation is most expensive.
+
+None of these three says closed is better. They say open also takes effort, also carries risk, and is partially being met halfway. Weigh that against the downside of locking your business definition into one platform and then fragmenting it across five. Neither side is free; one of them keeps the core asset in your own hands.
 
 ## Layers Everyone Depends On End Up Neutral
 
@@ -124,7 +140,9 @@ The pattern itself isn't new, but it's worth telling with fresh examples, becaus
 
 The "definition layer" that an entire ecosystem collectively depends on tends to become neutral. The oldest example is SQL: database vendors competed fiercely, yet the query language itself remained public. Two newer examples are **OpenTelemetry**, the observability data standard hosted by the neutral CNCF, and **LSP (the Language Server Protocol)**, opened by Microsoft and adopted by many editors because it was open.
 
-The LSP example is especially useful because Microsoft itself proved the pattern: opening the definition layer and competing on the best implementation can create more value than locking the layer down. The business semantic layer is the same kind of thing. In the future, it will be depended on **simultaneously** by your applications, your agents, your audit systems, and tools from multiple vendors. A layer depended on by so many parties cannot stay private to one of them without continuing to produce the kind of fragmentation Yuanfeng suffered.
+The LSP example is especially useful because Microsoft itself proved the pattern: opening the definition layer and competing on the best implementation can create more value than locking the layer down. Note what LSP actually opened, though — the *protocol* and the *definition of what a language server must provide*. MCP has done the first half for ontologies. Apache Ossie is attempting the second half for the analytical part. Nobody has yet done it for the part that acts.
+
+A layer depended on simultaneously by your applications, your agents, your audit systems, and tools from five vendors cannot stay private to one of them without continuing to produce the kind of fragmentation Yuanfeng suffered.
 
 ## What the Neutral Layer Looks Like
 
@@ -153,18 +171,22 @@ os start   # The same definition, running on your own infrastructure
 
 Now ask the critical question again: "How high is H Group's renewal risk next year?" The agent now sees **one** unified "customer," with permissions and audit attached: healthy orders, overlaid with two executive-level complaints and a 90-day payment dispute. It answers, "High risk; recommend early intervention." Same model, same question. Because the definition beneath it is no longer fragmented, the conclusion shifts from "lost millions" to "warned a full quarter early."
 
+The MCP point applies here too, and in the direction that matters: the same definition is what the runtime serves to agents as governed tools, so the read path is open *and* the definition is yours. That is the argument [why the definition and the runtime should both be open](/en/blog/ai-ontology-open-protocol/) makes in full.
+
 This is the division of labor between ObjectStack and ObjectOS, and its answer to this race:
 
-- **ObjectStack** — the open definition protocol and open-source self-hosted runtime (Apache 2.0): the definition lives in your repository, any vendor's agent can read it, and the runtime validates and executes it with permissions and audit;
+- **ObjectStack** — an **open business ontology**: the open definition protocol and open-source self-hosted runtime (Apache 2.0). The definition lives in your repository, any vendor's agent can read it, and the runtime validates and executes it with permissions and audit;
 - **ObjectOS** — the optional commercial production platform and operated experience for the same ObjectStack application — cloud or self-managed — adding browser-based AI building, deployment, and operations without replacing the open definition or runtime underneath.
 
 The definition and self-hosted runtime stay open and neutral; the commercial production experience is where products compete. It is the same relationship SQL has with database vendors, and LSP has with editor vendors.
+
+Being honest about the trade: on modeling depth, on cold start, and on analytical semantics over warehouse-scale data, the platforms above are ahead, and the [comparison post](/en/blog/enterprise-ontology-platform-comparison/) says where in detail. What is different here is narrower than "better" — the definition is an ordinary file in your repository under an open license, and the runtime that enforces it is yours to host.
 
 ## Closing
 
 This is not an ideological question of "open is good" or "closed is good." It is a colder architecture question: **when your vendor mix changes through multi-model adoption, multi-cloud strategy, acquisition, or compliance isolation, who is holding the definition of your business?**
 
-The major platforms have proved that this layer is worth building. They have also put the ownership question in front of every enterprise at the same time. Yuanfeng's three "customers" were not a technical accident; they were the cost of handing the definition away. H Group, misjudged as "low risk," was only the first bill.
+Nine months ago that question was hypothetical, because the field had not shipped yet. It has now. Five platforms proved the layer is worth building, and then most of them opened a front door to a house you do not own. An MCP endpoint on someone else's ontology is a genuinely useful thing — it is just not the same thing as owning the definition, and the gap between those two is where Yuanfeng's H Group went.
 
 A layer everyone depends on rarely stays with one company for long. There is no reason this one should be different.
 
