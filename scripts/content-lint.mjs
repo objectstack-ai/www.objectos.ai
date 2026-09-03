@@ -22,16 +22,25 @@ const today = new Date();
 today.setHours(23, 59, 59, 999);
 
 const VALID_STATUS = new Set(['published', 'archived']);
-const VALID_TOPIC = new Set([
-  'ai-agents',
-  'app-building',
-  'integration-data',
-  'automation',
-  'modernization',
-  'governance',
-  'customer-stories',
-]);
-const VALID_AUDIENCE = new Set(['business', 'it', 'developer', 'general']);
+
+// The frontmatter taxonomy, derived from the module that declares it instead of
+// restated here. `src/lib/term-data.ts` holds the same rows `src/content.config.ts`
+// turns into its Zod enums (through `slugsByGroup` in `src/lib/terms.ts`), so one
+// edit to the taxonomy moves this gate and the build together.
+//
+// A literal copy here was never a second opinion, it was a second producer of one
+// fact — and it drifted in the direction an author feels: add a term, use it in a
+// post, and this script rejected the post that `astro check` and `astro build`
+// both accept, naming the post while the file to edit was this one.
+//
+// The frontmatter field and the taxonomy group differ in name for the audience
+// axis: `audience` holds a `role` slug. `src/content.config.ts` maps it the same
+// way (`audience: z.enum(ROLE)`).
+const { RAW_TERMS, termSlugPath } = await readTermData();
+const slugsInGroup = (group) =>
+  new Set(RAW_TERMS.filter((term) => term.group === group).map((term) => term.slug));
+const VALID_TOPIC = slugsInGroup('topic');
+const VALID_AUDIENCE = slugsInGroup('role');
 const PLACEHOLDERS = [
   { label: 'Write your article here', pattern: /write your article here/i },
   { label: 'your-domain.com', pattern: /your-domain\.com/i },
@@ -202,15 +211,41 @@ async function readClusterSlugs() {
 }
 
 /**
+ * The taxonomy itself, read once from the module that declares it. Two things in
+ * this script need it — the frontmatter term checks above and the topic-hub
+ * registry below — and reading it once is the point: a second reader is a second
+ * producer of the same fact, which is the drift this gate exists to catch.
+ *
+ * The module is imported, never text-matched: re-deriving the slug list by
+ * scraping a TypeScript file is exactly the tolerant re-parse a gate must not do.
+ * `src/lib/term-data.ts` deliberately has no value imports so that plain Node can
+ * load it; see its header before adding one.
+ */
+async function readTermData() {
+  try {
+    return await import(pathToFileURL(TERMS_MODULE).href);
+  } catch (error) {
+    console.error(
+      `✗ content lint could not read the term list from src/lib/term-data.ts, so ` +
+        `topic / audience cannot be checked and ` +
+        `/<locale>/blog/topics/<slug>/ links cannot be resolved.\n` +
+        `  This script imports that module directly, which needs Node type ` +
+        `stripping (Node 22.18+) and a module with no value imports — an ` +
+        `extensionless specifier like './i18n' resolves under Vite only.\n` +
+        `  ${error.message}`
+    );
+    exit(1);
+  }
+}
+
+/**
  * Topic hubs — `/<locale>/blog/topics/<slugPath>/`, one page per term the site
  * has content for. Two separate facts decide whether such a URL exists, so the
  * registry carries both:
  *
- *   * the term list and its nesting, from `src/lib/term-data.ts`. This script
- *     imports the module and calls its own `termSlugPath`, so the gate and the
- *     route cannot disagree about where a hub lives — re-deriving the slug list
- *     by text-matching a TypeScript file is exactly the tolerant re-parse a gate
- *     must not do. That module deliberately has no value imports; see its header.
+ *   * the term list and its nesting, from `src/lib/term-data.ts` (`readTermData`
+ *     above). This script calls that module's own `termSlugPath`, so the gate and
+ *     the route cannot disagree about where a hub lives.
  *   * which terms have content in which locale. `getStaticPaths` emits a hub
  *     only for the terms `getAllUsedTerms(locale)` returns, and a topic hub also
  *     aggregates its children's articles (`articleHasTerm`, src/lib/posts.ts).
@@ -220,22 +255,6 @@ async function readClusterSlugs() {
  * serves, not what `astro dev` additionally renders.
  */
 async function readTermHubs() {
-  let module;
-  try {
-    module = await import(pathToFileURL(TERMS_MODULE).href);
-  } catch (error) {
-    console.error(
-      `✗ content lint could not read the term list from src/lib/term-data.ts, so ` +
-        `/<locale>/blog/topics/<slug>/ links cannot be resolved.\n` +
-        `  This script imports that module directly, which needs Node type ` +
-        `stripping (Node 22.18+) and a module with no value imports — an ` +
-        `extensionless specifier like './i18n' resolves under Vite only.\n` +
-        `  ${error.message}`
-    );
-    exit(1);
-  }
-  const { RAW_TERMS: terms, termSlugPath } = module;
-
   const usedByLocale = new Map();
   for (const file of await walk(BLOG)) {
     let data;
@@ -259,14 +278,14 @@ async function readTermHubs() {
   }
 
   const childSlugs = new Map();
-  for (const term of terms) {
+  for (const term of RAW_TERMS) {
     if (term.group !== 'topic' || !term.parent) continue;
     childSlugs.set(term.parent, [...(childSlugs.get(term.parent) ?? []), term.slug]);
   }
 
   const byPath = new Map(); // hub path -> locales the site builds it in
   const pathBySlug = new Map(); // term slug -> its one canonical hub path
-  for (const term of terms) {
+  for (const term of RAW_TERMS) {
     const owned = [term.slug, ...(childSlugs.get(term.slug) ?? [])];
     const locales = new Set();
     for (const [locale, used] of usedByLocale) {
