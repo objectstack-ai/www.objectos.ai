@@ -2,7 +2,9 @@
 // Deterministic content checks for the blog publishing gate.
 //
 // Default behavior checks every MDX file. Use `--published` in CI/builds to
-// skip archived content and check only indexable content.
+// skip archived content and check only indexable content. `--dist` is a
+// separate mode that checks the BUILT HTML instead of the sources; it runs
+// after `astro build` (see the `build` script in package.json).
 
 import { readdir, readFile, access } from 'node:fs/promises';
 import path from 'node:path';
@@ -22,6 +24,211 @@ const today = new Date();
 today.setHours(23, 59, 59, 999);
 
 const VALID_STATUS = new Set(['published', 'archived']);
+
+// ─── Built HTML: no literal `**` in rendered prose ────────────────────────
+//
+// A `**bold**` span whose delimiter touches CJK punctuation on the inside and
+// a CJK letter on the outside is not a flanking delimiter run, so CommonMark
+// emits the asterisks verbatim and the reader sees `**` mid-sentence. It is
+// not a renderer bug and the markdown is valid, which is exactly why nothing
+// else here catches it: this script's MDX pass, `astro check`, `astro build`
+// and `seo:smoke` all pass on a post that renders broken. English almost never
+// trips it because English puts a space next to the delimiter; the four CJK
+// locales — the ones least likely to have a reader who reports it — trip it
+// constantly. An audit at 4dd647c found 24 built pages in that state.
+//
+// Two decisions this check is deliberately built on:
+//
+//   * It reads the BUILT HTML, not the MDX. The defect exists only in rendered
+//     output, so an MDX-level heuristic would have to re-implement CommonMark's
+//     flanking rule tolerantly — and a tolerant re-parse of the thing being
+//     gated is how a gate silently stops gating. The renderer's own output is
+//     the only source that cannot disagree with the renderer.
+//   * The `<code>`/`<pre>` exclusion is STRUCTURAL — the emitted HTML is parsed
+//     and those elements skipped — not a regex hoping to spot a code fence.
+//     Real pages depend on it: `<code>138****5678</code>` is a masked phone
+//     number, and an English post quotes `**` in a snippet. Both are correct,
+//     and a regex that tried to except them by pattern would either miss them
+//     or punch a hole a real defect could hide in.
+const DIST = path.join(ROOT, 'dist');
+
+/** Elements whose text is not prose: never scanned. */
+const SKIP_ELEMENTS = new Set(['code', 'pre']);
+
+/**
+ * HTML elements whose content is raw text rather than markup. Their bodies are
+ * scripts and stylesheets, not anything a reader reads, and `**` is ordinary
+ * there (`a ** b` is exponentiation). Skipped for the same reason as the two
+ * above: the rule is about rendered prose.
+ */
+const RAW_TEXT_ELEMENTS = new Set(['script', 'style', 'textarea', 'title']);
+
+/** Index of the `>` closing a tag, honouring quoted attribute values. */
+function tagEnd(html, from) {
+  let quote = null;
+  for (let i = from; i < html.length; i++) {
+    const c = html[i];
+    if (quote) {
+      if (c === quote) quote = null;
+    } else if (c === '"' || c === "'") {
+      quote = c;
+    } else if (c === '>') {
+      return i;
+    }
+  }
+  return -1;
+}
+
+/**
+ * Text nodes of a document that are prose: outside `<code>`/`<pre>` and outside
+ * raw-text elements. Returns `{ index, text }` so a hit can be reported with
+ * the surrounding sentence.
+ */
+function proseTextNodes(html) {
+  const nodes = [];
+  let i = 0;
+  let skipDepth = 0;
+  while (i < html.length) {
+    const lt = html.indexOf('<', i);
+    if (lt === -1) {
+      if (skipDepth === 0) nodes.push({ index: i, text: html.slice(i) });
+      break;
+    }
+    if (lt > i && skipDepth === 0) nodes.push({ index: i, text: html.slice(i, lt) });
+    if (html.startsWith('<!--', lt)) {
+      const end = html.indexOf('-->', lt + 4);
+      i = end === -1 ? html.length : end + 3;
+      continue;
+    }
+    if (html.startsWith('<!', lt)) {
+      const end = tagEnd(html, lt + 2);
+      i = end === -1 ? html.length : end + 1;
+      continue;
+    }
+    const tag = /^<(\/?)([a-zA-Z][a-zA-Z0-9-]*)/.exec(html.slice(lt, lt + 64));
+    if (!tag) {
+      // A bare `<` in text. Emitted HTML escapes it, but treating it as text
+      // keeps an unexpected one visible to the scan instead of silently
+      // swallowing the rest of the document.
+      if (skipDepth === 0) nodes.push({ index: lt, text: '<' });
+      i = lt + 1;
+      continue;
+    }
+    const closing = tag[1] === '/';
+    const name = tag[2].toLowerCase();
+    const end = tagEnd(html, lt + tag[0].length);
+    if (end === -1) break;
+    const selfClosing = html[end - 1] === '/';
+    i = end + 1;
+    if (!closing && !selfClosing && RAW_TEXT_ELEMENTS.has(name)) {
+      const close = html.toLowerCase().indexOf(`</${name}`, i);
+      i = close === -1 ? html.length : close;
+      continue;
+    }
+    if (SKIP_ELEMENTS.has(name)) {
+      if (closing) skipDepth = Math.max(0, skipDepth - 1);
+      else if (!selfClosing) skipDepth++;
+    }
+  }
+  return nodes;
+}
+
+/**
+ * `**` reaches a reader as two asterisks however it was spelled, so the numeric
+ * and named character references for `*` are resolved before matching. Without
+ * this the rule would be satisfiable by an escape that changes nothing a reader
+ * sees.
+ */
+function decodeAsterisks(text) {
+  return text.replace(/&(?:#0*42|#[xX]0*2[aA]|ast);/g, '*');
+}
+
+/** Every built blog page: `dist/<locale>/blog/<slug>/index.html`. */
+async function builtBlogPages(dir) {
+  const pages = [];
+  let entries;
+  try {
+    entries = await readdir(dir, { withFileTypes: true });
+  } catch {
+    return pages;
+  }
+  for (const entry of entries) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) pages.push(...(await builtBlogPages(full)));
+    else if (entry.name === 'index.html' && /(^|[\\/])blog[\\/]/.test(path.relative(DIST, full))) {
+      pages.push(full);
+    }
+  }
+  return pages;
+}
+
+/**
+ * The gate. Returns the process exit code.
+ *
+ * A run that measured nothing is a failure, not a pass: with no `dist/`, or a
+ * `dist/` holding no blog pages, "no page contains `**`" is true and means
+ * nothing. Reporting that as green is how this gate would quietly stop gating
+ * the day the build layout moves.
+ */
+async function checkBuiltProse() {
+  const pages = await builtBlogPages(DIST);
+  if (pages.length === 0) {
+    console.error(
+      `✗ content lint --dist found no built blog pages under ${path.relative(ROOT, DIST)}/.\n` +
+        `  This mode reads the rendered HTML, so it must run AFTER \`astro build\` — ` +
+        `\`pnpm build\` wires it in that order.\n` +
+        `  Nothing was checked, which is not the same as nothing being wrong.`
+    );
+    return 1;
+  }
+
+  const offenders = [];
+  for (const page of pages.sort()) {
+    const html = await readFile(page, 'utf8');
+    const hits = [];
+    for (const node of proseTextNodes(html)) {
+      const text = decodeAsterisks(node.text);
+      let at = text.indexOf('**');
+      while (at !== -1) {
+        const from = Math.max(0, at - 60);
+        hits.push(text.slice(from, at + 60).replace(/\s+/g, ' ').trim());
+        at = text.indexOf('**', at + 2);
+      }
+    }
+    if (hits.length > 0) offenders.push({ page: path.relative(DIST, page), hits });
+  }
+
+  if (offenders.length === 0) {
+    console.log(
+      `✓ content lint --dist passed (${pages.length} built blog page${pages.length === 1 ? '' : 's'} checked)`
+    );
+    return 0;
+  }
+
+  for (const { page, hits } of offenders) {
+    console.log(`✗ ${page}: ${hits.length} literal ** in rendered prose`);
+    for (const hit of hits) console.log(`    …${hit}…`);
+  }
+  console.error(
+    `\n✗ content lint --dist failed (${offenders.length} page${offenders.length === 1 ? '' : 's'} of ` +
+      `${pages.length} render a literal **)\n` +
+      `  A bold span did not close. CommonMark closes \`**\` only on a flanking delimiter run: ` +
+      `a closing run preceded by punctuation must also be followed by whitespace or punctuation, ` +
+      `and an opening run followed by punctuation must be preceded by whitespace or punctuation. ` +
+      `CJK prose puts a letter where English puts a space, so a delimiter sitting against ` +
+      `（）「」。：" does not pair.\n` +
+      `  Fix it by MOVING the delimiter, never by deleting the emphasis:\n` +
+      `    **用語（gloss）**は…   ->  **用語**（gloss）は…      (past a trailing gloss)\n` +
+      `    …しか呼べない。**モ    ->  …しか呼べない**。モ       (inside sentence punctuation)\n` +
+      `    **"引用"**の…          ->  "**引用**"の…             (inside the quotes)\n` +
+      `  Edit the authored locale; zh-Hant is generated by \`pnpm gen:zh-hant\`.`
+  );
+  return 1;
+}
+
+if (args.has('--dist')) {
+  exit(await checkBuiltProse());
+}
 
 // The frontmatter taxonomy, derived from the module that declares it instead of
 // restated here. `src/lib/term-data.ts` holds the same rows `src/content.config.ts`
