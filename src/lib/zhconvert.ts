@@ -23,37 +23,86 @@ import type { DictGroup, DictLike, LocalePreset } from 'opencc-js/core';
 // fail with ERR_MODULE_NOT_FOUND. Keep relative imports out of this file — the
 // same constraint `src/lib/term-data.ts` documents, for the same reason.
 
-// ─── Taiwanese vocabulary: s2twp, minus two wrong entries ──────────────────
+// ─── Taiwanese vocabulary: s2twp, minus eight wrong entries ────────────────
 //
 // `twp` is the right preset. Its phrase layer is what turns 数据 into 資料,
 // 程序 into 程式, 对象 into 物件, 接口 into 介面, 服务器 into 伺服器, 软件 into
 // 軟體, 信息 into 資訊, 缓存 into 快取, 用户 into 使用者 and 默认/缺省 into
-// 預設 — 123 of its 603 phrase entries fire in the blog corpus, and all but two
-// are the ordinary Taiwanese term. Dropping to plain `tw` to escape those two
-// would lose every one of the rest, so the preset stays and the two are
+// 預設 — 123 of its 603 phrase entries fire in the blog corpus, and all but
+// eight are the ordinary Taiwanese term. Dropping to plain `tw` to escape those
+// eight would lose every one of the rest, so the preset stays and the eight are
 // shadowed.
 //
 // HOW THE SHADOW WORKS. `s2twp` runs three conversion groups in order:
 // [STPhrases, STCharacters] → [TWPhrases] → [TWVariants]. Inside one group the
 // FIRST dictionary wins — `Trie.loadDictGroup` loads a group in reverse, so a
-// dictionary listed earlier is loaded later and overwrites. An identity entry at
-// the head of the TWPhrases group therefore disables exactly that one TWPhrases
-// rule and nothing else: the correction lands at the stage that introduces the
-// defect, and the character conversion underneath is untouched.
+// dictionary listed earlier is loaded later and overwrites. An entry at the head
+// of the TWPhrases group therefore replaces exactly that one TWPhrases rule and
+// nothing else: the correction lands at the stage that introduces the defect,
+// and the character conversion underneath is untouched. An entry whose two sides
+// are equal disables the stock rule outright; an entry with a different right
+// side substitutes for it.
 //
-// WHY IDENTITY ENTRIES AND NOT A POST-PASS. Rewriting 許可權 back to 權限 after
+// WHY OVERRIDE ENTRIES AND NOT A POST-PASS. Rewriting 許可權 back to 權限 after
 // the fact would also rewrite a genuine 许可权 — a real Simplified word — that
 // the preset had converted correctly. Shadowing leaves 许可权 → 許可權 alone and
-// only stops 权限 from being rewritten. TWPhrases is the only dictionary in the
-// chain that can emit 許可權 or 例項 at all: STPhrases (49276 entries),
-// STCharacters (3882) and TWVariants (39) contain neither string.
+// only stops 权限 from being rewritten. The same asymmetry is why 適配器 →
+// 介面卡 is repaired here and not afterwards: 介面卡 is a real Taiwanese word (a
+// network interface card), it is what a source 介面卡 must stay, and STPhrases
+// carries it as an identity entry to keep it that way. A post-pass could not
+// tell the two apart; the shadow never sees the genuine one.
+//
+// WHY THE SHADOW REACHES ALL EIGHT. Keyed on the post-s2t form, which is what
+// the TWPhrases group sees — 权限 arrives as 權限, 镜像 as 鏡像, 扩展 as 擴展.
+// And TWPhrases is the only dictionary in the chain that can emit any of the
+// eight wrong strings at all, which is what makes shadowing it sufficient:
+// across STPhrases (49276 entries), STCharacters (3882) and TWVariants (39),
+// the only hit for any of them is STPhrases' identity entry 介面卡 → 介面卡,
+// which can preserve a NIC but can never introduce one.
 export const TWP_PHRASE_OVERRIDES: readonly (readonly [string, string])[] = [
   // 权限 → 許可權 is a Microsoft-glossary rendering; 權限 is the ordinary term in
-  // Taiwanese technical and legal writing. Keyed on the post-s2t form, which is
-  // what the TWPhrases group sees.
+  // Taiwanese technical and legal writing.
   ['權限', '權限'],
   // 实例 → 例項 is not standard Taiwanese usage in any register.
   ['實例', '實例'],
+
+  // ── Mechanical over-substitutions: a fragment appended or swapped ────────
+  //
+  // These five are not contested vocabulary. The preset glues on a word part,
+  // or swaps a character, in a way that is wrong in Taiwanese usage in any
+  // register and for any audience — so each is corrected to the ordinary term
+  // rather than merely disabled, since leaving the mainland spelling standing
+  // would be its own defect.
+  //
+  // 全局 → 全域性 appends a 性 that turns the noun into an adjective.
+  ['全局', '全域'],
+  // 扩展 → 擴充套件 appends 套件 ("package"). Every use in this corpus is the
+  // verb — extend a system, extend an object model — never a plug-in.
+  ['擴展', '擴充'],
+  // 适配器 → 介面卡 substitutes different hardware: 介面卡 is a network
+  // interface card. The adapter of the adapter pattern is 配接器.
+  ['適配器', '配接器'],
+  // 控件 → 控制元件 appends 元件 ("component"). The standard UI-control term is
+  // 控制項, which this corpus already ships elsewhere from a source 控制项 —
+  // closing the split is half the point of the entry.
+  ['控件', '控制項'],
+  // 镜像 → 映象 swaps the second character; a disk or container image is 映像.
+  // TWPhrases carries the same 象/像 slip a second time in 顯像管 → 映象管,
+  // left alone deliberately: no source here writes 显像管, and a CRT is not
+  // this card's business.
+  ['鏡像', '映像'],
+
+  // ── One normalization, not a repair ─────────────────────────────────────
+  //
+  // 脚本 → 指令碼 is the Microsoft-glossary rendering; 腳本 is the ordinary
+  // Taiwanese word, and in this corpus the referent is always shell or webhook
+  // glue in an automation argument, never a screenplay. The reason it cannot
+  // wait for a vocabulary round is that the corpus already shipped BOTH: the
+  // STPhrases entry 本里 matches across the word boundary in 脚本里 and blocks
+  // the phrase layer along with the character layer, so a handful of sites
+  // escaped the substitution and read 腳本 while the rest read 指令碼. The
+  // identity entry settles every site the same way, straddled or not.
+  ['腳本', '腳本'],
 ];
 
 /** `s2twp` with TWP_PHRASE_OVERRIDES shadowing the head of its phrase group. */
@@ -104,8 +153,11 @@ function buildVocabularyConverter(): (text: string) => string {
 // never sees it — so this is a whitelist by construction. It cannot fire on 公里,
 // 英里, 里程碑, 鄰里, 里長 or a place name, because none of those follow one of
 // the listed words. The straddle also blocks the phrase layer, which is why the
-// text these rules touch reads 腳本 and 函數 rather than 指令碼 and 函式; both
-// spellings are listed so the rule holds once a straddle stops hiding one.
+// text these rules touch reads 函數 rather than 函式; both spellings are listed
+// so the rule holds once a straddle stops hiding one. 腳本 no longer depends on
+// that — TWP_PHRASE_OVERRIDES settles it everywhere — but 指令碼 stays in the
+// alternation for the same reason 函式 does: this list must not be the thing
+// that breaks if an override above is ever reconsidered.
 export const LOCATIVE_LI: readonly (readonly [RegExp, string])[] = [
   // …里 directly after a technical artifact. `(?!程)` holds 里程碑 out: 系統里程碑
   // is a milestone, not something inside the system.
@@ -172,6 +224,36 @@ export const CONVERSION_CASES: readonly (readonly [string, string])[] = [
   // …and a genuine 许可权 / 例项 in the source still converts on its own terms.
   ['许可权', '許可權'],
   ['例项', '例項'],
+  // The five mechanical over-substitutions, bare and in the phrase shapes the
+  // corpus actually writes. Each pins BOTH halves: the wrong string is gone and
+  // the ordinary term is what took its place, so a preset bump that reinstated
+  // 全域性 and a well-meant edit that merely disabled it both fail here.
+  ['全局', '全域'],
+  ['看清全局', '看清全域'],
+  ['错误却是全局的', '錯誤卻是全域的'],
+  ['一个全局定时服务', '一個全域定時服務'],
+  ['扩展', '擴充'],
+  ['逐步扩展', '逐步擴充'],
+  ['扩展存量系统', '擴充存量系統'],
+  ['适配器', '配接器'],
+  ['接入适配器', '接入配接器'],
+  ['控件', '控制項'],
+  ['拖控件', '拖控制項'],
+  ['镜像', '映像'],
+  ['开放镜像格式', '開放映像格式'],
+  ['离线容器镜像', '離線容器映像'],
+  // 脚本 normalized, straddled (see LOCATIVE_LI) and not.
+  ['脚本', '腳本'],
+  ['写一段脚本', '寫一段腳本'],
+  ['脚本和 webhook', '腳本和 webhook'],
+  // …and the genuine words these five must never disturb. 介面卡 IS a Taiwanese
+  // word — a network interface card — and a source that writes one keeps it;
+  // that is the whole reason 适配器 is repaired in the phrase layer rather than
+  // rewritten afterwards. 控制项 already converts to the same 控制項 the 控件
+  // override now emits, which is the split this closes.
+  ['介面卡', '介面卡'],
+  ['全域', '全域'],
+  ['控制项', '控制項'],
   // The rest of the preset still applies. This is the whole reason `twp` is
   // kept rather than dropped to `tw` to escape the two entries above.
   ['数据 程序 对象 接口 服务器', '資料 程式 物件 介面 伺服器'],
