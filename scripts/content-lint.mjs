@@ -760,6 +760,87 @@ function resolveInternalLink(href, registries) {
   return { severity: 'error', reason: 'not a route this site builds' };
 }
 
+// ─── Cross-locale body links ───────────────────────────────────────────────
+//
+// A link is resolvable and still wrong when it names a locale the file is not
+// written in. `resolveInternalLink` above finds `/zh-Hans/blog/x/` in an `index.ja.mdx`
+// perfectly real, because it is: the page builds, the link works, and the reader
+// is quietly moved out of the language they were reading in — at which point the
+// language switcher offers to "switch" them to the locale they were already in.
+// Nothing else in the gate chain looks at the locale segment at all.
+//
+// THE RULE IS CONDITIONAL, AND THE CONDITION IS THE WHOLE DESIGN. A deliberate
+// cross-locale link is a real thing: an English-only companion post linked from
+// a translation is the author's only option, and the alternative — a same-locale
+// URL that was never built — is a hard 404 the check above already rejects. So
+// the finding fires only when the SAME-LOCALE TARGET EXISTS. Then the link is
+// unambiguously a mistake, because the page the reader wanted is right there in
+// their language.
+//
+// That is the same rule `scripts/gen-zh-hant.mjs` enforces on the generated side:
+// it rewrites a `/zh-Hans/` link to `/zh-Hant/` only when the Traditional target
+// is provably built, and withholds the rewrite otherwise because a manufactured
+// 404 is worse than a cross-locale link. One rule, two enforcement points — the
+// generator repairs the links it can reach, this catches the hand-written locales
+// (`.ja`, `.ko`, `.de`, `.es`, `.fr`) that have no generator to blame. If the two
+// ever disagree, one of them is wrong and a shared rule makes that visible.
+//
+// "The same-locale target exists" is answered by calling `resolveInternalLink`
+// on the swapped URL rather than by re-deriving existence per surface. A second
+// answer to that question is a second producer of one fact, and it would drift
+// exactly where it matters: the two would disagree about some URL, and the
+// disagreement would surface as a cross-locale error on a link whose same-locale
+// form 404s — the manufactured 404 this rule exists to avoid. Reusing the
+// resolver also means a `warn` verdict (the noindexed English fallback the
+// glossary and marketing registries serve) does NOT count as existing. That is
+// deliberate and conservative: choosing the real English page over a noindexed
+// English-bodied duplicate is a defensible authoring call, not a mistake, and
+// option 2's discipline is to fire only on the unambiguous case.
+
+/** `/en/blog/x/#anchor` -> `/ja/blog/x/#anchor`. Null when there is no segment to swap. */
+function withLocale(href, locale) {
+  const match = href.match(/^\/[^/#?]+(\/[^#?]*)?([#?].*)?$/);
+  if (!match) return null;
+  return `/${locale}${match[1] ?? ''}${match[2] ?? ''}`;
+}
+
+/**
+ * One body link read from a file written in `fileLocale`. Returns null when the
+ * link is same-locale, carries no routable locale segment, or has no built
+ * same-locale counterpart; otherwise `{ severity, reason }`.
+ */
+function crossLocaleMiss(href, fileLocale, registries) {
+  const clean = href.split('#')[0].split('?')[0];
+  const segments = clean.split('/').filter(Boolean);
+  if (segments.length === 0) return null; // "/" — the locale-picking root page
+  const linkLocale = segments[0];
+  // A root route or a `public/` asset has no locale to be wrong about.
+  if (!registries.locales.has(linkLocale)) return null;
+  if (linkLocale === fileLocale) return null;
+
+  const sameLocale = withLocale(href, fileLocale);
+  if (!sameLocale || resolveInternalLink(sameLocale, registries) !== null) return null;
+
+  // zh-Hant posts are generated from zh-Hans unless hand-maintained, so naming
+  // the generated file as the place to edit would send the author to a file the
+  // next `pnpm gen:zh-hant` overwrites.
+  const authored =
+    fileLocale === 'zh-Hant'
+      ? ' If this file carries the `@generated` marker, fix the link in the zh-Hans source and re-run `pnpm gen:zh-hant`.'
+      : '';
+
+  return {
+    severity: 'error',
+    reason:
+      `this file is the ${fileLocale} version, the link points at ${linkLocale}, and ` +
+      `${sameLocale} IS built — so the reader is sent out of the language they were ` +
+      `reading in for a page that exists in it. Change the locale segment to ` +
+      `${sameLocale}; do not delete the link. (A cross-locale link is accepted when ` +
+      `the same-locale target does not exist — an English-only companion post is the ` +
+      `author's only option there, and this rule stays silent on it.)${authored}`,
+  };
+}
+
 const registries = {
   blog: await readBlogRegistry(),
   glossary: await readLocaleTree(GLOSSARY),
@@ -920,6 +1001,20 @@ for (const file of files) {
         data,
         miss.severity,
         `Dangling internal link [${link.text}](${link.href}): ${miss.reason}`
+      );
+    }
+    // A link that does not resolve at all is reported once, above. Its locale is
+    // not the interesting fact about it, and a second finding on the same link
+    // would send the author to fix the segment of a URL that 404s either way.
+    if (miss?.severity === 'error') continue;
+    const crossed = crossLocaleMiss(link.href, locale, registries);
+    if (crossed) {
+      addIssue(
+        issues,
+        rel,
+        data,
+        crossed.severity,
+        `Cross-locale internal link [${link.text}](${link.href}): ${crossed.reason}`
       );
     }
   }
