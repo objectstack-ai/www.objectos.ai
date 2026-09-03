@@ -77,7 +77,7 @@ export function termDescription(term: Term, locale: Locale): string {
     },
     'zh-Hant': {
       topic: `圍繞${label}的文章，關注 AI-native 企業軟體、受控資料、應用搭建和 Agent 工作流的實踐。`,
-      solution: `關於${label}場景的實踐思考，覆蓋資料模型、流程、許可權、整合以及企業 AI Agent 的設計方式。`,
+      solution: `關於${label}場景的實踐思考，覆蓋資料模型、流程、權限、整合以及企業 AI Agent 的設計方式。`,
       role: `面向${label}的文章，討論如何用 ObjectOS 構建、執行和治理 AI-native 業務應用。`,
       industry: `面向${label}團隊的文章，討論如何連線現有系統、業務資料、流程與 AI Agent，而不是替換核心平臺。`,
     },
