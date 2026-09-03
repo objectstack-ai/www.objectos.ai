@@ -41,6 +41,19 @@ const slugsInGroup = (group) =>
   new Set(RAW_TERMS.filter((term) => term.group === group).map((term) => term.slug));
 const VALID_TOPIC = slugsInGroup('topic');
 const VALID_AUDIENCE = slugsInGroup('role');
+const VALID_SOLUTION = slugsInGroup('solution');
+const VALID_INDUSTRY = slugsInGroup('industry');
+
+// `topic` and `audience` carry one slug; `solutions` and `industries` carry a
+// list of them (`z.array(z.enum(...)).default([])` in `src/content.config.ts`).
+// Only an absent field defaults to the empty list there, so anything else that
+// is not a list — `solutions:` with nothing after it parses as null — is an
+// error here too, which is the point: this gate and the build should reach the
+// same verdict on the same file.
+const LIST_TERM_FIELDS = [
+  { field: 'solutions', noun: 'solution', valid: VALID_SOLUTION },
+  { field: 'industries', noun: 'industry', valid: VALID_INDUSTRY },
+];
 const PLACEHOLDERS = [
   { label: 'Write your article here', pattern: /write your article here/i },
   { label: 'your-domain.com', pattern: /your-domain\.com/i },
@@ -227,7 +240,7 @@ async function readTermData() {
   } catch (error) {
     console.error(
       `✗ content lint could not read the term list from src/lib/term-data.ts, so ` +
-        `topic / audience cannot be checked and ` +
+        `topic / audience / solutions / industries cannot be checked and ` +
         `/<locale>/blog/topics/<slug>/ links cannot be resolved.\n` +
         `  This script imports that module directly, which needs Node type ` +
         `stripping (Node 22.18+) and a module with no value imports — an ` +
@@ -590,6 +603,24 @@ for (const file of files) {
   }
   if (data.audience && !VALID_AUDIENCE.has(data.audience)) {
     addIssue(issues, rel, data, 'error', `Invalid audience: ${data.audience}`);
+  }
+
+  // A frontmatter group nobody checks is the same defect as one checked against
+  // a stale list, only further from being noticed: until this ran, an author
+  // could put any string in `solutions` or `industries` and every gate this
+  // script owns stayed green, leaving `astro build` to be the first to object.
+  for (const { field, noun, valid } of LIST_TERM_FIELDS) {
+    const value = data[field];
+    if (value === undefined) continue;
+    if (!Array.isArray(value)) {
+      addIssue(issues, rel, data, 'error', `${field} must be a list of terms, got: ${value}`);
+      continue;
+    }
+    for (const slug of value) {
+      if (!valid.has(slug)) {
+        addIssue(issues, rel, data, 'error', `Invalid ${noun}: ${slug}`);
+      }
+    }
   }
 
   if (typeof data.title === 'string') {
