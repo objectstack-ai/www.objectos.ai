@@ -3,6 +3,7 @@ title: "Cross-System Workflow Automation: Connector Failure Handling in a Govern
 description: "The moment a step leaves your runtime you stop being able to observe it. A governed cross-system flow declares what each outbound call does, designs the failure path first, and never reports a step it could not measure as zero."
 author: ObjectStack Team
 date: 2026-06-05T12:00:00+08:00
+updated: 2026-09-02T10:00:00+08:00
 status: published
 topic: integration-data
 audience: business
@@ -57,7 +58,7 @@ An external system telling *the platform* something happened is a different mech
 
 What matters *here* is that the two directions hand you opposite problems:
 
-- **Outbound, you own the budget.** You control how many times a delivery is retried, how long it backs off, and what happens when it gives up. You also own the consequence: every retry is another chance to apply the same change twice at the far end.
+- **Outbound, you own the budget.** The platform retries on one fixed cadence, so you know how long it keeps trying and exactly when it gives up — and you own what happens after it does. You also own the consequence: every retry is another chance to apply the same change twice at the far end. What the platform hands you is an anchor rather than a dial: every attempt at one delivery carries that delivery's id in an `X-Objectstack-Delivery` header, so a receiver that deduplicates on it will not post the same change twice.
 - **Inbound, you own none of it.** The sender decides how often to retry, and you cannot make it stop. Delivery is at-least-once. Idempotency is not a nicety on the inbound side; it is the only defence you have, which is why an `x-idempotency-key` header passes through to the queue's dedup window and why an inbound flow must be authored to tolerate seeing the same event twice.
 
 Teams that model both directions as "webhooks" end up writing one set of assumptions and applying it to both. The duplicate approval created by a re-sent callback, and the customer record updated by a retry that should have been suppressed, are the same mistake pointed two ways.
@@ -76,7 +77,9 @@ That last behaviour is a deliberate design position: a missing integration shoul
 
 ## The retry budget you inherit
 
-Here is the number to hold on to. When an outbound delivery goes through the durable outbox, the retry schedule is **fixed at five attempts — roughly 1 second, 10 seconds, 1 minute, 10 minutes, then 1 hour, each with ±20% jitter — after which the row is dead-lettered** rather than retried forever.
+Here is the number to hold on to. When an outbound delivery goes through the durable outbox, the retry schedule is **fixed at seven backoff steps — roughly 1 second, 10 seconds, 1 minute, 10 minutes, 1 hour, 6 hours, then 24 hours, each with ±20% jitter — after which the row is dead-lettered** rather than retried forever. End to end that is about 31 hours from the first failure to the dead-letter row.
+
+Read that number as an operational fact, not a trivia item. It means a delivery can take more than a day to fail for good, so "the other side never got it" does not announce itself while anyone is still looking at the run — and it means a dead-lettered row nobody is assigned to is an incident with a paper trail and no owner.
 
 Fixed means fixed: it is not configurable per webhook. That is a real constraint, and it was chosen for a specific reason. An earlier version of the spec let authors declare a `retryPolicy` on a webhook, and the delivery path never read it. A retry budget that silently does not exist is strictly worse than one you cannot change, so the key was removed rather than left as decoration. If you need a different schedule, that is a platform-level conversation, not a per-webhook checkbox — and you should know which of those two you are having.
 
@@ -86,7 +89,7 @@ There are three retry budgets in play in a cross-system flow, and confusing them
 | --- | --- | --- |
 | Flow node `errorHandling` | Re-running a failed node inside one run. `strategy: 'retry'` requires `maxRetries >= 1`. | It governs **one synchronous dispatch**. A durable pause — an approval, a screen, a wait — ends the retry-governed segment, so a failure after the run resumes is not retried. |
 | Connector `retryConfig` | The connector's own HTTP attempts, with exponential backoff. Retryable status codes default to `408, 429, 500, 502, 503, 504`. | Spelled `maxAttempts`, and it **includes** the first attempt. |
-| Messaging outbox | Delivery of outbound webhooks and durable HTTP calls. | The fixed five-step schedule above, then a dead-letter row. |
+| Messaging outbox | Delivery of outbound webhooks and durable HTTP calls. | The fixed seven-step schedule above, then a dead-letter row. |
 
 The off-by-one in that table is worth a line of its own, because it is exactly the kind of thing an AI writing your flow gets wrong silently: **`maxAttempts` (connector) includes the first attempt; `maxRetries` (flow node) counts the ones after it.** Copying a number from one to the other runs one attempt fewer than you asked for. Write `maxRetries: maxAttempts - 1`.
 
