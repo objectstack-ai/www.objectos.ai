@@ -26,6 +26,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
+import { splitFrontmatter } from './frontmatter.mjs';
 
 /** Every `.mdx` under `dir`, recursively. */
 function walkMdx(dir) {
@@ -38,14 +39,24 @@ function walkMdx(dir) {
   return files;
 }
 
-/** Parse the YAML frontmatter block of an MDX source. */
+/**
+ * Parse the YAML frontmatter block of an MDX source.
+ *
+ * The fence split comes from `./frontmatter.mjs`, shared with
+ * `scripts/content-lint.mjs` so the gate and this map cannot drift into
+ * accepting different files. The wording stays here: this reader throws where
+ * the gate collects, and both sets of strings are their own caller's.
+ */
 function frontmatter(source, file) {
-  if (!source.startsWith('---\n')) {
-    throw new Error(`${file} does not start with YAML frontmatter`);
+  const split = splitFrontmatter(source);
+  if (!split.ok) {
+    throw new Error(
+      split.reason === 'no-opening-fence'
+        ? `${file} does not start with YAML frontmatter`
+        : `${file} has no closing frontmatter fence`
+    );
   }
-  const end = source.indexOf('\n---', 4);
-  if (end === -1) throw new Error(`${file} has no closing frontmatter fence`);
-  const data = yaml.load(source.slice(4, end));
+  const data = yaml.load(split.raw);
   if (!data || typeof data !== 'object') {
     throw new Error(`${file} has empty or non-object frontmatter`);
   }
