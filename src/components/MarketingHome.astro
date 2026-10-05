@@ -2,6 +2,7 @@
 import { getPostsInLocale } from '../lib/posts';
 import { blogPath, formatDate, pricingPath, postPath, type Locale } from '../lib/i18n';
 import { homeCopy } from '../lib/home';
+import { heroLineJoin } from '../lib/positioning';
 import { termBySlug, termHref, termLabel } from '../lib/terms';
 import { CLUSTERS, clusterPath } from '../lib/clusters';
 import { clusterCopy } from '../lib/cluster-i18n';
@@ -19,7 +20,9 @@ interface Props {
 
 const { locale } = Astro.props;
 const copy = homeCopy[locale];
-const lineJoin = locale === 'zh-Hans' || locale === 'zh-Hant' || locale === 'ja' ? '' : ' ';
+// The H1 is the canonical T1 split over two lines; `positioning.ts` asserts the
+// two halves rejoin to T1 with exactly this joiner, so the rule lives there.
+const lineJoin = heroLineJoin(locale);
 const productTourHref = marketingPagePath(locale, 'product-tour');
 const templatesHref = `${marketingPagePath(locale, 'templates')}#catalog`;
 const agentDeveloperHref = marketingPagePath(locale, 'agent-developer');
@@ -501,9 +504,13 @@ const coverSrc = (cover: unknown): string =>
     background: var(--surface);
     box-shadow: 0 12px 30px -26px rgba(var(--shadow), 0.45);
   }
+  /* Four chips, one per promise of the README's T3 line, so four columns at
+     desktop width — at the strip's 940px that is ~220px a column, which holds
+     the longest title (`de` "Von Agents bedienbar", `ja` the twelve-kana
+     agent chip) on one line. 2-up on tablets, 1-up on phones below. */
   .proof {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 1rem;
     margin: 2.25rem 0 0;
     padding-top: 1.1rem;
@@ -1125,6 +1132,11 @@ const coverSrc = (cover: unknown): string =>
       grid-column: span 2;
       min-height: 240px;
     }
+    /* Four chips in two rows of two: at tablet widths four columns would be
+       ~150px each, which breaks the longer titles onto two lines. */
+    .proof {
+      grid-template-columns: repeat(2, 1fr);
+    }
   }
   .home.lang-de .hero h1,
   .home.lang-fr .hero h1,
@@ -1162,24 +1174,15 @@ const coverSrc = (cover: unknown): string =>
     .hero-media::before {
       inset: -10px 12px 18px -10px;
     }
-    /* One column on phones. Three columns survive down here only by getting
-       narrower than their own content: measured at 390px each column is
-       ~114px (en) / ~112px (de), which breaks every `dt` onto two lines and
-       runs the `dd` to three — "Human-controlled" hyphenates, and `de` is
-       worse than `en` at every width. The `gap: 0.5rem` this replaces was
-       already a symptom: it existed only to squeeze a third column into a
-       phone, so with the third column gone it has nothing left to do, and
-       the value below is a row gap separating three stacked entries.
+    /* One column on phones. Two columns survive down here only by getting
+       narrower than their own content: at 390px each column is ~175px,
+       which breaks the longer titles (`de`, `fr`) onto two lines and runs
+       the `dd` to three. The value below is a row gap separating four
+       stacked entries.
 
        640px is this file's existing phone breakpoint rather than a new
-       number, and the strip has no good in-between state — with exactly
-       three items a 2-up grid strands the third on its own row. Measured
-       across 360-900px, three columns stop being cramped at ~600px in the
-       worst-case locale (`de`: every `dt` on one line, every `dd` within
-       two), so the last width that keeps them is comfortable, not marginal.
-
-       The strip is the last child in both the source order and the phone
-       reorder, so this moves nothing above it — the video included. */
+       number. The strip is the last child in both the source order and the
+       phone reorder, so this moves nothing above it — the video included. */
     .proof {
       grid-template-columns: 1fr;
       gap: 0.9rem;

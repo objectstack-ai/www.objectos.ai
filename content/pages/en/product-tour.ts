@@ -1,4 +1,7 @@
 import type { MarketingPage } from '../../../src/content-pages/types';
+import { positioning } from '../../../src/lib/positioning';
+
+const p = positioning.en;
 
 const page = {
     slug: 'product-tour',
@@ -8,8 +11,7 @@ const page = {
       'See how teams use ObjectOS to take an ObjectStack app from a business request to production: typed metadata, a human-reviewed diff, and governed operation.',
     eyebrow: 'Product tour',
     heroTitle: 'From one request to a governed application.',
-    lead:
-      'ObjectStack is the open target format and runtime for AI-written enterprise software: an agent writes compact metadata, a person reviews the diff, and the runtime derives the repeatable application surfaces. ObjectOS is the commercial production platform for building, deploying, and operating those apps.',
+    lead: `${p.t2} ${p.t4}`,
     primary: { label: 'Point your agent at ObjectStack', href: '/en/agent-developer/' },
     secondary: { label: 'Review the trust model', href: '/en/trust-center/' },
     metrics: [
@@ -128,13 +130,11 @@ export const Case = ObjectSchema.create({
     faqs: [
       {
         question: 'Is ObjectOS a low-code builder?',
-        answer:
-          'No. Low-code usually optimizes human screen building. ObjectOS is the commercial production platform for ObjectStack apps. ObjectStack is the open, typed target format and runtime that keeps metadata reviewable and enforces governance on every call.',
+        answer: `No. Low-code usually optimizes human screen building. ObjectOS is ${p.descriptor}. ${p.t1} An agent writes it, a person reviews the diff, and the ObjectStack runtime keeps metadata reviewable and enforces governance on every call.`,
       },
       {
         question: 'How do ObjectStack and ObjectOS differ?',
-        answer:
-          'ObjectStack defines and runs the application as open, versioned metadata. ObjectOS is the commercial production platform that adds the in-app AI experience, team operation, deployment choices, and enterprise support around ObjectStack apps.',
+        answer: `ObjectStack is the open-source stack: it defines and runs the application as one open, versioned business ontology — objects and fields, relations, actions, permissions, flows, and agent and tool definitions. ObjectOS is ${p.descriptor}, adding the in-app AI Build and Ask experience, team operation, deployment choices, and enterprise support. ${p.e1}`,
       },
     ],
   } satisfies MarketingPage;

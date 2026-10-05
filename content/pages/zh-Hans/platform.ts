@@ -1,15 +1,16 @@
 import type { MarketingPage } from '../../../src/content-pages/types';
+import { positioning } from '../../../src/lib/positioning';
+
+const p = positioning['zh-Hans'];
 
 const page = {
     slug: 'platform',
     navLabel: '平台总览',
     title: 'ObjectOS 平台：AI 编写的业务应用背后的全部能力',
-    description:
-      'ObjectOS 是 ObjectStack 应用的商业生产平台，把产品内 AI、部署与团队运营建立在开放、受治理的 ObjectStack 运行时之上。',
+    description: `ObjectOS 是${p.descriptor}：把产品内 AI、部署与团队运营建立在开放、受治理的 ObjectStack 运行时之上。`,
     eyebrow: '平台总览',
     heroTitle: '一个业务系统需要的一切，随时可投入生产。',
-    lead:
-      '你的 Agent 用紧凑、类型化的 ObjectStack 元数据描述业务。开放的 ObjectStack 运行时派生数据库、API、权限感知的界面、自动化流程、审批队列和仪表盘，并在每次调用中强制治理。ObjectOS 把这个基础打包成用于构建、部署与生产运营的商业平台。',
+    lead: `你的 Agent 用一份类型化的 ObjectStack 本体描述业务。开放的 ObjectStack 运行时派生数据库、API、权限感知的界面、自动化流程、审批队列和仪表盘，并在每次调用中强制治理。${p.t4}`,
     primary: { label: '对比版本与定价', href: '/en/pricing/' },
     secondary: { label: '查看产品导览', href: '/en/product-tour/' },
     metrics: [
