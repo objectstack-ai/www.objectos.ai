@@ -1,15 +1,16 @@
 import type { MarketingPage } from '../../../src/content-pages/types';
+import { positioning } from '../../../src/lib/positioning';
+
+const p = positioning.en;
 
 const page = {
     slug: 'platform',
     navLabel: 'Platform',
     title: 'ObjectOS Platform: The Capabilities Behind AI-Written Business Apps',
-    description:
-      'ObjectOS is the commercial production platform for ObjectStack apps, combining in-app AI, deployment, and team operations with the open, governed ObjectStack runtime.',
+    description: `ObjectOS is ${p.descriptor}: in-app AI Build and Ask, deployment, and team operations on the open, governed ObjectStack runtime.`,
     eyebrow: 'Platform',
     heroTitle: 'Everything a business system needs. Ready for production.',
-    lead:
-      'Your agent describes the business as compact, typed ObjectStack metadata. The open ObjectStack runtime derives the database, APIs, permission-aware screens, automated processes, approval queues, and dashboards, enforcing governance on every call. ObjectOS packages that foundation as a commercial platform for building, deploying, and operating the app in production.',
+    lead: `Your agent describes the business as one typed ObjectStack ontology. The open ObjectStack runtime derives the database, APIs, permission-aware screens, automated processes, approval queues, and dashboards, enforcing governance on every call. ${p.t4}`,
     primary: { label: 'Compare editions and pricing', href: '/en/pricing/' },
     secondary: { label: 'Take the product tour', href: '/en/product-tour/' },
     metrics: [

@@ -1,4 +1,7 @@
 import type { MarketingPage } from '../../../src/content-pages/types';
+import { positioning } from '../../../src/lib/positioning';
+
+const p = positioning['zh-Hans'];
 
 const page = {
     slug: 'product-tour',
@@ -8,8 +11,7 @@ const page = {
       '了解团队如何在 ObjectOS 中把业务需求变成 ObjectStack 类型化元数据，经人审阅 diff 后投入受治理的生产运营。',
     eyebrow: '产品导览',
     heroTitle: '从一句需求，到一个受治理的应用。',
-    lead:
-      'ObjectStack 是 AI 编写企业软件的开放目标格式与运行时：Agent 编写紧凑的元数据，人审阅 diff，运行时派生可重复的应用表面。ObjectOS 是用于构建、部署与运营这些应用的商业生产平台。',
+    lead: `${p.t2}${p.t4}`,
     primary: { label: '把你的 Agent 指向 ObjectStack', href: '/en/agent-developer/' },
     secondary: { label: '查看信任模型', href: '/en/trust-center/' },
     metrics: [
@@ -128,13 +130,11 @@ export const Case = ObjectSchema.create({
     faqs: [
       {
         question: 'ObjectOS 是低代码平台吗？',
-        answer:
-          '不是。低代码通常优化的是人拖拽界面的效率。ObjectOS 是 ObjectStack 应用的商业生产平台；ObjectStack 才是开放、类型化的目标格式与运行时，让元数据可审阅，并在每次调用中强制治理。',
+        answer: `不是。低代码通常优化的是人拖拽界面的效率。ObjectOS 是${p.descriptor}。${p.t1}Agent 编写它，人审阅 diff，ObjectStack 运行时让元数据可审阅，并在每次调用中强制治理。`,
       },
       {
         question: 'ObjectStack 与 ObjectOS 有什么区别？',
-        answer:
-          'ObjectStack 以开放、版本化元数据定义并运行应用。ObjectOS 是围绕 ObjectStack 应用提供产品内 AI、团队运营、部署选项与企业支持的商业生产平台。',
+        answer: `ObjectStack 是开源的技术栈：它把应用定义并运行为一份开放、带版本的业务本体——对象与字段、关系、动作、权限、流程，以及 Agent 与工具定义。ObjectOS 是${p.descriptor}，在此之上提供产品内 AI Build 与 Ask、团队运营、部署选项与企业支持。${p.e1}`,
       },
     ],
   } satisfies MarketingPage;
