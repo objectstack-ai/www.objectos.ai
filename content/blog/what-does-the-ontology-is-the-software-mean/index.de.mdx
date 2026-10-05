@@ -1,0 +1,197 @@
+---
+title: "Was bedeutet „Die Ontologie ist die Software“? Eine ausführbare Geschäftsontologie, definiert"
+description: "Der Satz ist ObjectStacks Positionierung; dies ist seine Definition: ein Kern aus sechs Arten, vier Projektionen, drei Dinge, die sie nicht ist, und ein Test, der Kern von Projektion trennt."
+author: ObjectStack Team
+date: 2026-10-08
+status: published
+topic: app-building
+audience: developer
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Ontologie
+  - Ausführbare Geschäftsontologie
+---
+
+**Die Kurzfassung.** „Die Ontologie ist die Software.“ ist der erste Satz der ObjectStack-README, und die Zeile darunter ist die Definition: „Eine ausführbare Geschäftsontologie. AI schreibt sie, die Runtime führt sie aus, Agents bedienen sie, Sie besitzen sie.“ Eine ausführbare Geschäftsontologie ist die Definition Ihres Geschäfts, die eine Runtime direkt ausführt. Ihr Kern besteht aus sechs Arten von Dingen – Objekte und Felder, Relationen, Aktionen, Berechtigungen, Flows sowie Agent- und Tool-Definitionen –, kompiliert in ein Artefakt, aus dem Datenbank, API, UI und Agent-Tools abgeleitet werden. Views, Dashboards, Apps und Übersetzungen sind Projektionen davon, nicht Teil davon. Sie ist keine Ontologie im Sinne der Wissensrepräsentation, kein Semantic Layer über Ihren bestehenden Systemen und keine formale Ontologie im philosophischen Sinn. Code verschwindet nicht; er wandert in die Runtime, als Hooks, Aktionsrümpfe, CEL und eingeschränktes JSX.
+
+Das ist die ganze Behauptung. Der Rest dieses Beitrags nimmt sie auseinander: warum der Satz *ist* sagt und nicht *beschreibt*, die sechs Arten, die Projektionen und ein Test, der beides trennt, die drei Verneinungen, wohin Code geht, und die vier Versprechen, auf die sich die Zeile reduziert. Die Quellen sind die README und die Konzeptseite, auf die sie verlinkt, zitiert statt paraphrasiert, dazu das CRM-Beispiel aus demselben Repository, gemessen statt beschrieben.
+
+## Warum der Satz „ist“ sagt
+
+Die meisten Unternehmensontologien beschreiben Software. Sie stehen neben den Systemen, die das Geschäft tatsächlich betreiben – ein Modell des Kunden, ein Graph davon, was womit verbunden ist, eine kontrollierte Definition dessen, was Umsatz bedeutet –, und die Systeme laufen darunter weiter, ohne davon zu wissen. Die Beschreibung ist nützlich, und sie ist auch optional: Löschen Sie sie, und nichts bleibt stehen.
+
+Der ObjectStack-Satz ist als Identität formuliert, weil die Beziehung umgekehrt ist. Die Definition ist das, was läuft. Löschen Sie die Ontologie, und es bleibt keine Anwendung übrig: keine Tabellen, keine Endpunkte, keine Bildschirme, keine Tools, die ein Agent aufrufen könnte. Die Konzeptseite bringt die Pipeline in eine Zeile:
+
+```text
+objectstack.config.ts -> objectstack.json -> ObjectStack runtime -> database · REST / realtime API · UI · MCP server
+```
+
+Sie schreiben typisierte Metadaten in `objectstack.config.ts`; sie kompilieren zum Artefakt `objectstack.json`; die Runtime liest das Artefakt und leitet den Rest ab. Die Bildunterschrift der README zum selben Bild ist noch kürzer: „Eine typisierte Definition → Datenbank · REST API · Client-SDK · UI · MCP-Tools.“ Es gibt kein zweites Artefakt, das die Software *ist*, während die Ontologie nur über sie spricht. Das bedeutet „ist“ hier, und alles Weitere folgt daraus.
+
+## Der Kern aus sechs Arten
+
+Die Konzeptseite definiert den Kern als sechs Arten von Dingen. Die Tabelle unten behält ihren Wortlaut in der mittleren Spalte und zeigt in der rechten Spalte, wo jede Art im mitgelieferten CRM-Beispiel (`examples/app-crm` im ObjectStack-Repository) lebt, damit die Definition an einer echten Definition geprüft werden kann und nicht an einem Slogan.
+
+| Kern | Was sie deklariert | Im mitgelieferten CRM-Beispiel |
+| :--- | :--- | :--- |
+| **Objekte und Felder** | Die Entitäten des Geschäfts und ihre typisierten Attribute – Validierung, Formeln, Standardwerte, Dateien | `src/objects/`: Account, Kontakt, Lead, Opportunity, Opportunity-Position, Aktivität |
+| **Relationen** | Lookups und Master-Detail-Verknüpfungen zwischen Objekten | `Field.lookup('crm_account', …)` auf der Opportunity; die Position ist ihr Master-Detail-Kind |
+| **Aktionen** | Die Operationen, die ein Benutzer oder ein Agent auf einem Datensatz auslösen darf, und die Bedingungen, unter denen sie erscheinen | `src/actions/convert-lead.action.ts`, nur sichtbar, solange der Lead noch nicht konvertiert ist |
+| **Berechtigungen** | Wer was lesen, anlegen, bearbeiten und löschen darf – RBAC, Sicherheit auf Zeilen- und Feldebene, Freigaben | `src/security/sales-positions.ts`: ein Set `crm_sales_user` und ein Gastprofil, das nur Leads anlegen darf |
+| **Flows** | Die Geschäftsprozesse – DAG-Flows, Datensatz-Trigger, geplante Jobs, Genehmigungen, Workflows | `src/flows/convert-lead.flow.ts`, ein Screen-Flow, der Account und Opportunity anlegt und den Lead dann als konvertiert markiert |
+| **Agent- und Tool-Definitionen** | Die AI-Agents, die die App mitbringt, die Tools, die sie aufrufen dürfen, und die Skills, die sie formen | In diesem Beispiel nicht deklariert. Jedes Objekt ist bereits ein MCP-Tool; Aktionen melden sich mit `ai: { exposed: true }` an |
+
+Eine Messung, aufgenommen mit dem Befehl, den die README selbst unter „measure it yourself“ ausgibt: Beim Commit `9f9510f2` umfasst die Definition des CRM-Beispiels **1.917 Zeilen TypeScript in 31 Dateien**. Diese Dateien enthalten sechs Objekte, drei Views, ein Dashboard, eine App, einen Lead-Konvertierungs-Flow, eine Aktion, einen Hook, zwei Berechtigungssets, drei Positionen, ein Übersetzungsbündel, eine Seite und die Seed-Daten – die ganze Anwendung, als Diff, den Sie lesen können. Der Punkt der Zahl ist nicht, dass sie abstrakt klein wäre. Der Punkt ist, dass ein Agent die ganze Definition auf einmal halten und „Was geht kaputt, wenn ich das ändere?“ aus der Definition selbst beantworten kann – was die README Apps nennt, die klein genug sind, dass AI sie als Ganzes fassen kann.
+
+Der Kern ist außerdem, per Konstruktion, der Teil, der Ihnen gehört. Die Konzeptseite: „Es ist eine Definition, offen und versioniert. Sie liegt als gewöhnliches TypeScript in Ihrem Repository, ist als Diff prüfbar und ist unter Apache-2.0 spezifiziert und lizenziert – kein Graph, der im System eines Anbieters gehalten wird und nur über dessen Konsole erreichbar ist.“
+
+## Projektionen und der Entfernungstest
+
+Views, Dashboards, Apps und Übersetzungen werden in denselben Metadaten geschrieben und von demselben Gate validiert, aber sie sind nicht Teil der Ontologie. Die Konzeptseite nennt sie Projektionen und erklärt jede in einem Nebensatz: „Eine Listenansicht projiziert die Felder und Berechtigungen eines Objekts auf ein Raster; ein Dashboard projiziert Abfragen über Objekte auf Diagramme; eine App fasst Objekte, Views und Aktionen zu einem navigierbaren Produkt zusammen; eine Übersetzung projiziert jedes Label in eine Sprache.“
+
+![Der Kern aus sechs Arten kompiliert über die ObjectStack-Runtime in Datenbank, API, Console-UI und MCP-Tools; Views, Dashboards, Apps und Übersetzungen stehen als Projektionen außerhalb des Ontologie-Kastens, und Hooks, Aktionsrümpfe, CEL und eingeschränktes JSX laufen innerhalb des Zauns der Runtime](./six-kind-core-en.svg)
+
+Der Satz, der die Unterscheidung handhabbar macht, ist dieser: „Ändern Sie den Kern, und die Projektionen folgen; entfernen Sie eine Projektion, und das Geschäft, das sie zeigte, ist unverändert.“ Machen Sie daraus einen Test, und Sie können jede Definition in einem Projekt mit einem Zug einordnen. Nennen wir ihn den **Entfernungstest**:
+
+> Löschen Sie die Definition. Wenn sich das Datenbankschema, die API oder das, was ein Benutzer oder Agent tun darf, geändert hat, war sie Kern. Wenn nur ein Bildschirm, ein Diagramm, ein Menü oder ein Label verschwunden ist, war sie eine Projektion.
+
+Legen Sie ihn an das CRM-Beispiel an. Löschen Sie `src/views/opportunity.view.ts`, und das Opportunity-Objekt, seine Felder, seine Lookups und sein Berechtigungsset sind alle noch da; der REST-Endpunkt antwortet weiter; das MCP-Tool existiert weiter. Löschen Sie `src/objects/opportunity.object.ts`, und die View hat nichts mehr zu projizieren, der Flow nichts mehr anzulegen, und das Berechtigungsset benennt ein Objekt, das nicht mehr existiert. Das eine war eine Projektion; das andere war die Software.
+
+Warum die Unterscheidung einen Namen verdient, steht auf derselben Seite: „Die Unterscheidung begrenzt, was ein Agent halten muss, um über das Geschäft nachzudenken: den Kern, nicht jeden Bildschirm.“ Ein Agent, der eine Änderung an einer Genehmigungsschwelle prüft, braucht die Objekte, die Berechtigungen und den Flow vor sich. Er braucht nicht jedes Dashboard, das das Ergebnis zufällig in ein Diagramm zeichnet.
+
+## Drei Dinge, die sie nicht ist
+
+Das Wort *Ontologie* trägt Jahrzehnte an Bedeutung aus anderen Feldern, und die README verwendet einen guten Teil ihrer Definition darauf zu sagen, welche dieser Bedeutungen nicht gelten. Es gibt drei Verneinungen, und sie sind verschieden.
+
+| Sie ist nicht | Was dieses Ding ist | Warum das hier anders ist |
+| :--- | :--- | :--- |
+| **Eine Ontologie der Wissensrepräsentation** | OWL, RDF und Wissensgraphen *beschreiben* eine Domäne, tragen Klassenvererbung und Axiome und werden von einer Inferenzmaschine *durchdacht* | Keine Objektvererbung, keine Axiome, kein Reasoner. Die Definition wird validiert – durch Zod-Schemas und `os validate` – und dann ausgeführt. Der Schlüssel `abstract` wurde genau deshalb aus der Spezifikation entfernt (ADR-0049) |
+| **Ein Semantic Layer über Ihren bestehenden Systemen** | Eine nur lesende Abbildung über Systeme, die Sie bereits betreiben: Sie beschreibt das Geschäft, führt es aber nicht aus | Die Ontologie *ist* das System: Datenbank, API, UI und Agent-Tools werden aus ihr abgeleitet. Die Föderation einer externen Datenquelle ist möglich, standardmäßig nur lesend und früh |
+| **Eine formale Ontologie im philosophischen Sinn** | Eine Aussage darüber, was im Allgemeinen existiert | Sie macht keine solche Aussage. Sie ist die Anwendung eines Unternehmens, genau genug definiert, um zu laufen |
+
+![Drei Spalten: Eine Ontologie der Wissensrepräsentation wird beschrieben und durchdacht, ein Semantic Layer ist eine nur lesende Abbildung über bestehenden Systemen, und eine ausführbare Geschäftsontologie wird validiert und dann zu Datenbank, API, UI und Agent-Tools ausgeführt](./validated-not-reasoned-en.svg)
+
+Die erste Verneinung wird am häufigsten übersehen, weil sie eine Designentscheidung ist und keine Einschränkung. Eine Inferenzmaschine ist eine zweite Quelle der Wahrheit: Die Fakten, die sie zur Laufzeit ableitet, wurden nie irgendwo aufgeschrieben, wo ein Prüfer sie lesen könnte. Die Regel von ObjectStack, von der Konzeptseite, ist das Gegenteil: „Zur Laufzeit wird nichts durchdacht: Was läuft, ist, was validiert wurde.“ Wenn eine Berechtigung nicht im Diff steht, ist sie nicht im System.
+
+Die zweite Verneinung ist für jeden wichtig, der Plattformen bewertet, denn der Begriff *Semantic Layer* wird in denselben Gesprächen für zwei verschiedene Dinge verwendet. Ein Semantic Layer kann eine ausgezeichnete Definition dessen sein, was eine Zahl bedeutet – der [Vergleich mit Wissensgraphen](/en/blog/ontology-vs-semantic-layer-vs-knowledge-graph/) verteidigt ihn fair. Er ist eine Substantivschicht. Eine ausführbare Geschäftsontologie trägt die Verben: Aktionen, Berechtigungen und Flows, die entscheiden, was getan werden darf, von wem, und was als Nächstes passiert. Die Dokumentation merkt außerdem an, dass sie *Semantic Layer* in einem engeren Sinn verwendet, für die Analyse-Dataset-Schicht, an die Berichte und Dashboards binden; dieser engere Sinn betrifft das Berichtswesen und ist nicht, was der Satz meint.
+
+Die dritte Verneinung ist die kürzeste und die ehrlichste. Das Format macht keine Aussage über die Welt. Es behauptet, dass die Anwendung eines Unternehmens genau genug formuliert werden kann, damit eine Runtime sie ausführt und ein Prüfer sie als Ganzes liest.
+
+## Wohin Code geht
+
+Eine Definition, die ausgeführt und nicht durchdacht wird, muss trotzdem Dinge ausdrücken, die kein Schema ausdrückt: eine Wahrscheinlichkeit, die auf 100 % springt, wenn ein Deal abschließt, ein Button, der verschwindet, sobald ein Lead konvertiert ist, eine Landingpage mit einem Layout. Der Satz der README lautet „Code verschwindet nicht: er wandert in die Runtime, als Hooks, Aktionsrümpfe, CEL und eingeschränktes JSX“, und die Konzeptseite gibt den Grund: Alle vier „laufen innerhalb des Berechtigungs- und Audit-Zauns der Runtime“, und „nichts davon ist über eine Codebasis verstreut, die die Ontologie dann beschreiben müsste.“
+
+Ein Hook aus dem CRM-Beispiel ist eine Funktion, die am Lebenszyklus eines Objekts hängt:
+
+```ts
+export const OpportunityStageHook = defineHook({
+  name: 'opportunity_stage_probability',
+  object: 'crm_opportunity',
+  events: ['beforeInsert', 'beforeUpdate'],
+  priority: 100,
+  handler: async (ctx: HookContext) => {
+    const input = ctx.input as { stage?: string; probability?: number };
+    if (input.stage === 'closed_won') input.probability = 100;
+    if (input.stage === 'closed_lost') input.probability = 0;
+  },
+});
+```
+
+CEL ist die Ausdruckssprache für Formeln, Prädikate und Richtlinien. Dasselbe Beispiel nutzt sie für ein berechnetes Feld und für die Sichtbarkeit einer Aktion:
+
+```ts
+expected_revenue: Field.formula({
+  label: 'Expected Revenue',
+  expression: cel`(record.amount == null ? 0 : record.amount) * (record.probability == null ? 0 : record.probability) / 100`,
+}),
+```
+
+```ts
+visible: 'has(record.status) && record.status != "converted"',
+```
+
+Eingeschränktes JSX ist die Art, eine eigene Seite zu schreiben, und die Einschränkung ist der Punkt: Es „wird in einen servergesteuerten UI-Baum geparst, niemals als Code ausgeführt.“ Das Paket, das dies tut, ist in der README als Compiler aufgeführt, der parst und nie ausführt. Aktionsrümpfe sind der vierte Ort, für die serverseitige Arbeit, die eine Aktion beim Aufruf verrichtet.
+
+Das Muster über alle vier ist dasselbe. Code ist erlaubt; Code ist nicht der Ort, an dem das Geschäft lebt. Das Geschäft lebt in den sechs Arten, und der Code läuft innerhalb des Zauns, den diese sechs Arten definieren, unter denselben Berechtigungen und demselben Audit wie ein Klick oder ein Tool-Aufruf.
+
+## Validiert, dann ausgeführt
+
+Zwei Verben beschreiben, was die Runtime mit dem Artefakt tut, und die Konzeptseite verwendet beide bewusst. Sie **leitet ab**: „das Datenbankschema auf einem austauschbaren Treiber, eine generierte REST- und Realtime-API, servergesteuerte UI für die Console und einen MCP-Server“. Und sie **setzt durch**: „RBAC, Sicherheit auf Zeilen- und Feldebene, Freigaben und Audit gelten für eine REST-Anfrage, einen Klick in der Console und den Tool-Aufruf eines Agents gleichermaßen.“
+
+Die README zeigt das erste Verb mit einem Objekt. Deklarieren Sie ein Ticket:
+
+```ts
+import { ObjectSchema, Field } from '@objectstack/spec/data';
+
+export const Ticket = ObjectSchema.create({
+  name: 'support_desk_ticket',
+  label: 'Ticket',
+  sharingModel: 'private',            // org-wide default — the security gate requires it
+  fields: {
+    subject: Field.text({ label: 'Subject', required: true, searchable: true }),
+    status: Field.select({
+      label: 'Status',
+      required: true,
+      options: [
+        { label: 'Open', value: 'open', color: '#3B82F6', default: true },
+        { label: 'Resolved', value: 'resolved', color: '#10B981' },
+      ],
+    }),
+    due_date: Field.date({ label: 'Due Date' }),
+  },
+});
+```
+
+und „die REST-API existiert in dem Moment, in dem das Objekt existiert – keine Controller zu schreiben“:
+
+```bash
+curl http://localhost:3000/api/v1/data/support_desk_ticket
+```
+
+Beachten Sie `sharingModel: 'private'` mit seinem Kommentar. Die Sicherheitshaltung ist Teil des Objekts, und das Gate verlangt sie: `os validate` „lehnt Metadaten ab, die den Typcheck bestehen, aber zur Laufzeit still scheitern würden: hängende Bindungen, fehlerhafte CEL-Prädikate, fehlende Sicherheitshaltung.“ Das ist die validierte Hälfte. Die ausgeführte Hälfte ist, dass jede aus dem Objekt abgeleitete Oberfläche – die Tabelle, der Endpunkt, das Console-Raster, das MCP-Tool – bei jedem Aufruf gegen dieselben Berechtigungen geprüft wird, sodass ein Agent, der das Ticket über MCP erreicht, genau das sieht, was ein Mensch mit denselben Berechtigungen sehen würde.
+
+## Die vier Versprechen, angeführt von „Ausführbar“
+
+Die README reduziert die Zeile auf vier Worte: „Ausführbar · Von AI schreibbar · Von Agents bedienbar · Sie besitzen sie“. Jedes ist eine Behauptung mit einem Mechanismus dahinter, und die Reihenfolge ist keine Dekoration – das erste ist das, worauf die anderen drei stehen.
+
+**Ausführbar.** Die Definition ist das, was läuft. Alles in den beiden Abschnitten oben ist dieses Versprechen: ein Artefakt, abgeleitete Oberflächen, Durchsetzung bei jedem Aufruf, nichts, das zur Laufzeit durchdacht wird. Ohne es würde „von AI schreibbar“ bedeuten, dass eine AI Dokumentation schreibt.
+
+**Von AI schreibbar.** „Der Agent schreibt typisierte Metadaten – keine Codebasis. Das Gate lehnt ab, was zur Laufzeit still scheitern würde, und der Agent behebt es, bevor Sie es je zu sehen bekommen.“ Der Scaffolder „installiert das AI-Skills-Bündel und schreibt eine `AGENTS.md`, sodass Ihr Agent mit den bereits geladenen Regeln des Protokolls startet“. Die vier Gates der README – typisiert, validiert, geprüft, kontrolliert – sind der Grund, warum die Fehler des Agents nicht ausgeliefert werden, und der genannte Grund, warum das überhaupt funktioniert: „Die Fehler eines Agents werden zu lokalisiertem, korrigierendem Text, den er lesen und selbst beheben kann.“
+
+**Von Agents bedienbar.** „Objekte sind Tools, Aktionen sind Tools, Berechtigungen entscheiden, was ein Agent aufrufen darf, und das Audit zeichnet auf, was er getan hat.“ Die laufende App „stellt sie als MCP-Server unter `/api/v1/mcp` bereit – standardmäßig eingeschaltet“, und ein Agent bedient sie „unter denselben Berechtigungen und derselben RLS wie ein Mensch“. Dieselbe Ontologie, die von einem Agent geschrieben wurde, wird dann von einem benutzt, durch denselben Zaun.
+
+**Sie besitzen sie.** „Alles in diesem Repo ist der offene Stack – Protokoll, Mikrokernel, SDK, CLI und die Produktions-Runtime, Apache-2.0 ohne Open-Core-Sternchen.“ Und die Definition selbst „liegt als gewöhnliches TypeScript in Ihrem Repository, versioniert in Ihrer VCS und als Diff prüfbar – kein Graph, der im System eines Anbieters gehalten wird.“ Die Ontologie ist eine Datei, die Sie halten, nicht ein Mandant, den Sie mieten.
+
+## Was das nicht löst
+
+Ein Definitionsbeitrag sollte sagen, wo die Definition endet.
+
+Sie macht das Modellieren nicht leicht. Zu entscheiden, was eine Opportunity ist, wer eine abschließen darf und was ein Rabatt über 30 % braucht, ist nach wie vor die langsame, umstrittene, menschliche Arbeit, die es immer war; das Format entscheidet nur, ob das Ergebnis klein genug ist, um es als Ganzes zu lesen, und streng genug, um Fehler schon beim Verfassen abzulehnen.
+
+Sie schlussfolgert nicht. Wenn Ihr Problem wirklich Inferenz über ein Domänenmodell braucht – Klassenhierarchien, abgeleitete Fakten, eine Maschine, die Konsequenzen entdeckt –, dann ist das die Ontologie der Wissensrepräsentation, die diese ausdrücklich nicht ist. Wählen Sie dieses Werkzeug, und erwarten Sie nicht, dass diesem ein Reasoner wächst.
+
+Sie ist keine Schicht über dem, was Sie bereits betreiben. Die Föderation einer externen Datenquelle ist standardmäßig nur lesend und als früh beschrieben, sodass eine ausführbare Ontologie über einer Altdatenbank als Lesemodell beginnt und sich Schreibzugriffe Objekt für Objekt verdient. [Ein internes System in Metadaten überführen](/en/blog/how-to-move-an-internal-system-to-metadata/) ist die ehrliche Version dieses Wegs, einschließlich der Fälle, in denen die Antwort lautet, gar nicht zu migrieren.
+
+Und neuartige Logik bleibt Code. Hooks und Aktionsrümpfe sind ihr Ort, innerhalb des Zauns, und sie sind weiterhin Code, den ein Mensch prüfen muss. Die Ontologie macht diesen Code kleiner und begrenzt; sie lässt ihn nicht verschwinden, und die README sagt das mit genau diesen Worten.
+
+## Gehostet, oder auf Ihrer eigenen Infrastruktur
+
+Die README beschreibt die Schleife oben – ein Coding-Agent schreibt die Metadaten in Ihr Repo und bedient die laufende App über MCP – und sagt dann: „Dieselbe Schleife gehostet, im Browser, ohne Installation? Das ist ObjectOS, die kommerzielle Laufzeitumgebung auf Basis von ObjectStack.“ ObjectOS läuft gehostet im Browser ohne Installation (ObjectOS Cloud) oder selbst verwaltet auf Ihrer eigenen Infrastruktur (ObjectOS Enterprise), und in beiden Editionen können Sie Ihre Ontologie exportieren und auf der quelloffenen ObjectStack Runtime ausführen. Das ist das vierte Versprechen, als Produktgrenze formuliert: Die Ontologie gehört Ihnen auf jedem Host, auf dem sie läuft.
+
+## Beginnen Sie mit dem Agent-Pfad
+
+Nichts oben verlangt, die Definition auf Treu und Glauben zu nehmen; der Fünf-Minuten-Pfad der README selbst erzeugt eine, die Sie lesen können.
+
+```bash
+npm create objectstack@latest my-app && cd my-app
+```
+
+Öffnen Sie das Projekt in Ihrem Coding-Agent und beschreiben Sie die Anforderung. Das Beispiel der README ist ein Support-Desk: ein `ticket`-Objekt mit Betreff, Beschreibung, einer Prioritätsauswahl und einer Statusauswahl; eine Resolve-Aktion, die nur auf Tickets erscheint, die noch nicht gelöst sind; eine Listenansicht „Open tickets“ und eine Support-Navigationsgruppe; `npm run validate`, wenn es fertig ist. Dann die Vorschau:
+
+```bash
+npx os dev --ui   # → http://localhost:3000/_console/
+```
+
+Sehen Sie sich den Diff an, den der Agent erzeugt hat, bevor Sie in die Console schauen. Das Objekt, die Aktion und ihr Sichtbarkeitsprädikat, die View – Sie werden jede Zeile mit dem Entfernungstest in Kern oder Projektion einsortieren können, und das Gate wird die Zeilen, die nicht laufen würden, bereits abgelehnt haben. Wenn der Agent Steuerung braucht, deckt [die Konfiguration für ObjectStack](/en/blog/how-to-point-your-agent-at-objectstack/) die Regeldatei, das Skills-Bündel und den Tool-Server ab. Die Definition, die er schreibt, ist die Software, und sie liegt in Ihrem Repository.

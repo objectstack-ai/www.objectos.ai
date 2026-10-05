@@ -1,0 +1,197 @@
+---
+title: "¿Qué significa «La ontología es el software»? Una ontología de negocio ejecutable, definida"
+description: "La frase es el posicionamiento de ObjectStack; esto es su definición: un núcleo de seis tipos, cuatro proyecciones, tres cosas que no es y una prueba para distinguir núcleo de proyección."
+author: ObjectStack Team
+date: 2026-10-08
+status: published
+topic: app-building
+audience: developer
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Ontología
+  - Ontología de negocio ejecutable
+---
+
+**La versión corta.** «La ontología es el software.» es la primera frase del README de ObjectStack, y la línea de debajo es la definición: «Una ontología de negocio ejecutable. La AI la escribe, el runtime la ejecuta, los agentes la operan, tú la posees.» Una ontología de negocio ejecutable es la definición de tu negocio que un runtime ejecuta directamente. Su núcleo son seis tipos de cosas —objetos y campos, relaciones, acciones, permisos, flujos, y definiciones de agentes y herramientas— compilados en un artefacto, del que se derivan la base de datos, la API, la UI y las herramientas de agente. Las vistas, los paneles, las apps y las traducciones son proyecciones suyas, no parte de ella. No es una ontología de representación del conocimiento, no es una capa semántica sobre tus sistemas existentes y no es una ontología formal en el sentido filosófico. El código no desaparece; se traslada al runtime, como hooks, cuerpos de acción, CEL y JSX restringido.
+
+Esa es toda la afirmación. El resto de este artículo la desmonta: por qué la frase dice *es* y no *describe*, los seis tipos, las proyecciones y una prueba para distinguirlas, las tres negaciones, adónde va el código, y las cuatro promesas a las que se reduce la línea. Las fuentes son el README y la página de conceptos que enlaza, citadas en lugar de parafraseadas, más el ejemplo de CRM que viene en el mismo repositorio, medido en lugar de descrito.
+
+## Por qué la frase dice «es»
+
+La mayoría de las ontologías empresariales describen software. Están junto a los sistemas que de verdad hacen funcionar el negocio —un modelo del cliente, un grafo de qué se conecta con qué, una definición gobernada de qué significa ingreso— y los sistemas siguen funcionando debajo, sin enterarse. La descripción es útil, y también es opcional: bórrala y nada se detiene.
+
+La frase de ObjectStack está formulada como una identidad porque la relación es la contraria. La definición es la cosa que se ejecuta. Borra la ontología y no queda ninguna aplicación: ni tablas, ni endpoints, ni pantallas, ni herramientas que un agente pueda llamar. La página de conceptos pone la tubería en una línea:
+
+```text
+objectstack.config.ts -> objectstack.json -> ObjectStack runtime -> database · REST / realtime API · UI · MCP server
+```
+
+Escribes metadatos tipados en `objectstack.config.ts`; se compilan en el artefacto `objectstack.json`; el runtime lee el artefacto y deriva el resto. El pie de foto del README para la misma imagen es aún más corto: «Una definición tipada → base de datos · REST API · SDK de cliente · UI · herramientas MCP.» No hay un segundo artefacto que *sea* el software mientras la ontología se limita a hablar de él. Eso es lo que significa «es» aquí, y todo lo que sigue se desprende de ello.
+
+## El núcleo de seis tipos
+
+La página de conceptos define el núcleo como seis tipos de cosas. La tabla siguiente conserva su redacción en la columna central y, en la columna derecha, señala dónde vive cada tipo en el ejemplo de CRM incluido (`examples/app-crm` en el repositorio de ObjectStack), para que la definición pueda comprobarse contra una definición real y no contra un eslogan.
+
+| Núcleo | Qué declara | En el ejemplo de CRM incluido |
+| :--- | :--- | :--- |
+| **Objetos y campos** | Las entidades del negocio y sus atributos tipados: validación, fórmulas, valores por defecto, archivos | `src/objects/`: cuenta, contacto, lead, oportunidad, línea de oportunidad, actividad |
+| **Relaciones** | Lookups y enlaces maestro-detalle entre objetos | `Field.lookup('crm_account', …)` en la oportunidad; la línea es su hijo maestro-detalle |
+| **Acciones** | Las operaciones que un usuario o un agente puede invocar sobre un registro, y las condiciones bajo las que aparecen | `src/actions/convert-lead.action.ts`, visible solo mientras el lead aún no está convertido |
+| **Permisos** | Quién puede leer, crear, editar y borrar qué: RBAC, seguridad a nivel de fila y de campo, compartición | `src/security/sales-positions.ts`: un conjunto `crm_sales_user` y un perfil de invitado que solo puede insertar leads |
+| **Flujos** | Los procesos de negocio: flujos DAG, disparadores de registro, tareas programadas, aprobaciones, workflows | `src/flows/convert-lead.flow.ts`, un flujo de pantalla que crea la cuenta y la oportunidad y luego marca el lead como convertido |
+| **Definiciones de agentes y herramientas** | Los agentes de AI que la app incluye, las herramientas que pueden llamar y las skills que los moldean | Ninguna declarada en este ejemplo. Cada objeto ya es una herramienta MCP; las acciones se apuntan con `ai: { exposed: true }` |
+
+Una medición, tomada con el comando que el propio README imprime bajo «measure it yourself»: en el commit `9f9510f2`, la definición del ejemplo de CRM son **1.917 líneas de TypeScript en 31 archivos**. Esos archivos contienen seis objetos, tres vistas, un panel, una app, un flujo de conversión de leads, una acción, un hook, dos conjuntos de permisos, tres posiciones, un paquete de traducción, una página y los datos semilla: la aplicación entera, como un diff que puedes leer. La gracia del número no es que sea pequeño en abstracto. Es que un agente puede sostener la definición completa de una vez y responder «¿qué se rompe si cambio esto?» desde la propia definición, lo que el README llama apps lo bastante pequeñas para que la AI las abarque enteras.
+
+El núcleo es también, por construcción, la parte que es tuya. La página de conceptos: «Es una definición, abierta y versionada. Vive en tu repositorio como TypeScript ordinario, es revisable como un diff, y está especificada y licenciada bajo Apache-2.0: no un grafo guardado dentro del sistema de un proveedor y accesible solo a través de la consola de ese proveedor.»
+
+## Proyecciones, y la prueba de eliminación
+
+Las vistas, los paneles, las apps y las traducciones se escriben en los mismos metadatos y se validan en la misma puerta, pero no forman parte de la ontología. La página de conceptos las llama proyecciones y explica cada una en una cláusula: «Una vista de lista proyecta los campos y permisos de un objeto sobre una cuadrícula; un panel proyecta consultas sobre objetos en gráficos; una app agrupa objetos, vistas y acciones en un producto navegable; una traducción proyecta cada etiqueta a un idioma.»
+
+![El núcleo de seis tipos se compila a través del runtime de ObjectStack en la base de datos, la API, la UI de la Console y las herramientas MCP; las vistas, los paneles, las apps y las traducciones quedan fuera de la caja de la ontología como proyecciones, y los hooks, los cuerpos de acción, CEL y el JSX restringido se ejecutan dentro de la valla del runtime](./six-kind-core-en.svg)
+
+La frase que hace operativa la distinción es esta: «Cambia el núcleo y las proyecciones lo siguen; elimina una proyección y el negocio que mostraba no cambia.» Conviértela en una prueba y podrás clasificar cualquier definición de un proyecto de un solo movimiento. Llamémosla la **prueba de eliminación**:
+
+> Borra la definición. Si el esquema de la base de datos, la API, o lo que un usuario o agente puede hacer ha cambiado, era núcleo. Si solo ha desaparecido una pantalla, un gráfico, un menú o una etiqueta, era una proyección.
+
+Léela contra el ejemplo de CRM. Borra `src/views/opportunity.view.ts` y el objeto oportunidad, sus campos, sus lookups y su conjunto de permisos siguen todos ahí; el endpoint REST sigue respondiendo; la herramienta MCP sigue existiendo. Borra `src/objects/opportunity.object.ts` y la vista no tiene nada que proyectar, el flujo no tiene nada que crear, y el conjunto de permisos nombra un objeto que ya no existe. Uno era una proyección; el otro era el software.
+
+Por qué la distinción merece un nombre lo dice la misma página: «La distinción acota lo que un agente debe sostener para razonar sobre el negocio: el núcleo, no cada pantalla.» Un agente que revisa un cambio en un umbral de aprobación necesita tener delante los objetos, los permisos y el flujo. No necesita cada panel que casualmente grafica el resultado.
+
+## Tres cosas que no es
+
+La palabra *ontología* arrastra décadas de significado de otros campos, y el README dedica buena parte de su definición a decir cuáles de esos significados no aplican. Hay tres negaciones, y son distintas.
+
+| No es | Qué es esa cosa | Por qué esto es diferente |
+| :--- | :--- | :--- |
+| **Una ontología de representación del conocimiento** | OWL, RDF y los grafos de conocimiento *describen* un dominio, llevan herencia de clases y axiomas, y un motor de inferencia *razona* sobre ellos | Sin herencia de objetos, sin axiomas, sin razonador. La definición se valida —con esquemas Zod y `os validate`— y después se ejecuta. La clave `abstract` se eliminó de la especificación exactamente por esa razón (ADR-0049) |
+| **Una capa semántica sobre tus sistemas existentes** | Un mapeo de solo lectura sobre sistemas que ya operas: describe el negocio pero no lo ejecuta | La ontología *es* el sistema: la base de datos, la API, la UI y las herramientas de agente se derivan de ella. Federar una fuente de datos externa es posible, de solo lectura por defecto, y temprano |
+| **Una ontología formal en el sentido filosófico** | Una afirmación sobre qué existe en general | No hace tal afirmación. Es la aplicación de un negocio, definida con la precisión suficiente para ejecutarse |
+
+![Tres columnas: una ontología de representación del conocimiento se describe y se razona, una capa semántica es un mapeo de solo lectura sobre sistemas existentes, y una ontología de negocio ejecutable se valida y luego se ejecuta en una base de datos, una API, una UI y herramientas de agente](./validated-not-reasoned-en.svg)
+
+La primera negación es la que más se pasa por alto, porque es una decisión de diseño y no una limitación. Un motor de inferencia es una segunda fuente de verdad: los hechos que deriva en tiempo de ejecución nunca se escribieron en ningún sitio que un revisor pudiera leer. La regla de ObjectStack, de la página de conceptos, es la contraria: «Nada se razona en tiempo de ejecución: lo que se ejecuta es lo que se validó.» Si un permiso no está en el diff, no está en el sistema.
+
+La segunda negación importa a cualquiera que evalúe plataformas, porque el término *capa semántica* se está usando para dos cosas distintas en las mismas conversaciones. Una capa semántica puede ser una excelente definición de qué significa un número; la [comparación con los grafos de conocimiento](/en/blog/ontology-vs-semantic-layer-vs-knowledge-graph/) la defiende con justicia. Es una capa de sustantivos. Una ontología de negocio ejecutable lleva los verbos: acciones, permisos y flujos que deciden qué puede hacerse, quién lo hace y qué ocurre después. La documentación también señala que usa *capa semántica* en un sentido más estrecho, para la capa de datasets analíticos a la que se enlazan informes y paneles; ese sentido estrecho trata de informes, y no es lo que la frase significa.
+
+La tercera negación es la más corta y la más honesta. El formato no afirma nada sobre el mundo. Afirma que la aplicación de un negocio puede enunciarse con la precisión suficiente para que un runtime la ejecute y un revisor la lea entera.
+
+## Adónde va el código
+
+Una definición que se ejecuta en lugar de razonarse sigue teniendo que expresar cosas que ningún esquema expresa: una probabilidad que salta al 100 % cuando se cierra un trato, un botón que desaparece una vez convertido un lead, una página de aterrizaje con un diseño. La frase del README es «el código no desaparece: se traslada al runtime, como hooks, cuerpos de acción, CEL y JSX restringido», y la página de conceptos da la razón: los cuatro «se ejecutan dentro de la valla de permisos y auditoría del runtime», y «nada de ello queda disperso por una base de código que la ontología tendría entonces que describir.»
+
+Un hook, del ejemplo de CRM, es una función enganchada al ciclo de vida de un objeto:
+
+```ts
+export const OpportunityStageHook = defineHook({
+  name: 'opportunity_stage_probability',
+  object: 'crm_opportunity',
+  events: ['beforeInsert', 'beforeUpdate'],
+  priority: 100,
+  handler: async (ctx: HookContext) => {
+    const input = ctx.input as { stage?: string; probability?: number };
+    if (input.stage === 'closed_won') input.probability = 100;
+    if (input.stage === 'closed_lost') input.probability = 0;
+  },
+});
+```
+
+CEL es el lenguaje de expresiones para fórmulas, predicados y políticas. El mismo ejemplo lo usa para un campo calculado y para la visibilidad de una acción:
+
+```ts
+expected_revenue: Field.formula({
+  label: 'Expected Revenue',
+  expression: cel`(record.amount == null ? 0 : record.amount) * (record.probability == null ? 0 : record.probability) / 100`,
+}),
+```
+
+```ts
+visible: 'has(record.status) && record.status != "converted"',
+```
+
+El JSX restringido es la forma de escribir una página personalizada, y la restricción es lo importante: «se parsea en un árbol de UI dirigido por el servidor, nunca se ejecuta como código.» El paquete que lo hace figura en el README como un compilador que parsea y nunca ejecuta. Los cuerpos de acción son el cuarto lugar, para el trabajo del lado del servidor que una acción realiza cuando se invoca.
+
+El patrón en los cuatro es el mismo. El código está permitido; el código no es donde vive el negocio. El negocio vive en los seis tipos, y el código se ejecuta dentro de la valla que esos seis tipos definen, bajo los mismos permisos y la misma auditoría que un clic o una llamada a una herramienta.
+
+## Validada, y después ejecutada
+
+Dos verbos describen lo que el runtime hace con el artefacto, y la página de conceptos usa ambos a propósito. **Deriva**: «el esquema de la base de datos sobre un driver intercambiable, una API REST y en tiempo real generada, UI dirigida por el servidor para la Console, y un servidor MCP». Y **aplica**: «RBAC, seguridad a nivel de fila y de campo, compartición y auditoría se aplican por igual a una petición REST, a un clic en la Console y a la llamada a una herramienta de un agente.»
+
+El README muestra el primer verbo con un objeto. Declara un ticket:
+
+```ts
+import { ObjectSchema, Field } from '@objectstack/spec/data';
+
+export const Ticket = ObjectSchema.create({
+  name: 'support_desk_ticket',
+  label: 'Ticket',
+  sharingModel: 'private',            // org-wide default — the security gate requires it
+  fields: {
+    subject: Field.text({ label: 'Subject', required: true, searchable: true }),
+    status: Field.select({
+      label: 'Status',
+      required: true,
+      options: [
+        { label: 'Open', value: 'open', color: '#3B82F6', default: true },
+        { label: 'Resolved', value: 'resolved', color: '#10B981' },
+      ],
+    }),
+    due_date: Field.date({ label: 'Due Date' }),
+  },
+});
+```
+
+y «la API REST existe en el momento en que existe el objeto: no hay controladores que escribir»:
+
+```bash
+curl http://localhost:3000/api/v1/data/support_desk_ticket
+```
+
+Fíjate en `sharingModel: 'private'` con su comentario. La postura de seguridad forma parte del objeto, y la puerta la exige: `os validate` «rechaza metadatos que pasan la comprobación de tipos pero fallarían en silencio en tiempo de ejecución: enlaces colgantes, predicados CEL incorrectos, postura de seguridad ausente.» Esa es la mitad validada. La mitad ejecutada es que cada superficie derivada del objeto —la tabla, el endpoint, la cuadrícula de la Console, la herramienta MCP— se comprueba contra los mismos permisos en cada llamada, de modo que un agente que llega al ticket por MCP ve exactamente lo que vería un humano con los mismos permisos.
+
+## Las cuatro promesas, encabezadas por «Ejecutable»
+
+El README reduce la línea a cuatro palabras: «Ejecutable · Escribible por AI · Operable por agentes · Tú la posees». Cada una es una afirmación con un mecanismo detrás, y el orden no es decorativo: la primera es sobre la que se apoyan las otras tres.
+
+**Ejecutable.** La definición es la cosa que se ejecuta. Todo lo de las dos secciones anteriores es esta promesa: un artefacto, superficies derivadas, aplicación en cada llamada, nada razonado en tiempo de ejecución. Sin ella, «escribible por AI» significaría una AI escribiendo documentación.
+
+**Escribible por AI.** «El agente escribe metadatos tipados, no una base de código. La puerta rechaza lo que fallaría en silencio en tiempo de ejecución, y el agente lo corrige antes de que tú lo veas.» El scaffolder «instala el paquete de skills de AI y escribe un `AGENTS.md`, de modo que tu agente empieza con las reglas del protocolo ya cargadas». Las cuatro puertas del README —tipado, validado, revisado, gobernado— son la razón de que los errores del agente no lleguen a producción, y la razón declarada de que funcione en absoluto: «los errores de un agente se convierten en texto localizado y correctivo que puede leer y corregir por sí mismo».
+
+**Operable por agentes.** «Los objetos son herramientas, las acciones son herramientas, los permisos deciden qué puede llamar un agente, y la auditoría registra lo que hizo.» La app en ejecución «la sirve como servidor MCP en `/api/v1/mcp`, activo por defecto», y un agente la opera «bajo los mismos permisos y RLS que un humano». La misma ontología que un agente escribió es después usada por uno, a través de la misma valla.
+
+**Tú la posees.** «Todo en este repositorio es el stack abierto: protocolo, microkernel, SDK, CLI y el runtime de producción, Apache-2.0 sin asteriscos de open core.» Y la propia definición «vive en tu repositorio como TypeScript ordinario, versionada en tu VCS y revisable como un diff: no un grafo guardado dentro del sistema de un proveedor.» La ontología es un archivo que tienes en la mano, no una tenencia que alquilas.
+
+## Lo que esto no resuelve
+
+Un artículo de definición debería decir dónde se detiene la definición.
+
+No hace fácil el modelado. Decidir qué es una oportunidad, quién puede cerrarla y qué necesita un descuento superior al 30 % sigue siendo el trabajo lento, discutido y humano que siempre fue; el formato solo decide si el resultado es lo bastante pequeño para leerse entero y lo bastante estricto para rechazar errores al escribirlo.
+
+No razona. Si tu problema de verdad necesita inferencia sobre un modelo de dominio —jerarquías de clases, hechos derivados, un motor que descubra consecuencias—, esa es la ontología de representación del conocimiento que esta explícitamente no es. Elige esa herramienta, y no esperes que a esta le crezca un razonador.
+
+No es una capa sobre lo que ya operas. Federar una fuente de datos externa es de solo lectura por defecto y se describe como temprano, así que una ontología ejecutable sobre una base de datos heredada empieza como un modelo de lectura y se gana las escrituras objeto a objeto. [Mover un sistema interno a metadatos](/en/blog/how-to-move-an-internal-system-to-metadata/) es la versión honesta de ese camino, incluidos los casos en que la respuesta es no migrar en absoluto.
+
+Y la lógica novedosa sigue siendo código. Los hooks y los cuerpos de acción son su sitio, dentro de la valla, y siguen siendo código que un humano tiene que revisar. La ontología hace ese código más pequeño y acotado; no lo hace desaparecer, y el README lo dice con esas mismas palabras.
+
+## Alojada, o en tu propia infraestructura
+
+El README describe el ciclo de arriba —un agente de código escribe los metadatos en tu repositorio y opera la app en ejecución por MCP— y después dice: «¿Quieres el mismo ciclo alojado, en el navegador, sin instalar nada? Eso es ObjectOS, el entorno de ejecución comercial construido sobre ObjectStack.» ObjectOS funciona alojado en el navegador sin instalar nada (ObjectOS Cloud) o autogestionado en tu propia infraestructura (ObjectOS Enterprise), y en cualquiera de las dos ediciones puedes exportar tu ontología y ejecutarla en el runtime open source de ObjectStack. Que es la cuarta promesa, enunciada como un límite de producto: la ontología es tuya en cualquier host donde se ejecute.
+
+## Empieza por el camino del agente
+
+Nada de lo anterior te obliga a aceptar la definición por fe; el propio camino de cinco minutos del README produce una que puedes leer.
+
+```bash
+npm create objectstack@latest my-app && cd my-app
+```
+
+Abre el proyecto en tu agente de código y describe el requisito. El ejemplo del README es un servicio de soporte: un objeto `ticket` con asunto, descripción, un selector de prioridad y un selector de estado; una acción Resolve que solo aparece en los tickets que aún no están resueltos; una vista de lista «Open tickets» y un grupo de navegación Support; `npm run validate` cuando termine. Después previsualiza el resultado:
+
+```bash
+npx os dev --ui   # → http://localhost:3000/_console/
+```
+
+Mira el diff que produjo el agente antes de mirar la Console. El objeto, la acción y su predicado de visibilidad, la vista: podrás clasificar cada línea en núcleo o proyección con la prueba de eliminación, y la puerta ya habrá rechazado las líneas que no se ejecutarían. Si el agente necesita guía, [cómo configurarlo para ObjectStack](/en/blog/how-to-point-your-agent-at-objectstack/) cubre el archivo de reglas, el paquete de skills y el servidor de herramientas. La definición que escribe es el software, y está en tu repositorio.
