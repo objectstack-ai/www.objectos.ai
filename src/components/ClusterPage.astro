@@ -1,4 +1,5 @@
 ---
+import { Image } from 'astro:assets';
 import type { CollectionEntry } from 'astro:content';
 import type { Cluster } from '../lib/clusters';
 import { clusterCopy, clusterLabels } from '../lib/cluster-i18n';
@@ -33,10 +34,16 @@ const termLinks = (
     })
   )
 ).filter((link) => link !== undefined);
-const coverSrc = (cover: unknown): string =>
-  typeof cover === 'string'
-    ? cover
-    : (cover as { src?: string })?.src ?? '';
+// A raster cover is served as WebP at the width the reading-path card draws
+// it at, not as the 240-370 KB original JPG. Above 640px the image is a 180px
+// (150px at 641-900px) column as tall as the card's text, about 190-230px, and
+// object-fit: cover fills it by height, so a 1.6:1 or 16:9 cover is drawn
+// 300-370px wide: `sizes` says 400px. On a phone the card stacks and the image
+// is the full column at 16:9, drawn at its own width. The widest candidate
+// covers the phone column at 3x. An SVG cover is a few KB and scales itself,
+// so it is served as is.
+const CARD_WIDTHS = [400, 540, 720, 1080];
+const CARD_SIZES = '(max-width: 640px) calc(100vw - 2rem), 400px';
 ---
 
 <article class="cluster">
@@ -93,16 +100,28 @@ const coverSrc = (cover: unknown): string =>
     <div class="article-grid">
       {posts.map(({ slug, entry }) => (
         <a class="article-card" href={postPath(locale, slug)}>
-          {entry.data.cover && (
-            <img
-              src={coverSrc(entry.data.cover)}
-              alt={entry.data.title}
-              width="360"
-              height="380"
-              loading="lazy"
-              decoding="async"
-            />
-          )}
+          {entry.data.cover &&
+            (entry.data.cover.format === 'svg' ? (
+              <img
+                src={entry.data.cover.src}
+                alt={entry.data.title}
+                width="360"
+                height="380"
+                loading="lazy"
+                decoding="async"
+              />
+            ) : (
+              <Image
+                src={entry.data.cover}
+                alt={entry.data.title}
+                width={Math.min(CARD_WIDTHS.at(-1)!, entry.data.cover.width)}
+                widths={CARD_WIDTHS}
+                sizes={CARD_SIZES}
+                format="webp"
+                loading="lazy"
+                decoding="async"
+              />
+            ))}
           <div>
             <time datetime={entry.data.date.toISOString().slice(0, 10)}>
               {formatDate(locale, entry.data.date)}
