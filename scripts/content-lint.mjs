@@ -504,6 +504,37 @@ function splitFrontmatter(source, file) {
   };
 }
 
+// ─── Search-snippet width ──────────────────────────────────────────────────
+//
+// A results page shows about 60 columns of a title and 160 of a description
+// (it truncates by pixel width; columns are the portable stand-in). A CJK
+// character is two columns: "AI 编写的企业软件" is 10 characters and 18 columns,
+// and counting characters would let a Chinese or Japanese title run to twice
+// the width an English one may. Past the limit the end of the line — often the
+// part that distinguishes one post from another — is replaced by an ellipsis.
+//
+// This is a warning, never an error: a longer query-shaped title (writing rule
+// 2) can be the right call. Posts first published before SNIPPET_WIDTH_SINCE
+// are counted in one summary line rather than listed — about 400 of them when
+// the check landed — so the warning stays readable for the post being written
+// now; `--snippets` lists every one. `date`, not `updated`, decides: a title
+// is written at first publication, and a revision sweep that touches 18 posts
+// (setting `updated`) does not make their titles new.
+const SNIPPET_WIDTH = { title: 60, description: 160 };
+const SNIPPET_WIDTH_SINCE = new Date('2026-10-06T00:00:00Z');
+const listAllSnippets = args.has('--snippets');
+
+/** Display columns: East Asian wide and fullwidth characters count two. */
+function displayWidth(text) {
+  let width = 0;
+  for (const ch of text) {
+    width += /[\u1100-\u115F\u2E80-\uA4CF\uAC00-\uD7A3\uF900-\uFAFF\uFE30-\uFE4F\uFF00-\uFF60\uFFE0-\uFFE6]/u.test(ch)
+      ? 2
+      : 1;
+  }
+  return width;
+}
+
 function words(text) {
   const latin = text.match(/[A-Za-z0-9]+(?:[-'][A-Za-z0-9]+)?/g) ?? [];
   const han = text.match(/[\u3400-\u9fff]/g) ?? [];
@@ -1058,6 +1089,7 @@ registries.locales = routableLocales(registries.blog, registries.glossary, regis
 const files = await walk(BLOG);
 const posts = [];
 const issues = [];
+const snippetBacklog = { title: 0, description: 0 };
 
 for (const file of files) {
   const rel = path.relative(ROOT, file);
@@ -1115,10 +1147,30 @@ for (const file of files) {
     }
   }
 
-  if (typeof data.title === 'string') {
-    if (data.title.length > 95) {
-      addIssue(issues, rel, data, 'warn', `Title is long (${data.title.length} chars)`);
+  // Measured against the search snippet (see SNIPPET_WIDTH); a pre-existing
+  // post is counted in the summary instead of listed, unless --snippets.
+  const snippetListed =
+    listAllSnippets || Boolean(data.date && new Date(data.date) >= SNIPPET_WIDTH_SINCE);
+  const snippetWarn = (field, value) => {
+    const width = displayWidth(value);
+    if (width <= SNIPPET_WIDTH[field]) return;
+    if (!snippetListed) {
+      snippetBacklog[field] += 1;
+      return;
     }
+    const noun = field === 'title' ? 'Title' : 'Description';
+    addIssue(
+      issues,
+      rel,
+      data,
+      'warn',
+      `${noun} is ${width} columns wide (${[...value].length} chars); search results show about ` +
+        `${SNIPPET_WIDTH[field]}, so the end is cut`
+    );
+  };
+
+  if (typeof data.title === 'string') {
+    snippetWarn('title', data.title);
     if (data.title.length < 12) {
       addIssue(issues, rel, data, 'warn', 'Title is very short');
     }
@@ -1128,8 +1180,11 @@ for (const file of files) {
     if (data.description.length < 55) {
       addIssue(issues, rel, data, 'warn', `Description is short (${data.description.length} chars)`);
     }
+    // AGENTS.md's ceiling for cards; the snippet width below it is advisory.
     if (data.description.length > 230) {
       addIssue(issues, rel, data, 'warn', `Description is long (${data.description.length} chars)`);
+    } else {
+      snippetWarn('description', data.description);
     }
   }
 
@@ -1459,6 +1514,15 @@ const checked = `${posts.length} file${posts.length === 1 ? '' : 's'}, ${terms.l
 // that is the whole difference between a documented decision and a silent gap.
 for (const exemption of [...honouredExemptions].sort()) {
   console.log(`honoured exemption: ${exemption}`);
+}
+// Printed on a passing run too: it is the size of the backlog, not a pass.
+if (snippetBacklog.title + snippetBacklog.description > 0) {
+  console.log(
+    `• snippet width: ${snippetBacklog.title} title${snippetBacklog.title === 1 ? '' : 's'} over ` +
+      `${SNIPPET_WIDTH.title} columns and ${snippetBacklog.description} description` +
+      `${snippetBacklog.description === 1 ? '' : 's'} over ${SNIPPET_WIDTH.description} in posts dated ` +
+      `before ${SNIPPET_WIDTH_SINCE.toISOString().slice(0, 10)} (list them: pnpm content:lint --snippets)`
+  );
 }
 
 if (issues.length === 0) {
