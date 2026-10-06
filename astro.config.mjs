@@ -3,6 +3,7 @@ import { readdir, rename, rmdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'astro/config';
 import mdx from '@astrojs/mdx';
+import { rehypeCjkSegmentBreaks } from './scripts/lib/cjk-segment-break.mjs';
 import sitemap from '@astrojs/sitemap';
 import { readPostLastmods } from './scripts/lib/post-dates.mjs';
 
@@ -94,7 +95,11 @@ export default defineConfig({
   // `github-dark-default` keeps the block dark (BlogPost.astro draws the
   // code-block scrollbar light for it) and puts comments at #8b949e on
   // #0d1117, 6.15:1, the lowest of the token colours the posts use.
-  markdown: { shikiConfig: { theme: 'github-dark-default' } },
+  // A source line break between two CJK characters renders as a stray space in
+  // Chromium and Safari; this removes it from the rendered prose (code
+  // excluded). MDX inherits `markdown` config. See scripts/lib/cjk-segment-break.mjs,
+  // and `pnpm content:lint --dist`, which fails the build on any that remain.
+  markdown: { shikiConfig: { theme: 'github-dark-default' }, rehypePlugins: [rehypeCjkSegmentBreaks] },
   integrations: [
     mdx(),
     sitemap({
