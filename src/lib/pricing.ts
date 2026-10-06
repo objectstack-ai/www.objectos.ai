@@ -29,8 +29,12 @@ export interface PricingCopy {
 
 // CTA targets. Plan CTAs point at the docs "get started" surface; enterprise
 // opens an email. Repoint these at the app signup URL once it is live.
+// The Enterprise contact is sales@, the address the public licence page
+// (docs.objectos.ai/docs/resources/license) names for "contact sales" on
+// Enterprise, the Runtime Subscription and OEM terms; support@ is the
+// billing and refunds address the refund policy names.
 const GET_STARTED = 'https://docs.objectos.ai';
-const CONTACT = 'mailto:support@objectstack.ai';
+const CONTACT = 'mailto:sales@objectstack.ai';
 
 // Prices/quotas mirror the product's source of truth:
 // cloud `packages/service-cloud/src/plan-entitlements.ts` (PLAN_PRICING +

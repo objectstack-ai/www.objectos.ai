@@ -90,7 +90,7 @@ export const GET: APIRoute = async ({ site }) => {
       (page) => `- [${page.navLabel}](${absoluteUrl(site, marketingPagePath('en', page.slug))}): ${page.description}`
     ),
     `- [Security](${absoluteUrl(site, securityPath('en'))}): Data residency, permissions, approvals, audit logs, and the ObjectOS Enterprise self-managed deployment boundary.`,
-    `- [Pricing](${absoluteUrl(site, pricingPath('en'))}): Open-source ObjectStack and ObjectOS Cloud and Enterprise plans.`,
+    `- [Pricing](${absoluteUrl(site, pricingPath('en'))}): Open-source ObjectStack, the ObjectOS Cloud plans (Free, Team, Business), Business Self-Managed, and ObjectOS Enterprise.`,
     `- [Glossary](${absoluteUrl(site, glossaryIndexPath('en'))}): One-sentence definitions of the vocabulary this site uses, each linked to the pages and articles that apply it.`,
     `- [Articles](${absoluteUrl(site, blogPath('en'))}): Practical writing on AI-native software, enterprise AI agents, integration, modernization, and governance.`,
     `- [Documentation](https://docs.objectos.ai/): Product and developer documentation.`,

@@ -14,7 +14,7 @@ const page = {
     secondary: { label: '看 Agent 如何编写元数据', href: '/en/agent-developer/' },
     metrics: [
       { value: '2 条路径', label: '在源码里用编码 Agent，或在云端用对话' },
-      { value: '<150k tokens', label: '完整 CRM 全应用（含 UI），一个上下文窗口可容纳' },
+      { value: '整体装下', label: '应用小到 AI 能整体装下——README 自带的示例 CRM 可端到端读完' },
       { value: 'Business 起', label: 'AI 动作审计、护栏与权限限定从 ObjectOS Business 开始提供' },
     ],
     artifact: {
@@ -36,7 +36,7 @@ const page = {
         eyebrow: 'AI Build',
         title: '两种构建方式，同一份可审阅的定义',
         copy:
-          '无论 AI 是在你的代码仓库里工作，还是在 ObjectOS 聊天面板里工作，产出都是由人审阅并拥有的同一种 ObjectStack 类型化元数据。完整 CRM 全应用小于 150k tokens：对象、流程、权限等业务逻辑小于 100k，UI 元数据约 50k。',
+          '无论 AI 是在你的代码仓库里工作，还是在 ObjectOS 聊天面板里工作，产出都是由人审阅并拥有的同一种 ObjectStack 类型化元数据。整份定义小到 Agent 能整体装下：objectstack README 自带的示例 CRM——对象、视图、仪表盘、线索转化流程、权限集、动作、翻译——可以端到端读完，并在一次变更里整体重构。',
         items: [
           {
             title: '在源码里，用你的编码 Agent',
@@ -86,7 +86,7 @@ const page = {
         items: [
           {
             title: 'Agent 写源码文件',
-            body: 'Claude Code、Cursor 或任意编码 Agent 直接编辑仓库中的 ObjectStack 定义，审阅就是普通的 git diff。',
+            body: 'npm create objectstack@latest 生成项目并写入 AGENTS.md，Claude Code、Cursor 或任意编码 Agent 一开始就带着协议规则；它直接编辑仓库中的 ObjectStack 定义，npx os dev --ui 把它渲染出来，审阅就是普通的 git diff。',
           },
           {
             title: '任意 MCP 客户端可问询',

@@ -115,7 +115,7 @@ const TEMPLATES: Record<TemplateLocale, TextTemplates> = {
       '把客户、订单、案件、设备、合同和审批建模成业务对象。',
       '从同一份业务规格生成页面、流程、API 和 Agent 工具。',
       '让用户和 AI Agent 在同一套权限、审批和审计边界内执行动作。',
-      '连接现有 CRM、ERP、数据库和自研系统，而不是强制迁移。',
+      '把已在运行的 CRM、ERP 数据库联邦接入——默认只读、尚在早期——而不是强制迁移。',
     ],
     useCases: () => [
       '围绕维修、服务、审批或内部运营需求生成可运行应用。',
@@ -136,7 +136,7 @@ const TEMPLATES: Record<TemplateLocale, TextTemplates> = {
       {
         question: '是否需要先替换现有系统？',
         answer:
-          '通常不需要。更稳妥的路径是先连接现有系统，把关键记录建模为业务对象，再逐步叠加 AI、流程和新应用。',
+          '通常不需要。更稳妥的路径是先把现有数据库作为只读数据源接入——联邦默认只读、尚在早期，写权限按对象有意开启——把关键记录建模为业务对象，再逐步叠加 AI、流程和新应用。',
       },
     ],
   },
@@ -169,7 +169,7 @@ const TEMPLATES: Record<TemplateLocale, TextTemplates> = {
       '顧客、注文、ケース、設備、契約、承認をビジネスオブジェクトとしてモデル化します。',
       '同じ業務仕様から画面、ワークフロー、API、エージェントツールを生成します。',
       'ユーザーと AI エージェントを同じ権限、承認、監査境界の中で動かします。',
-      'CRM、ERP、データベース、独自システムを移行なしで接続します。',
+      '稼働中の CRM や ERP のデータベースを移行なしでフェデレートします。既定で読み取り専用で、まだ初期段階です。',
     ],
     useCases: () => [
       '修理、サービス、承認、社内業務の要件から実行可能なアプリを作ります。',
@@ -190,7 +190,7 @@ const TEMPLATES: Record<TemplateLocale, TextTemplates> = {
       {
         question: '既存システムの置き換えが必要ですか？',
         answer:
-          '通常は不要です。まず既存システムに接続し、重要な記録をビジネスオブジェクトとしてモデル化してから AI と新しいワークフローを追加します。',
+          '通常は不要です。まず既存データベースを読み取り専用のデータソースとして接続し（フェデレーションは既定で読み取り専用で、まだ初期段階。書き込みはオブジェクト単位で意図的に有効化します）、重要な記録をビジネスオブジェクトとしてモデル化してから AI と新しいワークフローを追加します。',
       },
     ],
   },
@@ -223,7 +223,7 @@ const TEMPLATES: Record<TemplateLocale, TextTemplates> = {
       'Kunden, Aufträge, Fälle, Geräte, Verträge und Freigaben als Business Objects modellieren.',
       'Screens, Workflows, APIs und Agent Tools aus derselben Geschäftsspezifikation erzeugen.',
       'Nutzer und AI Agents in denselben Berechtigungs-, Freigabe- und Audit-Grenzen ausführen.',
-      'CRM, ERP, Datenbanken und eigene Systeme verbinden, ohne eine Migration zu erzwingen.',
+      'Bereits laufende CRM- und ERP-Datenbanken föderieren, ohne eine Migration zu erzwingen – standardmäßig nur lesend und noch früh.',
     ],
     useCases: () => [
       'Aus Service-, Reparatur-, Freigabe- oder Operations-Anforderungen laufende Anwendungen bauen.',
@@ -244,7 +244,7 @@ const TEMPLATES: Record<TemplateLocale, TextTemplates> = {
       {
         question: 'Müssen bestehende Systeme ersetzt werden?',
         answer:
-          'Meist nicht. Der sichere Weg ist, bestehende Systeme zu verbinden, wichtige Datensätze als Business Objects zu modellieren und dann AI sowie neue Workflows zu ergänzen.',
+          'Meist nicht. Der sichere Weg ist, die bestehende Datenbank zuerst als nur lesende Datasource zu verbinden – Föderation ist standardmäßig nur lesend und noch früh, Schreibzugriff wird bewusst pro Objekt freigegeben –, wichtige Datensätze als Business Objects zu modellieren und dann AI sowie neue Workflows zu ergänzen.',
       },
     ],
   },
@@ -277,7 +277,7 @@ const TEMPLATES: Record<TemplateLocale, TextTemplates> = {
       'Modelar clientes, órdenes, casos, equipos, contratos y aprobaciones como objetos de negocio.',
       'Generar pantallas, workflows, APIs y herramientas de agente desde la misma especificación.',
       'Ejecutar usuarios y agentes AI dentro de los mismos límites de permisos, aprobación y auditoría.',
-      'Conectar CRM, ERP, bases de datos y sistemas propios sin forzar una migración.',
+      'Federar las bases de datos de CRM y ERP que ya usas sin forzar una migración — solo lectura por defecto y aún temprano.',
     ],
     useCases: () => [
       'Crear aplicaciones operativas a partir de requisitos de servicio, reparación, aprobación u operaciones internas.',
@@ -298,7 +298,7 @@ const TEMPLATES: Record<TemplateLocale, TextTemplates> = {
       {
         question: '¿Hay que reemplazar los sistemas existentes?',
         answer:
-          'Normalmente no. El camino más seguro es conectar sistemas existentes, modelar los registros clave como objetos de negocio y añadir AI y nuevos workflows por etapas.',
+          'Normalmente no. El camino más seguro es conectar primero la base de datos existente como datasource de solo lectura — la federación es de solo lectura por defecto y aún temprana; las escrituras se habilitan deliberadamente, objeto por objeto —, modelar los registros clave como objetos de negocio y añadir AI y nuevos workflows por etapas.',
       },
     ],
   },
@@ -331,7 +331,7 @@ const TEMPLATES: Record<TemplateLocale, TextTemplates> = {
       'Modéliser clients, commandes, dossiers, équipements, contrats et approbations comme objets métier.',
       'Générer écrans, workflows, APIs et outils d’agents depuis la même spécification métier.',
       'Faire fonctionner utilisateurs et agents AI dans les mêmes limites de permissions, approbation et audit.',
-      'Connecter CRM, ERP, bases de données et systèmes internes sans migration forcée.',
+      'Fédérer les bases CRM et ERP déjà en production sans migration forcée — en lecture seule par défaut, et encore récent.',
     ],
     useCases: () => [
       'Créer des applications opérationnelles à partir de besoins de service, réparation, approbation ou opérations internes.',
@@ -352,7 +352,7 @@ const TEMPLATES: Record<TemplateLocale, TextTemplates> = {
       {
         question: 'Faut-il remplacer les systèmes existants ?',
         answer:
-          'Généralement non. Le chemin le plus sûr consiste à connecter les systèmes existants, modéliser les enregistrements clés comme objets métier, puis ajouter AI et workflows par étapes.',
+          'Généralement non. Le chemin le plus sûr consiste à connecter d’abord la base existante comme datasource en lecture seule — la fédération est en lecture seule par défaut, et encore récente ; l’écriture s’active délibérément, objet par objet —, modéliser les enregistrements clés comme objets métier, puis ajouter AI et workflows par étapes.',
       },
     ],
   },
@@ -385,7 +385,7 @@ const TEMPLATES: Record<TemplateLocale, TextTemplates> = {
       '고객, 주문, 케이스, 장비, 계약, 승인을 비즈니스 객체로 모델링합니다.',
       '같은 비즈니스 명세에서 화면, 워크플로, API, 에이전트 도구를 생성합니다.',
       '사용자와 AI 에이전트를 동일한 권한, 승인, 감사 경계 안에서 실행합니다.',
-      'CRM, ERP, 데이터베이스, 자체 시스템을 강제 마이그레이션 없이 연결합니다.',
+      '이미 운영 중인 CRM, ERP 데이터베이스를 강제 마이그레이션 없이 연합합니다 — 기본 읽기 전용이며 아직 초기 단계입니다.',
     ],
     useCases: () => [
       '수리, 서비스, 승인, 내부 운영 요구사항에서 실행 가능한 애플리케이션을 만듭니다.',
@@ -406,7 +406,23 @@ const TEMPLATES: Record<TemplateLocale, TextTemplates> = {
       {
         question: '기존 시스템을 교체해야 하나요?',
         answer:
-          '대부분 필요하지 않습니다. 기존 시스템을 연결하고 핵심 기록을 비즈니스 객체로 모델링한 뒤 AI와 새 워크플로를 단계적으로 추가하는 것이 더 안전합니다.',
+          '대부분 필요하지 않습니다. 기존 데이터베이스를 먼저 읽기 전용 데이터소스로 연결하고(연합은 기본 읽기 전용이며 아직 초기 단계로, 쓰기는 객체 단위로 의도적으로 활성화합니다), 핵심 기록을 비즈니스 객체로 모델링한 뒤 AI와 새 워크플로를 단계적으로 추가하는 것이 더 안전합니다.',
+      },
+    ],
+  },
+};
+
+// Questions one cluster answers that the shared per-locale template cannot,
+// appended after the template's FAQ. The English cluster carries the same
+// answer in `clusters.ts`; a locale listed here is authored, every other
+// template locale keeps the generic FAQ.
+const EXTRA_FAQ: Partial<Record<string, Partial<Record<TemplateLocale, ClusterFaq[]>>>> = {
+  'self-hosted-ai': {
+    'zh-Hans': [
+      {
+        question: '自托管是免费的吗？ObjectOS 又加了什么？',
+        answer:
+          '免费自托管指的是开源的 ObjectStack 框架（Apache-2.0）：协议、内核、CLI、生产运行时、Console UI 与 MCP 服务器，开发与生产之间没有功能门槛——经 MCP 自带你的 AI。自管部署的 ObjectOS 是付费许可的：Business Self-Managed 是单节点交付，带产品内 AI Builder 与 Ask、AI 治理与自带模型；ObjectOS 企业版是完整私有部署，提供集群、离线隔离、SCIM、合规鉴证与 SLA 支持。无论哪个版本，你都可以导出本体，拿到开源运行时上运行。起步：npm create objectstack@latest，把编码 Agent 指向生成的项目及其 AGENTS.md，然后 npx os dev --ui。',
       },
     ],
   },
@@ -460,7 +476,7 @@ export function clusterCopy(cluster: Cluster, locale: Locale): ClusterCopy {
     whyNow: template.whyNow(name.title),
     capabilities: template.capabilities(name.title),
     useCases: template.useCases(name.title),
-    faq: template.faq(name.title),
+    faq: [...template.faq(name.title), ...(EXTRA_FAQ[cluster.slug]?.[locale] ?? [])],
   };
 }
 

@@ -3,14 +3,14 @@ import type { MarketingPage } from '../../../src/content-pages/types';
 const page = {
     slug: 'approvals',
     navLabel: 'Approvals',
-    title: 'ObjectOS Approvals: Multi-Step Sign-Off for Business Changes and AI Actions',
+    title: 'Approvals: Multi-Step Sign-Off for Business Changes and AI Actions',
     description:
       'Multi-step approvals with user, role, team, and hierarchy resolution, a three-tab approvals inbox, escalation, and record locking — the same queue that gates AI-written structural changes before they ship.',
     eyebrow: 'Approvals',
     heroTitle: 'Every consequential change waits for a yes.',
     lead:
       'What does a 15%+ discount actually look like getting approved? The flow parks, the order locks, and finance sees the request in the approvals inbox — record snapshot, who did what when, all in one panel. Approve to release it, reject with a comment to send it back, and a stalled request escalates on its own. The schema change an AI just proposed rides the exact same queue.',
-    primary: { label: 'Compare editions and pricing', href: '/en/pricing/' },
+    primary: { label: 'Read the approvals docs', href: 'https://docs.objectos.ai/docs/build/automation/approvals' },
     secondary: { label: 'See permissions & security', href: '/en/permissions/' },
     metrics: [
       { value: '4 ways', label: 'Route to a user, role, team, or manager hierarchy' },
@@ -173,9 +173,9 @@ export const DiscountApproval = defineFlow({
           'No — an approval is a durable step inside a flow. That keeps one execution model for the whole process: the flow pauses, people decide, the flow resumes.',
       },
       {
-        question: 'Is the approvals inbox in the open-source ObjectStack?',
+        question: 'What is open source here, and what does ObjectOS add?',
         answer:
-          'Yes. The three-tab inbox, side-panel timeline, comments, recall and return-for-revision, and keyboard shortcuts ship in the open-source ObjectStack console — alongside multi-step approvals, approver resolution, escalation, record locking, and the audit trail.',
+          'Multi-step approvals, approver resolution, escalation, record locking, the audit trail, and the three-tab inbox with its side panel, comments, recall, return-for-revision, and keyboard shortcuts ship in the open-source ObjectStack Console, Apache-2.0. ObjectOS adds a second thing to approve: the in-app AI Builder’s metadata changes land in a pending-action queue where approvers see the proposed diff before clicking Approve — only Setup Administrators hold that permission by default — and every approve or reject lands in the audit log with the originating conversation.',
       },
     ],
   } satisfies MarketingPage;

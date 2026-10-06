@@ -3,14 +3,14 @@ import type { MarketingPage } from '../../../src/content-pages/types';
 const page = {
     slug: 'approvals',
     navLabel: '审批',
-    title: 'ObjectOS 审批：业务变更与 AI 动作的多级签核',
+    title: '审批：业务变更与 AI 动作的多级签核',
     description:
       '多级审批，按用户、角色、团队与管理层级解析审批人，配备三页签审批收件箱、升级与记录锁定——AI 编写的结构性变更在上线前也要过同一个队列。',
     eyebrow: '审批',
     heroTitle: '每个有分量的变更，都要等一个"同意"。',
     lead:
       '一笔超过 15% 的折扣批下来是什么样？流程停驻、订单锁定，财务在审批收件箱里看到请求——记录快照、谁在什么时候做了什么，一目了然；批准放行，驳回带评论退回，超时自动升级。AI 刚提议的 schema 变更，走的也是这同一个队列。',
-    primary: { label: '对比版本与定价', href: '/en/pricing/' },
+    primary: { label: '阅读审批文档', href: 'https://docs.objectos.ai/docs/build/automation/approvals' },
     secondary: { label: '查看权限与安全', href: '/en/permissions/' },
     metrics: [
       { value: '4 种路由', label: '指定用户、角色、团队或管理层级' },
@@ -173,9 +173,9 @@ export const DiscountApproval = defineFlow({
           '不是——审批是流程里的一个持久步骤。整个过程只有一个执行模型：流程暂停，人来决定，流程继续。',
       },
       {
-        question: '审批收件箱在开源 ObjectStack 里吗？',
+        question: '这里哪些是开源的，ObjectOS 又加了什么？',
         answer:
-          '在。三页签收件箱、侧栏时间线、评论、撤回与退回修改、键盘快捷键，连同多级审批、审批人解析、升级、记录锁定与审计轨迹，都是开源 ObjectStack 的一部分。',
+          '多级审批、审批人解析、升级、记录锁定、审计轨迹，以及三页签收件箱连同侧栏、评论、撤回、退回修改和键盘快捷键，都随开源 ObjectStack Console 发布，Apache-2.0。ObjectOS 加的是第二类要审的东西：产品内 AI Builder 的元数据变更会进入待审动作队列，审批人在点击批准前看到提议的 diff——默认只有 Setup Administrator 持有这项权限——每一次批准或驳回都连同发起它的对话写入审计日志。',
       },
     ],
   } satisfies MarketingPage;
