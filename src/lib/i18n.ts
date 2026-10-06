@@ -98,6 +98,18 @@ interface Strings {
     glossary: string;
     /** Accessible name of the mobile drawer's close button. */
     close: string;
+    /** Visible label of the drawer's theme button. */
+    theme: string;
+    /** Accessible name and tooltip of the theme toggle. */
+    toggleTheme: string;
+    /** Prefix of the language switcher's name, punctuation included: "Language: English". */
+    languagePrefix: string;
+    /** Accessible names of the header's navigation landmarks. */
+    primaryNav: string;
+    browseNav: string;
+    mobileNav: string;
+    /** Accessible name of the home page's topic-cluster links. */
+    topicClusters: string;
   };
   getStarted: string;
   skipToContent: string;
@@ -157,6 +169,13 @@ const en: Strings = {
     referenceStories: 'Reference stories',
     glossary: 'Glossary',
     close: 'Close',
+    theme: 'Theme',
+    toggleTheme: 'Toggle dark mode',
+    languagePrefix: 'Language: ',
+    primaryNav: 'Primary',
+    browseNav: 'Browse',
+    mobileNav: 'Mobile',
+    topicClusters: 'Topic clusters',
   },
   getStarted: 'Get started',
   skipToContent: 'Skip to content',
@@ -210,6 +229,13 @@ const zhHans: Strings = {
     referenceStories: '参考案例',
     glossary: '术语表',
     close: '关闭',
+    theme: '主题',
+    toggleTheme: '切换深色模式',
+    languagePrefix: '语言：',
+    primaryNav: '主导航',
+    browseNav: '浏览',
+    mobileNav: '移动端导航',
+    topicClusters: '专题导航',
   },
   getStarted: '开始使用',
   skipToContent: '跳到正文',
@@ -263,6 +289,13 @@ const ja: Strings = {
     referenceStories: '導入事例',
     glossary: '用語集',
     close: '閉じる',
+    theme: 'テーマ',
+    toggleTheme: 'ダークモードを切り替え',
+    languagePrefix: '言語：',
+    primaryNav: 'メインナビゲーション',
+    browseNav: 'ブラウズ',
+    mobileNav: 'モバイルナビゲーション',
+    topicClusters: 'トピッククラスター',
   },
   getStarted: 'はじめる',
   skipToContent: '本文へ移動',
@@ -316,6 +349,13 @@ const de: Strings = {
     referenceStories: 'Referenzberichte',
     glossary: 'Glossar',
     close: 'Schließen',
+    theme: 'Darstellung',
+    toggleTheme: 'Dunkelmodus umschalten',
+    languagePrefix: 'Sprache: ',
+    primaryNav: 'Hauptnavigation',
+    browseNav: 'Durchstöbern',
+    mobileNav: 'Mobile Navigation',
+    topicClusters: 'Themencluster',
   },
   getStarted: 'Loslegen',
   skipToContent: 'Zum Inhalt springen',
@@ -369,6 +409,13 @@ const es: Strings = {
     referenceStories: 'Casos de referencia',
     glossary: 'Glosario',
     close: 'Cerrar',
+    theme: 'Tema',
+    toggleTheme: 'Cambiar modo oscuro',
+    languagePrefix: 'Idioma: ',
+    primaryNav: 'Navegación principal',
+    browseNav: 'Explorar',
+    mobileNav: 'Navegación móvil',
+    topicClusters: 'Grupos temáticos',
   },
   getStarted: 'Empezar',
   skipToContent: 'Saltar al contenido',
@@ -422,6 +469,13 @@ const fr: Strings = {
     referenceStories: 'Cas de référence',
     glossary: 'Glossaire',
     close: 'Fermer',
+    theme: 'Thème',
+    toggleTheme: 'Basculer le mode sombre',
+    languagePrefix: 'Langue : ',
+    primaryNav: 'Navigation principale',
+    browseNav: 'Parcourir',
+    mobileNav: 'Navigation mobile',
+    topicClusters: 'Groupes thématiques',
   },
   getStarted: 'Commencer',
   skipToContent: 'Aller au contenu',
@@ -475,6 +529,13 @@ const ko: Strings = {
     referenceStories: '레퍼런스 사례',
     glossary: '용어집',
     close: '닫기',
+    theme: '테마',
+    toggleTheme: '다크 모드 전환',
+    languagePrefix: '언어: ',
+    primaryNav: '주 메뉴',
+    browseNav: '둘러보기',
+    mobileNav: '모바일 메뉴',
+    topicClusters: '주제 클러스터',
   },
   getStarted: '시작하기',
   skipToContent: '본문으로 건너뛰기',
@@ -529,6 +590,13 @@ const toHant = (s: Strings): Strings => ({
     referenceStories: s2t(s.siteNav.referenceStories),
     glossary: s2t(s.siteNav.glossary),
     close: s2t(s.siteNav.close),
+    theme: s2t(s.siteNav.theme),
+    toggleTheme: s2t(s.siteNav.toggleTheme),
+    languagePrefix: s2t(s.siteNav.languagePrefix),
+    primaryNav: s2t(s.siteNav.primaryNav),
+    browseNav: s2t(s.siteNav.browseNav),
+    mobileNav: s2t(s.siteNav.mobileNav),
+    topicClusters: s2t(s.siteNav.topicClusters),
   },
   getStarted: s2t(s.getStarted),
   skipToContent: s2t(s.skipToContent),
