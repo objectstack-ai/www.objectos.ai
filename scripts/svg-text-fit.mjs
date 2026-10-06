@@ -34,7 +34,7 @@
 // text, so the gate errs strict) and glyphs outside the table, which are charged
 // a full em (1.25em for emoji). Checked against headless Chromium rendering the
 // same files with Liberation Sans/Mono: over 2,232 boxes the gate was never more
-// than 2.0px narrower than Chromium (which rounds boxes out to whole pixels) and
+// than 2px narrower than Chromium (which rounds boxes out to whole pixels) and
 // at most 3.9px wider (kerning, and the em charge), and both found the same
 // crossings.
 //
