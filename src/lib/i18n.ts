@@ -643,7 +643,10 @@ export const ui: Record<Locale, Strings> = {
   ko,
 };
 
+// Theme tokens, not hex: the pill sits on a tint of --surface in both themes,
+// so one colour cannot clear 4.5:1 in light and dark. Values and ratios live
+// with the tokens in src/layouts/Base.astro.
 export const STATUS_COLOR: Record<StatusKey, string> = {
-  published: '#059669',
-  archived: '#78716c',
+  published: 'var(--status-published)',
+  archived: 'var(--status-archived)',
 };

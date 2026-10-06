@@ -171,20 +171,19 @@ const menus = (
               type="button"
               class:list={['menu-trigger', { active: g.active }]}
               aria-expanded="false"
-              aria-haspopup="true"
+              aria-controls={`menu-${g.id}`}
               data-menu-trigger>
               {g.label}
               <span class="caret" aria-hidden="true">▾</span>
             </button>
-            <div class:list={['menu-panel', { mega: g.sections.length > 1 }]} role="menu">
+            <div class:list={['menu-panel', { mega: g.sections.length > 1 }]} id={`menu-${g.id}`}>
               {g.sections.map((s) => (
                 <div class="menu-col">
-                  {s.label && <span class="menu-col-label" role="presentation">{s.label}</span>}
+                  {s.label && <span class="menu-col-label">{s.label}</span>}
                   {s.items.map((it) => (
                     <a
                       class:list={['menu-item', { active: it.active }]}
                       href={it.href}
-                      role="menuitem"
                       target={it.external ? '_blank' : undefined}
                       rel={it.external ? 'noopener' : undefined}>
                       {it.label}
@@ -230,7 +229,7 @@ const menus = (
           type="button"
           class="lang-trigger"
           aria-expanded="false"
-          aria-haspopup="true"
+          aria-controls="menu-lang"
           aria-label={`${t.siteNav.languagePrefix}${LANG_NATIVE[locale]}`}
           title={`${t.siteNav.languagePrefix}${LANG_NATIVE[locale]}`}
           data-menu-trigger>
@@ -238,14 +237,13 @@ const menus = (
           <span class="lang-cur native">{LANG_NATIVE[locale]}</span>
           <span class="caret" aria-hidden="true">▾</span>
         </button>
-        <div class="menu-panel lang-panel" role="menu">
+        <div class="menu-panel lang-panel" id="menu-lang">
           {
             LOCALES.map((l) => (
               <a
                 class:list={['menu-item', { active: l === locale }]}
                 href={switcherTargets[l] ?? homePath(l)}
-                data-lang={l}
-                role="menuitem">
+                data-lang={l}>
                 {LANG_NATIVE[l]}
               </a>
             ))
@@ -287,20 +285,19 @@ const menus = (
                 type="button"
                 class:list={['menu-trigger', { active: m.active }]}
                 aria-expanded="false"
-                aria-haspopup="true"
+                aria-controls={`menu-axis-${m.group}`}
                 data-menu-trigger>
                 {groupMeta(m.group).label[locale]}
                 <span class="caret" aria-hidden="true">▾</span>
               </button>
-              <div class="menu-panel" role="menu">
+              <div class="menu-panel" id={`menu-axis-${m.group}`}>
                 {m.terms.map((term) => (
                   <a
                     class:list={[
                       'menu-item',
                       { active: pathname.startsWith(termHref(locale, term)) },
                     ]}
-                    href={termHref(locale, term)}
-                    role="menuitem">
+                    href={termHref(locale, term)}>
                     {term.label[locale]}
                   </a>
                 ))}
@@ -320,7 +317,7 @@ const menus = (
   <div class="drawer-panel" role="dialog" aria-modal="true" aria-label={t.siteNav.menu}>
     <div class="drawer-head">
       <span class="drawer-title">{t.siteNav.menu}</span>
-      <button type="button" class="iconbtn" aria-label={t.siteNav.close} data-drawer-close>
+      <button type="button" class="iconbtn drawer-close" aria-label={t.siteNav.close} data-drawer-close>
         <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
           <line x1="5" y1="5" x2="15" y2="15" />
           <line x1="15" y1="5" x2="5" y2="15" />
@@ -418,14 +415,19 @@ const menus = (
     });
   });
 
-  // Dropdown menus (nav groups + axes + language): click to open, single-open,
-  // close on outside-click / Escape.
+  // Dropdown menus (nav groups + axes + language) are disclosure widgets, not
+  // ARIA menus: a button with aria-expanded/aria-controls shows a panel of
+  // plain links, which Tab walks in order. Click to open, single-open; an
+  // outside click, focus leaving the menu, or Escape closes it, and Escape
+  // hands focus back to the trigger.
   const menus = document.querySelectorAll<HTMLElement>('[data-menu]');
+  function closeMenu(m: HTMLElement) {
+    m.classList.remove('open');
+    m.querySelector('[data-menu-trigger]')?.setAttribute('aria-expanded', 'false');
+  }
   function closeAll(except?: HTMLElement) {
     menus.forEach((m) => {
-      if (m === except) return;
-      m.classList.remove('open');
-      m.querySelector('[data-menu-trigger]')?.setAttribute('aria-expanded', 'false');
+      if (m !== except) closeMenu(m);
     });
   }
   menus.forEach((menu) => {
@@ -436,32 +438,79 @@ const menus = (
       trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
       closeAll(menu);
     });
+    menu.addEventListener('focusout', (e) => {
+      const next = (e as FocusEvent).relatedTarget as Node | null;
+      if (next && !menu.contains(next)) closeMenu(menu);
+    });
   });
   document.addEventListener('click', () => closeAll());
 
-  // Mobile drawer.
+  // Mobile drawer: a modal dialog. Opening moves focus to its close button,
+  // makes everything behind it inert, and keeps Tab inside it; closing
+  // returns focus to the menu button.
   const drawer = document.querySelector<HTMLElement>('[data-drawer]');
+  const panel = drawer?.querySelector<HTMLElement>('.drawer-panel');
   const openBtn = document.querySelector<HTMLElement>('[data-drawer-open]');
-  function setDrawer(open: boolean) {
-    if (!drawer) return;
+  let drawerOpen = false;
+  const tabbables = (): HTMLElement[] =>
+    panel
+      ? [...panel.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), summary')].filter(
+          (el) => el.getClientRects().length > 0
+        )
+      : [];
+  function setDrawer(open: boolean, returnFocus = true) {
+    if (!drawer || open === drawerOpen) return;
+    drawerOpen = open;
     drawer.classList.toggle('open', open);
     drawer.setAttribute('aria-hidden', open ? 'false' : 'true');
     openBtn?.setAttribute('aria-expanded', open ? 'true' : 'false');
     document.documentElement.style.overflow = open ? 'hidden' : '';
+    for (const el of document.body.children) {
+      if (el !== drawer) (el as HTMLElement).inert = open;
+    }
+    if (open) tabbables()[0]?.focus();
+    else if (returnFocus) openBtn?.focus();
   }
   openBtn?.addEventListener('click', () => setDrawer(true));
   document.querySelectorAll('[data-drawer-close]').forEach((el) =>
     el.addEventListener('click', () => setDrawer(false))
   );
-  // Navigating away should close the sheet.
+  // Following a link closes the sheet; focus goes where the link leads.
   drawer?.querySelectorAll('a').forEach((a) =>
-    a.addEventListener('click', () => setDrawer(false))
+    a.addEventListener('click', () => setDrawer(false, false))
   );
+  drawer?.addEventListener('keydown', (e) => {
+    if (e.key !== 'Tab') return;
+    const list = tabbables();
+    if (!list.length) return;
+    const first = list[0];
+    const last = list[list.length - 1];
+    const at = document.activeElement;
+    if (e.shiftKey && (at === first || !panel?.contains(at))) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && (at === last || !panel?.contains(at))) {
+      e.preventDefault();
+      first.focus();
+    }
+  });
+  // The drawer only exists below the desktop breakpoint; widening the window
+  // past it must not leave an invisible modal holding the page inert.
+  matchMedia('(min-width: 901px)').addEventListener('change', (e) => {
+    if (e.matches) setDrawer(false, false);
+  });
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      closeAll();
+    if (e.key !== 'Escape') return;
+    if (drawerOpen) {
       setDrawer(false);
+      return;
+    }
+    const open = [...menus].find((m) => m.classList.contains('open'));
+    if (!open) return;
+    closeMenu(open);
+    if (open.contains(document.activeElement)) {
+      open.querySelector<HTMLElement>('[data-menu-trigger]')?.focus();
     }
   });
 </script>
@@ -658,9 +707,12 @@ const menus = (
     background: var(--surface-sunk);
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--line) 70%, transparent);
   }
+  /* 0.7, not 0.55: the caret is the only sign a trigger opens a panel, and
+     0.55 put it at 2.5:1 (WCAG 1.4.11 asks 3:1); 0.7 is 3.16:1 on the
+     hovered trigger's --surface-sunk. */
   .caret {
     font-size: 0.6rem;
-    opacity: 0.55;
+    opacity: 0.7;
     transition: transform 0.15s;
   }
   .menu.open .caret {
@@ -971,8 +1023,20 @@ const menus = (
     .bar-desktop {
       display: none;
     }
+    /* Touch-size targets (44px) for the bar's controls and the drawer's
+       close button; the desktop icon buttons stay 34px. */
     .hamburger {
       display: inline-flex;
+      width: 44px;
+      height: 44px;
+    }
+    .drawer-close {
+      width: 44px;
+      height: 44px;
+    }
+    .cta,
+    .wordmark {
+      min-height: 44px;
     }
   }
 
