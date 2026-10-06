@@ -15,7 +15,7 @@ const page = {
     metrics: [
       { value: '2 paths', label: 'Build with a coding agent in source, or by conversation in the cloud' },
       { value: '<150k tokens', label: 'A complete CRM, including UI, held in one context window' },
-      { value: '0 bypasses', label: 'Every AI action runs inside user permissions and audit' },
+      { value: 'Business+', label: 'AI action audit, guardrails, and permission scoping start on ObjectOS Business' },
     ],
     artifact: {
       eyebrow: 'The build loop',
@@ -73,7 +73,7 @@ const page = {
           },
           {
             title: 'Everything on the record',
-            body: 'Every Ask query and action lands in the audit log alongside human activity, so review works the same for both.',
+            body: 'On ObjectOS Business and Enterprise, Ask queries and actions land in the audit log alongside human activity, so review works the same for both.',
           },
         ],
       },
@@ -93,8 +93,8 @@ const page = {
             body: 'The MCP server exposes your objects, queries, and actions to whatever model you run — hosted or fully local.',
           },
           {
-            title: 'Same runtime, same rules',
-            body: 'Permissions, approvals, and audit apply identically. The edition changes who hosts the AI, never how it is governed.',
+            title: 'Same runtime, governance by edition',
+            body: 'On the open-source runtime, MCP tool calls run inside the caller’s permissions and land in the audit log. ObjectOS adds in-app AI by edition: a taste on Free, in-app AI Build and Ask on Team, and AI governance — action audit, guardrails, permission scoping — from Business.',
           },
         ],
       },
@@ -103,7 +103,9 @@ const page = {
       columns: ['Edition', 'How AI builds', 'How AI answers'],
       rows: [
         ['Open-source ObjectStack', 'Your coding agent edits metadata source files; review as git diffs', 'Any MCP client queries governed objects with your own model'],
-        ['ObjectOS Cloud Team & Business', 'In-app AI Build drafts changes; approvals gate structure', 'In-app AI Ask answers and runs approved actions'],
+        ['ObjectOS Cloud Free', 'A taste of in-app AI Build', 'A taste of in-app AI Ask'],
+        ['ObjectOS Cloud Team', 'In-app AI Build drafts changes; approvals gate structure', 'In-app AI Ask answers and runs approved actions'],
+        ['ObjectOS Business (Cloud or Self-Managed)', 'Same, plus AI governance: action audit, guardrails, permission scoping', 'Same, with Ask queries and actions audited and guardrailed'],
         ['ObjectOS Enterprise', 'Same, plus private deployment and bring-your-own-model', 'Same, plus local models and internal identity'],
       ],
     },
@@ -111,12 +113,12 @@ const page = {
       {
         question: 'What stops AI from breaking production?',
         answer:
-          'The ObjectStack runtime enforces three guarantees: structural changes require human approval, every action runs inside the requesting user’s permissions, and everything is audited. ObjectOS makes that approval and audit loop available in the production product, so AI can draft quickly but cannot ship silently.',
+          'The ObjectStack runtime enforces two guarantees for any agent working over MCP: structural changes require human approval, and every tool call runs inside the requesting user’s permissions and is audited. ObjectOS Business and Enterprise add AI governance for the in-app AI — action audit, guardrails, permission scoping — so AI can draft quickly but cannot ship silently.',
       },
       {
         question: 'Which models does it use?',
         answer:
-          'Cloud editions run managed models behind AI Build and Ask. The open-source ObjectStack brings your own — any MCP-compatible client or a local model. Enterprise adds bring-your-own-model for private deployments.',
+          'Cloud editions run managed models behind AI Build and Ask. The open-source ObjectStack brings your own — any MCP-compatible client or a local model. Business Self-Managed and Enterprise private deployments bring your own model or key.',
       },
     ],
   } satisfies MarketingPage;
