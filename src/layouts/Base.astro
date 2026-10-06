@@ -9,7 +9,13 @@ interface Props {
   title: string;
   description?: string;
   locale: Locale;
-  canonical?: string;
+  /**
+   * `null` omits the canonical link and `og:url` altogether. Only the 404
+   * pages use it: they answer for every URL that does not exist, so there is
+   * no one address to name, and naming their own `/404` path or the home page
+   * would tell crawlers a missing URL is a duplicate of a real one.
+   */
+  canonical?: string | null;
   image?: string;
   type?: 'website' | 'article';
   noindex?: boolean;
@@ -51,7 +57,9 @@ const t = ui[locale];
 const site = Astro.site?.toString().replace(/\/$/, '') ?? '';
 const absoluteUrl = (href: string): string =>
   site ? new URL(href, `${site}/`).toString() : new URL(href, Astro.url).toString();
-const canonicalUrl = canonical
+const canonicalUrl = canonical === null
+  ? null
+  : canonical
   ? absoluteUrl(canonical)
   : site
     ? `${site}${Astro.url.pathname}`
@@ -112,7 +120,7 @@ const jsonLdHtml = (value: Record<string, unknown>) =>
     <title>{title}</title>
     {description && <meta name="description" content={description} />}
     {noindex && <meta name="robots" content="noindex, nofollow" />}
-    <link rel="canonical" href={canonicalUrl} />
+    {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
     {hreflangs.map((a) => <link rel="alternate" hreflang={a.hreflang} href={a.href} />)}
     {xDefault && <link rel="alternate" hreflang="x-default" href={xDefault} />}
     <link
@@ -125,7 +133,7 @@ const jsonLdHtml = (value: Record<string, unknown>) =>
     <meta property="og:title" content={title} />
     {description && <meta property="og:description" content={description} />}
     <meta property="og:type" content={type} />
-    <meta property="og:url" content={canonicalUrl} />
+    {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
     <meta property="og:image" content={imageUrl} />
     <meta property="og:locale" content={htmlLang(locale).replace('-', '_')} />
     {publishedTime && <meta property="article:published_time" content={publishedTime} />}
@@ -151,14 +159,14 @@ const jsonLdHtml = (value: Record<string, unknown>) =>
           <span class="muted">© {new Date().getFullYear()}</span>
         </span>
         <div class="foot-links">
-          <a href={marketingPagePath(locale, 'product-tour')}>Product tour</a>
-          <a href={marketingPagePath(locale, 'platform')}>Platform</a>
-          <a href={marketingPagePath(locale, 'ai')}>AI Build & Ask</a>
-          <a href={marketingPagePath(locale, 'mcp')}>Tools & MCP</a>
-          <a href={marketingPagePath(locale, 'templates')}>Templates</a>
-          <a href={marketingPagePath(locale, 'agent-developer')}>Agent guide</a>
-          <a href={marketingPagePath(locale, 'trust-center')}>Trust center</a>
-          <a href={marketingPagePath(locale, 'customer-stories')}>Reference stories</a>
+          <a href={marketingPagePath(locale, 'product-tour')}>{t.siteNav.productTour}</a>
+          <a href={marketingPagePath(locale, 'platform')}>{t.footer.platform}</a>
+          <a href={marketingPagePath(locale, 'ai')}>{t.siteNav.aiBuildAsk}</a>
+          <a href={marketingPagePath(locale, 'mcp')}>{t.siteNav.toolsMcp}</a>
+          <a href={marketingPagePath(locale, 'templates')}>{t.siteNav.templates}</a>
+          <a href={marketingPagePath(locale, 'agent-developer')}>{t.siteNav.agentGuide}</a>
+          <a href={marketingPagePath(locale, 'trust-center')}>{t.siteNav.trustCenter}</a>
+          <a href={marketingPagePath(locale, 'customer-stories')}>{t.siteNav.referenceStories}</a>
           <a href={glossaryIndexPath(locale)}>{t.siteNav.glossary}</a>
           <a href={pricingPath(locale)}>{t.footer.pricing}</a>
           <a href="https://docs.objectos.ai" target="_blank" rel="noopener">{t.siteNav.docs}</a>
@@ -323,13 +331,16 @@ const jsonLdHtml = (value: Record<string, unknown>) =>
         display: flex;
         justify-content: space-between;
         align-items: center;
+        gap: 0.75rem 2rem;
         font-size: 0.8rem;
         color: var(--ink-soft);
       }
       .site-footer .foot-brand {
         display: inline-flex;
+        flex-shrink: 0;
         align-items: center;
         gap: 0.4rem;
+        white-space: nowrap;
       }
       .site-footer .foot-links {
         display: flex;

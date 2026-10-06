@@ -96,10 +96,25 @@ interface Strings {
     templates: string;
     referenceStories: string;
     glossary: string;
+    /** Accessible name of the mobile drawer's close button. */
+    close: string;
   };
   getStarted: string;
   skipToContent: string;
-  footer: { terms: string; privacy: string; pricing: string; refunds: string };
+  /**
+   * `platform` is the footer's short label; the header uses the longer
+   * `siteNav.platform`. Every other footer link reuses its `siteNav` label.
+   */
+  footer: { terms: string; privacy: string; pricing: string; refunds: string; platform: string };
+  /** The 404 page (`src/pages/404.astro`, `src/pages/[lang]/404.astro`). */
+  notFound: {
+    title: string;
+    heading: string;
+    lead: string;
+    home: string;
+    blog: string;
+    pricing: string;
+  };
   all: string;
   audience: string;
   articlesTitle: string;
@@ -141,10 +156,19 @@ const en: Strings = {
     templates: 'Templates',
     referenceStories: 'Reference stories',
     glossary: 'Glossary',
+    close: 'Close',
   },
   getStarted: 'Get started',
   skipToContent: 'Skip to content',
-  footer: { terms: 'Terms & License', privacy: 'Privacy', pricing: 'Pricing', refunds: 'Refunds' },
+  footer: { terms: 'Terms & License', privacy: 'Privacy', pricing: 'Pricing', refunds: 'Refunds', platform: 'Platform' },
+  notFound: {
+    title: 'Page not found',
+    heading: 'This page does not exist.',
+    lead: 'The link may be out of date, or the page may have moved. Start from one of these instead.',
+    home: 'Home',
+    blog: 'Blog',
+    pricing: 'Pricing',
+  },
   all: 'Home',
   audience: 'Audience',
   articlesTitle: 'Articles',
@@ -185,10 +209,19 @@ const zhHans: Strings = {
     templates: '模板',
     referenceStories: '参考案例',
     glossary: '术语表',
+    close: '关闭',
   },
   getStarted: '开始使用',
   skipToContent: '跳到正文',
-  footer: { terms: '许可协议', privacy: '隐私政策', pricing: '定价', refunds: '退款政策' },
+  footer: { terms: '许可协议', privacy: '隐私政策', pricing: '定价', refunds: '退款政策', platform: '平台' },
+  notFound: {
+    title: '页面不存在',
+    heading: '这个页面不存在。',
+    lead: '链接可能已经过期，或者页面已经移动。可以从下面这些页面重新开始。',
+    home: '首页',
+    blog: '博客',
+    pricing: '定价',
+  },
   all: '首页',
   audience: '受众',
   articlesTitle: '文章',
@@ -229,10 +262,19 @@ const ja: Strings = {
     templates: 'テンプレート',
     referenceStories: '導入事例',
     glossary: '用語集',
+    close: '閉じる',
   },
   getStarted: 'はじめる',
   skipToContent: '本文へ移動',
-  footer: { terms: '利用規約・ライセンス', privacy: 'プライバシー', pricing: '料金', refunds: '返金' },
+  footer: { terms: '利用規約・ライセンス', privacy: 'プライバシー', pricing: '料金', refunds: '返金', platform: 'プラットフォーム' },
+  notFound: {
+    title: 'ページが見つかりません',
+    heading: 'このページは存在しません。',
+    lead: 'リンクが古いか、ページが移動した可能性があります。以下のページからお探しください。',
+    home: 'ホーム',
+    blog: 'ブログ',
+    pricing: '料金',
+  },
   all: 'ホーム',
   audience: '読者',
   articlesTitle: '記事',
@@ -273,10 +315,19 @@ const de: Strings = {
     templates: 'Vorlagen',
     referenceStories: 'Referenzberichte',
     glossary: 'Glossar',
+    close: 'Schließen',
   },
   getStarted: 'Loslegen',
   skipToContent: 'Zum Inhalt springen',
-  footer: { terms: 'Bedingungen & Lizenz', privacy: 'Datenschutz', pricing: 'Preise', refunds: 'Rückerstattung' },
+  footer: { terms: 'Bedingungen & Lizenz', privacy: 'Datenschutz', pricing: 'Preise', refunds: 'Rückerstattung', platform: 'Plattform' },
+  notFound: {
+    title: 'Seite nicht gefunden',
+    heading: 'Diese Seite gibt es nicht.',
+    lead: 'Der Link ist vielleicht veraltet, oder die Seite ist umgezogen. Starten Sie stattdessen hier.',
+    home: 'Startseite',
+    blog: 'Blog',
+    pricing: 'Preise',
+  },
   all: 'Start',
   audience: 'Zielgruppe',
   articlesTitle: 'Artikel',
@@ -317,10 +368,19 @@ const es: Strings = {
     templates: 'Plantillas',
     referenceStories: 'Casos de referencia',
     glossary: 'Glosario',
+    close: 'Cerrar',
   },
   getStarted: 'Empezar',
   skipToContent: 'Saltar al contenido',
-  footer: { terms: 'Términos y licencia', privacy: 'Privacidad', pricing: 'Precios', refunds: 'Reembolsos' },
+  footer: { terms: 'Términos y licencia', privacy: 'Privacidad', pricing: 'Precios', refunds: 'Reembolsos', platform: 'Plataforma' },
+  notFound: {
+    title: 'Página no encontrada',
+    heading: 'Esta página no existe.',
+    lead: 'Puede que el enlace esté desactualizado o que la página se haya movido. Empieza desde una de estas.',
+    home: 'Inicio',
+    blog: 'Blog',
+    pricing: 'Precios',
+  },
   all: 'Inicio',
   audience: 'Audiencia',
   articlesTitle: 'Artículos',
@@ -361,10 +421,19 @@ const fr: Strings = {
     templates: 'Modèles',
     referenceStories: 'Cas de référence',
     glossary: 'Glossaire',
+    close: 'Fermer',
   },
   getStarted: 'Commencer',
   skipToContent: 'Aller au contenu',
-  footer: { terms: 'Conditions et licence', privacy: 'Confidentialité', pricing: 'Tarifs', refunds: 'Remboursements' },
+  footer: { terms: 'Conditions et licence', privacy: 'Confidentialité', pricing: 'Tarifs', refunds: 'Remboursements', platform: 'Plateforme' },
+  notFound: {
+    title: 'Page introuvable',
+    heading: 'Cette page n’existe pas.',
+    lead: 'Le lien est peut-être obsolète, ou la page a été déplacée. Repartez plutôt de l’une de celles-ci.',
+    home: 'Accueil',
+    blog: 'Blog',
+    pricing: 'Tarifs',
+  },
   all: 'Accueil',
   audience: 'Audience',
   articlesTitle: 'Articles',
@@ -405,10 +474,19 @@ const ko: Strings = {
     templates: '템플릿',
     referenceStories: '레퍼런스 사례',
     glossary: '용어집',
+    close: '닫기',
   },
   getStarted: '시작하기',
   skipToContent: '본문으로 건너뛰기',
-  footer: { terms: '약관 및 라이선스', privacy: '개인정보 보호', pricing: '가격', refunds: '환불' },
+  footer: { terms: '약관 및 라이선스', privacy: '개인정보 보호', pricing: '가격', refunds: '환불', platform: '플랫폼' },
+  notFound: {
+    title: '페이지를 찾을 수 없습니다',
+    heading: '이 페이지는 존재하지 않습니다.',
+    lead: '링크가 오래되었거나 페이지가 이동했을 수 있습니다. 아래 페이지에서 다시 시작해 보세요.',
+    home: '홈',
+    blog: '블로그',
+    pricing: '가격',
+  },
   all: '홈',
   audience: '대상',
   articlesTitle: '글',
@@ -450,6 +528,7 @@ const toHant = (s: Strings): Strings => ({
     templates: s2t(s.siteNav.templates),
     referenceStories: s2t(s.siteNav.referenceStories),
     glossary: s2t(s.siteNav.glossary),
+    close: s2t(s.siteNav.close),
   },
   getStarted: s2t(s.getStarted),
   skipToContent: s2t(s.skipToContent),
@@ -458,6 +537,15 @@ const toHant = (s: Strings): Strings => ({
     privacy: s2t(s.footer.privacy),
     pricing: s2t(s.footer.pricing),
     refunds: s2t(s.footer.refunds),
+    platform: s2t(s.footer.platform),
+  },
+  notFound: {
+    title: s2t(s.notFound.title),
+    heading: s2t(s.notFound.heading),
+    lead: s2t(s.notFound.lead),
+    home: s2t(s.notFound.home),
+    blog: s2t(s.notFound.blog),
+    pricing: s2t(s.notFound.pricing),
   },
   all: s2t(s.all),
   audience: s2t(s.audience),

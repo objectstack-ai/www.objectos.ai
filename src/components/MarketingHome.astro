@@ -161,7 +161,7 @@ const coverSrc = (cover: unknown): string =>
           <span class="cap-index">{String(index + 1).padStart(2, '0')}</span>
           <h3>
             <a href={capabilityCardHrefs[index] ?? productTourHref}>
-              {item.title} <span class="card-arrow" aria-hidden="true">→</span>
+              {item.title}&nbsp;<span class="card-arrow" aria-hidden="true">→</span>
             </a>
           </h3>
           <p>{item.copy}</p>
@@ -183,7 +183,7 @@ const coverSrc = (cover: unknown): string =>
           <span>{String(index + 1).padStart(2, '0')}</span>
           <h3>
             <a href={aiCardHrefs[index] ?? productTourHref}>
-              {item.title} <span class="card-arrow" aria-hidden="true">→</span>
+              {item.title}&nbsp;<span class="card-arrow" aria-hidden="true">→</span>
             </a>
           </h3>
           <p>{item.copy}</p>
@@ -254,7 +254,7 @@ const coverSrc = (cover: unknown): string =>
           <span class="solution-mark"></span>
           <h3>{solution.title}</h3>
           <p>{solution.copy}</p>
-          <span class="solution-link">{copy.solutionLink} →</span>
+          <span class="solution-link">{copy.solutionLink}&nbsp;→</span>
         </a>
       ))}
     </div>
@@ -278,7 +278,7 @@ const coverSrc = (cover: unknown): string =>
           <span class="solution-mark"></span>
           <h3>{c.title}</h3>
           <p>{c.copy}</p>
-          <span class="solution-link">{copy.compareLink} →</span>
+          <span class="solution-link">{copy.compareLink}&nbsp;→</span>
         </a>
       ))}
     </div>
@@ -315,7 +315,7 @@ const coverSrc = (cover: unknown): string =>
                 src={coverSrc(post.entry.data.cover)}
                 alt={post.entry.data.title}
                 width="800"
-                height="500"
+                height="450"
                 loading="lazy"
                 decoding="async"
               />
@@ -681,6 +681,9 @@ const coverSrc = (cover: unknown): string =>
   .capability-list li {
     display: grid;
     grid-template-columns: 40px 1fr;
+    /* A row's taller card stretches its neighbour; without this the extra
+       height is shared into the title row and pushes the body down. */
+    align-content: start;
     gap: 0 1rem;
     padding: 2rem 1.5rem 2.2rem 0;
     border-bottom: 1px solid var(--line);
@@ -906,8 +909,9 @@ const coverSrc = (cover: unknown): string =>
     grid-template-columns: repeat(3, 1fr);
     gap: 1rem;
   }
+  /* No min-height: a floor taller than the content only reserved empty space
+     (94px of it above every title, when the mark took the slack). */
   .solution {
-    min-height: 310px;
     display: flex;
     flex-direction: column;
     padding: 1.5rem;
@@ -930,7 +934,7 @@ const coverSrc = (cover: unknown): string =>
   .solution-mark {
     width: 34px;
     height: 5px;
-    margin-bottom: auto;
+    margin-bottom: 1.6rem;
     background: var(--tone);
     border-radius: 999px;
   }
@@ -944,7 +948,10 @@ const coverSrc = (cover: unknown): string =>
     line-height: 1.75;
     margin-bottom: 1.4rem;
   }
+  /* The card's slack goes above the link, so titles sit under the mark and
+     the links line up along the bottom of a row. */
   .solution-link {
+    margin-top: auto;
     color: var(--tone);
     font-size: 0.76rem;
     font-weight: 700;
@@ -1010,11 +1017,16 @@ const coverSrc = (cover: unknown): string =>
     color: var(--ink);
     text-decoration: none;
   }
+  /* `height: auto` is load-bearing: the `height` attribute maps to a CSS
+     height, which beats `aspect-ratio` and cut each 16:9 cover to a 344×500
+     sliver. The box is the covers' own 16:9; `contain` letterboxes the odd
+     16:10 cover instead of cropping its title. */
   .article img {
     display: block;
     width: 100%;
-    aspect-ratio: 16 / 10;
-    object-fit: cover;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: contain;
     margin-bottom: 1rem;
     border: 1px solid var(--line);
     border-radius: 8px;
@@ -1130,7 +1142,6 @@ const coverSrc = (cover: unknown): string =>
     }
     .solution:last-child {
       grid-column: span 2;
-      min-height: 240px;
     }
     /* Four chips in two rows of two: at tablet widths four columns would be
        ~150px each, which breaks the longer titles onto two lines. */
@@ -1207,6 +1218,7 @@ const coverSrc = (cover: unknown): string =>
       grid-template-columns: 1fr;
     }
     .capability-list li,
+    .capability-list li:nth-child(odd),
     .capability-list li:nth-child(even) {
       padding: 1.5rem 0;
       border-right: none;
@@ -1233,7 +1245,6 @@ const coverSrc = (cover: unknown): string =>
     .solution,
     .solution:last-child {
       grid-column: auto;
-      min-height: 260px;
     }
     .closing {
       margin: 4rem -0.5rem 0;
