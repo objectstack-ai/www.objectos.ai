@@ -1,4 +1,5 @@
 ---
+import { Image } from 'astro:assets';
 import Base from './Base.astro';
 import type { CollectionEntry } from 'astro:content';
 import { formatDate, ui, blogPath, postPath, STATUS_COLOR, type Locale } from '../lib/i18n';
@@ -37,6 +38,14 @@ const coverSize =
   data.cover && typeof data.cover !== 'string'
     ? (data.cover as unknown as { width?: number; height?: number })
     : undefined;
+// The header cover is the LCP element on a phone, so a raster cover is served
+// as WebP at the width the column needs instead of the 1.5-1.9 MB original:
+// the article is at most 860px wide, and the phone column is the viewport less
+// the 1rem gutters. The widest candidate covers a 2x desktop screen; Astro
+// caps the list at the file's own width. An SVG cover is already a few KB and
+// scales itself, so it is served as is.
+const COVER_WIDTHS = [480, 720, 960, 1280, 1600];
+const COVER_SIZES = '(min-width: 908px) 860px, calc(100vw - 2rem)';
 const site = Astro.site?.toString().replace(/\/$/, '') ?? '';
 const absoluteUrl = (href: string): string =>
   site ? new URL(href, `${site}/`).toString() : new URL(href, Astro.url).toString();
@@ -265,18 +274,32 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
       {data.description && <p class="lead">{data.description}</p>}
 
       {
-        coverSrc && (
-          <img
-            class="cover"
-            src={coverSrc}
-            alt={data.title}
-            width="1200"
-            height="675"
-            loading="eager"
-            decoding="async"
-            fetchpriority="high"
-          />
-        )
+        data.cover &&
+          (data.cover.format === 'svg' ? (
+            <img
+              class="cover"
+              src={data.cover.src}
+              alt={data.title}
+              width={data.cover.width}
+              height={data.cover.height}
+              loading="eager"
+              decoding="async"
+              fetchpriority="high"
+            />
+          ) : (
+            <Image
+              class="cover"
+              src={data.cover}
+              alt={data.title}
+              width={Math.min(COVER_WIDTHS.at(-1)!, data.cover.width)}
+              widths={COVER_WIDTHS}
+              sizes={COVER_SIZES}
+              format="webp"
+              loading="eager"
+              decoding="async"
+              fetchpriority="high"
+            />
+          ))
       }
 
       {

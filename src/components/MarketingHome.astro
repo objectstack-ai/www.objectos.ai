@@ -1,4 +1,5 @@
 ---
+import { Image } from 'astro:assets';
 import { getPostsInLocale } from '../lib/posts';
 import { blogPath, formatDate, pricingPath, postPath, ui, type Locale } from '../lib/i18n';
 import { homeCopy } from '../lib/home';
@@ -80,10 +81,12 @@ const compareLinks = [
   { slug: 'is-lovable-safe-for-production', tone: 'amber' },
 ];
 
-const coverSrc = (cover: unknown): string =>
-  typeof cover === 'string'
-    ? cover
-    : (cover as { src?: string })?.src ?? '';
+// A raster post cover is served as WebP at the card's width, not as the
+// 1.5-1.9 MB original: one of three columns (about 345px) on a desktop, one of
+// two at 641-900px, the full column on a phone. The widest candidate covers
+// the phone column at 3x. An SVG cover is a few KB and is served as is.
+const ARTICLE_WIDTHS = [360, 540, 720, 1080];
+const ARTICLE_SIZES = '(max-width: 640px) calc(100vw - 2rem), (max-width: 900px) calc(50vw - 2rem), 360px';
 ---
 
 <div class:list={['home', `lang-${locale}`]}>
@@ -310,16 +313,28 @@ const coverSrc = (cover: unknown): string =>
       <div class="article-grid">
         {posts.map((post) => (
           <a class="article" href={postPath(locale, post.slug)}>
-            {post.entry.data.cover && (
-              <img
-                src={coverSrc(post.entry.data.cover)}
-                alt={post.entry.data.title}
-                width="800"
-                height="450"
-                loading="lazy"
-                decoding="async"
-              />
-            )}
+            {post.entry.data.cover &&
+              (post.entry.data.cover.format === 'svg' ? (
+                <img
+                  src={post.entry.data.cover.src}
+                  alt={post.entry.data.title}
+                  width={post.entry.data.cover.width}
+                  height={post.entry.data.cover.height}
+                  loading="lazy"
+                  decoding="async"
+                />
+              ) : (
+                <Image
+                  src={post.entry.data.cover}
+                  alt={post.entry.data.title}
+                  width={Math.min(ARTICLE_WIDTHS.at(-1)!, post.entry.data.cover.width)}
+                  widths={ARTICLE_WIDTHS}
+                  sizes={ARTICLE_SIZES}
+                  format="webp"
+                  loading="lazy"
+                  decoding="async"
+                />
+              ))}
             <div>
               <time datetime={post.entry.data.date.toISOString().slice(0, 10)}>
                 {formatDate(locale, post.entry.data.date)}
