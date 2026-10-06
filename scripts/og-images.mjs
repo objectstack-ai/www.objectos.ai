@@ -28,8 +28,9 @@
 //      - a PNG or JPG cover is an illustration with no text, so it is scaled
 //        to cover 1200x630 and cropped centred (a 16:9 cover loses 3.4% top and
 //        bottom, a 1.6:1 one 8%).
-//   4. Every page that names a share image under /og/ in `og:image` declares
-//      its width and height, and they are the file's own.
+//   4. Every page whose `og:image` is a file of this site (a rendered one, or
+//      the default in src/layouts/Base.astro) declares its width and height,
+//      and they are the file's own; a file that is not in dist/ fails too.
 
 import { spawn } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
@@ -138,8 +139,10 @@ for (const file of htmlFiles) {
     if (!named.has(urlPath)) named.set(urlPath, new Set());
     named.get(urlPath).add(page);
   }
+  // Every share image this site serves, the rendered ones and the default
+  // (src/layouts/Base.astro), is checked against the size the page declares.
   const og = meta('property', 'og:image');
-  if (og?.startsWith(`${SITE}/og/`)) {
+  if (og?.startsWith(`${SITE}/`)) {
     declared.push({
       page,
       path: og.slice(SITE.length),
@@ -236,10 +239,11 @@ try {
         sizes.set(urlPath, { w, h });
       } catch {
         sizes.set(urlPath, null);
+        issues.push(`${page}: og:image ${urlPath} is not a file in dist/`);
       }
     }
     const size = sizes.get(urlPath);
-    if (!size) continue; // reported above
+    if (!size) continue;
     if (width !== String(size.w) || height !== String(size.h)) {
       issues.push(
         `${page}: og:image ${urlPath} is ${size.w}x${size.h}, but og:image:width/height say ${width ?? '(none)'}x${height ?? '(none)'}`
