@@ -1,8 +1,9 @@
 ---
 import Base from '../../layouts/Base.astro';
 import SecurityPage from '../../components/SecurityPage.astro';
+import { fallbackRoute } from '../../lib/fallback';
 import { LOCALES, securityPath, segToLocale } from '../../lib/i18n';
-import { securityCopy } from '../../lib/security';
+import { securityCopy, securitySourceLocale } from '../../lib/security';
 
 export function getStaticPaths() {
   return LOCALES.map((locale) => ({ params: { lang: locale } }));
@@ -10,9 +11,20 @@ export function getStaticPaths() {
 
 const locale = segToLocale(Astro.params.lang!)!;
 const copy = securityCopy[locale];
-const alternates = Object.fromEntries(LOCALES.map((language) => [language, securityPath(language)]));
+// A partly translated locale is an English page with a translated frame: it is
+// noindexed, canonical to /en/security/ and absent from hreflang. The body
+// keeps the locale's `lang` because its frame is translated; SecurityPage marks
+// each English part with `lang="en"` instead.
+const route = fallbackRoute(locale, securitySourceLocale, securityPath);
 ---
 
-<Base title={copy.title} description={copy.description} {locale} {alternates}>
+<Base
+  title={copy.title}
+  description={copy.description}
+  {locale}
+  canonical={route.canonical}
+  noindex={route.isFallback}
+  alternates={route.alternates}
+  navAlternates={route.navAlternates}>
   <SecurityPage {copy} {locale} />
 </Base>

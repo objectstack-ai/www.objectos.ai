@@ -1,8 +1,11 @@
 ---
 import Base from '../../layouts/Base.astro';
 import MarketingHome from '../../components/MarketingHome.astro';
-import { segToLocale, homePath, LOCALES } from '../../lib/i18n';
+import { fallbackRoute, sourceLocaleByIdentity } from '../../lib/fallback';
+import { segToLocale, homePath, LOCALES, pricingPath } from '../../lib/i18n';
 import { homeCopy } from '../../lib/home';
+import { ORGANIZATION_ID } from '../../lib/organization';
+import { pricingCopy } from '../../lib/pricing';
 
 export function getStaticPaths() {
   return LOCALES.map((l) => ({ params: { lang: l } }));
@@ -14,6 +17,36 @@ const alternates = Object.fromEntries(LOCALES.map((l) => [l, homePath(l)]));
 const site = Astro.site?.toString().replace(/\/$/, '') ?? '';
 const absoluteUrl = (href: string): string =>
   site ? new URL(href, `${site}/`).toString() : new URL(href, Astro.url).toString();
+// `offers` comes from the pricing page's own plans (src/lib/pricing.ts, which
+// mirrors the cloud plan table), not from a second copy of the numbers: every
+// plan with a dollar headline is an Offer, and "Custom" (Enterprise) is not —
+// it has no price to state. The URL is the indexable pricing page, so a locale
+// whose pricing falls back to English names /en/pricing/.
+const pricing = fallbackRoute(locale, sourceLocaleByIdentity(pricingCopy), pricingPath);
+const offers = pricingCopy[locale].plans.flatMap((plan) => {
+  const amount = /^\$(\d+(?:\.\d+)?)$/.exec(plan.price)?.[1];
+  if (amount === undefined) return [];
+  const recurring = plan.billedNote !== undefined;
+  return [
+    {
+      '@type': 'Offer',
+      name: plan.name,
+      price: amount,
+      priceCurrency: 'USD',
+      url: absoluteUrl(pricing.canonical),
+      ...(recurring
+        ? {
+            priceSpecification: {
+              '@type': 'UnitPriceSpecification',
+              price: amount,
+              priceCurrency: 'USD',
+              unitText: [plan.cadence, plan.billedNote].filter(Boolean).join(', '),
+            },
+          }
+        : {}),
+    },
+  ];
+});
 const jsonLd = [
   {
     '@context': 'https://schema.org',
@@ -31,8 +64,10 @@ const jsonLd = [
     operatingSystem: 'Web',
     description: copy.description,
     url: absoluteUrl(homePath(locale)),
+    offers,
     publisher: {
       '@type': 'Organization',
+      '@id': ORGANIZATION_ID,
       name: 'ObjectStack AI LLC',
     },
   },
