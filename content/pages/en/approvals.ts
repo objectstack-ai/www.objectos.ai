@@ -5,11 +5,11 @@ const page = {
     navLabel: 'Approvals',
     title: 'Approvals: Multi-Step Sign-Off for Business Changes and AI Actions',
     description:
-      'Multi-step approvals with user, role, team, and hierarchy resolution, a three-tab approvals inbox, escalation, and record locking — the same queue that gates AI-written structural changes before they ship.',
+      'Multi-step approvals with user, role, team, and hierarchy resolution, a three-tab approvals inbox, escalation, and record locking in the open-source console — and, on ObjectOS, a separate reviewed path for the AI Builder’s metadata changes: a pending-action queue with the diff, its own approve permission, and an audit entry.',
     eyebrow: 'Approvals',
     heroTitle: 'Every consequential change waits for a yes.',
     lead:
-      'What does a 15%+ discount actually look like getting approved? The flow parks, the order locks, and finance sees the request in the approvals inbox — record snapshot, who did what when, all in one panel. Approve to release it, reject with a comment to send it back, and a stalled request escalates on its own. The schema change an AI just proposed rides the exact same queue.',
+      'What does a 15%+ discount actually look like getting approved? The flow parks, the order locks, and finance sees the request in the approvals inbox — record snapshot, who did what when, all in one panel. Approve to release it, reject with a comment to send it back, and a stalled request escalates on its own. A schema change the ObjectOS AI Builder just proposed waits the same way — in its own pending-action queue, where an approver reads the diff before it goes live.',
     primary: { label: 'Read the approvals docs', href: 'https://docs.objectos.ai/docs/build/automation/approvals' },
     secondary: { label: 'See permissions & security', href: '/en/permissions/' },
     metrics: [
@@ -130,17 +130,17 @@ export const DiscountApproval = defineFlow({
       {
         id: 'ai-gate',
         eyebrow: 'The AI governance gate',
-        title: 'The same queue that reviews people reviews AI',
+        title: 'People and AI are both reviewed before anything ships',
         copy:
-          'This is the mechanism that makes AI-written software governable: structural changes from an agent do not ship — they queue.',
+          'This is the mechanism that makes AI-written software governable: a structural change from an agent does not ship — it waits for a person. On the open runtime that is your git diff; on ObjectOS it is the AI Builder’s pending-action queue.',
         items: [
           {
             title: 'Structural changes queue',
-            body: 'When an agent proposes new objects, fields, flows, or permission changes, the change lands in the same approvals inbox as a compact diff.',
+            body: 'When the ObjectOS AI Builder proposes new packages, objects, fields, actions, or flows, the change lands in a pending-action queue — separate from record approvals — where approvers see the proposed diff before clicking Approve; every approve or reject lands in the audit log with the originating conversation.',
           },
           {
             title: 'The diff is the request',
-            body: 'Reviewers see exactly what would change — schema, authority, automation — not a description of it.',
+            body: 'Reviewers see exactly what would change — schema, authority, automation — not a description of it. Approving is its own permission, ai:approve: Setup Administrators hold it by default, and a permission set can scope it per package.',
           },
           {
             title: 'Sensitive actions gated',
@@ -155,7 +155,7 @@ export const DiscountApproval = defineFlow({
         ['Discounts above 15% need finance', 'An approval step on the change', 'Routing, the inbox, locking, decision records'],
         ['Big refunds need two approvals', 'A multi-step chain', 'Sequenced sign-off with escalation and send-back'],
         ['Nothing stalls in one inbox', 'A timeout and an escalation path', 'Automatic escalation and reminders'],
-        ['AI schema changes get reviewed', 'The proposed diff itself', 'The approval queue in front of deployment'],
+        ['AI schema changes get reviewed', 'The proposed diff itself', 'The AI Builder’s pending-action queue, in front of deployment'],
       ],
     },
     checklistTitle: 'An approval review should confirm',
@@ -164,7 +164,7 @@ export const DiscountApproval = defineFlow({
       'Routing uses roles and hierarchy, not hardcoded people.',
       'Timeouts and escalation are defined for every step.',
       'Records lock while decisions are pending.',
-      'AI-proposed structural changes cannot bypass the queue.',
+      'AI-proposed structural changes cannot bypass review — the pending-action queue on ObjectOS, the git diff on the open runtime.',
     ],
     faqs: [
       {
