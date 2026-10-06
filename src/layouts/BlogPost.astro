@@ -99,6 +99,85 @@ const jsonLd = [
     ],
   },
 ];
+
+// The post body is MDX this layout does not author, so the attributes the
+// article owes its body markup are added here, once, on the rendered HTML —
+// not in every post × eight locales.
+//   - A table is a scroll container on a phone (see the stylesheet), and a
+//     scroll container a keyboard cannot reach is axe's
+//     `scrollable-region-focusable`. It gets `tabindex="0"` and is named by
+//     the heading of the section it sits in — the article title for a table
+//     that comes before the first heading.
+//   - A code block is a scroll container at every width. Shiki already gives
+//     it `tabindex="0"`; it gets a name ("Code (bash)") so the focus stop
+//     announces what it is. `aria-label` is not allowed on a bare `pre`, whose
+//     role is generic, hence `role="group"` — not `region`: a region is a
+//     landmark, and two "Code (bash)" landmarks on one page fail axe's
+//     `landmark-unique`.
+//   - A body image becomes a link to its own asset. A 1200-wide diagram fit
+//     into a 328px column renders its smallest text at 3–4px; one tap opens
+//     the asset in the browser, whose own pinch zoom takes that text past
+//     legible. The link's accessible name is the image's alt text, so an
+//     image without alt text (decorative) is left alone rather than turned
+//     into a nameless link.
+const CODE_LABEL: Record<Locale, string> = {
+  en: 'Code',
+  'zh-Hans': '代码',
+  'zh-Hant': '程式碼',
+  ja: 'コード',
+  ko: '코드',
+  de: 'Code',
+  es: 'Código',
+  fr: 'Code',
+};
+const PLAIN_LANGUAGES = new Set(['plaintext', 'plain', 'text', 'txt']);
+const attrOf = (tag: string, name: string): string | undefined =>
+  tag.match(new RegExp(`\\s${name}="([^"]*)"`))?.[1];
+const withAttrs = (tag: string, attrs: Record<string, string>): string => {
+  const added = Object.entries(attrs)
+    .filter(([name]) => attrOf(tag, name) === undefined)
+    .map(([name, value]) => ` ${name}="${value}"`)
+    .join('');
+  return tag.replace(/\s*\/?>$/, (end) => `${added}${end}`);
+};
+const annotateBody = (html: string): string => {
+  let headingId = 'article-title';
+  let linkDepth = 0;
+  return html.replace(
+    /<h[2-6]\b[^>]*>|<a\b[^>]*>|<\/a>|<table\b[^>]*>|<pre\b[^>]*>|<img\b[^>]*>/g,
+    (tag) => {
+      if (tag === '</a>') {
+        linkDepth = Math.max(0, linkDepth - 1);
+        return tag;
+      }
+      if (tag.startsWith('<a')) {
+        linkDepth += 1;
+        return tag;
+      }
+      if (tag.startsWith('<h')) {
+        headingId = attrOf(tag, 'id') ?? headingId;
+        return tag;
+      }
+      if (tag.startsWith('<table')) {
+        const named = attrOf(tag, 'aria-label') ?? attrOf(tag, 'aria-labelledby');
+        return withAttrs(tag, {
+          tabindex: '0',
+          ...(named === undefined ? { 'aria-labelledby': headingId } : {}),
+        });
+      }
+      if (tag.startsWith('<pre')) {
+        const lang = attrOf(tag, 'data-language');
+        const name =
+          lang && !PLAIN_LANGUAGES.has(lang) ? `${CODE_LABEL[locale]} (${lang})` : CODE_LABEL[locale];
+        return withAttrs(tag, { tabindex: '0', role: 'group', 'aria-label': name });
+      }
+      const src = attrOf(tag, 'src');
+      if (linkDepth > 0 || !src || !attrOf(tag, 'alt')?.trim()) return tag;
+      return `<a class="figure-link" href="${src}">${tag}</a>`;
+    }
+  );
+};
+const bodyHtml = annotateBody(await Astro.slots.render('default'));
 ---
 
 <Base
@@ -158,7 +237,7 @@ const jsonLd = [
         <span>{t.by} {data.author}</span>
       </div>
 
-      <h1>{data.title}</h1>
+      <h1 id="article-title">{data.title}</h1>
       {data.description && <p class="lead">{data.description}</p>}
 
       {
@@ -201,7 +280,7 @@ const jsonLd = [
     </header>
 
     <div class="prose">
-      <slot />
+      <Fragment set:html={bodyHtml} />
     </div>
 
     {
@@ -446,6 +525,13 @@ const jsonLd = [
       display: block;
       margin: 1.5rem auto;
     }
+    /* A block box with no padding or border: the image's margins collapse
+       through it, so the link adds a tap target and a focus ring without
+       moving the image by a pixel at any width. */
+    .prose .figure-link {
+      display: block;
+      cursor: zoom-in;
+    }
     .prose :not(pre) > code {
       font-family: var(--font-mono);
       font-size: 0.88em;
@@ -466,6 +552,37 @@ const jsonLd = [
       border: 1px solid var(--line);
       background: color-mix(in srgb, var(--surface-sunk) 72%, var(--surface));
       box-shadow: 0 18px 42px -36px rgba(var(--shadow), 0.45);
+      overscroll-behavior-x: contain;
+    }
+    /* A code block scrolls sideways at every width, not only on a phone, so
+       it carries the two scroll affordances the phone table carries (see the
+       comments there) at every width. Shiki paints the block dark in both
+       themes, so its scrollbar is drawn light. A block that fits draws no
+       scrollbar and its scroll timeline is inactive, so it is unchanged. */
+    .prose pre::-webkit-scrollbar {
+      height: 6px;
+    }
+    .prose pre::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+    }
+    .prose pre::-webkit-scrollbar-thumb {
+      background: rgba(225, 228, 232, 0.42);
+      border-radius: 999px;
+    }
+    @supports (animation-timeline: scroll(self inline)) {
+      .prose pre {
+        animation: prose-scroll-edge-fade linear both;
+        animation-timeline: scroll(self inline);
+      }
+    }
+    @keyframes prose-scroll-edge-fade {
+      from {
+        mask-image: linear-gradient(to right, #000 calc(100% - 34px), transparent);
+      }
+      to {
+        mask-image: linear-gradient(to right, #000 100%, transparent);
+      }
     }
     .prose table {
       width: 100%;
@@ -548,10 +665,28 @@ const jsonLd = [
         max-width: 100%;
         overflow-x: auto;
         font-size: 0.82rem;
-        white-space: nowrap;
         /* Keep a horizontal swipe that reaches the end of the table from
            chaining into the page/browser behind it. */
         overscroll-behavior-x: contain;
+      }
+      /* Cells wrap; each column keeps a floor. Unwrapped (`nowrap`), a row of
+         prose cells ran as long as its longest sentence: 2,035px on a 328px
+         column, seven screens of swiping per row. 6.5rem (104px, padding
+         included) is the widest floor at which three columns still fit the
+         328px column of a 360px phone (3 × 104 = 312), so every two- and
+         three-column table, 57 of the 69 in the English corpus, needs no
+         sideways scroll at 360 or 390; four to six columns still scroll,
+         to at most 6 × 104 = 624px. `overflow-wrap: anywhere` is what keeps a
+         column at its floor: it lets a long identifier break instead of
+         setting the column's minimum width, so an overflowing table is never
+         wider than its column count × 104px. */
+      .prose th,
+      .prose td {
+        box-sizing: border-box;
+        min-width: 6.5rem;
+        padding-right: 0.6rem;
+        padding-left: 0.6rem;
+        overflow-wrap: anywhere;
       }
       /* Affordance 1 — a scrollbar that is always drawn, not just mid-gesture.
          Styling ::-webkit-scrollbar opts the container out of overlay
@@ -584,16 +719,8 @@ const jsonLd = [
          table that does not scroll. */
       @supports (animation-timeline: scroll(self inline)) {
         .prose table {
-          animation: prose-table-edge-fade linear both;
+          animation: prose-scroll-edge-fade linear both;
           animation-timeline: scroll(self inline);
-        }
-      }
-      @keyframes prose-table-edge-fade {
-        from {
-          mask-image: linear-gradient(to right, #000 calc(100% - 34px), transparent);
-        }
-        to {
-          mask-image: linear-gradient(to right, #000 100%, transparent);
         }
       }
     }
