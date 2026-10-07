@@ -16,6 +16,15 @@ import VideoEmbed from './VideoEmbed.astro';
 // homepage — these URLs are identical in every locale.
 const OVERVIEW_VIDEO_ID = 'CX_FlOoOtr0';
 const YOUTUBE_CHANNEL_URL = 'https://www.youtube.com/@objectstack';
+// The words on the video poster, drawn as HTML over the artwork (see
+// VideoEmbed.astro). The title is this locale's video caption, which every
+// locale already has, split after the product name: "ObjectStack" over "in 90
+// Seconds", "90 秒总览", "を 90 秒で" (a leading particle stays on line one).
+// The eyebrow and the sub-line exist in English only: the eyebrow names the
+// licence and stays in every locale, the sub-line is a sentence and is drawn
+// in English only.
+const POSTER_EYEBROW = 'OPEN PROTOCOL & RUNTIME · APACHE-2.0';
+const POSTER_NOTE = 'Data model · UI · workflows · permissions — one context window.';
 
 interface Props {
   locale: Locale;
@@ -23,6 +32,8 @@ interface Props {
 
 const { locale } = Astro.props;
 const copy = homeCopy[locale];
+const posterSplit = copy.videoCaption.match(/^(ObjectStack(?: [\u3040-\u309f]+)?) (.+)$/u);
+const posterTitle: [string, string] = posterSplit ? [posterSplit[1], posterSplit[2]] : [copy.videoCaption, ''];
 // The H1 is the canonical T1 split over two lines; `positioning.ts` asserts the
 // two halves rejoin to T1 with exactly this joiner, so the rule lives there.
 const lineJoin = heroLineJoin(locale);
@@ -123,8 +134,13 @@ const HERO_SIZES = '(min-width: 898px) 910px, calc(120vw - 2.4rem)';
       <VideoEmbed
         videoId={OVERVIEW_VIDEO_ID}
         title={copy.videoCaption}
-        poster="/images/objectstack-overview-poster.svg"
+        poster="/images/objectstack-overview-poster-art.svg"
         playLabel={copy.videoPlayLabel}
+        posterText={{
+          eyebrow: POSTER_EYEBROW,
+          title: posterTitle,
+          note: locale === 'en' ? POSTER_NOTE : undefined,
+        }}
       />
       <figcaption>
         <span class="video-name">{copy.videoCaption}</span>
