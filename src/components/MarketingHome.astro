@@ -432,7 +432,7 @@ const HERO_SIZES = '(min-width: 898px) 910px, calc(120vw - 2.4rem)';
     margin-inline: auto;
   }
   .hero-video {
-    margin-top: 2.5rem;
+    margin-top: 2rem;
     margin-bottom: 0;
   }
   .eyebrow,
@@ -476,9 +476,9 @@ const HERO_SIZES = '(min-width: 898px) 910px, calc(120vw - 2.4rem)';
        alone, so a 1366x768 laptop got a 74px two-line headline — ~216px, the
        single largest thing between the top of the page and the video. The
        `8vh` term is self-limiting: 8vh reaches the 5rem ceiling at 1000px of
-       viewport height, so at every height where the desktop reading order is
-       kept this computes to exactly what it computed before, and the size
-       meets the old value continuously rather than stepping at a breakpoint.
+       viewport height, so a tall desktop computes exactly what it computed
+       before, and the size meets the old value continuously rather than
+       stepping at a breakpoint.
        (`vh` is the large viewport height, so a collapsing mobile URL bar does
        not resize it — and phones take the fixed 2.7rem below anyway.) */
     font-size: clamp(3.1rem, min(5.4vw, 8vh), 5rem);
@@ -503,6 +503,16 @@ const HERO_SIZES = '(min-width: 898px) 910px, calc(120vw - 2.4rem)';
     line-height: 1.85;
     max-width: 35rem;
     margin-bottom: 1.8rem;
+  }
+  /* Desktop measure and leading for the lead, which runs T2, T4 and E1
+     together: at 35rem/1.85 it was seven lines in en and nine in ja, and with
+     the CTA row under it that was 609-664px of a 625px laptop screen. */
+  @media (min-width: 901px) {
+    .hero-lead {
+      max-width: 40rem;
+      line-height: 1.72;
+      margin-bottom: 1.5rem;
+    }
   }
   .hero-actions {
     display: flex;
@@ -1130,23 +1140,19 @@ const HERO_SIZES = '(min-width: 898px) 910px, calc(120vw - 2.4rem)';
     background: white;
   }
   /* The video moves directly under the headline, ahead of the lead and the CTA
-     row. Two independent triggers, one rule — the markup and the source order
-     are untouched, so this still costs no duplicated DOM:
+     row, on phones and small tablets (`max-width: 900px`), where the lead alone
+     runs about nine lines and pushed the video off the screen entirely. The
+     markup and the source order are untouched, so this costs no duplicated
+     DOM.
 
-     - NARROW (`max-width: 900px`). On a phone the lead alone runs about nine
-       lines and pushed the video off the screen entirely.
-     - SHORT (`max-height: 1040px`). A laptop is wide but short — 1366x768 and
-       1440x900 machines give ~625px and ~750px of actual viewport — so they
-       never entered the width trigger and kept the desktop stack: eyebrow,
-       headline, a six-line lead and the CTA row, ~746px before the video
-       begins. Measured on the unreordered layout, the frame starts at 746px
-       (en) / 763px (de) and is 529px tall, so half of it clears the fold only
-       from ~1028px of viewport height upward; 1040px is the first round number
-       past that. Above it the desktop reading order is kept and the video is
-       still 56%+ visible — a 1920x1200 desktop is deliberately outside this
-       rule. Below it the desktop order cannot show the video at all, which is
-       the defect. */
-  @media (max-width: 900px), (max-height: 1040px) {
+     A wide but short screen keeps the source order: eyebrow, headline, lead,
+     CTA row, then the video. This rule used to fire on `max-height: 1040px`
+     too, to get the video into a laptop's first screen, and that put the
+     primary CTA under a 529px frame: its bottom was at 1207px on a 1366x625
+     laptop and 1256px at 1920x945, with the lead off-screen as well. The CTA
+     is the screen's job; the video starts right under it (43px of it shows at
+     1366x625 in en, 314px at 1920x945) and the header CTA stays sticky. */
+  @media (max-width: 900px) {
     .hero > .eyebrow {
       order: 1;
     }
