@@ -5,6 +5,7 @@ import { getMarketingPages, marketingPagePath } from '../content-pages/registry'
 import type { MarketingPage } from '../content-pages/types';
 import { marketingPageUi } from '../content-pages/ui';
 import { cardSpans } from '../lib/card-rows';
+import { phraseHtml } from '../lib/cjk-phrases';
 import { pricingPath, securityPath, type Locale } from '../lib/i18n';
 
 interface Props {
@@ -34,13 +35,16 @@ const localizeHref = (href: string): string => {
 // 713-781px of an 800-844px phone), so it stays eager.
 const HERO_WIDTHS = [400, 560, 840, 1200, 1586];
 const HERO_SIZES = '(max-width: 640px) calc(120vw - 4.5rem), (max-width: 860px) calc(100vw - 5rem), 545px';
+// Headings in zh and ja carry a <wbr> between phrases (src/lib/cjk-phrases.ts)
+// and break nowhere else; the copy itself is unchanged.
+const ph = (text: string): string => phraseHtml(text, locale);
 ---
 
 <article class="evidence-page">
   <section class="hero">
     <div class="hero-copy">
       <p class="eyebrow">{page.eyebrow}</p>
-      <h1>{page.heroTitle}</h1>
+      <h1 set:html={ph(page.heroTitle)} />
       <p class="lead">{page.lead}</p>
       <div class="actions">
         <a class="button primary" href={localizeHref(page.primary.href)}>{page.primary.label}</a>
@@ -91,7 +95,7 @@ const HERO_SIZES = '(max-width: 640px) calc(120vw - 4.5rem), (max-width: 860px) 
   <section class="artifact" aria-labelledby="artifact-title">
     <div>
       <p class="eyebrow">{page.artifact.eyebrow}</p>
-      <h2 id="artifact-title">{page.artifact.title}</h2>
+      <h2 id="artifact-title" set:html={ph(page.artifact.title)} />
       <p>{page.artifact.body}</p>
     </div>
     {
@@ -109,7 +113,7 @@ const HERO_SIZES = '(max-width: 640px) calc(120vw - 4.5rem), (max-width: 860px) 
     <section class="section" id={section.id} aria-labelledby={`${section.id}-title`}>
       <div class="section-head">
         <p class="eyebrow">{section.eyebrow}</p>
-        <h2 id={`${section.id}-title`}>{section.title}</h2>
+        <h2 id={`${section.id}-title`} set:html={ph(section.title)} />
         <p>{section.copy}</p>
       </div>
       <div class="item-grid">
@@ -142,7 +146,7 @@ const HERO_SIZES = '(max-width: 640px) calc(120vw - 4.5rem), (max-width: 860px) 
       <section class="table-section" aria-labelledby="table-title">
         <div class="section-head compact">
           <p class="eyebrow">{ui.decisionEyebrow}</p>
-          <h2 id="table-title">{ui.decisionTitle}</h2>
+          <h2 id="table-title" set:html={ph(ui.decisionTitle)} />
         </div>
         <div class="table-wrap" tabindex="0" role="group" aria-labelledby="table-title">
           <table>
@@ -169,7 +173,7 @@ const HERO_SIZES = '(max-width: 640px) calc(120vw - 4.5rem), (max-width: 860px) 
       <section class="checklist" aria-labelledby="checklist-title">
         <div>
           <p class="eyebrow">{ui.checklistEyebrow}</p>
-          <h2 id="checklist-title">{page.checklistTitle}</h2>
+          <h2 id="checklist-title" set:html={ph(page.checklistTitle ?? '')} />
         </div>
         <ul>
           {page.checklist.map((item) => <li>{item}</li>)}
@@ -181,7 +185,7 @@ const HERO_SIZES = '(max-width: 640px) calc(120vw - 4.5rem), (max-width: 860px) 
   <section class="faq" aria-labelledby="faq-title">
     <div class="section-head compact">
       <p class="eyebrow">{ui.faqEyebrow}</p>
-      <h2 id="faq-title">{ui.faqTitle}</h2>
+      <h2 id="faq-title" set:html={ph(ui.faqTitle)} />
     </div>
     <div class="faq-list">
       {page.faqs.map((faq) => (
@@ -196,7 +200,7 @@ const HERO_SIZES = '(max-width: 640px) calc(120vw - 4.5rem), (max-width: 860px) 
   <section class="next">
     <div>
       <p class="eyebrow">{ui.nextEyebrow}</p>
-      <h2>{ui.nextTitle}</h2>
+      <h2 set:html={ph(ui.nextTitle)} />
     </div>
     <div class="next-links">
       {relatedPages.slice(0, 4).map((item) => (
@@ -258,6 +262,16 @@ const HERO_SIZES = '(max-width: 640px) calc(120vw - 4.5rem), (max-width: 860px) 
   h2 {
     font-family: var(--font-display);
     letter-spacing: 0;
+  }
+  /* zh and ja headings break only at the <wbr> between phrases, so a word
+     such as 可投入 or 環境 is never split across lines; a phrase wider than
+     the line still breaks, as a last resort. */
+  h1:lang(zh),
+  h1:lang(ja),
+  h2:lang(zh),
+  h2:lang(ja) {
+    word-break: keep-all;
+    overflow-wrap: anywhere;
   }
   /* Sized by whichever axis is tighter, as the home hero is. Off width alone
      a 1366x625 laptop got a 69.7px headline over three to five lines, and the

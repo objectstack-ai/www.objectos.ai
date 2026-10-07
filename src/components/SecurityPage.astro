@@ -1,4 +1,5 @@
 ---
+import { phraseHtml } from '../lib/cjk-phrases';
 import { postPath, type Locale } from '../lib/i18n';
 import { securityEnglishFields, type SecurityCopy } from '../lib/security';
 
@@ -24,12 +25,15 @@ const blogHref = postPath(locale, blogSlug);
 const englishFields = securityEnglishFields(locale);
 const en = (field: keyof SecurityCopy): 'en' | undefined =>
   englishFields.has(field) ? 'en' : undefined;
+// zh and ja headings carry a <wbr> between phrases (src/lib/cjk-phrases.ts);
+// a field inherited from English is English text and gets none.
+const ph = (text: string, field: keyof SecurityCopy): string => phraseHtml(text, en(field) ?? locale);
 ---
 
 <article class="security-page">
   <section class="hero">
     <p class="eyebrow" lang={en('eyebrow')}>{copy.eyebrow}</p>
-    <h1 lang={en('hero')}>{copy.hero[0]}<br />{lineJoin}<strong>{copy.hero[1]}</strong></h1>
+    <h1 lang={en('hero')}><Fragment set:html={ph(copy.hero[0], 'hero')} /><br />{lineJoin}<strong set:html={ph(copy.hero[1], 'hero')} /></h1>
     <p class="lead" lang={en('lead')}>{copy.lead}</p>
     <dl class="metrics" lang={en('metrics')}>
       {copy.metrics.map((item) => (
@@ -52,7 +56,7 @@ const en = (field: keyof SecurityCopy): 'en' | undefined =>
   <section class="panel ai-panel" id="ai">
     <div class="section-head">
       <p class="eyebrow" lang={en('aiKicker')}>{copy.aiKicker}</p>
-      <h2 lang={en('aiTitle')}>{copy.aiTitle}</h2>
+      <h2 lang={en('aiTitle')} set:html={ph(copy.aiTitle, 'aiTitle')} />
       <p lang={en('aiLead')}>{copy.aiLead}</p>
     </div>
     <ol class="step-grid" lang={en('aiSteps')}>
@@ -69,7 +73,7 @@ const en = (field: keyof SecurityCopy): 'en' | undefined =>
   <section class="split" id="data">
     <div>
       <p class="eyebrow" lang={en('residencyKicker')}>{copy.residencyKicker}</p>
-      <h2 id="residency-title" lang={en('residencyTitle')}>{copy.residencyTitle}</h2>
+      <h2 id="residency-title" lang={en('residencyTitle')} set:html={ph(copy.residencyTitle, 'residencyTitle')} />
       <p lang={en('residencyLead')}>{copy.residencyLead}</p>
     </div>
     <div class="table-wrap" tabindex="0" role="group" aria-labelledby="residency-title">
@@ -95,7 +99,7 @@ const en = (field: keyof SecurityCopy): 'en' | undefined =>
   <section class="split permissions" id="permissions">
     <div>
       <p class="eyebrow" lang={en('permissionKicker')}>{copy.permissionKicker}</p>
-      <h2 lang={en('permissionTitle')}>{copy.permissionTitle}</h2>
+      <h2 lang={en('permissionTitle')} set:html={ph(copy.permissionTitle, 'permissionTitle')} />
       <p lang={en('permissionLead')}>{copy.permissionLead}</p>
     </div>
     <div class="layer-list" lang={en('permissionLayers')}>
@@ -111,7 +115,7 @@ const en = (field: keyof SecurityCopy): 'en' | undefined =>
   <section class="panel" id="deployment">
     <div class="section-head">
       <p class="eyebrow" lang={en('deploymentKicker')}>{copy.deploymentKicker}</p>
-      <h2 lang={en('deploymentTitle')}>{copy.deploymentTitle}</h2>
+      <h2 lang={en('deploymentTitle')} set:html={ph(copy.deploymentTitle, 'deploymentTitle')} />
       <p lang={en('deploymentLead')}>{copy.deploymentLead}</p>
     </div>
     <div class="deploy-grid" lang={en('deployments')}>
@@ -127,7 +131,7 @@ const en = (field: keyof SecurityCopy): 'en' | undefined =>
   <section class="faq" id="faq">
     <div class="section-head">
       <p class="eyebrow" lang={en('faqKicker')}>{copy.faqKicker}</p>
-      <h2 lang={en('faqTitle')}>{copy.faqTitle}</h2>
+      <h2 lang={en('faqTitle')} set:html={ph(copy.faqTitle, 'faqTitle')} />
     </div>
     <div class="faq-list" lang={en('faqs')}>
       {copy.faqs.map((faq) => (
@@ -141,7 +145,7 @@ const en = (field: keyof SecurityCopy): 'en' | undefined =>
 
   <section class="cta">
     <p class="eyebrow" lang={en('ctaKicker')}>{copy.ctaKicker}</p>
-    <h2 lang={en('ctaTitle')}>{copy.ctaTitle}</h2>
+    <h2 lang={en('ctaTitle')} set:html={ph(copy.ctaTitle, 'ctaTitle')} />
     <p lang={en('ctaCopy')}>{copy.ctaCopy}</p>
     <div class="actions">
       <a class="button primary" href={docsHref} lang={en('ctaPrimary')}>{copy.ctaPrimary} <span>→</span></a>
@@ -190,6 +194,16 @@ const en = (field: keyof SecurityCopy): 'en' | undefined =>
   .hero h1 strong {
     color: var(--sec-green);
     font-weight: inherit;
+  }
+  /* zh and ja: break only at the <wbr> between phrases (src/lib/cjk-phrases.ts),
+     so 网络 or ネットワーク is never split; a phrase wider than the line still
+     breaks, as a last resort. */
+  h1:lang(zh),
+  h1:lang(ja),
+  h2:lang(zh),
+  h2:lang(ja) {
+    word-break: keep-all;
+    overflow-wrap: anywhere;
   }
   .lead {
     max-width: 720px;
@@ -560,6 +574,15 @@ const en = (field: keyof SecurityCopy): 'en' | undefined =>
     }
     h2 {
       font-size: 1.9rem;
+    }
+    /* Japanese breaks only between phrases, and the longest here are nine
+       (ネットワーク内に。) and eleven (セキュリティレビューを) characters:
+       sized so each fits the 312px column of a 360px phone. */
+    .hero h1:lang(ja) {
+      font-size: 2rem;
+    }
+    h2:lang(ja) {
+      font-size: 1.6rem;
     }
     .step-grid,
     .deploy-grid {
