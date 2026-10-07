@@ -1,6 +1,7 @@
 ---
 import { getGlossaryTerms, glossaryTermPath } from '../glossary/registry';
 import { glossaryUi } from '../glossary/ui';
+import { cardSpans } from '../lib/card-rows';
 import type { Locale } from '../lib/i18n';
 
 interface Props {
@@ -10,6 +11,7 @@ interface Props {
 const { locale } = Astro.props;
 const ui = glossaryUi(locale);
 const terms = getGlossaryTerms(locale);
+const spans = cardSpans(terms.length);
 ---
 
 <div class="glossary-index">
@@ -25,8 +27,8 @@ const terms = getGlossaryTerms(locale);
       <p class="empty">{ui.empty}</p>
     ) : (
       <ul class="term-grid">
-        {terms.map((term) => (
-          <li>
+        {terms.map((term, index) => (
+          <li class={`span-${spans[index]}`}>
             <a href={glossaryTermPath(locale, term.slug)}>
               <h2>
                 {term.term}
@@ -87,9 +89,13 @@ const terms = getGlossaryTerms(locale);
   .empty {
     color: var(--muted);
   }
+  /* Three to a row on desktop, on six tracks so the count decides the rows
+     (src/lib/card-rows.ts): 22 terms are six rows of three and two of two.
+     `auto-fill` gave three columns at desktop width and left the last term,
+     "Vibe coding", alone on its row. */
   .term-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 1rem;
     margin: 0;
     padding: 2.25rem 0 0;
@@ -98,6 +104,27 @@ const terms = getGlossaryTerms(locale);
   }
   .term-grid li {
     min-width: 0;
+  }
+  @media (min-width: 861px) {
+    .term-grid .span-2 {
+      grid-column: span 2;
+    }
+    .term-grid .span-3 {
+      grid-column: span 3;
+    }
+    .term-grid .span-6 {
+      grid-column: 1 / -1;
+    }
+  }
+  /* Two columns between the phone and desktop layouts, where auto-fill gave
+     two as well; an odd last term takes the row. */
+  @media (max-width: 860px) {
+    .term-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .term-grid > li:last-child:nth-child(odd) {
+      grid-column: 1 / -1;
+    }
   }
   .term-grid a {
     display: block;

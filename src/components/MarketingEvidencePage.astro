@@ -4,6 +4,7 @@ import heroImage from '../assets/objectos-home-hero.png';
 import { getMarketingPages, marketingPagePath } from '../content-pages/registry';
 import type { MarketingPage } from '../content-pages/types';
 import { marketingPageUi } from '../content-pages/ui';
+import { cardSpans } from '../lib/card-rows';
 import { pricingPath, securityPath, type Locale } from '../lib/i18n';
 
 interface Props {
@@ -112,8 +113,8 @@ const HERO_SIZES = '(max-width: 640px) calc(120vw - 4.5rem), (max-width: 860px) 
         <p>{section.copy}</p>
       </div>
       <div class="item-grid">
-        {section.items.map((item) => (
-          <div class="item">
+        {section.items.map((item, index) => (
+          <div class:list={['item', `span-${cardSpans(section.items.length)[index]}`]}>
             {/* An item without a meta label still takes the meta row when a
                 sibling has one, so every title in the grid starts at the same
                 height. */}
@@ -492,10 +493,25 @@ const HERO_SIZES = '(max-width: 640px) calc(120vw - 4.5rem), (max-width: 860px) 
   .section-head.compact {
     max-width: 820px;
   }
+  /* Six tracks, so a row holds three cards (span 2) or two (span 3): the
+     count decides the rows (src/lib/card-rows.ts), and no section ends on a
+     lone card. A fixed three columns left one card with two-thirds of its
+     row empty in every four-card section. */
   .item-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 1rem;
+  }
+  @media (min-width: 861px) {
+    .item.span-2 {
+      grid-column: span 2;
+    }
+    .item.span-3 {
+      grid-column: span 3;
+    }
+    .item.span-6 {
+      grid-column: 1 / -1;
+    }
   }
   .item {
     min-height: 210px;
@@ -706,6 +722,10 @@ const HERO_SIZES = '(max-width: 640px) calc(120vw - 4.5rem), (max-width: 860px) 
     .item-grid,
     .next-links {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    /* Two columns, where the spans do not apply: an odd last card takes the row. */
+    .item-grid > .item:last-child:nth-child(odd) {
+      grid-column: 1 / -1;
     }
     .metrics {
       grid-template-columns: 1fr;
