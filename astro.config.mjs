@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'astro/config';
 import mdx from '@astrojs/mdx';
 import { rehypeCjkSegmentBreaks } from './scripts/lib/cjk-segment-break.mjs';
+import { rehypeCjkHeadingPhrases } from './scripts/lib/cjk-phrases.mjs';
 import { remarkQuotes } from './scripts/lib/cjk-quotes.mjs';
 import sitemap from '@astrojs/sitemap';
 import { readPostLastmods } from './scripts/lib/post-dates.mjs';
@@ -105,7 +106,14 @@ export default defineConfig({
   // that opens on a quote, Next ‘26, German „Wort”); `remarkQuotes` runs after it
   // and sets each mark by its position in its pair, in every locale. See
   // scripts/lib/cjk-quotes.mjs; `content:lint --dist` guards it too.
-  markdown: { shikiConfig: { theme: 'github-dark-default' }, remarkPlugins: [remarkQuotes], rehypePlugins: [rehypeCjkSegmentBreaks] },
+  // In a zh or ja post, each heading the body authors gets a <wbr> between its
+  // phrases (BlogPost.astro sets keep-all on them), so it never breaks inside a
+  // word; headings only, never inside code. See scripts/lib/cjk-phrases.mjs.
+  markdown: {
+    shikiConfig: { theme: 'github-dark-default' },
+    remarkPlugins: [remarkQuotes],
+    rehypePlugins: [rehypeCjkSegmentBreaks, rehypeCjkHeadingPhrases],
+  },
   integrations: [
     mdx(),
     sitemap({

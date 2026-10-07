@@ -4,6 +4,7 @@ import type { Locale } from '../lib/i18n';
 import { formatDate, postPath, STATUS_COLOR, ui } from '../lib/i18n';
 import type { LocalePost } from '../lib/posts';
 import { termLabel } from '../lib/terms';
+import { phraseHtml } from '../../scripts/lib/cjk-phrases.mjs';
 
 interface Props {
   post: LocalePost;
@@ -72,7 +73,7 @@ const thumbLoading = variant === 'feature' ? 'eager' : 'lazy';
         </span>
         <time datetime={d.date.toISOString().slice(0, 10)}>{formatDate(locale, d.date)}</time>
       </div>
-      <h2>{d.title}</h2>
+      <h2 set:html={phraseHtml(d.title, locale)} />
       <p class="desc">{d.description}</p>
       <div class="facets">
         <span class="facet topic">{termLabel(d.topic, locale)}</span>
@@ -185,6 +186,16 @@ const thumbLoading = variant === 'feature' ? 'eager' : 'lazy';
     letter-spacing: 0;
     margin: 0 0 0.4rem;
     transition: color 0.18s ease;
+  }
+  /* zh and ja titles break only at the <wbr> between phrases
+     (scripts/lib/cjk-phrases.mjs), so a word such as 业务 or アプリケーション
+     is never split across lines; a phrase wider than the line still breaks,
+     as a last resort. */
+  h2:lang(zh),
+  h2:lang(ja) {
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+    text-wrap: balance;
   }
   .card:hover h2 {
     color: var(--accent);
