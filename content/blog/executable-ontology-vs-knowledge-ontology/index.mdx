@@ -1,0 +1,196 @@
+---
+title: "Executable Ontology vs Knowledge Ontology: Why \"No Inheritance, No Axioms, No Reasoner\" Is the Point"
+description: "A knowledge ontology is built to be reasoned over; an executable business ontology is built to be validated and run. The proof is one key, abstract, that promised inheritance, did nothing, and was removed rather than kept."
+author: ObjectStack Team
+date: 2026-10-13
+status: published
+topic: app-building
+audience: developer
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Ontology
+  - Executable business ontology
+  - Knowledge graph
+---
+
+A knowledge ontology is built to be reasoned over. An executable business ontology is built to be validated, reviewed and run. The ObjectStack README states the difference as three refusals — "no inheritance, no axioms, no reasoner" — and the refusals are not a gap in a roadmap. They are what makes every definition checkable and every diff reviewable: a key you can write either has a reader in the runtime, or it is removed. This post argues that in full, and the proof is one key.
+
+Here is the key. An object marked abstract, the way a class in a knowledge ontology can be:
+
+```ts
+export const Party = ObjectSchema.create({
+  name: 'crm_party',
+  label: 'Party',
+  abstract: true,
+  sharingModel: 'private',
+  fields: { name: Field.text({ label: 'Name', required: true }) },
+});
+```
+
+On `@objectstack/spec@15.1.1`, published 2026-07-17, that definition parses, and `abstract` comes back `true`. On `@objectstack/spec@17.7.0`, the current release, it is refused:
+
+```text
+Unrecognized key(s) on this object: `abstract`.
+  • `abstract` was removed from the spec (ADR-0049) — object inheritance/abstraction is not implemented, so an abstract object still got a table and was instantiable. Remove the key.
+```
+
+Nothing was built in between. No inheritance arrived. What changed is that a key the runtime never read was taken out of the spec, with a message that says why. Everything below is the argument for why that is the right move for one kind of ontology and would be the wrong move for the other, drawn from the README, the [Business Ontology](https://github.com/objectstack-ai/objectstack/blob/8caa131e52717ef35fe71742d758f10b8f2b77ee/content/docs/concepts/ontology.mdx) concepts page, the decision record that governs the removal, and the published packages, measured rather than described.
+
+## Two ontologies, two jobs
+
+The word *ontology* names two different objects in the same conversations, and [the pillar post](/en/blog/what-does-the-ontology-is-the-software-mean/) listed this as the first of three things an executable business ontology is not. The README's paragraph on the subject is short enough to quote whole:
+
+> Your app's definition — objects and fields, relations, actions, permissions, flows, and agent and tool definitions — is a **business ontology**: open, versioned, and yours, not code scattered across a framework. It is executable, not a knowledge-representation ontology: no inheritance, no axioms, no reasoner — validated rather than reasoned over — and it is not a semantic layer over your existing systems (federating an external datasource is read-only by default and early).
+>
+> — objectstack `README.md`, ["What we mean by ontology"](https://github.com/objectstack-ai/objectstack/blob/8caa131e52717ef35fe71742d758f10b8f2b77ee/README.md#L79-L89)
+
+Take the two kinds in turn, and take the first one seriously, because it is the older and the more rigorous of the two.
+
+**A knowledge ontology is built for inference.** In the W3C's [OWL 2](https://www.w3.org/TR/owl2-primer/) and the RDF stack under it, you write classes, properties and *axioms*: this class is a subclass of that one; these two classes are disjoint; this property has at most one value; this property chain implies that other property. Then a *reasoner* reads the whole model and derives what follows. The class hierarchy is computed, not just declared. An individual is classified by what is known about it, not by the class someone typed. Contradictions between axioms are found. And the whole thing runs under the open-world assumption: a fact that is absent is unknown, not false. That is exactly the right design when the data comes from many sources, the vocabulary has to be shared across institutions, and the question is "what follows from everything we know?" The [comparison with semantic layers and knowledge graphs](/en/blog/ontology-vs-semantic-layer-vs-knowledge-graph/) gives that tradition its due; this post only needs its shape.
+
+**An executable business ontology is built so software can be generated, validated, reviewed and run.** The concepts page gives the pipeline in one line:
+
+```text
+objectstack.config.ts -> objectstack.json -> ObjectStack runtime -> database · REST / realtime API · UI · MCP server
+```
+
+and the rule that governs it in another: "Nothing is reasoned over at runtime: what runs is what was validated." The definition is one business's application, authored as typed metadata, checked by Zod schemas and `os validate`, and then executed. There is no second artifact of derived facts. The world is closed by construction: what the definition says is what the system does, and what it does not say, the system does not do.
+
+| | Knowledge ontology | Executable business ontology |
+| :--- | :--- | :--- |
+| **Built for** | Inference over a described domain | Generating, validating, reviewing and running one application |
+| **Unit of definition** | Classes, properties, individuals, axioms | Objects and fields, relations, actions, permissions, flows, agent and tool definitions |
+| **What reads a definition** | A reasoner, which derives entailments from the whole model | A named runtime reader per key — the database driver, the API, the permission evaluator, the Console, the MCP server |
+| **What exists at runtime that nobody wrote** | Inferred facts: the computed hierarchy, classifications, consequences | Nothing. "What runs is what was validated." |
+| **How a wrong definition fails** | An inconsistency the reasoner reports, or an entailment nobody expected | A located error at authoring time, before anything runs |
+| **Where to look to know what the system does** | The model *and* what it entails | The diff |
+
+The two columns are not a ranking. They are two answers to two questions, and the second question — can a reviewer tell what this change does, and can a runtime refuse a definition that would not work — is the one an application has to answer.
+
+![Two pipelines side by side. A knowledge ontology runs classes, properties and axioms through a reasoner and produces entailments derived at runtime, which are not in the diff. An executable business ontology runs typed metadata through validation (strict TypeScript, Zod, os validate) and then executes it into the database, the API, the UI and the MCP server; nothing is reasoned over at runtime. Beneath them, the three refusals: no inheritance, no axioms, no reasoner.](./two-pipelines-en.svg)
+
+## The three refusals, one at a time
+
+Each refusal removes something a knowledge ontology is right to have. Each one is there because of what it would cost a reviewer and a gate.
+
+### No inheritance
+
+In a class hierarchy, a child inherits the restrictions of its parent, and a reasoner is what tells you the full set a given class ends up with. That is a feature for a vocabulary: declare the general case once and let the engine propagate it. For an application definition it is a cost paid by the reader. A one-line change to a parent changes the behaviour of every child, none of which appears in the diff, and the question "what does this object actually enforce?" cannot be answered from the object's own file.
+
+ObjectStack's objects do not inherit. The concepts page lists the only kinds of link between objects as "Lookups and master-detail links between objects" — relations between records, declared on the object that holds them. Every object's table, fields, permissions and security posture are stated on that object, so the file is the whole answer and the diff is the whole change.
+
+### No axioms
+
+An axiom is a constraint the reasoner uses to *derive*: from "every order has exactly one customer" and an order with two, it concludes the two customers are the same individual, or that the model is inconsistent. An executable ontology has constraints too — required fields, select options, lookup targets, CEL predicates, the security posture every object must declare — but they are used to *reject*, not to derive. The README's second gate is the sentence: `os validate` "rejects metadata that type-checks but would fail silently at runtime: dangling bindings, bad CEL predicates, missing security posture". A definition that violates a constraint does not acquire a consequence. It acquires an error, with a location.
+
+### No reasoner
+
+This is the refusal the other two serve. An inference engine is a second source of truth: the facts it derives at runtime were never written anywhere a reviewer could read them. "Nothing is reasoned over at runtime: what runs is what was validated" is the concepts page's rule, and its practical form is the one the pillar post gave: if a permission is not in the diff, it is not in the system. The runtime *derives* surfaces from the artifact — the schema, the API, the UI, the MCP tools — and *enforces* the definition on every call. It does not conclude anything the definition did not say.
+
+## The proof: a key that promised inheritance and did nothing
+
+Refusing a reasoner is cheap to say and expensive to keep, because the easy thing to do with a key that sounds like a feature is to leave it in the schema and let something, later, make it mean something. `abstract` is what that looks like, and what the opposite looks like.
+
+### Before: declared, parsed, unread
+
+In `@objectstack/spec@15.1.1` the object schema declared the key, with a description that is a textbook definition of an abstract class:
+
+```ts
+abstract: z.boolean().optional().default(false).describe("Is abstract base object (cannot be instantiated)")
+```
+
+The Studio's object form listed it as a boolean field, with the help text "Abstract base (cannot be instantiated)". And the same package's own liveness ledger — the file the project keeps to say, key by key, whether a runtime reader exists — said this about it:
+
+```json
+"abstract": {
+  "status": "dead",
+  "evidence": "no runtime reader",
+  "authorWarn": true,
+  "authorHint": "No runtime reader — an abstract object still gets a table and is instantiable. Object inheritance/abstraction is not implemented."
+}
+```
+
+So in 15.1.1 the key parsed, the form offered it, the parsed output carried `abstract: true`, and — in the ledger's words — an abstract object "still gets a table and is instantiable", exactly as if the line were not there. In a knowledge ontology an abstract class is a statement the reasoner honours. Here it was a statement nothing honoured: valid syntax, a plausible line in a diff, and no reader.
+
+### The rule: enforced, experimental, or absent
+
+The decision record that governs this is [ADR-0049](https://github.com/objectstack-ai/objectstack/blob/8caa131e52717ef35fe71742d758f10b8f2b77ee/docs/adr/0049-no-unenforced-security-properties.md). It was written about security properties, after an audit that "found that **roughly half of all spec properties are dead**", and it states the rule as three states:
+
+> 1. **Enforced** — a runtime consumer reads it and changes a decision (`file:line`).
+> 2. **`experimental`** — explicitly marked and documented as *not yet enforced*, so authoring it is a known no-op (roadmapped, not a promise).
+> 3. **Absent** — removed from the spec.
+>
+> Shipping a security property in a fourth state — *parsed, unmarked, unenforced* — is prohibited. This is the **enforce-or-remove gate**.
+
+Its reason is the one that matters for any key, not only a security one: "A security property that parses but does nothing is **worse than absent**: it produces a *false sense of compliance*." And its default, where no feature is committed, is removal: "Removal is preferred over marking when there is no committed roadmap for the property — a smaller spec surface is the stronger default pre-MVP." `abstract` is not a security key; the ADR's own scope note records that the repository "cites this ADR as the enforce-or-remove policy for spec-property retirement generally", and the work order that retired it, [#2377](https://github.com/objectstack-ai/objectstack/issues/2377), says why that generality is deliberate: "Authoring them is a false affordance — especially dangerous for AI-authored metadata."
+
+### After: a tombstone that tells you what to do
+
+The removal shipped in 16.0.0. The package [changelog](https://github.com/objectstack-ai/objectstack/blob/8caa131e52717ef35fe71742d758f10b8f2b77ee/packages/spec/CHANGELOG.md#L98572-L98573) records it in one sentence: "object `tags`/`active`/`abstract`: `ObjectSchema.create()` now throws a located error naming the removal. None gated anything at runtime — remove them." Today the key is a tombstone in the object schema's unknown-key guidance, and the message every author who writes it will see is the one at the top of this post, from [`object.zod.ts`](https://github.com/objectstack-ai/objectstack/blob/8caa131e52717ef35fe71742d758f10b8f2b77ee/packages/spec/src/data/object.zod.ts#L1538-L1541):
+
+```ts
+abstract:
+  '`abstract` was removed from the spec (ADR-0049) — object ' +
+  'inheritance/abstraction is not implemented, so an abstract object still ' +
+  'got a table and was instantiable. Remove the key.',
+```
+
+The [liveness ledger's object row](https://github.com/objectstack-ai/objectstack/blob/8caa131e52717ef35fe71742d758f10b8f2b77ee/packages/spec/liveness/README.md#L958) keeps the record: "tags/active/abstract REMOVED (#2377) — tombstoned in UNKNOWN_KEY_GUIDANCE". The before and after were measured on the published packages, by parsing the `Party` object above through each one:
+
+| `@objectstack/spec` | `ObjectSchema.create()` | `ObjectSchema.safeParse()` |
+| :--- | :--- | :--- |
+| **15.1.1** (2026-07-17) | Accepts; `abstract: true` kept | Accepts; `abstract: true` kept |
+| **16.0.0** (2026-07-21) | Throws, naming the removal | Accepts; `abstract` silently stripped |
+| **17.7.0** (2026-10-06) | Throws, naming the removal | Rejects: `unrecognized_keys`, with the prescription |
+
+The middle row is worth a sentence. In 16.0.0 the authoring path was closed and the parse path was not — `parse()` still dropped the key without a word, the behaviour the schema's own comments trace back to Zod's default `.strip()` and to [#1535](https://github.com/objectstack-ai/objectstack/issues/1535), where an object-level `workflows: [...]` "vanished with no error, no warning, and a green `tsc`". The 17.x message says so itself, in its last sentence: "Until this shape was closed these were dropped silently on the PARSE path — `ObjectSchema.create()` has rejected them, but `defineStack({ objects })`, `/api/v1/meta/types/object` and the Studio form all go through `parse()`, which did not." Closing a key is not one decision; it is one decision per entry point, and a gate that is complete on one and silent on another is the fourth state wearing a different coat.
+
+![A timeline of one key across three published versions of the spec. In 15.1.1 the key is declared, parses, keeps its value and has no runtime reader, so an abstract object still gets a table. ADR-0049 forces a choice between enforced, experimental and absent, and with no committed inheritance feature the answer is absent. In 16.0.0 create() refuses the key while parse() still strips it silently. In 17.7.0 both paths refuse it with the prescription: remove the key.](./abstract-before-after-en.svg)
+
+### Why this is the point
+
+At the moment the ledger said "no runtime reader", there were two honest moves. Build object inheritance, so that `abstract: true` has a reader and a meaning. Or remove the key. The knowledge-ontology habit — and it is a habit, not a mistake, in the tradition it comes from — is to keep the declaration, because in that tradition meaning lives in the model and the engine will honour it. The executable habit is the opposite: the set of keys you can write *is* the set of things the runtime does, and a key with no reader is not a feature in waiting, it is a reviewer's false belief in waiting.
+
+Call that **a reader for every key**. It is the concrete form of "validated rather than reasoned over". A validator can only be complete over a vocabulary where every term has a consumer; the moment a term is parsed and unread, "valid" stops meaning "will do what it says". The `abstract` removal did not make the ontology smaller for its own sake. It kept the promise that a definition which passes the gate is a definition the runtime will enforce.
+
+## What a reviewer gets, and what an agent gets
+
+For the human reviewing a change, the payoff is that the diff is the behaviour. There is no parent to open, no entailment to compute, no key whose effect depends on a feature that may or may not exist. If `sharingModel: 'private'` is in the diff, records are private; if a permission is not in the diff, nobody has it. Asking "what does this line do?" is answered by the runtime reader that line has, and a line with no reader cannot be in the diff at all.
+
+For the agent writing the change, the payoff is the same fact seen from the other side. The README's claim for why AI-written metadata works is that "an agent's errors become located, corrective text it can read and fix itself". A false affordance defeats exactly that: an agent that learns a format from its examples cannot tell an enforced key from a parsed one, because both validate, both look authoritative, and both appear in samples — the failure the [declared-vs-enforced](/en/glossary/declared-vs-enforced/) entry describes as valid, plausible, inert declarations. Removing the key, and leaving a tombstone that ends in "Remove the key.", turns that failure into a one-line fix the agent can perform without a human noticing there was a problem.
+
+## In defence of the reasoner: what this does not do
+
+An honest version of this argument has to say what the executable ontology gives up, because it gives up real things.
+
+**It does not reason.** No entailments, no classification by description, no consistency checking across a model. If a derived fact is the product you need — "which of these ten thousand records is, by what we know about it, an instance of a high-risk counterparty?" — a reasoner answers that and a validator does not.
+
+**It does not do open-world inference.** The closed world is the whole point of the design, and it is the wrong assumption for data that is partial by nature: a shared vocabulary across organisations, a record that is true even though your system has never seen the fact that makes it true. A knowledge ontology is built for that case and this one is not.
+
+**It does not do schema-level inheritance.** There is no base object. A field that six objects share is declared on six objects, or modelled explicitly as a lookup to a shared one. The repetition is deliberate — it is what makes each object's file the whole answer — and it is still repetition, with the maintenance cost repetition has.
+
+**It does not decide that two things are the same thing.** Whether the "customer" in one system and the "account" in another are one entity is a declaration someone has to make, not an inference the runtime draws; the [enterprise-ontology post](/en/blog/enterprise-ontology-race-open-vs-closed/) is about why that alignment is still work in any model.
+
+And one limit belongs to the discipline itself rather than to the format: "validated" is only as true as the validators. The audit behind ADR-0049 found half the spec's properties dead *before* the rule existed; the liveness ledger and the gates that read it are what keep the rule true afterwards, and that is a standing piece of maintenance, not a state reached once. The `abstract` story is evidence the discipline is practised, not evidence that it is finished.
+
+## Hosted, or on your own infrastructure
+
+The README describes this loop — an agent writes typed metadata in your repository, the gate refuses what would not run, the runtime executes what passed — and then says: "Want the same loop hosted, in the browser, nothing to install? That's ObjectOS, the commercial runtime environment built on ObjectStack." ObjectOS runs hosted in the browser with nothing to install (ObjectOS Cloud) or self-managed on your own infrastructure (ObjectOS Enterprise), and on either edition you can export your ontology and run it on the open-source ObjectStack runtime. The gate is the same on every host, and so is the ontology it guards.
+
+## Try the refusal yourself
+
+The README's agent path produces the artifact this post is about in a few minutes, and the refusal is the part worth seeing.
+
+```bash
+npm create objectstack@latest my-app && cd my-app
+```
+
+Open the project in your coding agent and describe one business object — a customer, a ticket, a work order. Then ask for the line this post started with: add `abstract: true` to it, because it is going to be a base for other objects. Whichever gate reaches it first, the typed one in the editor or `ObjectSchema.create()` at build, refuses it with the message quoted above, and the message ends in the fix. Let the agent take the fix, then preview the result:
+
+```bash
+npx os dev --ui   # → http://localhost:3000/_console/
+```
+
+What you will find in the diff is an object with no base, no inherited anything, and no key the runtime does not read — which is to say, a definition small enough to review and strict enough to run. If the agent needs steering, [how to point it at ObjectStack](/en/blog/how-to-point-your-agent-at-objectstack/) covers the rule file, the skills bundle and the tool server. The three refusals in the README are not what the format lacks. They are what it enforces.
