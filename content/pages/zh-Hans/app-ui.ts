@@ -3,14 +3,14 @@ import type { MarketingPage } from '../../../src/content-pages/types';
 const page = {
     slug: 'app-ui',
     navLabel: '应用界面',
-    title: 'ObjectOS 应用界面：从元数据渲染的权限感知界面',
+    title: '应用界面：从元数据渲染的权限感知界面',
     description:
       '表单、视图和仪表盘直接从元数据渲染——按每个用户的权限成形、实时更新，并可在带实时预览的视图设计器里用列检查器与筛选构建器微调。',
     eyebrow: '应用界面',
     heroTitle: '没人手写的界面，人人信得过的视图。',
     lead:
-      '拿一个客服工作台来说：客服在网格里处理待办工单，主管拖着按状态分组的看板，所有人都会看截止日历。在 ObjectOS 里这是一份视图定义——按用户渲染、随记录实时变化，还能在视图设计器里调整，不碰一个文件。',
-    primary: { label: '对比版本与定价', href: '/en/pricing/' },
+      '拿一个客服工作台来说：客服在网格里处理待办工单，主管拖着按状态分组的看板，所有人都会看截止日历。在开源 ObjectStack 运行时上这是一份视图定义——按用户渲染、随记录实时变化，还能在视图设计器里调整，不碰一个文件。在 ObjectOS 上，产品内 AI Builder 能从一句描述注册出同样的视图。',
+    primary: { label: '阅读界面文档', href: 'https://docs.objectos.ai/docs/build/interface' },
     secondary: { label: '查看报表与分析', href: '/en/analytics/' },
     metrics: [
       { value: '0', label: '列表、表单、详情页——没有手写前端' },
@@ -160,9 +160,9 @@ export const CaseViews = defineView({
           '能。生成的界面覆盖重复度最高的 CRUD 主体，同一套 API 与权限模型支撑你添加的任何定制前端——定制界面绕不过治理。',
       },
       {
-        question: '视图设计器在开源 ObjectStack 里吗？',
+        question: '这里哪些是开源的，ObjectOS 又加了什么？',
         answer:
-          '在。带实时预览的视图设计器、列与筛选检查器、积木式页面画布和响应式页面设计器都随开源 ObjectStack 控制台发布——连同元数据渲染的视图、表单、仪表盘、导航、多语言与实时更新。',
+          '元数据渲染的视图、表单、仪表盘、导航、多语言与实时更新，以及带实时预览的视图设计器、检查器、页面画布和响应式页面设计器，都随开源 ObjectStack Console 发布，Apache-2.0。ObjectOS 加的是产品内 AI Builder：它能从一句对话请求注册视图——比如一个按状态分组的看板——并把变更排队等审批；在开源运行时上，这件事交给你自己的编码 Agent 与 MCP 客户端。',
       },
     ],
   } satisfies MarketingPage;

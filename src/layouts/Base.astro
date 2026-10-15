@@ -1,14 +1,27 @@
 ---
+import { getImage } from 'astro:assets';
+import heroImage from '../assets/objectos-home-hero.png';
+import FooterClusters from '../components/FooterClusters.astro';
 import Header from '../components/Header.astro';
 import Logo from '../components/Logo.astro';
 import { marketingPagePath } from '../content-pages/registry';
 import { glossaryIndexPath } from '../glossary/registry';
-import { htmlLang, pricingPath, privacyPath, rssPath, termsPath, ui, type Locale } from '../lib/i18n';
+import { htmlLang, OG_LOCALE, pricingPath, privacyPath, rssPath, termsPath, ui, type Locale } from '../lib/i18n';
+import { ORGANIZATION_ID, ORGANIZATION_SAME_AS } from '../lib/organization';
 
 interface Props {
   title: string;
   description?: string;
   locale: Locale;
+  /**
+   * The language the page body is written in, when it is not `locale`: the
+   * fallback pages (marketing, glossary, pricing, legal) render the English
+   * copy at every locale URL. The header and footer stay in `locale`, so
+   * `<html lang>` does too; `<main>` gets this language, which is what a
+   * screen reader pronounces the body in (WCAG 3.1.1 / 3.1.2) and what
+   * `og:locale` reports. Omit it when the body is in `locale`.
+   */
+  contentLocale?: Locale;
   /**
    * `null` omits the canonical link and `og:url` altogether. Only the 404
    * pages use it: they answer for every URL that does not exist, so there is
@@ -17,6 +30,15 @@ interface Props {
    */
   canonical?: string | null;
   image?: string;
+  /**
+   * `og:image:alt` and the image's intrinsic size. Only meaningful with
+   * `image`; the default share image carries its own. Width and height are
+   * emitted only when both are known — a guessed size is worse than none,
+   * since a consumer lays out the preview card from it before fetching.
+   */
+  imageAlt?: string;
+  imageWidth?: number;
+  imageHeight?: number;
   type?: 'website' | 'article';
   noindex?: boolean;
   publishedTime?: string;
@@ -40,8 +62,12 @@ const {
   title,
   description,
   locale,
+  contentLocale = locale,
   canonical,
   image,
+  imageAlt,
+  imageWidth,
+  imageHeight,
   type = 'website',
   noindex = false,
   publishedTime,
@@ -64,9 +90,23 @@ const canonicalUrl = canonical === null
   : site
     ? `${site}${Astro.url.pathname}`
     : Astro.url.href;
-const imageUrl = image
-  ? absoluteUrl(image)
-  : absoluteUrl('/images/objectos-home-hero.png');
+// The default share image is the home hero, cut to the 1200x630 card the
+// networks lay out (a 1.7 MB 1586x992 PNG before); its alt text is the one the
+// home and marketing pages give the same picture.
+const defaultShare = await getImage({ src: heroImage, width: 1200, height: 630, fit: 'cover', format: 'jpg', quality: 82 });
+const DEFAULT_IMAGE = {
+  src: defaultShare.src,
+  alt: 'ObjectOS product surface connecting business data, applications, and AI agents',
+  width: 1200,
+  height: 630,
+};
+const imageUrl = absoluteUrl(image ?? DEFAULT_IMAGE.src);
+const ogImageAlt = image ? (imageAlt ?? title) : DEFAULT_IMAGE.alt;
+const ogImageSize = image
+  ? imageWidth && imageHeight
+    ? { width: imageWidth, height: imageHeight }
+    : null
+  : { width: DEFAULT_IMAGE.width, height: DEFAULT_IMAGE.height };
 const hreflangs = Object.entries(alternates ?? {}).map(([l, href]) => ({
   hreflang: htmlLang(l as Locale),
   href: absoluteUrl(href),
@@ -77,10 +117,12 @@ const jsonLdItems = [
   {
     '@context': 'https://schema.org',
     '@type': 'Organization',
+    '@id': ORGANIZATION_ID,
     name: 'ObjectOS',
     legalName: 'ObjectStack AI LLC',
     url: absoluteUrl('/en/'),
     logo: absoluteUrl('/logo.svg'),
+    sameAs: ORGANIZATION_SAME_AS,
   },
   {
     '@context': 'https://schema.org',
@@ -90,6 +132,7 @@ const jsonLdItems = [
     inLanguage: htmlLang(locale),
     publisher: {
       '@type': 'Organization',
+      '@id': ORGANIZATION_ID,
       name: 'ObjectStack AI LLC',
     },
   },
@@ -135,7 +178,10 @@ const jsonLdHtml = (value: Record<string, unknown>) =>
     <meta property="og:type" content={type} />
     {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
     <meta property="og:image" content={imageUrl} />
-    <meta property="og:locale" content={htmlLang(locale).replace('-', '_')} />
+    <meta property="og:image:alt" content={ogImageAlt} />
+    {ogImageSize && <meta property="og:image:width" content={String(ogImageSize.width)} />}
+    {ogImageSize && <meta property="og:image:height" content={String(ogImageSize.height)} />}
+    <meta property="og:locale" content={OG_LOCALE[contentLocale]} />
     {publishedTime && <meta property="article:published_time" content={publishedTime} />}
     {modifiedTime && <meta property="article:modified_time" content={modifiedTime} />}
     {author && <meta property="article:author" content={author} />}
@@ -143,16 +189,18 @@ const jsonLdHtml = (value: Record<string, unknown>) =>
     <meta name="twitter:title" content={title} />
     {description && <meta name="twitter:description" content={description} />}
     <meta name="twitter:image" content={imageUrl} />
+    <meta name="twitter:image:alt" content={ogImageAlt} />
     <link rel="icon" href="/logo.svg" type="image/svg+xml" />
     {jsonLdItems.map((item) => <script is:inline type="application/ld+json" set:html={jsonLdHtml(item)} />)}
   </head>
   <body>
     <a class="skip-link" href="#main-content">{t.skipToContent}</a>
     <Header {locale} {alternates} {navAlternates} />
-    <main id="main-content" tabindex="-1">
+    <main id="main-content" tabindex="-1" lang={contentLocale === locale ? undefined : htmlLang(contentLocale)}>
       <slot />
     </main>
     <footer class="site-footer">
+      <FooterClusters {locale} />
       <div class="inner">
         <span class="foot-brand" translate="no">
           <Logo size={14} /> ObjectStack AI LLC

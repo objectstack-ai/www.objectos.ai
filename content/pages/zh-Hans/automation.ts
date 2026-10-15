@@ -3,14 +3,14 @@ import type { MarketingPage } from '../../../src/content-pages/types';
 const page = {
     slug: 'automation',
     navLabel: '流程自动化',
-    title: 'ObjectOS 自动化：面向业务流程的流程、触发器、作业与 Webhook',
+    title: '流程自动化：面向业务流程的流程、触发器、作业与 Webhook',
     description:
       '支持持久暂停与恢复的多步流程，带 16+ 类型节点的可视化流程画布，带测试触发的运行历史，三类触发器，后台作业与 outbox 背书的 Webhook 投递。',
     eyebrow: '流程自动化',
     heroTitle: '流程自己跑——该等人的时候，等人。',
     lead:
-      '拿一个真实流程来说：订单金额超过 10 万，财务必须签核，结果要同步 ERP，负责人要收到通知。这就是一次分支、一次人工等待、一次对外调用和一条通知——恰好是 ObjectOS 流程为之而生的形状：持久、多步，你的 Agent 用元数据写出来，你的团队在画布上画出来。',
-    primary: { label: '对比版本与定价', href: '/en/pricing/' },
+      '拿一个真实流程来说：订单金额超过 10 万，财务必须签核，结果要同步 ERP，负责人要收到通知。这就是一次分支、一次人工等待、一次对外调用和一条通知——恰好是 ObjectStack 流程为之而生的形状：持久、多步，你的 Agent 用元数据写出来，你的团队在画布上画出来，在 ObjectOS 上还能由产品内 AI Builder 从一句描述起草出来。',
+    primary: { label: '阅读流程文档', href: 'https://docs.objectos.ai/docs/build/automation/flows' },
     secondary: { label: '查看审批', href: '/en/approvals/' },
     metrics: [
       { value: '16+', label: '画布上的类型化节点——判断、等待、审批、脚本、子流程' },
@@ -185,9 +185,9 @@ export const EscalateBreachedCases = defineFlow({
           '流程状态是持久的。等待某个人或某个定时器的流程会从暂停处精确恢复——重启和部署不会丢失或重复任何工作。',
       },
       {
-        question: '可视化设计器在开源 ObjectStack 里吗？',
+        question: '这里哪些是开源的，ObjectOS 又加了什么？',
         answer:
-          '在。流程画布、节点面板、校验、模拟、运行历史和调度预览都随开源 ObjectStack 控制台发布——连同流程、全部三类触发器、后台队列和 Webhook 投递。',
+          '流程、全部三类触发器、后台队列、Webhook 投递，以及流程画布连同节点面板、校验、模拟、运行历史和调度预览，都随开源 ObjectStack Console 发布，Apache-2.0。ObjectOS 加的是产品内 AI Builder——从一句描述起草流程与动作，并把每一次元数据变更排队等人审批——以及从商业版起的 AI 治理：动作审计、护栏、权限限定。',
       },
     ],
   } satisfies MarketingPage;

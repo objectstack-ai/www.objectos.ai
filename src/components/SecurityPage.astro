@@ -1,6 +1,7 @@
 ---
-import { blogPath, type Locale } from '../lib/i18n';
-import type { SecurityCopy } from '../lib/security';
+import { phraseHtml } from '../../scripts/lib/cjk-phrases.mjs';
+import { postPath, type Locale } from '../lib/i18n';
+import { securityEnglishFields, type SecurityCopy } from '../lib/security';
 
 interface Props {
   copy: SecurityCopy;
@@ -10,19 +11,31 @@ interface Props {
 const { copy, locale } = Astro.props;
 const docsHref = 'https://docs.objectos.ai/docs/reference/security';
 const lineJoin = locale === 'zh-Hans' || locale === 'zh-Hant' || locale === 'ja' ? '' : ' ';
-const blogSlug =
-  locale === 'zh-Hans' || locale === 'zh-Hant'
-    ? 'ai-agent-business-data-security-boundaries'
-    : 'extend-existing-systems-with-ai';
-const blogHref = `${blogPath(locale)}${blogSlug}`;
+// One target in every locale: the agent security-boundaries article, which is
+// published in all eight. The English page used to send readers to the
+// existing-systems post while Chinese sent them here, so the same button meant
+// two different things.
+const blogSlug = 'ai-agent-business-data-security-boundaries';
+// `postPath` carries the trailing slash: `/en/blog/x` answers with a 308 to
+// `/en/blog/x/`, a redirect on every security page's CTA.
+const blogHref = postPath(locale, blogSlug);
+// The ja/de/es/fr/ko copies translate the frame and inherit the rest from
+// English; each inherited part is marked `lang="en"` so it is announced, and
+// identified, as English (WCAG 3.1.2). `undefined` renders no attribute.
+const englishFields = securityEnglishFields(locale);
+const en = (field: keyof SecurityCopy): 'en' | undefined =>
+  englishFields.has(field) ? 'en' : undefined;
+// zh and ja headings carry a <wbr> between phrases (scripts/lib/cjk-phrases.mjs);
+// a field inherited from English is English text and gets none.
+const ph = (text: string, field: keyof SecurityCopy): string => phraseHtml(text, en(field) ?? locale);
 ---
 
 <article class="security-page">
   <section class="hero">
-    <p class="eyebrow">{copy.eyebrow}</p>
-    <h1>{copy.hero[0]}<br />{lineJoin}<strong>{copy.hero[1]}</strong></h1>
-    <p class="lead">{copy.lead}</p>
-    <dl class="metrics">
+    <p class="eyebrow" lang={en('eyebrow')}>{copy.eyebrow}</p>
+    <h1 lang={en('hero')}><span class="title-line" set:html={ph(copy.hero[0], 'hero')} />{lineJoin}<strong class="title-line" set:html={ph(copy.hero[1], 'hero')} /></h1>
+    <p class="lead" lang={en('lead')}>{copy.lead}</p>
+    <dl class="metrics" lang={en('metrics')}>
       {copy.metrics.map((item) => (
         <div>
           <dt>{item.value}</dt>
@@ -33,20 +46,20 @@ const blogHref = `${blogPath(locale)}${blogSlug}`;
   </section>
 
   <nav class="page-nav" aria-label={copy.title}>
-    <a href="#ai">{copy.aiTitle}</a>
-    <a href="#data">{copy.residencyTitle}</a>
-    <a href="#permissions">{copy.permissionTitle}</a>
-    <a href="#deployment">{copy.deploymentTitle}</a>
-    <a href="#faq">{copy.faqTitle}</a>
+    <a href="#ai" lang={en('aiTitle')}>{copy.aiTitle}</a>
+    <a href="#data" lang={en('residencyTitle')}>{copy.residencyTitle}</a>
+    <a href="#permissions" lang={en('permissionTitle')}>{copy.permissionTitle}</a>
+    <a href="#deployment" lang={en('deploymentTitle')}>{copy.deploymentTitle}</a>
+    <a href="#faq" lang={en('faqTitle')}>{copy.faqTitle}</a>
   </nav>
 
   <section class="panel ai-panel" id="ai">
     <div class="section-head">
-      <p class="eyebrow">{copy.aiTitle}</p>
-      <h2>{copy.aiTitle}</h2>
-      <p>{copy.aiLead}</p>
+      <p class="eyebrow" lang={en('aiKicker')}>{copy.aiKicker}</p>
+      <h2 lang={en('aiTitle')} set:html={ph(copy.aiTitle, 'aiTitle')} />
+      <p lang={en('aiLead')}>{copy.aiLead}</p>
     </div>
-    <ol class="step-grid">
+    <ol class="step-grid" lang={en('aiSteps')}>
       {copy.aiSteps.map((step, index) => (
         <li>
           <span>{String(index + 1).padStart(2, '0')}</span>
@@ -59,18 +72,18 @@ const blogHref = `${blogPath(locale)}${blogSlug}`;
 
   <section class="split" id="data">
     <div>
-      <p class="eyebrow">{copy.residencyTitle}</p>
-      <h2 id="residency-title">{copy.residencyTitle}</h2>
-      <p>{copy.residencyLead}</p>
+      <p class="eyebrow" lang={en('residencyKicker')}>{copy.residencyKicker}</p>
+      <h2 id="residency-title" lang={en('residencyTitle')} set:html={ph(copy.residencyTitle, 'residencyTitle')} />
+      <p lang={en('residencyLead')}>{copy.residencyLead}</p>
     </div>
     <div class="table-wrap" tabindex="0" role="group" aria-labelledby="residency-title">
       <table>
-        <thead>
+        <thead lang={en('residencyColumns')}>
           <tr>
             {copy.residencyColumns.map((column) => <th>{column}</th>)}
           </tr>
         </thead>
-        <tbody>
+        <tbody lang={en('residencyRows')}>
           {copy.residencyRows.map((row) => (
             <tr>
               <td>{row.data}</td>
@@ -85,11 +98,11 @@ const blogHref = `${blogPath(locale)}${blogSlug}`;
 
   <section class="split permissions" id="permissions">
     <div>
-      <p class="eyebrow">{copy.permissionTitle}</p>
-      <h2>{copy.permissionTitle}</h2>
-      <p>{copy.permissionLead}</p>
+      <p class="eyebrow" lang={en('permissionKicker')}>{copy.permissionKicker}</p>
+      <h2 lang={en('permissionTitle')} set:html={ph(copy.permissionTitle, 'permissionTitle')} />
+      <p lang={en('permissionLead')}>{copy.permissionLead}</p>
     </div>
-    <div class="layer-list">
+    <div class="layer-list" lang={en('permissionLayers')}>
       {copy.permissionLayers.map((layer) => (
         <div>
           <h3>{layer.title}</h3>
@@ -101,11 +114,11 @@ const blogHref = `${blogPath(locale)}${blogSlug}`;
 
   <section class="panel" id="deployment">
     <div class="section-head">
-      <p class="eyebrow">{copy.deploymentTitle}</p>
-      <h2>{copy.deploymentTitle}</h2>
-      <p>{copy.deploymentLead}</p>
+      <p class="eyebrow" lang={en('deploymentKicker')}>{copy.deploymentKicker}</p>
+      <h2 lang={en('deploymentTitle')} set:html={ph(copy.deploymentTitle, 'deploymentTitle')} />
+      <p lang={en('deploymentLead')}>{copy.deploymentLead}</p>
     </div>
-    <div class="deploy-grid">
+    <div class="deploy-grid" lang={en('deployments')}>
       {copy.deployments.map((deployment) => (
         <div>
           <h3>{deployment.title}</h3>
@@ -117,10 +130,10 @@ const blogHref = `${blogPath(locale)}${blogSlug}`;
 
   <section class="faq" id="faq">
     <div class="section-head">
-      <p class="eyebrow">{copy.faqTitle}</p>
-      <h2>{copy.faqTitle}</h2>
+      <p class="eyebrow" lang={en('faqKicker')}>{copy.faqKicker}</p>
+      <h2 lang={en('faqTitle')} set:html={ph(copy.faqTitle, 'faqTitle')} />
     </div>
-    <div class="faq-list">
+    <div class="faq-list" lang={en('faqs')}>
       {copy.faqs.map((faq) => (
         <details>
           <summary>{faq.question}</summary>
@@ -131,12 +144,12 @@ const blogHref = `${blogPath(locale)}${blogSlug}`;
   </section>
 
   <section class="cta">
-    <p class="eyebrow">{copy.ctaKicker}</p>
-    <h2>{copy.ctaTitle}</h2>
-    <p>{copy.ctaCopy}</p>
+    <p class="eyebrow" lang={en('ctaKicker')}>{copy.ctaKicker}</p>
+    <h2 lang={en('ctaTitle')} set:html={ph(copy.ctaTitle, 'ctaTitle')} />
+    <p lang={en('ctaCopy')}>{copy.ctaCopy}</p>
     <div class="actions">
-      <a class="button primary" href={docsHref}>{copy.ctaPrimary} <span>→</span></a>
-      <a class="button secondary" href={blogHref}>{copy.ctaSecondary}</a>
+      <a class="button primary" href={docsHref} lang={en('ctaPrimary')}>{copy.ctaPrimary} <span>→</span></a>
+      <a class="button secondary" href={blogHref} lang={en('ctaSecondary')}>{copy.ctaSecondary}</a>
     </div>
   </section>
 </article>
@@ -172,15 +185,34 @@ const blogHref = `${blogPath(locale)}${blogSlug}`;
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
+  /* Page title and section headings take the display face, as on every page;
+     card titles stay in the text face. */
   .hero h1 {
     margin: 0 0 1.4rem;
+    font-family: var(--font-display);
     font-size: clamp(3rem, 6vw, 5rem);
     line-height: 1.05;
     letter-spacing: 0;
+    text-wrap: balance;
   }
   .hero h1 strong {
     color: var(--sec-green);
     font-weight: inherit;
+  }
+  /* The h1's two parts are block lines, each balanced on its own: after a
+     forced <br> the second part wrapped on a phone and left "data." alone. */
+  .title-line {
+    display: block;
+  }
+  /* zh and ja: break only at the <wbr> between phrases (scripts/lib/cjk-phrases.mjs),
+     so 网络 or ネットワーク is never split; a phrase wider than the line still
+     breaks, as a last resort. */
+  h1:lang(zh),
+  h1:lang(ja),
+  h2:lang(zh),
+  h2:lang(ja) {
+    word-break: keep-all;
+    overflow-wrap: anywhere;
   }
   .lead {
     max-width: 720px;
@@ -256,9 +288,11 @@ const blogHref = `${blogPath(locale)}${blogSlug}`;
   }
   h2 {
     margin: 0 0 1rem;
+    font-family: var(--font-display);
     font-size: clamp(2rem, 4.2vw, 3.3rem);
     line-height: 1.18;
     letter-spacing: 0;
+    text-wrap: balance;
   }
   .split > div > p,
   .section-head p,
@@ -551,6 +585,15 @@ const blogHref = `${blogPath(locale)}${blogSlug}`;
     }
     h2 {
       font-size: 1.9rem;
+    }
+    /* Japanese breaks only between phrases, and the longest here are nine
+       (ネットワーク内に。) and eleven (セキュリティレビューを) characters:
+       sized so each fits the 312px column of a 360px phone. */
+    .hero h1:lang(ja) {
+      font-size: 2rem;
+    }
+    h2:lang(ja) {
+      font-size: 1.6rem;
     }
     .step-grid,
     .deploy-grid {

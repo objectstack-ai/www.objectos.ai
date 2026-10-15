@@ -2,6 +2,7 @@
 import Base from '../../../layouts/Base.astro';
 import ArticleList from '../../../components/ArticleList.astro';
 import { blogPath, LOCALES, segToLocale, ui } from '../../../lib/i18n';
+import { homeCopy } from '../../../lib/home';
 import { getPostsInLocale } from '../../../lib/posts';
 
 export function getStaticPaths() {
@@ -16,10 +17,14 @@ const site = Astro.site?.toString().replace(/\/$/, '') ?? '';
 const absoluteUrl = (href: string): string =>
   site ? new URL(href, `${site}/`).toString() : new URL(href, Astro.url).toString();
 const description = t.articlesLead(postCount);
+// "Articles · ObjectOS" names a page class, not a page: it says nothing a
+// searcher would type and matches every site's blog. The home page's heading
+// for this same list says what the writing is about, in every locale.
+const title = `${homeCopy[locale].insightsTitle} · ${t.siteName}`;
 const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'CollectionPage',
-  name: `${t.articlesTitle} · ${t.siteName}`,
+  name: title,
   description,
   url: absoluteUrl(blogPath(locale)),
   inLanguage: locale,
@@ -27,7 +32,7 @@ const jsonLd = {
 ---
 
 <Base
-  title={`${t.articlesTitle} · ${t.siteName}`}
+  {title}
   description={description}
   jsonLd={jsonLd}
   {locale}

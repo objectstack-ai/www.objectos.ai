@@ -15,9 +15,9 @@ const page = {
     primary: { label: 'Point your agent at ObjectStack', href: '/en/agent-developer/' },
     secondary: { label: 'Review the trust model', href: '/en/trust-center/' },
     metrics: [
-      { value: '<150k tokens', label: 'A complete CRM including UI — one context window' },
-      { value: '<100k tokens', label: 'Objects, workflows, permissions, and business logic' },
-      { value: '~50k tokens', label: 'The UI metadata for the complete CRM' },
+      { value: '4 gates', label: 'Typed, validated, reviewed, governed — between the agent and your users' },
+      { value: '1 definition', label: 'Database, REST API, client SDK, UI, and MCP tools all follow from it' },
+      { value: 'Held whole', label: 'Apps small enough for AI to hold whole — the bundled CRM loads end-to-end' },
     ],
     artifact: {
       eyebrow: 'Review surface',
@@ -91,13 +91,13 @@ export const Case = ObjectSchema.create({
       {
         id: 'connect',
         eyebrow: 'Existing systems',
-        title: 'Add an object layer without replacing systems of record',
+        title: 'Add an object layer beside systems of record — read-only by default',
         copy:
-          'Most enterprise software value is already trapped in databases, ERP, CRM, ticketing, files, and custom systems. ObjectStack gives agents an explicit object model over that estate; ObjectOS gives teams a production platform for operating apps built on it.',
+          `Most enterprise software value is already trapped in databases, ERP, CRM, ticketing, files, and custom systems. ObjectStack can federate a database you already run as an external datasource and give agents an explicit object model over it — read-only by default, and early; the system of record keeps writing the rows. ObjectOS is ${p.descriptor}, where teams run and operate the apps built on that model.`,
         items: [
           {
-            title: 'Connect databases and APIs',
-            body: 'Map existing records into business objects, relationships, calculated fields, and actions without forcing a rip-and-replace migration.',
+            title: 'Connect the database you already run',
+            body: 'Connect it as a datasource — a readOnly datasource or a read-only database user to start — and model the tables you care about as objects, relationships, calculated fields, and actions; writes are enabled deliberately, per object, once you trust the model.',
           },
           {
             title: 'Keep authority explicit',

@@ -3,14 +3,14 @@ import type { MarketingPage } from '../../../src/content-pages/types';
 const page = {
     slug: 'automation',
     navLabel: 'Process automation',
-    title: 'ObjectOS Automation: Flows, Triggers, Jobs, and Webhooks for Business Processes',
+    title: 'Process Automation: Flows, Triggers, Jobs, and Webhooks for Business Processes',
     description:
       'Multi-step flows with durable pause and resume, a visual flow canvas with 16+ node types, run history with test triggers, three trigger types, background jobs, and outbox-backed webhook delivery.',
     eyebrow: 'Process automation',
     heroTitle: 'Processes that run themselves — and wait for people when they must.',
     lead:
-      'Take one real process: an order books above ¥100k, finance must sign off, the ERP needs the result, and the owner wants to know. That is a branch, a human wait, an outbound call, and a notification — exactly the shape ObjectOS flows are built for: durable, multi-step, written as metadata by your agent or drawn on a canvas by your team.',
-    primary: { label: 'Compare editions and pricing', href: '/en/pricing/' },
+      'Take one real process: an order books above $100k, finance must sign off, the ERP needs the result, and the owner wants to know. That is a branch, a human wait, an outbound call, and a notification — exactly the shape ObjectStack flows are built for: durable, multi-step, written as metadata by your agent or drawn on a canvas by your team, and on ObjectOS drafted by the in-app AI Builder from a plain-language request.',
+    primary: { label: 'Read the flows docs', href: 'https://docs.objectos.ai/docs/build/automation/flows' },
     secondary: { label: 'See approvals', href: '/en/approvals/' },
     metrics: [
       { value: '16+', label: 'Typed nodes on the visual canvas — decision, wait, approval, script, subflow' },
@@ -75,13 +75,13 @@ export const EscalateBreachedCases = defineFlow({
       {
         id: 'flows',
         eyebrow: 'Build the process',
-        title: 'Follow the ¥100k order through the flow',
+        title: 'Follow the $100k order through the flow',
         copy:
           'Each step below is a typed node in the same definition — the parts that usually turn into unmaintainable worker code stay declarative and reviewable.',
         items: [
           {
             title: 'Branch on business conditions',
-            body: 'A decision node routes the order: under ¥100k goes straight to fulfillment; above it takes the approval path. Conditions are expressions on real fields, not code in a worker.',
+            body: 'A decision node routes the order: under $100k goes straight to fulfillment; above it takes the approval path. Conditions are expressions on real fields, not code in a worker.',
           },
           {
             title: 'Wait for finance — durably',
@@ -163,7 +163,7 @@ export const EscalateBreachedCases = defineFlow({
     table: {
       columns: ['Business need', 'AI writes', 'Runtime supplies'],
       rows: [
-        ['Orders over ¥100k wait for finance', 'A decision node and an approval node', 'Durable waiting, queues, locking, resumption'],
+        ['Orders over $100k wait for finance', 'A decision node and an approval node', 'Durable waiting, queues, locking, resumption'],
         ['Escalate overdue cases nightly', 'A scheduled flow with conditions', 'Execution, retries, and run history'],
         ['Sync approved orders to the ERP', 'An http_request node behind the approval', 'Durable outbox, retries, delivery records'],
         ['Ops tunes the flow without a deploy', 'Nothing — the canvas edits the same metadata', 'The visual designer, validation, simulation'],
@@ -185,9 +185,9 @@ export const EscalateBreachedCases = defineFlow({
           'Flow state is durable. A process waiting on a person or a timer resumes exactly where it paused — restarts and deploys do not lose or duplicate work.',
       },
       {
-        question: 'Is the visual designer in the open-source ObjectStack?',
+        question: 'What is open source here, and what does ObjectOS add?',
         answer:
-          'Yes. The flow canvas, node palette, validation, simulation, run history, and schedule previews ship in the open-source ObjectStack console — alongside flows, all three trigger types, background queues, and webhook delivery.',
+          'Flows, all three trigger types, background queues, webhook delivery, and the flow canvas with its node palette, validation, simulation, run history, and schedule previews ship in the open-source ObjectStack Console, Apache-2.0. ObjectOS adds the in-app AI Builder, which drafts flows and actions from a plain-language request and queues every metadata change for human approval, plus AI governance — action audit, guardrails, permission scoping — from Business.',
       },
     ],
   } satisfies MarketingPage;

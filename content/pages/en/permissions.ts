@@ -3,14 +3,14 @@ import type { MarketingPage } from '../../../src/content-pages/types';
 const page = {
     slug: 'permissions',
     navLabel: 'Permissions & security',
-    title: 'ObjectOS Permissions: Role, Row, and Field-Level Control for AI-Written Apps',
+    title: 'Permissions: Role, Row, and Field-Level Control for AI-Written Apps',
     description:
       'Role-based, row-level, and field-level access control with a permission matrix editor and an audit log viewer, record sharing, and tenant isolation — enforced on people and AI agents alike.',
     eyebrow: 'Permissions & security',
     heroTitle: 'Who sees what, who changes what — enforced at runtime.',
     lead:
-      'Take a sales organization: reps see only their team’s accounts, the cost field is masked for them, managers see the whole region, and audit wants to know who changed that discount. In ObjectOS that boundary is one reviewable definition — enforced on every query, API call, and AI tool call.',
-    primary: { label: 'Compare editions and pricing', href: '/en/pricing/' },
+      'Take a sales organization: reps see only their team’s accounts, the cost field is masked for them, managers see the whole region, and audit wants to know who changed that discount. On the ObjectStack runtime that boundary is one reviewable definition — enforced on every query, API call, and AI tool call, whether the agent is your own over MCP or ObjectOS’s in-app AI.',
+    primary: { label: 'Read the permissions docs', href: 'https://docs.objectos.ai/docs/configure/permissions' },
     secondary: { label: 'Review the trust model', href: '/en/trust-center/' },
     metrics: [
       { value: '3 layers', label: 'Object, record, and field-level control in one model' },
@@ -108,7 +108,7 @@ const page = {
         eyebrow: 'AI under the same rules',
         title: 'Agents get your permission model, not a service account',
         copy:
-          'The fastest way to lose control of AI is to give it superuser access. ObjectOS never does: every agent action runs as the signed-in user who asked for it.',
+          'The fastest way to lose control of AI is to give it superuser access. The ObjectStack runtime never does: every agent action runs as the signed-in user who asked for it.',
         items: [
           {
             title: 'User-scoped execution',
@@ -149,9 +149,9 @@ const page = {
           'No. Agents act as the signed-in user and inherit that user’s object, row, and field permissions. There is no privileged AI identity to leak or misuse.',
       },
       {
-        question: 'Are the permission matrix and audit viewer in the open-source ObjectStack?',
+        question: 'What is open source here, and what does ObjectOS add?',
         answer:
-          'Yes. The permission matrix editor and the audit log viewer ship in the open-source ObjectStack console — alongside roles, row rules, field security, sharing, tenant isolation, and the audit log itself, all of which apply equally to MCP tool access.',
+          'Roles and permission sets, row-level rules, field security, sharing, tenant isolation, the audit log, and the permission matrix editor and audit log viewer in the Console are all open-source ObjectStack, Apache-2.0, and apply equally to MCP tool access. ObjectOS adds AI governance for its in-app AI from Business — action audit, guardrails, and permission scoping — and makes approving the AI Builder’s changes its own permission, one you can scope per package in a permission set.',
       },
     ],
   } satisfies MarketingPage;

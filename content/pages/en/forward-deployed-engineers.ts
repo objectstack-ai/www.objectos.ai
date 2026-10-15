@@ -1,21 +1,24 @@
 import type { MarketingPage } from '../../../src/content-pages/types';
+import { positioning } from '../../../src/lib/positioning';
+
+const p = positioning.en;
 
 const page = {
     slug: 'forward-deployed-engineers',
     navLabel: 'For FDEs',
     title: 'Forward-Deployed Engineer Tools: An Ontology-First, Open-Source Stack',
     description:
-      'ObjectStack gives FDEs an open target format and governed runtime for a client-owned open business ontology; ObjectOS is the optional commercial platform for production operations.',
+      `ObjectStack gives FDEs an Apache-2.0 runtime for a client-owned business ontology; ObjectOS is ${p.descriptor}, for clients who want in-app AI, hosted or self-managed delivery, and support.`,
     eyebrow: 'For forward-deployed engineers',
     heroTitle: 'Ship like the best FDE teams. Hand over what they never do: the ontology.',
     lead:
-      'The forward-deployed model won: embed with the client, model their business, deliver working software fast. Its weak point is the handover — the ontology stays locked in a platform the client rents forever. ObjectStack makes the ontology a set of typed, open files in the client’s repo and runs it with governed runtime enforcement. ObjectOS is the optional commercial production platform for clients who want in-app AI, managed or private deployment, and support.',
+      `The forward-deployed model won: embed with the client, model their business, deliver working software fast. Its weak point is the handover — the ontology stays locked in a platform the client rents forever. ObjectStack makes the ontology a set of typed, open files in the client’s repo and runs it with governed runtime enforcement. ObjectOS is ${p.descriptor}: for clients who want the in-app AI Builder and Ask, hosted (Cloud) or self-managed (Business Self-Managed, Enterprise) delivery, and support.`,
     primary: { label: 'Start with ObjectStack', href: 'https://github.com/objectstack-ai/objectstack' },
     secondary: { label: 'Read the FDE article', href: '/en/blog/forward-deployed-engineer-tools/' },
     metrics: [
-      { value: '<150k tokens', label: 'A complete CRM including UI — small enough to review whole' },
-      { value: '<100k tokens', label: 'Client-owned objects, workflows, permissions, and business logic' },
-      { value: '~50k tokens', label: 'UI metadata added to the complete CRM definition' },
+      { value: 'Apache-2.0', label: 'No seat to resell — the client self-hosts the runtime at no license cost' },
+      { value: '1 artifact', label: 'os compile builds one deployable JSON artifact; any ObjectStack runtime serves it' },
+      { value: 'Held whole', label: 'Apps small enough for AI to hold whole — reviewable end to end' },
     ],
     artifact: {
       eyebrow: 'The deliverable',
@@ -72,7 +75,7 @@ const page = {
           },
           {
             title: 'Security review reads the diff',
-            body: 'Permissions and audit are metadata. The client’s security team can review the complete definition — under 150k tokens for a full CRM, with business logic under 100k — instead of trusting a black-box platform boundary.',
+            body: 'Permissions and audit are metadata. The client’s security team can review the complete definition — small enough to hold whole, permissions and audit included — instead of trusting a black-box platform boundary.',
           },
           {
             title: 'Any AI, under governance',
@@ -91,14 +94,14 @@ const page = {
         ['Where the ontology lives', 'Inside the vendor’s platform', 'Typed files in the client’s repo (Apache-2.0)'],
         ['What the client pays for', 'Platform seats, indefinitely', 'ObjectOS production operations — or self-host ObjectStack at no license cost'],
         ['Who maintains it later', 'Vendor-trained specialists', 'Any coding agent plus a human reviewer'],
-        ['AI access', 'Platform-native assistants only', 'Open MCP — Claude, Cursor, local models'],
+        ['AI access', 'Set by the vendor’s roadmap', 'Open MCP, on by default — Claude, Cursor, local models'],
         ['Security review', 'Trust the platform boundary', 'Read the diff — permissions and audit are metadata'],
       ],
     },
     checklistTitle: 'FDE engagement checklist',
     checklist: [
       'Model the client’s nouns and verbs as objects and flows before any UI conversation.',
-      'Keep the whole definition under the 150k-token complete-app budget, so your agent can reason about and refactor it whole.',
+      'Keep the whole definition small enough for your agent to hold whole, so it can reason about and refactor it in one change.',
       'Default permissions conservative; make every authority change explicit in the diff.',
       'Hand over the repo, the compiled artifact, and a review checklist — not a login to your tenant.',
       'Leave MCP enabled so the client’s own AI can operate the app under their permissions.',
@@ -112,7 +115,7 @@ const page = {
       {
         question: 'Do I need ObjectOS to serve clients?',
         answer:
-          'No. ObjectStack is an open-source target format and runtime; its runtime can be self-hosted at no license cost, with Console and governance included. ObjectOS is the commercial production platform for clients who want the browser-based AI Builder, managed cloud or private Enterprise deployment, team operations, and support.',
+          `No. ObjectStack is Apache-2.0 — the protocol, kernel, CLI, production runtime, Console UI, and MCP server — with no feature gate between development and production, so a client can self-host it at no license cost. ObjectOS is ${p.descriptor}: clients buy it for the in-app AI Builder and Ask, AI governance from Business, hosted Cloud or self-managed delivery (Business Self-Managed on a single node; Enterprise for clustering, air-gapped operation, and SCIM), and official support.`,
       },
     ],
   } satisfies MarketingPage;
