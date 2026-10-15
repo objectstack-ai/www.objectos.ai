@@ -1,4 +1,7 @@
-// Quotation marks in CJK prose must point the right way.
+// Quotation marks in prose must point the right way, in every locale.
+//
+// (The file keeps its first name: the step began with zh, ja and ko, and the
+// WeChat export imports `directQuotes` from here.)
 //
 // Astro's default smartypants (remark-smartypants over retext-smartypants)
 // curls an ASCII quote by looking at the characters around it: after a letter
@@ -7,30 +10,37 @@
 // that follows a character comes out closing: 「大多数”给你的业务加上 AI”的说辞」.
 // It also reads the whole document as one string, so a heading or table cell
 // that starts with a quote takes its direction from the last letter of the
-// block before it; that is the Korean case, where words are spaced
-// («”다른 AI에게 검토를 맡기면 되지”가 …» as an h2). An audit of the built site
-// found 299 such pairs in 16 zh-Hans posts, the same in their zh-Hant copies,
-// and 13 headings and table cells in six ko posts.
+// block before it. That is the Korean case, where words are spaced
+// («”다른 AI에게 검토를 맡기면 되지”가 …» as an h2), and the case in every Latin
+// locale too: an English table of questions printed each one as
+// ”What exists in our business?”. An apostrophe that elides a century came out
+// as an opening mark (Next ‘26). German types „Wort" and smartypants curls the
+// ASCII closer as English ”, which German never prints after „: „Wort”.
+// Audits of the built site found 299 pairs in 16 zh-Hans posts, the same in
+// their zh-Hant copies, 13 headings and table cells in six ko posts, and, once
+// the rule ran on every locale, 344 marks on 17 de pages and 22 on 12
+// en/es/fr pages.
 //
 // The rule here does not guess from neighbours. Within one block of prose (a
 // paragraph, a heading, a table cell) double quotation marks come in pairs, so
 // a mark's direction is its position in the pair: the first opens, the next
 // closes. A mark the author already typed curly counts the same way, so a
 // source that mixes `"` and `“ ”` still pairs. Single marks pair the same way,
-// except an apostrophe, which is not part of a pair (see `isApostrophe`).
+// except an apostrophe, which is not part of a pair (see `isApostrophe`). A
+// low mark, „ or ‚, only ever opens, and its pair closes with “ or ‘, the
+// German pairs (de is the one locale here that types them; see `LOW_OPENERS`).
 //
 // Two consumers share these definitions, so they cannot disagree:
 //
-//   * `remarkCjkQuotes`, the build-time fix, wired into
-//     `markdown.remarkPlugins` in astro.config.mjs (MDX inherits it). It runs
-//     after smartypants and only on zh-Hans, zh-Hant, ja and ko files, chosen
-//     by file name, so an English, German, Spanish or French page is not
-//     touched at all. Every future post in those locales is covered, however
-//     its quotes were typed.
+//   * `remarkQuotes`, the build-time fix, wired into `markdown.remarkPlugins`
+//     in astro.config.mjs (MDX inherits it). It runs after smartypants on
+//     every Markdown and MDX file, whatever its locale, so every future post is
+//     covered, however its quotes were typed. The rule has no per-locale
+//     branch: the German pairs follow from the marks the source typed.
 //   * `pnpm content:lint --dist`, the guard, which reads the BUILT HTML of
-//     every zh, ja and ko page with its own scanner and fails on a mark whose
-//     direction disagrees with its position, or a pair left open. It catches
-//     the step not running, and CJK prose reaching a page by another road.
+//     every page with its own scanner and fails on a mark whose direction
+//     disagrees with its position, or a pair left open. It catches the step
+//     not running, and prose reaching a page by another road.
 //
 // The WeChat export (scripts/lib/wechat-html.mjs) renders with marked, which
 // does not curl quotes at all, and uses `directQuotes` on its own tokens.
@@ -39,28 +49,28 @@
 // opaque. They sit in the sentence (a quote can wrap inline code), but their
 // text is neither edited nor read.
 //
-// The marks stay “ ” and ‘ ’. AGENTS.md records no zh quotation style, and the
-// sources already type “ ” (354 pairs in zh-Hans) far more than 「」 (23), so
-// the author's choice of mark is kept and only the direction is corrected;
-// a source that types 「」 is left exactly as written.
+// Only the direction is corrected; the author's choice of mark is kept.
+// AGENTS.md records no quotation style for any locale. The zh sources type “ ”
+// (354 pairs in zh-Hans) far more than 「」 (23), so the marks there stay “ ”
+// and ‘ ’; a source that types 「」, « » or „ “ keeps it, and an ASCII pair
+// becomes “ ” in every locale, as smartypants prints it.
 
 import { OPAQUE_ELEMENTS } from './cjk-segment-break.mjs';
 
-/** Locales whose prose puts no space before a quotation, or whose files this step owns. */
-export const CJK_QUOTE_LOCALES = new Set(['zh-Hans', 'zh-Hant', 'ja', 'ko']);
+export const DOUBLE_QUOTES = new Set(['"', '“', '”', '„']);
+export const SINGLE_QUOTES = new Set(["'", '‘', '’', '‚']);
 
 /**
- * The CJK locale of a content file from its name, or null. A translation is
- * `index.<locale>.mdx` (or flat `<slug>.<locale>.mdx`); the English original
- * carries no locale and is never matched.
+ * A low mark and the mark that closes its pair. „ and ‚ never close a pair,
+ * and never stand for an apostrophe: they open, and the pair they open closes
+ * with “ or ‘ (German „Wort“, ‚Wort‘), whatever the source typed for the
+ * closer. A pair opened any other way closes with ” or ’. Smartypants turns
+ * the ASCII closer of `„Wort"` into ”, a closing mark German never prints.
  */
-export function cjkLocaleOfPath(file) {
-  const m = /\.([A-Za-z]{2,3}(?:-[A-Za-z]{2,4})?)\.mdx?$/.exec(String(file ?? ''));
-  return m && CJK_QUOTE_LOCALES.has(m[1]) ? m[1] : null;
-}
-
-export const DOUBLE_QUOTES = new Set(['"', '“', '”']);
-export const SINGLE_QUOTES = new Set(["'", '‘', '’']);
+export const LOW_OPENERS = new Map([
+  ['„', '“'],
+  ['‚', '‘'],
+]);
 
 /**
  * Stands for an opaque inline (inline code, an image) in a block's text. It
@@ -97,12 +107,15 @@ function lastCharOf(text) {
  * Directs every quotation mark in one block of prose. `segments` is the
  * block's text in document order: a string is prose, `null` an opaque inline.
  * Returns the segments with each double and single mark set by its position
- * in its pair; nothing else changes, and `null` stays `null`.
+ * in its pair; nothing else changes, and `null` stays `null`. A low mark keeps
+ * its shape and sets the closer of its pair (`LOW_OPENERS`).
  */
 export function directQuotes(segments) {
   const full = segments.map((s) => (s === null ? OPAQUE_INLINE : s)).join('');
   let doubleOpen = false;
+  let doubleCloser = '”';
   let singleOpen = false;
+  let singleCloser = '’';
   let at = 0;
   return segments.map((segment) => {
     if (segment === null) {
@@ -112,15 +125,29 @@ export function directQuotes(segments) {
     let out = '';
     for (const ch of segment) {
       if (DOUBLE_QUOTES.has(ch)) {
-        out += doubleOpen ? '”' : '“';
-        doubleOpen = !doubleOpen;
+        if (doubleOpen && !LOW_OPENERS.has(ch)) {
+          out += doubleCloser;
+          doubleOpen = false;
+        } else {
+          out += LOW_OPENERS.has(ch) ? ch : '“';
+          doubleCloser = LOW_OPENERS.get(ch) ?? '”';
+          doubleOpen = true;
+        }
+      } else if (LOW_OPENERS.has(ch)) {
+        out += ch;
+        singleCloser = LOW_OPENERS.get(ch);
+        singleOpen = true;
       } else if (SINGLE_QUOTES.has(ch)) {
         const before = lastCharOf(full.slice(Math.max(0, at - 2), at));
         if (isApostrophe(before, full.slice(at + 1, at + 6), singleOpen)) {
           out += '’';
+        } else if (singleOpen) {
+          out += singleCloser;
+          singleOpen = false;
         } else {
-          out += singleOpen ? '’' : '‘';
-          singleOpen = !singleOpen;
+          out += '‘';
+          singleCloser = '’';
+          singleOpen = true;
         }
       } else {
         out += ch;
@@ -186,12 +213,11 @@ function directBlocks(node) {
 }
 
 /**
- * Remark plugin: set every quotation mark in a zh-Hans, zh-Hant, ja or ko
- * file by its position in its pair. Any other file is returned untouched.
+ * Remark plugin: set every quotation mark in a Markdown or MDX file by its
+ * position in its pair, whatever the file's locale.
  */
-export function remarkCjkQuotes() {
-  return (tree, file) => {
-    if (!cjkLocaleOfPath(file?.path ?? file?.history?.[0])) return;
+export function remarkQuotes() {
+  return (tree) => {
     directBlocks(tree);
   };
 }

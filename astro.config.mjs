@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'astro/config';
 import mdx from '@astrojs/mdx';
 import { rehypeCjkSegmentBreaks } from './scripts/lib/cjk-segment-break.mjs';
-import { remarkCjkQuotes } from './scripts/lib/cjk-quotes.mjs';
+import { remarkQuotes } from './scripts/lib/cjk-quotes.mjs';
 import sitemap from '@astrojs/sitemap';
 import { readPostLastmods } from './scripts/lib/post-dates.mjs';
 
@@ -100,11 +100,12 @@ export default defineConfig({
   // Chromium and Safari; this removes it from the rendered prose (code
   // excluded). MDX inherits `markdown` config. See scripts/lib/cjk-segment-break.mjs,
   // and `pnpm content:lint --dist`, which fails the build on any that remain.
-  // Smartypants curls quotes by their neighbours, which points the opening mark
-  // of a zh or ja pair the wrong way; `remarkCjkQuotes` runs after it and sets
-  // each mark by its position in its pair, in zh-Hans, zh-Hant, ja and ko files
-  // only. See scripts/lib/cjk-quotes.mjs; `content:lint --dist` guards it too.
-  markdown: { shikiConfig: { theme: 'github-dark-default' }, remarkPlugins: [remarkCjkQuotes], rehypePlugins: [rehypeCjkSegmentBreaks] },
+  // Smartypants curls quotes by their neighbours, and across block boundaries,
+  // which points marks the wrong way (a zh or ja pair, a heading or table cell
+  // that opens on a quote, Next ‘26, German „Wort”); `remarkQuotes` runs after it
+  // and sets each mark by its position in its pair, in every locale. See
+  // scripts/lib/cjk-quotes.mjs; `content:lint --dist` guards it too.
+  markdown: { shikiConfig: { theme: 'github-dark-default' }, remarkPlugins: [remarkQuotes], rehypePlugins: [rehypeCjkSegmentBreaks] },
   integrations: [
     mdx(),
     sitemap({
