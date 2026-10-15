@@ -1,4 +1,6 @@
 ---
+import { Image } from 'astro:assets';
+import heroImage from '../assets/objectos-home-hero.png';
 import { getMarketingPages, marketingPagePath } from '../content-pages/registry';
 import type { MarketingPage } from '../content-pages/types';
 import { marketingPageUi } from '../content-pages/ui';
@@ -23,6 +25,14 @@ const localizeHref = (href: string): string => {
   if (slug === 'pricing') return pricingPath(locale);
   return href;
 };
+// The hero is served as WebP at the width its box needs instead of the 1.7 MB
+// PNG. The box crops the 1.6:1 image with object-fit: cover, so the image is
+// drawn wider than the box: 415x340 on a desktop needs 545px of image, a
+// phone's 4:3 box about 1.2x its own width. It is in the first screen at
+// every viewport (top at 172px on a desktop, the LCP element there; at
+// 713-781px of an 800-844px phone), so it stays eager.
+const HERO_WIDTHS = [400, 560, 840, 1200, 1586];
+const HERO_SIZES = '(max-width: 640px) calc(120vw - 4.5rem), (max-width: 860px) calc(100vw - 5rem), 545px';
 ---
 
 <article class="evidence-page">
@@ -37,14 +47,16 @@ const localizeHref = (href: string): string => {
       </div>
     </div>
     <div class="hero-panel" aria-label={ui.loopLabel}>
-      <img
+      <Image
         class="hero-snapshot"
-        src="/images/objectos-home-hero.png"
+        src={heroImage}
         alt="ObjectOS product surface connecting business data, applications, and AI agents"
-        width="1586"
-        height="992"
+        widths={HERO_WIDTHS}
+        sizes={HERO_SIZES}
+        format="webp"
         loading="eager"
         decoding="async"
+        fetchpriority="high"
       />
       <div class="loop-step write">
         <span>{ui.loop.writer.eyebrow}</span>
@@ -309,6 +321,13 @@ const localizeHref = (href: string): string => {
     border: 1px solid var(--line);
     border-radius: 7px;
     background: var(--surface-sunk);
+  }
+  /* Dark theme: the hero is a white product render, which stayed a glaring
+     white block on the dark page. The image itself is dimmed (no dark variant
+     of the render exists); the hues and the depth survive, the white does
+     not dominate the panel. */
+  :global(:root[data-theme='dark']) .hero-snapshot {
+    filter: brightness(0.6) contrast(1.12);
   }
   .loop-step {
     min-height: 124px;

@@ -1,4 +1,5 @@
 ---
+import { Image } from 'astro:assets';
 import type { Locale } from '../lib/i18n';
 import { formatDate, postPath, STATUS_COLOR, ui } from '../lib/i18n';
 import type { LocalePost } from '../lib/posts';
@@ -13,24 +14,50 @@ interface Props {
 const { post, locale, variant = 'standard' } = Astro.props;
 const d = post.entry.data;
 const t = ui[locale];
-const coverSrc = (cover: unknown): string =>
-  typeof cover === 'string'
-    ? cover
-    : (cover as { src?: string })?.src ?? '';
+// A raster cover is served as WebP at the thumbnail's width, not as the
+// 1.5-1.9 MB original: a standard card is one of three columns (about 343px)
+// on a desktop, one of two at 641-900px and the full column on a phone; the
+// feature card's cover column is about 585px at 1024px and up, and the full
+// column below. `sizes` is the width the image is drawn at, not the card's:
+// the 16:10 thumb crops a 16:9 cover with object-fit: cover, which draws it
+// 1.11x the card's width (a 343px card needs 381px of image; the phone's 2:1
+// thumb needs none). The widest candidates cover the phone column at 3x and
+// the feature at 2x. An SVG cover is a few KB and scales itself, so it is
+// served as is. The feature card opens the blog index above the fold, so its
+// cover is not lazy.
+const THUMB_WIDTHS = [400, 540, 720, 1080, 1280];
+const thumbSizes =
+  variant === 'feature'
+    ? '(min-width: 1024px) 640px, calc(100vw - 2rem)'
+    : '(max-width: 640px) calc(100vw - 2rem), (max-width: 900px) calc(55vw - 2rem), 400px';
+const thumbLoading = variant === 'feature' ? 'eager' : 'lazy';
 ---
 
 <li class:list={['article-item', variant]}>
   <a class="card" href={postPath(locale, post.slug)}>
     <div class="thumb">
       {d.cover ? (
-        <img
-          src={coverSrc(d.cover)}
-          alt={d.title}
-          width="800"
-          height="500"
-          loading="lazy"
-          decoding="async"
-        />
+        d.cover.format === 'svg' ? (
+          <img
+            src={d.cover.src}
+            alt={d.title}
+            width={d.cover.width}
+            height={d.cover.height}
+            loading={thumbLoading}
+            decoding="async"
+          />
+        ) : (
+          <Image
+            src={d.cover}
+            alt={d.title}
+            width={Math.min(THUMB_WIDTHS.at(-1)!, d.cover.width)}
+            widths={THUMB_WIDTHS}
+            sizes={thumbSizes}
+            format="webp"
+            loading={thumbLoading}
+            decoding="async"
+          />
+        )
       ) : (
         <div class="thumb-fallback">
           <span class="fmark">◆</span>
