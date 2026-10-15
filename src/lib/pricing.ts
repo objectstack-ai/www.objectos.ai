@@ -184,7 +184,7 @@ const pricingZhHans: PricingCopy = {
       tagline: '面向有定制安全与合同需求的大型组织。',
       features: [
         '自管部署在你自己的基础设施上，含离线隔离（air-gap）',
-        '单节点入门选项：商业版自管（Business Self-Managed），10–25 个 AI 席位、每 AI 席每年 $540、自带模型',
+        '单节点入门选项：商业版自管，10–25 个 AI 席位、每 AI 席每年 $540、自带模型',
         'AI 席位批量定价',
         'SCIM、合规鉴证',
         '集群 / HA / 多节点',
