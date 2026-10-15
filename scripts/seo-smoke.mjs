@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readdir, readFile } from 'node:fs/promises';
+import { access, readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { cwd, exit } from 'node:process';
 
@@ -153,6 +153,40 @@ for (const clusterPath of CLUSTER_PATHS) {
   requireContains('llms.txt', llms, `${SITE}${clusterPath}`, `missing cluster page ${clusterPath}`);
   requireContains('sitemap-0.xml', sitemap, `${SITE}${clusterPath}`, `missing cluster page ${clusterPath}`);
 }
+
+// The 404 surface. Cloudflare Pages treats a deployment with no top-level
+// `404.html` as a single-page app: every missing URL answers 200 with the root
+// language-redirect page, which is a soft 404 to crawlers and a silent landing
+// on a home page for readers. With one, Pages serves the NEAREST `404.html` to
+// the missing URL with status 404, so each locale carries its own at
+// `<locale>/404.html` (renamed there by the `locale-404` integration in
+// astro.config.mjs). A 404 page answers for every missing URL, so it names no
+// canonical, is noindexed, stays out of the sitemap, and links the three
+// pages a lost reader most likely wants.
+const NOT_FOUND_PAGES = [
+  { file: '404.html', locale: 'en' },
+  ...LOCALES.map((locale) => ({ file: `${locale}/404.html`, locale })),
+];
+for (const { file, locale } of NOT_FOUND_PAGES) {
+  const html = await readDist(file);
+  if (!html) continue;
+  requireContains(file, html, `<html lang="${locale}">`, 'missing matching html lang');
+  requireContains(file, html, '<meta name="robots" content="noindex, nofollow">', '404 page must be noindexed');
+  requireExcludes(file, html, 'rel="canonical"', '404 page must not name a canonical URL');
+  requireExcludes(file, html, 'property="og:url"', '404 page must not name an Open Graph URL');
+  // Inside <main>: the header already links all three on every page, so a
+  // whole-document match would pass with the 404 body missing.
+  const main = html.match(/<main\b[^>]*>([\s\S]*?)<\/main>/)?.[1] ?? '';
+  for (const href of [`/${locale}/`, `/${locale}/blog/`, `/${locale}/pricing/`]) {
+    requireContains(file, main, `href="${href}"`, `404 page body must link ${href}`);
+  }
+}
+for (const locale of LOCALES) {
+  const leftover = `${locale}/404/index.html`;
+  const exists = await access(path.join(DIST, leftover)).then(() => true, () => false);
+  if (exists) issues.push(`${leftover}: the per-locale 404 was not moved to ${locale}/404.html — it is a 200-status page`);
+}
+requireExcludes('sitemap-0.xml', sitemap, /\/404(\.html|\/)?<\/loc>/, 'lists a 404 page');
 
 const rootRss = await readDist('rss.xml');
 requireContains('rss.xml', rootRss, '<rss version="2.0"', 'is not an RSS feed');
@@ -427,7 +461,9 @@ if (postEntriesChecked === 0) {
 const htmlFiles = (await walk(DIST))
   .filter((file) => file.endsWith('.html'))
   .map((file) => path.relative(DIST, file).split(path.sep).join('/'))
-  .filter((file) => file !== 'index.html');
+  .filter((file) => file !== 'index.html')
+  // Checked above: a 404 page has no canonical URL and no hreflang set.
+  .filter((file) => !/(^|\/)404\.html$/.test(file));
 
 for (const file of htmlFiles) {
   const html = await readDist(file);

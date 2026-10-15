@@ -3,6 +3,7 @@ import type { CollectionEntry } from 'astro:content';
 import type { Cluster } from '../lib/clusters';
 import { clusterCopy, clusterLabels } from '../lib/cluster-i18n';
 import { blogPath, formatDate, postPath, type Locale } from '../lib/i18n';
+import { builtHubLocale } from '../lib/posts';
 import { termBySlug, termHref, termLabel } from '../lib/terms';
 
 interface Props {
@@ -14,6 +15,24 @@ interface Props {
 const { cluster, locale, posts } = Astro.props;
 const copy = clusterCopy(cluster, locale);
 const labels = clusterLabels(locale);
+// `relatedTerms` is hand-curated, so a term may have no hub in this locale:
+// link the hub that is really built (this locale's, else English's) and drop
+// the term when neither exists. `hreflang` marks the English fallback.
+const termLinks = (
+  await Promise.all(
+    cluster.relatedTerms.map(async (slug) => {
+      const term = termBySlug(slug);
+      const hubLocale = term && (await builtHubLocale(term, locale));
+      return term && hubLocale
+        ? {
+            href: termHref(hubLocale, term),
+            label: termLabel(slug, locale),
+            hreflang: hubLocale === locale ? undefined : hubLocale,
+          }
+        : undefined;
+    })
+  )
+).filter((link) => link !== undefined);
 const coverSrc = (cover: unknown): string =>
   typeof cover === 'string'
     ? cover
@@ -99,14 +118,11 @@ const coverSrc = (cover: unknown): string =>
   <section class="terms">
     <p class="section-kicker">{labels.explore}</p>
     <div class="term-row">
-      {cluster.relatedTerms.map((slug) => {
-        const term = termBySlug(slug);
-        return term && (
-          <a href={termHref(locale, term)}>
-            {termLabel(slug, locale)}
-          </a>
-        );
-      })}
+      {termLinks.map((link) => (
+        <a href={link.href} hreflang={link.hreflang}>
+          {link.label}
+        </a>
+      ))}
     </div>
   </section>
 

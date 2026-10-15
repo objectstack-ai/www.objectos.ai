@@ -227,8 +227,206 @@ async function checkBuiltProse() {
   return 1;
 }
 
+// ─── Built HTML: no internal link to a page the build does not produce ─────
+//
+// A link is only as good as the page at the other end, and nothing upstream
+// can see the other end: `astro build` happily emits `href="/de/blog/topics/x/"`
+// whether or not the topics route produced a German `x` hub, and the MDX pass
+// below checks only links authors write in post bodies. Components render
+// links too — a cluster page's hand-curated `relatedTerms`, a footer, a nav —
+// and an audit at 53764e0 found five such links on the de/es/fr/ja/ko cluster
+// pages, each to a hub built only in en/zh-Hans/zh-Hant. On Cloudflare Pages a
+// missing page is not an error a reader sees in the build; it is the 404 page,
+// or (with no top-level 404.html) the language-redirect home answering 200.
+//
+// So this reads every `<a href>` and every `<link rel="canonical|alternate">`
+// in every built HTML file and resolves it the way Pages does: `/x/` is
+// `x/index.html`, `/x` is the file `x`, `x.html` or `x/index.html`, and a
+// source pattern in `dist/_redirects` counts as served. Only same-origin
+// targets are checked; external sites are not this build's to answer for.
+// Relative links on a `404.html` page are errors in themselves: that page
+// answers for every missing URL, so a relative link resolves against whatever
+// address the reader mistyped.
+
+const SITE_ORIGIN = 'https://www.objectos.ai';
+
+/** Files under `dir`, as `/`-separated paths relative to it. */
+async function distFiles(dir, prefix = '') {
+  const files = [];
+  let entries;
+  try {
+    entries = await readdir(dir, { withFileTypes: true });
+  } catch {
+    return files;
+  }
+  for (const entry of entries) {
+    const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) files.push(...(await distFiles(path.join(dir, entry.name), rel)));
+    else if (entry.isFile()) files.push(rel);
+  }
+  return files;
+}
+
+/** Start tags of a document with their attributes, outside comments and raw-text bodies. */
+function* startTags(html) {
+  let i = 0;
+  while (i < html.length) {
+    const lt = html.indexOf('<', i);
+    if (lt === -1) return;
+    if (html.startsWith('<!--', lt)) {
+      const end = html.indexOf('-->', lt + 4);
+      i = end === -1 ? html.length : end + 3;
+      continue;
+    }
+    const tag = /^<([a-zA-Z][a-zA-Z0-9-]*)/.exec(html.slice(lt, lt + 64));
+    if (!tag) {
+      i = lt + 1;
+      continue;
+    }
+    const end = tagEnd(html, lt + tag[0].length);
+    if (end === -1) return;
+    const name = tag[1].toLowerCase();
+    const attrs = new Map();
+    const source = html.slice(lt + tag[0].length, end);
+    for (const m of source.matchAll(/([^\s"'=<>/]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g)) {
+      attrs.set(m[1].toLowerCase(), decodeEntities(m[2] ?? m[3] ?? m[4] ?? ''));
+    }
+    yield { name, attrs };
+    i = end + 1;
+    if (RAW_TEXT_ELEMENTS.has(name) && name !== 'title') {
+      const close = html.toLowerCase().indexOf(`</${name}`, i);
+      i = close === -1 ? html.length : close;
+    }
+  }
+}
+
+function decodeEntities(value) {
+  return value
+    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
+    .replace(/&#[xX]([0-9a-fA-F]+);/g, (_, n) => String.fromCodePoint(parseInt(n, 16)))
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
+}
+
+/** `dist/_redirects` source patterns as matchers (`*` splat, `:name` placeholder). */
+async function redirectSources() {
+  let text = '';
+  try {
+    text = await readFile(path.join(DIST, '_redirects'), 'utf8');
+  } catch {
+    return [];
+  }
+  return text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('#'))
+    .map((line) => line.split(/\s+/)[0])
+    .map((source) => {
+      const pattern = source
+        .split('*')
+        .map((part) => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/:[A-Za-z]\w*/g, '[^/]+'))
+        .join('.*');
+      return new RegExp(`^${pattern}$`);
+    });
+}
+
+/** The page URL a built HTML file is served at. */
+function servedUrl(file) {
+  return `${SITE_ORIGIN}/${file.replace(/(^|\/)index\.html$/, '$1')}`;
+}
+
+async function checkBuiltLinks() {
+  const files = await distFiles(DIST);
+  const built = new Set(files);
+  const pages = files.filter((file) => file.endsWith('.html')).sort();
+  if (pages.length === 0) {
+    console.error(
+      `✗ content lint --dist found no built HTML under ${path.relative(ROOT, DIST)}/ — ` +
+        `the link check measured nothing, which is not the same as nothing being broken.`
+    );
+    return 1;
+  }
+  const redirects = await redirectSources();
+  const resolves = (pathname) => {
+    if (redirects.some((re) => re.test(pathname))) return true;
+    let rel;
+    try {
+      rel = decodeURIComponent(pathname).replace(/^\//, '');
+    } catch {
+      return false;
+    }
+    if (rel === '' || rel.endsWith('/')) return built.has(`${rel}index.html`);
+    return built.has(rel) || built.has(`${rel}.html`) || built.has(`${rel}/index.html`);
+  };
+
+  const broken = new Map(); // target -> pages linking it
+  const relativeOn404 = [];
+  let checked = 0;
+  for (const file of pages) {
+    const html = await readFile(path.join(DIST, file), 'utf8');
+    const base = servedUrl(file);
+    const is404 = /(^|\/)404\.html$/.test(file);
+    for (const { name, attrs } of startTags(html)) {
+      const rel = (attrs.get('rel') ?? '').toLowerCase().split(/\s+/);
+      const isLink = name === 'a' || (name === 'link' && (rel.includes('canonical') || rel.includes('alternate')));
+      if (!isLink || !attrs.has('href')) continue;
+      const href = attrs.get('href').trim();
+      if (href.startsWith('#')) continue;
+      let url;
+      try {
+        url = new URL(href, base);
+      } catch {
+        broken.set(href, [...(broken.get(href) ?? []), file]);
+        continue;
+      }
+      if (url.origin !== SITE_ORIGIN) continue;
+      checked++;
+      if (is404 && !/^(\/|[a-zA-Z][a-zA-Z0-9+.-]*:)/.test(href)) relativeOn404.push({ file, href });
+      if (!resolves(url.pathname)) {
+        const key = url.pathname;
+        broken.set(key, [...(broken.get(key) ?? []), file]);
+      }
+    }
+  }
+  if (checked === 0) {
+    console.error(
+      `✗ content lint --dist found no internal links in ${pages.length} built pages — ` +
+        `an empty match is a failure, not a pass.`
+    );
+    return 1;
+  }
+  if (broken.size === 0 && relativeOn404.length === 0) {
+    console.log(
+      `✓ content lint --dist links passed (${checked} internal links in ${pages.length} built pages resolve to built files)`
+    );
+    return 0;
+  }
+  for (const [target, from] of [...broken].sort(([a], [b]) => a.localeCompare(b))) {
+    const sources = [...new Set(from)];
+    console.log(`✗ ${target} is not built — linked from ${sources.length} page${sources.length === 1 ? '' : 's'}:`);
+    for (const source of sources.slice(0, 8)) console.log(`    ${source}`);
+    if (sources.length > 8) console.log(`    … and ${sources.length - 8} more`);
+  }
+  for (const { file, href } of relativeOn404) {
+    console.log(`✗ ${file}: relative link "${href}" — a 404 page is served at every missing URL, so link root-relative`);
+  }
+  console.error(
+    `\n✗ content lint --dist failed (${broken.size} internal link target${broken.size === 1 ? '' : 's'} not built` +
+      `${relativeOn404.length ? `, ${relativeOn404.length} relative link${relativeOn404.length === 1 ? '' : 's'} on a 404 page` : ''})\n` +
+      `  Each target above is a URL this build does not produce, so on Cloudflare Pages the reader gets the 404 page.\n` +
+      `  Fix the producer, not this check: link only pages that are built for that locale (a topic hub exists\n` +
+      `  only where a published post carries the term — \`builtHubLocale\` in src/lib/posts.ts answers which one).`
+  );
+  return 1;
+}
+
 if (args.has('--dist')) {
-  exit(await checkBuiltProse());
+  const prose = await checkBuiltProse();
+  const links = await checkBuiltLinks();
+  exit(prose || links);
 }
 
 // The frontmatter taxonomy, derived from the module that declares it instead of

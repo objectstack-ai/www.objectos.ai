@@ -102,10 +102,17 @@ const localizeHref = (href: string): string => {
       <div class="item-grid">
         {section.items.map((item) => (
           <div class="item">
-            {item.meta && <span>{item.meta}</span>}
+            {/* An item without a meta label still takes the meta row when a
+                sibling has one, so every title in the grid starts at the same
+                height. */}
+            {item.meta ? (
+              <span>{item.meta}</span>
+            ) : (
+              section.items.some((other) => other.meta) && <span aria-hidden="true">&nbsp;</span>
+            )}
             <h3>
               {item.href ? (
-                <a href={localizeHref(item.href)}>{item.title} <span class="item-arrow" aria-hidden="true">→</span></a>
+                <a href={localizeHref(item.href)}>{item.title}&nbsp;<span class="item-arrow" aria-hidden="true">→</span></a>
               ) : (
                 item.title
               )}
@@ -447,7 +454,9 @@ const localizeHref = (href: string): string => {
     border-radius: 8px;
     background: var(--surface);
   }
-  .item span {
+  /* Child combinator: a descendant selector also caught the arrow inside a
+     linked title, making those titles 38px tall against 22px for plain ones. */
+  .item > span {
     display: inline-flex;
     margin-bottom: 1.2rem;
     color: var(--proof-blue);
@@ -608,6 +617,7 @@ const localizeHref = (href: string): string => {
   }
   .next-links a {
     display: grid;
+    align-content: start;
     gap: 0.35rem;
     min-height: 132px;
     padding: 1rem;
