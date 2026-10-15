@@ -28,6 +28,22 @@ interface HomeCopy {
   videoCaption: string;
   videoPlayLabel: string;
   videoMoreLink: string;
+  /**
+   * The words drawn on the video poster besides the title (see
+   * `VideoEmbed.astro`): an eyebrow and a sub-line. Both quote the objectstack
+   * README rather than the canonical lines in `./positioning`: the eyebrow is
+   * its licence sentence ("the open stack — protocol … and the production
+   * runtime, Apache-2.0"), the sub-line's tail is its size line ("Apps small
+   * enough for AI to hold whole."), in the wording each locale's `aiCopy`
+   * already gives that line. The sub-line used to end "one context window":
+   * that was the title of the proof chip that carried the 150k-token figure,
+   * both retired by ruling Q5 on #209, and the README no longer says it; so
+   * no token figure and no context-window framing here. The eyebrow's parts
+   * are separated by " · ", which is where `VideoEmbed` lets it wrap. The
+   * nouns use each locale's vocabulary from `aiCopy` and `./positioning`.
+   */
+  videoPosterEyebrow: string;
+  videoPosterNote: string;
   proof: [string, string][];
   imageAlt: string;
   imageNoteTitle: string;
@@ -87,6 +103,8 @@ const zhHans: HomeCopy = {
   videoCaption: 'ObjectStack 90 秒总览',
   videoPlayLabel: '播放视频：ObjectStack 90 秒总览',
   videoMoreLink: '在 YouTube 上观看更多视频',
+  videoPosterEyebrow: '开放协议与运行时 · APACHE-2.0',
+  videoPosterNote: '数据模型 · 界面 · 流程 · 权限——小到 AI 能一次读全。',
   proof: [
     [positioning['zh-Hans'].t3[0], '运行时运行它'],
     [positioning['zh-Hans'].t3[1], 'AI 编写它'],
@@ -173,6 +191,8 @@ const en: HomeCopy = {
   videoCaption: 'ObjectStack in 90 Seconds',
   videoPlayLabel: 'Play the video: ObjectStack in 90 Seconds',
   videoMoreLink: 'More videos on YouTube',
+  videoPosterEyebrow: 'OPEN PROTOCOL & RUNTIME · APACHE-2.0',
+  videoPosterNote: 'Data model · UI · workflows · permissions — small enough for AI to hold whole.',
   proof: [
     [positioning.en.t3[0], 'The runtime runs it'],
     [positioning.en.t3[1], 'AI writes it'],
@@ -260,6 +280,8 @@ const ja: HomeCopy = {
   videoCaption: 'ObjectStack を 90 秒で',
   videoPlayLabel: '動画を再生：ObjectStack を 90 秒で',
   videoMoreLink: 'YouTube でほかの動画を見る',
+  videoPosterEyebrow: 'オープンプロトコル & ランタイム · APACHE-2.0',
+  videoPosterNote: 'データモデル · UI · ワークフロー · 権限 — AI が一度に把握できる小ささに収まる。',
   proof: [
     [positioning.ja.t3[0], 'ランタイムが動かす'],
     [positioning.ja.t3[1], 'AI が書く'],
@@ -347,6 +369,8 @@ const de: HomeCopy = {
   videoCaption: 'ObjectStack in 90 Sekunden',
   videoPlayLabel: 'Video abspielen: ObjectStack in 90 Sekunden',
   videoMoreLink: 'Mehr Videos auf YouTube',
+  videoPosterEyebrow: 'OFFENES PROTOKOLL & RUNTIME · APACHE-2.0',
+  videoPosterNote: 'Datenmodell · UI · Workflows · Berechtigungen — klein genug, dass AI das Ganze erfasst.',
   proof: [
     [positioning.de.t3[0], 'Die Runtime führt sie aus'],
     [positioning.de.t3[1], 'AI schreibt sie'],
@@ -434,6 +458,8 @@ const es: HomeCopy = {
   videoCaption: 'ObjectStack en 90 segundos',
   videoPlayLabel: 'Reproducir el vídeo: ObjectStack en 90 segundos',
   videoMoreLink: 'Más vídeos en YouTube',
+  videoPosterEyebrow: 'PROTOCOLO Y RUNTIME ABIERTOS · APACHE-2.0',
+  videoPosterNote: 'Modelo de datos · UI · workflows · permisos — tan pequeño que la AI lo abarca entero.',
   proof: [
     [positioning.es.t3[0], 'El runtime la ejecuta'],
     [positioning.es.t3[1], 'La AI la escribe'],
@@ -521,6 +547,8 @@ const fr: HomeCopy = {
   videoCaption: 'ObjectStack en 90 secondes',
   videoPlayLabel: 'Lire la vidéo : ObjectStack en 90 secondes',
   videoMoreLink: 'Plus de vidéos sur YouTube',
+  videoPosterEyebrow: 'PROTOCOLE ET RUNTIME OUVERTS · APACHE-2.0',
+  videoPosterNote: 'Modèle de données · UI · workflows · permissions — si petit que l’AI le tient entier.',
   proof: [
     [positioning.fr.t3[0], 'Le runtime l’exécute'],
     [positioning.fr.t3[1], 'L’AI l’écrit'],
@@ -608,6 +636,8 @@ const ko: HomeCopy = {
   videoCaption: 'ObjectStack 90초 살펴보기',
   videoPlayLabel: '동영상 재생: ObjectStack 90초 살펴보기',
   videoMoreLink: 'YouTube에서 더 많은 영상 보기',
+  videoPosterEyebrow: '오픈 프로토콜 & 런타임 · APACHE-2.0',
+  videoPosterNote: '데이터 모델 · UI · 워크플로 · 권한 — AI가 한 번에 담을 만큼 작습니다.',
   proof: [
     [positioning.ko.t3[0], '런타임이 실행합니다'],
     [positioning.ko.t3[1], 'AI가 작성합니다'],
