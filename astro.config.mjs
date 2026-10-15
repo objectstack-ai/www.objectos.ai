@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { readdir, rename, rmdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'astro/config';
@@ -15,6 +16,43 @@ const POST_LASTMOD = readPostLastmods(fileURLToPath(new URL('.', import.meta.url
 
 // `/<locale>/404/`, the per-locale 404 route before `locale404` renames it.
 const LOCALE_404 = /^\/[^/]+\/404\/$/;
+
+// Where `astro build` writes pages: the default `outDir`, which this config
+// does not override. The sitemap filter below reads the built pages from here.
+const OUT_DIR = new URL('./dist/', import.meta.url);
+
+/**
+ * Whether a built page may be listed in the sitemap: it must be indexable and
+ * its own canonical. A sitemap entry tells a crawler "index this URL"; listing
+ * a `noindex` page is the "Submitted URL marked noindex" error, and listing a
+ * page that canonicalizes elsewhere submits a duplicate.
+ *
+ * The answer is read from the built page itself rather than re-derived here
+ * from the registries, because the fallback rule has many producers — the
+ * marketing and glossary registries, pricing/legal/security
+ * (src/lib/fallback.ts), the templated cluster pages, thin topic hubs and
+ * archived posts — and a second copy of each would drift from the page that
+ * actually ships. The integration calls `filter` from its `astro:build:done`
+ * hook, after every page is written. `pnpm seo:smoke` asserts the result: no
+ * sitemap URL is noindexed or canonicalizes elsewhere.
+ */
+function isSelfCanonicalAndIndexable(pageUrl) {
+  const { pathname } = new URL(pageUrl);
+  if (!pathname.endsWith('/')) {
+    throw new Error(`sitemap filter: ${pageUrl} is not a directory URL; cannot locate its built page`);
+  }
+  let html;
+  try {
+    html = readFileSync(new URL(`.${decodeURIComponent(pathname)}index.html`, OUT_DIR), 'utf8');
+  } catch (error) {
+    // Failing loudly: a page this cannot read would otherwise be listed or
+    // dropped on a guess.
+    throw new Error(`sitemap filter: cannot read the built page for ${pageUrl}: ${error.message}`);
+  }
+  const head = html.slice(0, html.indexOf('</head>'));
+  if (/<meta name="robots" content="[^"]*\bnoindex\b/.test(head)) return false;
+  return /<link rel="canonical" href="([^"]*)"/.exec(head)?.[1] === pageUrl;
+}
 
 /**
  * Astro names only the top-level `/404` route `404.html`; `src/pages/[lang]/404.astro`
@@ -61,10 +99,12 @@ export default defineConfig({
     mdx(),
     sitemap({
       // The root language redirect and the per-locale 404 pages are not
-      // content (the top-level /404 the integration drops by itself).
+      // content (the top-level /404 the integration drops by itself); every
+      // other page is listed only if it is indexable and self-canonical.
       filter: (page) => {
         const { pathname } = new URL(page);
-        return pathname !== '/' && !LOCALE_404.test(pathname);
+        if (pathname === '/' || LOCALE_404.test(pathname)) return false;
+        return isSelfCanonicalAndIndexable(page);
       },
       // Spread the item through: the integration also fills `links`,
       // `priority` and `changefreq`, and returning a fresh object would drop

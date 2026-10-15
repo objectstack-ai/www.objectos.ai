@@ -8,7 +8,6 @@ import {
   pricingPath,
   securityPath,
   termsPath,
-  LOCALES,
   type Locale,
 } from '../lib/i18n';
 import { CLUSTERS, clusterPath } from '../lib/clusters';
@@ -106,12 +105,14 @@ export const GET: APIRoute = async ({ site }) => {
     '',
     '## Topic Cluster Pages',
     '',
-    ...LOCALES.flatMap((locale) =>
-      CLUSTERS.map((cluster) => {
-        const copy = clusterCopy(cluster, locale);
-        return `- [${copy.title}](${absoluteUrl(site, clusterPath(locale, cluster.slug))}): ${copy.description}`;
-      })
-    ),
+    // English only: the other locales' cluster pages are one template per
+    // locale with the name swapped, noindexed and canonical to these
+    // (`clusterSourceLocale` in src/lib/cluster-i18n.ts). A curated map lists
+    // the page a reader should be sent to, not 35 copies of it.
+    ...CLUSTERS.map((cluster) => {
+      const copy = clusterCopy(cluster, 'en');
+      return `- [${copy.title}](${absoluteUrl(site, clusterPath('en', cluster.slug))}): ${copy.description}`;
+    }),
     '',
     '## English Articles',
     '',

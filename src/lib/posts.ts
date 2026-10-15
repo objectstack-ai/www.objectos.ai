@@ -113,6 +113,17 @@ export async function getUsedTerms(
   );
 }
 
+/**
+ * A hub listing fewer posts than this is noindexed. Its only text of its own
+ * is `termDescription` — one sentence shared by every hub of the term's group
+ * with the label swapped in — so a one- or two-post hub is a thin page that
+ * duplicates the posts it lists. It stays built and linked (the menus and the
+ * post chips point at it, and a reader browsing a topic still wants it); it is
+ * kept out of the index, the sitemap and every hub's hreflang set until the
+ * topic has enough writing to stand as a page.
+ */
+export const MIN_INDEXABLE_HUB_POSTS = 3;
+
 /** Every term (any group) with content in `locale` — used to generate hubs. */
 export async function getAllUsedTerms(locale: Locale): Promise<Term[]> {
   const groups = await getPostGroups();

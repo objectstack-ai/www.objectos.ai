@@ -299,3 +299,30 @@ export const securityCopy: Record<Locale, SecurityCopy> = {
   fr,
   ko,
 };
+
+/**
+ * The fields of a locale's security copy that are still the English text. The
+ * ja/de/es/fr/ko copies are partial translations written as `{ ...en, ... }`,
+ * so every field they do not override is the English value itself — the same
+ * array for the lists, the same string for the rest. That is what this
+ * detects; a translator overriding a field removes it from the set with no
+ * second list to keep in step.
+ */
+export function securityEnglishFields(locale: Locale): Set<keyof SecurityCopy> {
+  if (locale === 'en') return new Set();
+  const copy = securityCopy[locale];
+  return new Set(
+    (Object.keys(en) as (keyof SecurityCopy)[]).filter((field) => copy[field] === en[field])
+  );
+}
+
+/**
+ * Whose copy a locale's security page stands for. A locale counts as authored
+ * only when nothing is inherited from English: a partly translated page is an
+ * English page with a translated frame, so it falls back — noindexed and
+ * canonicalized to /en/security/ by `fallbackRoute` — while the translated
+ * parts stay on the page for the reader, and the English parts are marked
+ * `lang="en"` (SecurityPage.astro).
+ */
+export const securitySourceLocale = (locale: Locale): Locale =>
+  securityEnglishFields(locale).size === 0 ? locale : 'en';

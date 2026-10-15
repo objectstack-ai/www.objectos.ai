@@ -4,6 +4,9 @@ import type { CollectionEntry } from 'astro:content';
 import { formatDate, ui, blogPath, postPath, STATUS_COLOR, type Locale } from '../lib/i18n';
 import { termBySlug, termHref, termLabel } from '../lib/terms';
 import { getPostsInLocale, isPublicPost } from '../lib/posts';
+import { clusterCopy, clusterLabels } from '../lib/cluster-i18n';
+import { CLUSTERS, clusterPath } from '../lib/clusters';
+import { ORGANIZATION_ID } from '../lib/organization';
 
 interface Props {
   data: CollectionEntry<'blog'>['data'];
@@ -27,6 +30,13 @@ const coverSrc =
   typeof data.cover === 'string'
     ? data.cover
     : (data.cover as { src?: string } | undefined)?.src;
+// The cover's intrinsic size, for `og:image:width/height`: the image() schema
+// reads it from the file, so it is the real size, never a layout guess. An SVG
+// cover arrives as a component function carrying the same metadata fields.
+const coverSize =
+  data.cover && typeof data.cover !== 'string'
+    ? (data.cover as unknown as { width?: number; height?: number })
+    : undefined;
 const site = Astro.site?.toString().replace(/\/$/, '') ?? '';
 const absoluteUrl = (href: string): string =>
   site ? new URL(href, `${site}/`).toString() : new URL(href, Astro.url).toString();
@@ -47,6 +57,16 @@ const relatedPosts = (await getPostsInLocale(locale))
   .filter((post) => post.score > 0)
   .sort((a, b) => b.score - a.score || b.entry.data.date.getTime() - a.entry.data.date.getTime())
   .slice(0, 3);
+// The pillar pages that list this post in their reading path. Each links the
+// post; the post links back, so a reader who lands on one article from search
+// finds the guide it belongs to, and the pillar is not an orphan that only the
+// home page links (src/components/FooterClusters.astro has the other half).
+// Titles only: outside English a cluster's description is one template with
+// the name swapped, and five of them stacked under a post read as exactly that.
+const readingPaths = CLUSTERS.filter((cluster) => cluster.articleSlugs.includes(slug)).map(
+  (cluster) => ({ href: clusterPath(locale, cluster.slug), copy: clusterCopy(cluster, locale) })
+);
+const readingPathLabel = clusterLabels(locale).readingPath;
 const jsonLd = [
   {
     '@context': 'https://schema.org',
@@ -61,6 +81,7 @@ const jsonLd = [
     },
     publisher: {
       '@type': 'Organization',
+      '@id': ORGANIZATION_ID,
       name: 'ObjectStack AI LLC',
       logo: {
         '@type': 'ImageObject',
@@ -185,6 +206,9 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
   description={data.description}
   canonical={data.canonical_url}
   image={coverSrc}
+  imageAlt={coverSrc ? data.title : undefined}
+  imageWidth={coverSize?.width}
+  imageHeight={coverSize?.height}
   type="article"
   noindex={!isPublicPost(data)}
   publishedTime={data.date.toISOString()}
@@ -282,6 +306,21 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
     <div class="prose">
       <Fragment set:html={bodyHtml} />
     </div>
+
+    {
+      readingPaths.length > 0 && (
+        <aside class="reading-path" aria-labelledby="reading-path-title">
+          <p class="reading-path-label" id="reading-path-title">{readingPathLabel}</p>
+          <ul>
+            {readingPaths.map((path) => (
+              <li>
+                <a href={path.href}>{path.copy.title} <span aria-hidden="true">→</span></a>
+              </li>
+            ))}
+          </ul>
+        </aside>
+      )
+    }
 
     {
       relatedPosts.length > 0 && (
@@ -412,6 +451,38 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
       background: var(--accent-soft);
       padding: 0.1rem 0.5rem;
       border-radius: 999px;
+    }
+    .reading-path {
+      margin-top: 3rem;
+      padding: 1rem 1.1rem;
+      border: 1px solid var(--line);
+      border-left: 3px solid var(--accent);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+    .reading-path-label {
+      margin: 0 0 0.5rem;
+      color: var(--ink-soft);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .reading-path ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 0.45rem;
+    }
+    .reading-path a {
+      color: var(--ink);
+      font-weight: 700;
+      line-height: 1.35;
+      text-decoration: none;
+    }
+    .reading-path a:hover {
+      color: var(--accent);
     }
     .related {
       margin-top: 3rem;

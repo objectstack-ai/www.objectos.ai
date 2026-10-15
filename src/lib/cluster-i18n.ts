@@ -482,3 +482,17 @@ export function clusterLabels(locale: Locale): ClusterLabels {
   if (locale === 'zh-Hant') return labelsToHant(clusterLabels('zh-Hans'));
   return TEMPLATES[locale].labels;
 }
+
+/**
+ * Whose page a locale's cluster page stands for. Only English is written per
+ * cluster: every other locale is `TEMPLATES[locale]` with the cluster's name
+ * swapped in (and zh-Hant is that template converted), so the 35 non-English
+ * cluster pages share one body per locale — the scaled-content pattern
+ * AGENTS.md writing rule 9 rules out. Until a cluster is written per locale,
+ * those pages fall back: noindexed, canonical to the English cluster page, and
+ * absent from hreflang (`fallbackRoute` in ./fallback). Their body stays in the
+ * locale it is written in, so they keep their own `lang`.
+ *
+ * When a locale gets real per-cluster copy, answer that locale here.
+ */
+export const clusterSourceLocale = (_locale: Locale): Locale => 'en';
