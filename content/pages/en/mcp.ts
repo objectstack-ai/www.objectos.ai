@@ -21,16 +21,18 @@ const page = {
       eyebrow: 'Connect in minutes',
       title: 'Point any MCP client at your runtime.',
       body:
-        'One entry in your client configuration connects the model to your governed objects. From there, every query and action is checked against the signed-in user’s permissions.',
-      code: `// Any MCP client configuration
+        'Every ObjectStack deployment already serves MCP at /api/v1/mcp — on by default, nothing to install. One command, or one entry in your client configuration, connects the model to your governed objects. From there, every query and action is checked against the signed-in user’s permissions.',
+      code: `# Claude Code — the first tool call opens a browser login
+claude mcp add --transport http my-app \\
+  https://your-deployment.example.com/api/v1/mcp
+
+# Any MCP client (.mcp.json), with an API key
 {
   "mcpServers": {
     "objectstack": {
-      "command": "npx",
-      "args": [
-        "@objectstack/mcp",
-        "--url", "https://runtime.your-company.com"
-      ]
+      "type": "http",
+      "url": "https://your-deployment.example.com/api/v1/mcp",
+      "headers": { "x-api-key": "osk_..." }
     }
   }
 }`,

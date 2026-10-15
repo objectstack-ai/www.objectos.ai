@@ -163,7 +163,7 @@ const ja: SecurityCopy = {
   hero: ['データは自社ネットワーク内に。', 'AI は権限の内側で動く。'],
   lead: `ObjectOS は ${positioning.ja.descriptor}です。ObjectOS Enterprise では ObjectStack ランタイムを自社インフラに展開でき、業務データ、ID、監査ログ、ファイル、シークレットは自社管理のままです。`,
   metrics: [
-    { value: '0', label: '既定の外部テレメトリ' },
+    { value: 'Agent', label: 'ユーザーの ID を継承' },
     { value: '5 層', label: 'ID からフィールドまでの権限モデル' },
     { value: 'HITL', label: 'AI 変更の人による承認' },
   ],

@@ -21,16 +21,18 @@ const page = {
       eyebrow: '几分钟接入',
       title: '把任意 MCP 客户端指向你的运行时。',
       body:
-        '在客户端配置里加一条，就把模型接到了你的受治理对象上。此后每一次查询和动作都会按登录用户的权限校验。',
-      code: `// 任意 MCP 客户端的配置
+        '每个 ObjectStack 部署都已在 /api/v1/mcp 提供 MCP——默认开启，无需安装。一条命令，或在客户端配置里加一条，就把模型接到了你的受治理对象上。此后每一次查询和动作都会按登录用户的权限校验。',
+      code: `# Claude Code——首次工具调用会打开浏览器登录
+claude mcp add --transport http my-app \\
+  https://your-deployment.example.com/api/v1/mcp
+
+# 任意 MCP 客户端（.mcp.json），使用 API key
 {
   "mcpServers": {
     "objectstack": {
-      "command": "npx",
-      "args": [
-        "@objectstack/mcp",
-        "--url", "https://runtime.your-company.com"
-      ]
+      "type": "http",
+      "url": "https://your-deployment.example.com/api/v1/mcp",
+      "headers": { "x-api-key": "osk_..." }
     }
   }
 }`,

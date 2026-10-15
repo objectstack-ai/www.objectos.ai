@@ -1,4 +1,7 @@
 import type { MarketingPage } from '../../../src/content-pages/types';
+import { positioning } from '../../../src/lib/positioning';
+
+const p = positioning['zh-Hans'];
 
 const page = {
     slug: 'trust-center',
@@ -9,11 +12,11 @@ const page = {
     eyebrow: '信任中心',
     heroTitle: 'AI 能写软件。更难的问题是：你敢不敢批准它。',
     lead:
-      'ObjectOS 为演示成功之后的采购、安全与 IT 评审而设计。它让业务数据留在客户控制之下，让 Agent 的权限在元数据与运行时执行中保持显式。',
+      `ObjectOS 为演示成功之后的采购、安全与 IT 评审而设计。${p.e1}无论哪个版本，Agent 的权限都在元数据与运行时执行中保持显式。`,
     primary: { label: '阅读安全模型', href: '/en/security/' },
     secondary: { label: '查看部署路径', href: '/en/pricing/' },
     metrics: [
-      { value: '自托管', label: '运行在你的 VPC、服务器或隔离网络中' },
+      { value: '两种版本', label: '托管在 ObjectOS Cloud，或以 ObjectOS Enterprise 自管部署在你自己的基础设施上' },
       { value: '用户级', label: 'Agent 继承登录用户的权限' },
       { value: '可审计', label: '读、写、工具调用、审批与 schema 变更' },
     ],
@@ -35,15 +38,15 @@ const page = {
         eyebrow: '边界',
         title: '敏感业务数据留在受控基础设施内',
         copy:
-          'ObjectOS 可以在客户控制的基础设施中部署并运营 ObjectStack 运行时。除非你显式配置外部服务，业务记录、提示词、文件、审计日志与凭据都留在这个边界内。',
+          '在 ObjectOS 企业版中，运行时、业务数据、用户身份、审计日志、文件与密钥都在你自己的基础设施内；除非你显式配置外部服务，它们都留在这个边界内。商业版自管同样把单节点许可运行在你的基础设施上。ObjectOS Cloud 由我们运营。',
         items: [
           {
             title: '数据驻留',
-            body: '连接客户控制的数据库与存储。ObjectOS 不要求把应用记录复制进供应商的工作区。',
+            body: '在 ObjectOS 企业版中，连接你自己的数据库与存储：业务记录、身份、审计日志与文件都存放在那里，而不是供应商的工作区。',
           },
           {
-            title: '无强制遥测',
-            body: '开源 ObjectStack 运行时不需要 license 回调或产品遥测通道即可运行。',
+            title: '许可证校验',
+            body: '自管部署的 ObjectOS 在线校验许可证（企业版离线许可证可离线校验）。开源 ObjectStack 运行时没有遥测、不查许可证、也不检查更新。',
           },
           {
             title: '模型可选',
@@ -95,7 +98,7 @@ const page = {
       {
         question: 'ObjectOS 会用客户数据训练模型吗？',
         answer:
-          '自托管部署由客户完全控制。云端与企业版的数据使用以相应商业协议为准；产品方向是：除非客户明确同意，客户数据不进入通用模型训练。',
+          '如果你启用 AI 功能或连接模型提供商，为完成请求，提示词、上下文、客户数据和输出可能会发送给所选提供商。除非客户明确同意或单独协议明确允许，我们不会使用付费云服务中的客户数据训练通用模型。以隐私政策为准。',
       },
       {
         question: 'ObjectOS 能在无互联网环境运行吗？',
