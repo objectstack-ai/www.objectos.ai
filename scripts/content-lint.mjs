@@ -12,6 +12,14 @@ import { pathToFileURL } from 'node:url';
 import { cwd, argv, exit } from 'node:process';
 import yaml from 'js-yaml';
 import { splitFrontmatter as splitFence } from './lib/frontmatter.mjs';
+import {
+  OPAQUE_ELEMENTS,
+  SEGMENT_BREAK,
+  TRANSPARENT_ELEMENTS,
+  firstChar,
+  isCjkWide,
+  lastChar,
+} from './lib/cjk-segment-break.mjs';
 
 const ROOT = cwd();
 const BLOG = path.join(ROOT, 'content', 'blog');
@@ -423,10 +431,151 @@ async function checkBuiltLinks() {
   return 1;
 }
 
+// ─── Built HTML: no segment break left between two CJK characters ─────────
+//
+// A hard-wrapped CJK source puts a newline between two characters of one
+// sentence, and the HTML carries it as a segment break. CSS Text 3 removes such
+// a break between two wide characters, but Chromium and Safari render it as a
+// space, so the reader sees 「数据 也已经」 mid-sentence. The rehype step in
+// astro.config.mjs removes these from everything Markdown/MDX renders; this
+// reads what the build actually emitted, so it also fails when that step is not
+// wired, or when CJK prose reaches a page by a road the step never sees (an
+// .astro template, a data file, a new renderer).
+//
+// Which characters count, which elements are prose and which are opaque is
+// defined once in scripts/lib/cjk-segment-break.mjs and shared with the fix;
+// the HTML scanning below is this gate's own. A break next to code, between
+// CJK and Latin, after an ambiguous-width `——`, or between two Hangul words is
+// a real space and is not flagged.
+
+/**
+ * Runs of inline prose: text joined across transparent phrasing elements
+ * (`<strong>`, `<a>`, …) and cut at every other tag, with opaque elements
+ * (code, pre, scripts, …) dropped entirely, as the rehype step sees them.
+ */
+function proseRuns(html) {
+  const runs = [];
+  let run = '';
+  let opaqueDepth = 0;
+  const cut = () => {
+    if (run) runs.push(run);
+    run = '';
+  };
+  let i = 0;
+  while (i < html.length) {
+    const lt = html.indexOf('<', i);
+    const stop = lt === -1 ? html.length : lt;
+    if (stop > i && opaqueDepth === 0) run += decodeEntities(html.slice(i, stop));
+    if (lt === -1) break;
+    if (html.startsWith('<!--', lt)) {
+      cut();
+      const end = html.indexOf('-->', lt + 4);
+      i = end === -1 ? html.length : end + 3;
+      continue;
+    }
+    if (html.startsWith('<!', lt)) {
+      cut();
+      const end = tagEnd(html, lt + 2);
+      i = end === -1 ? html.length : end + 1;
+      continue;
+    }
+    const tag = /^<(\/?)([a-zA-Z][a-zA-Z0-9-]*)/.exec(html.slice(lt, lt + 64));
+    if (!tag) {
+      if (opaqueDepth === 0) run += '<';
+      i = lt + 1;
+      continue;
+    }
+    const closing = tag[1] === '/';
+    const name = tag[2].toLowerCase();
+    const end = tagEnd(html, lt + tag[0].length);
+    if (end === -1) break;
+    const selfClosing = html[end - 1] === '/';
+    i = end + 1;
+    if (!closing && RAW_TEXT_ELEMENTS.has(name)) {
+      // Skip the body and its closing tag, so the closing tag is never
+      // mistaken for the end of an enclosing opaque element.
+      cut();
+      const close = html.toLowerCase().indexOf(`</${name}`, i);
+      const closeEnd = close === -1 ? -1 : tagEnd(html, close + name.length + 2);
+      i = closeEnd === -1 ? html.length : closeEnd + 1;
+      continue;
+    }
+    if (OPAQUE_ELEMENTS.has(name)) {
+      cut();
+      if (closing) opaqueDepth = Math.max(0, opaqueDepth - 1);
+      else if (!selfClosing) opaqueDepth++;
+      continue;
+    }
+    // A transparent element does not end the run it sits in; any other does.
+    if (!TRANSPARENT_ELEMENTS.has(name)) cut();
+  }
+  cut();
+  return runs;
+}
+
+/**
+ * A page whose document language is Chinese or Japanese: where a CJK line
+ * break would show. Counted so a build without them fails as unmeasured (every
+ * page carries CJK in its language menu, so "has CJK text" would not do).
+ */
+const CJK_LANG = /<html\b[^>]*\blang\s*=\s*["']?(?:zh|ja)(?:-|["'\s>])/i;
+
+async function checkBuiltCjkBreaks() {
+  const pages = (await distFiles(DIST)).filter((file) => file.endsWith('.html')).sort();
+  const offenders = [];
+  let cjkPages = 0;
+  let total = 0;
+  for (const page of pages) {
+    const html = await readFile(path.join(DIST, page), 'utf8');
+    if (CJK_LANG.test(html)) cjkPages++;
+    const hits = [];
+    for (const run of proseRuns(html)) {
+      for (const m of run.matchAll(SEGMENT_BREAK)) {
+        const end = m.index + m[0].length;
+        if (!isCjkWide(lastChar(run.slice(0, m.index))) || !isCjkWide(firstChar(run.slice(end)))) continue;
+        hits.push(`${run.slice(Math.max(0, m.index - 16), m.index)}⏎${run.slice(end, end + 16)}`.replace(/\s+/g, ' '));
+      }
+    }
+    total += hits.length;
+    if (hits.length > 0) offenders.push({ page, hits });
+  }
+  if (cjkPages === 0) {
+    console.error(
+      `✗ content lint --dist found no zh or ja page (by \`<html lang>\`) among ${pages.length} built ` +
+        `page${pages.length === 1 ? '' : 's'} under ${path.relative(ROOT, DIST)}/.\n` +
+        `  The zh-Hans, zh-Hant and ja pages are where a CJK line break would show, so a build without them ` +
+        `checked nothing, which is not the same as nothing being wrong.`
+    );
+    return 1;
+  }
+  if (offenders.length === 0) {
+    console.log(
+      `✓ content lint --dist CJK line breaks passed (${pages.length} built pages, ${cjkPages} in zh/ja, ` +
+        `0 segment breaks between CJK characters)`
+    );
+    return 0;
+  }
+  for (const { page, hits } of offenders) {
+    console.log(`✗ ${page}: ${hits.length} line break${hits.length === 1 ? '' : 's'} between CJK characters in rendered prose`);
+    for (const hit of hits.slice(0, 5)) console.log(`    …${hit}…`);
+    if (hits.length > 5) console.log(`    … and ${hits.length - 5} more`);
+  }
+  console.error(
+    `\n✗ content lint --dist failed (${total} segment break${total === 1 ? '' : 's'} between CJK characters on ` +
+      `${offenders.length} page${offenders.length === 1 ? '' : 's'}; ⏎ marks each)\n` +
+      `  Chromium and Safari render a source line break between two CJK characters as a space mid-sentence.\n` +
+      `  Markdown and MDX are fixed by \`rehypeCjkSegmentBreaks\` (scripts/lib/cjk-segment-break.mjs), wired in\n` +
+      `  astro.config.mjs \`markdown.rehypePlugins\`: if these pages are posts, that step did not run. If the text\n` +
+      `  came from somewhere else (an .astro template, a data file), join the line in that source.`
+  );
+  return 1;
+}
+
 if (args.has('--dist')) {
   const prose = await checkBuiltProse();
+  const cjkBreaks = await checkBuiltCjkBreaks();
   const links = await checkBuiltLinks();
-  exit(prose || links);
+  exit(prose || cjkBreaks || links);
 }
 
 // The frontmatter taxonomy, derived from the module that declares it instead of
