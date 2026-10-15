@@ -52,6 +52,11 @@ export default defineConfig({
   // Bind all interfaces; the port comes from the launcher (PORT env, with
   // 4321 as the default) so the preview panel's autoPort can pick a free one.
   server: { host: true },
+  // Shiki's default `github-dark` paints comments #6A737D on #24292e, 3.04:1.
+  // `github-dark-default` keeps the block dark (BlogPost.astro draws the
+  // code-block scrollbar light for it) and puts comments at #8b949e on
+  // #0d1117, 6.15:1, the lowest of the token colours the posts use.
+  markdown: { shikiConfig: { theme: 'github-dark-default' } },
   integrations: [
     mdx(),
     sitemap({
