@@ -20,6 +20,7 @@ import {
   isCjkWide,
   lastChar,
 } from './lib/cjk-segment-break.mjs';
+import { OPAQUE_INLINE, isApostrophe } from './lib/cjk-quotes.mjs';
 
 const ROOT = cwd();
 const BLOG = path.join(ROOT, 'content', 'blog');
@@ -571,11 +572,201 @@ async function checkBuiltCjkBreaks() {
   return 1;
 }
 
+// ─── Built HTML: quotation marks in zh, ja and ko prose point the right way ─
+//
+// Smartypants curls an ASCII quote by its neighbours, so in Chinese, which puts
+// no space before a quotation, the opening mark of a pair after a character
+// comes out closing: 「大多数”给你的业务加上 AI”的说辞」. It also reads a whole
+// document as one string, so a heading or table cell that starts with a quote
+// takes its direction from the block before it (the Korean headings). The
+// remark step in astro.config.mjs sets each mark by its position in its pair;
+// this reads what the build actually emitted, on every zh, ja and ko page, so
+// it also fails when that step is not wired, or when CJK prose reaches a page
+// by a road the step never sees (an .astro template, a data file).
+//
+// The rule is the step's own, defined once in scripts/lib/cjk-quotes.mjs: in
+// one block of prose, curly double marks alternate “ ” and end closed, and so
+// do single marks, except an apostrophe (`isApostrophe`), which is always ’.
+// The HTML scanning below is this gate's own. Straight ASCII marks have no
+// direction and are not read; marks inside code, pre, kbd and samp are not
+// prose and are not read either.
+
+/** Elements that sit inside a sentence without ending its block of prose. */
+const QUOTE_INLINE_ELEMENTS = new Set([...TRANSPARENT_ELEMENTS, 'br', 'wbr', 'img']);
+
+/**
+ * Blocks of prose: text joined across inline elements and cut at every other
+ * tag. An opaque element (code, kbd, svg, …) is one `OPAQUE_INLINE` in the
+ * block, as it is to the remark step: a quotation may wrap inline code.
+ */
+function quoteBlocks(html) {
+  const blocks = [];
+  let block = '';
+  let opaqueDepth = 0;
+  const cut = () => {
+    if (block) blocks.push(block);
+    block = '';
+  };
+  let i = 0;
+  while (i < html.length) {
+    const lt = html.indexOf('<', i);
+    const stop = lt === -1 ? html.length : lt;
+    if (stop > i && opaqueDepth === 0) block += decodeEntities(html.slice(i, stop));
+    if (lt === -1) break;
+    if (html.startsWith('<!--', lt)) {
+      const end = html.indexOf('-->', lt + 4);
+      i = end === -1 ? html.length : end + 3;
+      continue;
+    }
+    if (html.startsWith('<!', lt)) {
+      cut();
+      const end = tagEnd(html, lt + 2);
+      i = end === -1 ? html.length : end + 1;
+      continue;
+    }
+    const tag = /^<(\/?)([a-zA-Z][a-zA-Z0-9-]*)/.exec(html.slice(lt, lt + 64));
+    if (!tag) {
+      if (opaqueDepth === 0) block += '<';
+      i = lt + 1;
+      continue;
+    }
+    const closing = tag[1] === '/';
+    const name = tag[2].toLowerCase();
+    const end = tagEnd(html, lt + tag[0].length);
+    if (end === -1) break;
+    const selfClosing = html[end - 1] === '/';
+    i = end + 1;
+    if (!closing && RAW_TEXT_ELEMENTS.has(name)) {
+      cut();
+      const close = html.toLowerCase().indexOf(`</${name}`, i);
+      const closeEnd = close === -1 ? -1 : tagEnd(html, close + name.length + 2);
+      i = closeEnd === -1 ? html.length : closeEnd + 1;
+      continue;
+    }
+    if (OPAQUE_ELEMENTS.has(name)) {
+      if (closing) {
+        opaqueDepth = Math.max(0, opaqueDepth - 1);
+        if (opaqueDepth === 0) block += OPAQUE_INLINE;
+      } else if (selfClosing) {
+        if (opaqueDepth === 0) block += OPAQUE_INLINE;
+      } else {
+        opaqueDepth++;
+      }
+      continue;
+    }
+    if (opaqueDepth > 0) continue;
+    if (name === 'br') block += '\n';
+    else if (name === 'img') block += OPAQUE_INLINE;
+    else if (!QUOTE_INLINE_ELEMENTS.has(name)) cut();
+  }
+  cut();
+  return blocks;
+}
+
+/**
+ * Every curly mark in one block whose direction disagrees with its position
+ * in its pair, plus a pair left open at the end of the block. Returns the
+ * number of marks read and the hits, each with its sentence for the report.
+ */
+function misdirectedQuotes(block) {
+  const hits = [];
+  let marks = 0;
+  let doubleOpen = false;
+  let singleOpen = false;
+  // Where the open pair started, or -1 when its opening mark was already
+  // reported as misdirected (a lone `”` is one problem, not two).
+  let doubleAt = -1;
+  let singleAt = -1;
+  const context = (at, problem) =>
+    `${problem}: …${block.slice(Math.max(0, at - 14), at)}⟦${block[at] ?? ''}⟧${block.slice(at + 1, at + 15)}…`
+      .replace(/\s+/g, ' ')
+      .replaceAll(OPAQUE_INLINE, '▯');
+  for (let i = 0; i < block.length; i++) {
+    const ch = block[i];
+    if (ch === '“' || ch === '”') {
+      marks++;
+      const expected = doubleOpen ? '”' : '“';
+      if (ch !== expected) hits.push(context(i, doubleOpen ? 'a closing mark printed as “' : 'an opening mark printed as ”'));
+      doubleOpen = !doubleOpen;
+      if (doubleOpen) doubleAt = ch === expected ? i : -1;
+    } else if (ch === '‘' || ch === '’') {
+      marks++;
+      if (isApostrophe(lastChar(block.slice(0, i)), block.slice(i + 1, i + 6), singleOpen)) {
+        if (ch === '‘') hits.push(context(i, 'an apostrophe printed as ‘'));
+        continue;
+      }
+      const expected = singleOpen ? '’' : '‘';
+      if (ch !== expected) hits.push(context(i, singleOpen ? 'a closing mark printed as ‘' : 'an opening mark printed as ’'));
+      singleOpen = !singleOpen;
+      if (singleOpen) singleAt = ch === expected ? i : -1;
+    }
+  }
+  if (doubleOpen && doubleAt !== -1) hits.push(context(doubleAt, 'a “ never closed in its block'));
+  if (singleOpen && singleAt !== -1) hits.push(context(singleAt, 'a ‘ never closed in its block'));
+  return { marks, hits };
+}
+
+/** A page whose document language is Chinese, Japanese or Korean. */
+const CJK_QUOTE_LANG = /<html\b[^>]*\blang\s*=\s*["']?(?:zh|ja|ko)(?:-|["'\s>])/i;
+
+async function checkBuiltCjkQuotes() {
+  const pages = (await distFiles(DIST)).filter((file) => file.endsWith('.html')).sort();
+  const offenders = [];
+  let cjkPages = 0;
+  let marks = 0;
+  let total = 0;
+  for (const page of pages) {
+    const html = await readFile(path.join(DIST, page), 'utf8');
+    if (!CJK_QUOTE_LANG.test(html)) continue;
+    cjkPages++;
+    const hits = [];
+    for (const block of quoteBlocks(html)) {
+      const result = misdirectedQuotes(block);
+      marks += result.marks;
+      hits.push(...result.hits);
+    }
+    total += hits.length;
+    if (hits.length > 0) offenders.push({ page, hits });
+  }
+  if (cjkPages === 0 || marks === 0) {
+    console.error(
+      `✗ content lint --dist found ${cjkPages === 0 ? 'no zh, ja or ko page (by `<html lang>`)' : 'no curly quotation mark on any zh, ja or ko page'} ` +
+        `among ${pages.length} built page${pages.length === 1 ? '' : 's'} under ${path.relative(ROOT, DIST)}/.\n` +
+        `  Those are the pages where a quotation mark can point the wrong way, so this checked nothing, ` +
+        `which is not the same as nothing being wrong.`
+    );
+    return 1;
+  }
+  if (offenders.length === 0) {
+    console.log(
+      `✓ content lint --dist CJK quotation marks passed (${cjkPages} zh/ja/ko pages, ${marks} curly marks, ` +
+        `0 pointing the wrong way or left open)`
+    );
+    return 0;
+  }
+  for (const { page, hits } of offenders) {
+    console.log(`✗ ${page}: ${hits.length} quotation mark${hits.length === 1 ? '' : 's'} pointing the wrong way or left open`);
+    for (const hit of hits.slice(0, 5)) console.log(`    ${hit}`);
+    if (hits.length > 5) console.log(`    … and ${hits.length - 5} more`);
+  }
+  console.error(
+    `\n✗ content lint --dist failed (${total} quotation mark${total === 1 ? '' : 's'} pointing the wrong way or left open on ` +
+      `${offenders.length} zh/ja/ko page${offenders.length === 1 ? '' : 's'}; ⟦ ⟧ marks each)\n` +
+      `  In one paragraph, heading or table cell, the first mark of a pair opens and the next closes.\n` +
+      `  Markdown and MDX in zh-Hans, zh-Hant, ja and ko are set by \`remarkCjkQuotes\` (scripts/lib/cjk-quotes.mjs),\n` +
+      `  wired in astro.config.mjs \`markdown.remarkPlugins\`: if these pages are posts, that step did not run, or a\n` +
+      `  paragraph holds an odd number of marks (a stray \`"\`, or a quotation that runs over two paragraphs; close it\n` +
+      `  in each). If the text came from somewhere else (an .astro template, a data file), fix the marks in that source.`
+  );
+  return 1;
+}
+
 if (args.has('--dist')) {
   const prose = await checkBuiltProse();
   const cjkBreaks = await checkBuiltCjkBreaks();
+  const cjkQuotes = await checkBuiltCjkQuotes();
   const links = await checkBuiltLinks();
-  exit(prose || cjkBreaks || links);
+  exit(prose || cjkBreaks || cjkQuotes || links);
 }
 
 // The frontmatter taxonomy, derived from the module that declares it instead of
