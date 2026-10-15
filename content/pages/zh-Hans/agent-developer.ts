@@ -1,34 +1,41 @@
 import type { MarketingPage } from '../../../src/content-pages/types';
+import { positioning } from '../../../src/lib/positioning';
+
+const p = positioning['zh-Hans'];
 
 const page = {
     slug: 'agent-developer',
     navLabel: 'Agent 开发指南',
     title: 'Agent 开发指南：AI 如何编写 ObjectStack 元数据',
     description:
-      '教会编码 Agent 使用开放 ObjectStack 目标格式、Strict TypeScript 定义、Zod schema、validation gate 与整体上下文证明，生成可审阅应用。',
+      '编码 Agent 的 README 路径：npm create objectstack@latest 写入 AGENTS.md，Agent 编写类型化元数据，os validate 拒掉运行时会失败的东西，npx os dev --ui 把应用渲染出来供人审阅。',
     eyebrow: 'Agent 开发指南',
     heroTitle: '别教每个开发者手写应用。教你的 Agent 目标格式。',
     lead:
-      'ObjectStack 是 AI 编写企业软件的开放目标格式与运行时，面向“Agent 编写、人审阅”设计。完整 CRM 全应用（含 UI）小于 150k tokens，Agent 能在一个上下文里掌握全局；Strict TypeScript、Zod schema 与 validation gate 会在无效输出进入运行时前将其拦下。',
-    primary: { label: '阅读文档', href: 'https://docs.objectos.ai' },
+      `${p.t2}Agent 是作者，你是审阅者：脚手架写入 AGENTS.md，让 Agent 一开始就带着协议规则；Strict TypeScript、Zod schema 与 os validate 会在无效输出进入运行时前将其拒掉；整个应用小到 AI 能整体装下。`,
+    primary: { label: '照 README 路径走', href: 'https://github.com/objectstack-ai/objectstack#try-it-in-five-minutes' },
     secondary: { label: '查看模板模式', href: '/en/templates/' },
     metrics: [
-      { value: '<150k tokens', label: '完整 CRM 全应用（含 UI），一个上下文窗口' },
-      { value: '<100k tokens', label: '对象、流程、权限与其他业务逻辑' },
-      { value: '约 50k tokens', label: '完整 CRM 的 UI 元数据' },
+      { value: 'AGENTS.md', label: '由脚手架写入，Agent 一开始就带着协议规则' },
+      { value: '4 道闸门', label: '类型化、校验、审阅、治理——横在 Agent 与你的用户之间' },
+      { value: '整体装下', label: '应用小到 AI 能整体装下——README 自带的示例 CRM 可端到端读完' },
     ],
     artifact: {
-      eyebrow: 'Agent 指令',
-      title: '一份好的规则文件把目标格式写得明明白白',
+      eyebrow: 'README 路径',
+      title: '三条命令，你的 Agent 就有了规则',
       body:
-        '最重要的开发者产物不是一篇手写界面的教程，而是一份紧凑、可检索的指令集：告诉 Agent 该改什么、不该发明什么、必须通过哪些 schema，以及如何同时返回可审阅 diff 与“已考虑整个应用”的证明。',
-      code: `When building an ObjectStack app:
-1. Model business objects before UI.
-2. Write Strict TypeScript metadata that conforms to the published Zod schemas.
-3. Prefer metadata definitions over generated application code.
-4. Add conservative permissions and expose AI actions only through approved tools.
-5. Run the validation gate before proposing deployment.
-6. Return a small diff, reviewer checklist, and whole-context proof.`,
+        '脚手架安装 AI skills 包并写入 AGENTS.md，Agent 一开始就带着协议规则，而不是泛泛的“给我写点 TypeScript”先验。在 Claude Code、Cursor 或 Copilot 里描述需求；Agent 写的是类型化元数据而不是代码库，闸门会拒掉运行时会静默失败的东西。然后在浏览器里预览真实应用，并在一份读得懂的 diff 上提出下一次变更。',
+      code: `# 1 · 创建项目：安装 AI skills 包，写入 AGENTS.md
+npm create objectstack@latest my-app && cd my-app
+
+# 2 · 用 Claude Code（或 Cursor、Copilot……）打开它，描述业务需求：
+#    “搭一个支持台。加一个 ticket 对象，有 subject、description、
+#     priority 选择和 status 选择。加一个只在未解决工单上显示的
+#     Resolve 动作。加一个 Open tickets 列表视图和 Support 导航组。
+#     做完跑 npm run validate。”
+
+# 3 · 在浏览器里预览
+npx os dev --ui   # -> http://localhost:3000/_console/`,
     },
     sections: [
       {
@@ -40,7 +47,7 @@ const page = {
         items: [
           {
             title: '1. 提供运营上下文',
-            body: '把业务流程、对象命名、权限边界、流程状态、集成约束与完整的当前定义交给 Agent。完整 CRM 全应用（含 UI）小于 150k tokens，因此可以被整体检视，无需从碎片里拼凑。',
+            body: '把业务流程、对象命名、权限边界、流程状态、集成约束与完整的当前定义交给 Agent。应用小到 AI 能整体装下——README 自带的示例 CRM 可端到端读完——因此可以被整体检视，无需从碎片里拼凑。',
             meta: '上下文',
           },
           {
