@@ -60,10 +60,10 @@ const blogHref = `${blogPath(locale)}${blogSlug}`;
   <section class="split" id="data">
     <div>
       <p class="eyebrow">{copy.residencyTitle}</p>
-      <h2>{copy.residencyTitle}</h2>
+      <h2 id="residency-title">{copy.residencyTitle}</h2>
       <p>{copy.residencyLead}</p>
     </div>
-    <div class="table-wrap">
+    <div class="table-wrap" tabindex="0" role="group" aria-labelledby="residency-title">
       <table>
         <thead>
           <tr>
@@ -293,6 +293,61 @@ const blogHref = `${blogPath(locale)}${blogSlug}`;
   }
   tr:last-child td {
     border-bottom: none;
+  }
+  /* On a phone the 620px floor put the third column off-screen, with nothing
+     to say it was there. Same treatment as the article tables (BlogPost.astro)
+     and the marketing decision table: cells wrap, each column keeps a 6.5rem
+     floor (three columns fit a 360px phone), and if the wrap still overflows
+     (a 320px phone) it draws an always-on scrollbar and a trailing-edge fade.
+     The wrap is focusable and named by the section heading. The tighter
+     padding, type size and tracking match the decision table; here they
+     shorten the wrapped table from 694px to 569px at 360px. */
+  @media (max-width: 640px) {
+    .table-wrap {
+      overscroll-behavior-x: contain;
+    }
+    .table-wrap::-webkit-scrollbar {
+      height: 6px;
+    }
+    .table-wrap::-webkit-scrollbar-track {
+      background: color-mix(in srgb, var(--surface-sunk) 70%, transparent);
+      border-radius: 999px;
+    }
+    .table-wrap::-webkit-scrollbar-thumb {
+      background: color-mix(in srgb, var(--ink) 32%, transparent);
+      border-radius: 999px;
+    }
+    @supports (animation-timeline: scroll(self inline)) {
+      .table-wrap {
+        animation: residency-table-edge-fade linear both;
+        animation-timeline: scroll(self inline);
+      }
+    }
+    @keyframes residency-table-edge-fade {
+      from {
+        mask-image: linear-gradient(to right, #000 calc(100% - 34px), transparent);
+      }
+      to {
+        mask-image: linear-gradient(to right, #000 100%, transparent);
+      }
+    }
+    table {
+      min-width: 0;
+    }
+    th,
+    td {
+      box-sizing: border-box;
+      min-width: 6.5rem;
+      padding-right: 0.6rem;
+      padding-left: 0.6rem;
+      overflow-wrap: anywhere;
+    }
+    th {
+      letter-spacing: 0.02em;
+    }
+    td {
+      font-size: 0.82rem;
+    }
   }
   .section-head {
     max-width: 760px;
