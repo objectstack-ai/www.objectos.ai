@@ -3,6 +3,7 @@ import { Image } from 'astro:assets';
 import Base from './Base.astro';
 import { getEntry, type CollectionEntry } from 'astro:content';
 import { OG_IMAGE, ogImagePath, postCoverFile } from '../../scripts/lib/og-image.mjs';
+import { phraseHtml } from '../../scripts/lib/cjk-phrases.mjs';
 import { formatDate, ui, blogPath, postPath, STATUS_COLOR, type Locale } from '../lib/i18n';
 import { termBySlug, termHref, termLabel } from '../lib/terms';
 import { getPostsInLocale, isPublicPost } from '../lib/posts';
@@ -275,7 +276,7 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
         <span>{t.by} {data.author}</span>
       </div>
 
-      <h1 id="article-title">{data.title}</h1>
+      <h1 id="article-title" set:html={phraseHtml(data.title, locale)} />
       {data.description && <p class="lead">{data.description}</p>}
 
       {
@@ -353,7 +354,7 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
     {
       relatedPosts.length > 0 && (
         <aside class="related" aria-labelledby="related-title">
-          <h2 id="related-title">{t.relatedTitle}</h2>
+          <h2 id="related-title" set:html={phraseHtml(t.relatedTitle, locale)} />
           <ul>
             {relatedPosts.map((post) => (
               <li>
@@ -429,6 +430,18 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
       line-height: 1.06;
       letter-spacing: 0;
       margin: 0 0 1rem;
+    }
+    /* zh and ja: the title breaks only at the <wbr> between phrases
+       (scripts/lib/cjk-phrases.mjs); a phrase wider than the line still
+       breaks, as a last resort. The body's own headings get theirs from the
+       markdown pipeline (rehypeCjkHeadingPhrases) and the rule below. */
+    h1:lang(zh),
+    h1:lang(ja),
+    h2:lang(zh),
+    h2:lang(ja) {
+      word-break: keep-all;
+      overflow-wrap: anywhere;
+      text-wrap: balance;
     }
     .lead {
       font-size: 1.15rem;
@@ -581,6 +594,14 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
       font-size: 1.22rem;
       margin: 2rem 0 0.75rem;
       scroll-margin-top: 104px;
+    }
+    /* zh and ja body headings carry a <wbr> between phrases, added at build
+       time by rehypeCjkHeadingPhrases (scripts/lib/cjk-phrases.mjs), and break
+       nowhere else. */
+    .prose :is(h1, h2, h3, h4, h5, h6):is(:lang(zh), :lang(ja)) {
+      word-break: keep-all;
+      overflow-wrap: anywhere;
+      text-wrap: balance;
     }
     .prose p {
       margin: 0 0 1.25rem;
