@@ -105,8 +105,8 @@ const page = {
         ['Open-source ObjectStack', 'Your coding agent edits metadata source files; review as git diffs', 'Any MCP client queries governed objects with your own model'],
         ['ObjectOS Cloud Free', 'A taste of in-app AI Build', 'A taste of in-app AI Ask'],
         ['ObjectOS Cloud Team', 'In-app AI Build drafts changes; approvals gate structure', 'In-app AI Ask answers and runs approved actions'],
-        ['ObjectOS Business (Cloud or Self-Managed)', 'Same, plus AI governance: action audit, guardrails, permission scoping', 'Same, with Ask queries and actions audited and guardrailed'],
-        ['ObjectOS Enterprise', 'Same, plus private deployment and bring-your-own-model', 'Same, plus local models and internal identity'],
+        ['ObjectOS Business (Cloud)', 'Same, plus AI governance: action audit, guardrails, permission scoping', 'Same, with Ask queries and actions audited and guardrailed'],
+        ['ObjectOS Enterprise (self-managed)', 'Same, on your own infrastructure, plus bring-your-own-model', 'Same, plus local models and internal identity'],
       ],
     },
     faqs: [
@@ -118,7 +118,7 @@ const page = {
       {
         question: 'Which models does it use?',
         answer:
-          'Cloud editions run managed models behind AI Build and Ask. The open-source ObjectStack brings your own — any MCP-compatible client or a local model. Business Self-Managed and Enterprise private deployments bring your own model or key.',
+          'Cloud editions run managed models behind AI Build and Ask. The open-source ObjectStack brings your own — any MCP-compatible client or a local model. Self-managed ObjectOS Enterprise, from its single-node Business Self-Managed entry up, brings your own model or key.',
       },
     ],
   } satisfies MarketingPage;

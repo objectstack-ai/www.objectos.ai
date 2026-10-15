@@ -12,7 +12,7 @@ const page = {
     eyebrow: 'For forward-deployed engineers',
     heroTitle: 'Ship like the best FDE teams. Hand over what they never do: the ontology.',
     lead:
-      `The forward-deployed model won: embed with the client, model their business, deliver working software fast. Its weak point is the handover — the ontology stays locked in a platform the client rents forever. ObjectStack makes the ontology a set of typed, open files in the client’s repo and runs it with governed runtime enforcement. ObjectOS is ${p.descriptor}: for clients who want the in-app AI Builder and Ask, hosted (Cloud) or self-managed (Business Self-Managed, Enterprise) delivery, and support.`,
+      `The forward-deployed model won: embed with the client, model their business, deliver working software fast. Its weak point is the handover — the ontology stays locked in a platform the client rents forever. ObjectStack makes the ontology a set of typed, open files in the client’s repo and runs it with governed runtime enforcement. ObjectOS is ${p.descriptor}: for clients who want the in-app AI Builder and Ask, hosted (Cloud) or self-managed (Enterprise, from its single-node Business Self-Managed entry up) delivery, and support.`,
     primary: { label: 'Start with ObjectStack', href: 'https://github.com/objectstack-ai/objectstack' },
     secondary: { label: 'Read the FDE article', href: '/en/blog/forward-deployed-engineer-tools/' },
     metrics: [
@@ -115,7 +115,7 @@ const page = {
       {
         question: 'Do I need ObjectOS to serve clients?',
         answer:
-          `No. ObjectStack is Apache-2.0 — the protocol, kernel, CLI, production runtime, Console UI, and MCP server — with no feature gate between development and production, so a client can self-host it at no license cost. ObjectOS is ${p.descriptor}: clients buy it for the in-app AI Builder and Ask, AI governance from Business, hosted Cloud or self-managed delivery (Business Self-Managed on a single node; Enterprise for clustering, air-gapped operation, and SCIM), and official support.`,
+          `No. ObjectStack is Apache-2.0 — the protocol, kernel, CLI, production runtime, Console UI, and MCP server — with no feature gate between development and production, so a client can self-host it at no license cost. ObjectOS is ${p.descriptor}: clients buy it for the in-app AI Builder and Ask, AI governance from Business, hosted Cloud or self-managed Enterprise delivery (Business Self-Managed as its single-node entry; clustering, air-gapped operation, and SCIM beyond it), and official support.`,
       },
     ],
   } satisfies MarketingPage;

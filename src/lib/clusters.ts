@@ -137,7 +137,7 @@ export const CLUSTERS: Cluster[] = [
     lead:
       'Self-hosted AI is not only about where the model runs. Once AI reads business data and calls tools, the application runtime that controls objects, permissions, approvals, and audit evidence becomes the critical control point.',
     definition:
-      'A self-hosted AI application platform lets enterprises run the governed business runtime in their own infrastructure. The model can be local or external, but data access, tools, workflow execution, and audit policy stay under enterprise control. Two things answer to that description here: the free, Apache-2.0 ObjectStack framework, and licensed self-managed ObjectOS — Business Self-Managed or ObjectOS Enterprise — which adds the in-product AI on top of it.',
+      'A self-hosted AI application platform lets enterprises run the governed business runtime in their own infrastructure. The model can be local or external, but data access, tools, workflow execution, and audit policy stay under enterprise control. Two things answer to that description here: the free, Apache-2.0 ObjectStack framework, and licensed self-managed ObjectOS — ObjectOS Enterprise, from its single-node entry option Business Self-Managed up — which adds the in-product AI on top of it.',
     whyNow: [
       'AI agents increasingly need access to sensitive customer, operational, and financial records.',
       'Regulated teams need evidence of who accessed what, which action ran, and which approval was required.',
@@ -173,7 +173,7 @@ export const CLUSTERS: Cluster[] = [
       {
         question: 'Is self-hosting free, and what does ObjectOS add?',
         answer:
-          'Free self-hosting is the open-source ObjectStack framework (Apache-2.0): the protocol, kernel, CLI, production runtime, Console UI, and MCP server, with no feature gate between development and production — bring your own AI over MCP. Self-managed ObjectOS is licensed: Business Self-Managed is a single-node delivery with the in-product AI Builder and Ask, AI governance, and bring-your-own-model; ObjectOS Enterprise is the full private deployment with clustering, air-gapped operation, SCIM, compliance attestations, and SLA support. On either edition you can export your ontology and run it on the open-source runtime. To start: npm create objectstack@latest, point your coding agent at the generated project and its AGENTS.md, then npx os dev --ui.',
+          'Free self-hosting is the open-source ObjectStack framework (Apache-2.0): the protocol, kernel, CLI, production runtime, Console UI, and MCP server, with no feature gate between development and production — bring your own AI over MCP. Self-managed ObjectOS is ObjectOS Enterprise, licensed: its single-node entry option, Business Self-Managed, brings the in-product AI Builder and Ask, AI governance, and bring-your-own-model to one node; beyond that, Enterprise adds clustering, air-gapped operation, SCIM, compliance attestations, and SLA support. On either edition you can export your ontology and run it on the open-source runtime. To start: npm create objectstack@latest, point your coding agent at the generated project and its AGENTS.md, then npx os dev --ui.',
       },
     ],
     articleSlugs: [
