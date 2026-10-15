@@ -102,7 +102,7 @@ const pricingEn: PricingCopy = {
       name: 'Enterprise',
       price: 'Custom',
       cadence: 'contact sales',
-      tagline: 'For larger organizations with custom security, deployment, and contracting needs.',
+      tagline: 'For running ObjectOS on your own infrastructure, from a single node to air-gapped clusters.',
       features: [
         'Self-managed on your own infrastructure, including air-gapped',
         'Single-node entry: Business Self-Managed, 10–25 AI seats, $540 / AI seat / yr, bring your own model',
@@ -181,7 +181,7 @@ const pricingZhHans: PricingCopy = {
       name: '企业版',
       price: '定制',
       cadence: '联系销售',
-      tagline: '面向有定制安全与合同需求的大型组织。',
+      tagline: '面向自管运行 ObjectOS 的组织，从单节点到离线隔离集群。',
       features: [
         '自管部署在你自己的基础设施上，含离线隔离（air-gap）',
         '单节点入门选项：商业版自管，10–25 个 AI 席位、每 AI 席每年 $540、自带模型',
