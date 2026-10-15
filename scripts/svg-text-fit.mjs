@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 // Blog SVG text-fit gate: fails when a <text> box crosses the edge of the
 // filled shape painted under its centre, or runs under a filled shape painted
-// over it.
+// over it — and when a drop shadow is cut off by its own filter region.
 //
 //   node scripts/svg-text-fit.mjs [--verbose] [file.svg ...]      (pnpm svg:lint)
 //
 // No file arguments: every .svg under content/blog. --verbose prints each text
-// box's clearance to its shape, which is how a fix is measured before and after.
+// box's clearance to its shape and each filtered element's shadow margin, which
+// is how a fix is measured before and after.
 // Runs in `pnpm build`, so CI's Build step fails on a finding.
 //
 // What is measured. For every <text> the gate lays the line out the way a
@@ -38,6 +39,26 @@
 // at most 3.9px wider (kerning, and the em charge), and both found the same
 // crossings.
 //
+// Drop shadows (rule 3). A filter paints nothing outside its filter region, so
+// a region smaller than the shadow leaves a hard straight edge across it — the
+// classic case is `height="150%"` on a short card whose shadow falls 16px down
+// and blurs 22px. For every element with a filter the gate takes the element's
+// object bounding box (what objectBoundingBox units are fractions of), the box
+// it paints (strokes included), and the feDropShadow's offset and blur. The
+// shadow reaches 3σ past the offset painted box — the bounds a browser gives a
+// Gaussian blur (Skia outsets them by 3σ), beyond which it is under 0.14% of
+// the flood opacity — and that whole reach must lie inside the filter region
+// wherever it falls inside the canvas (a cut past the canvas edge is
+// invisible). A finding names each side the region cuts and how far out, in σ
+// and in the shadow's opacity there. Checked against headless Chromium with
+// every filter region made unbounded: of the 27 SVGs this rule first failed,
+// the 14 with a cut under 1.85σ rendered differently (by up to 15 of 255
+// levels) and the 13 whose cuts all lay 1.9σ or further out rendered the same.
+// So not every failure is visible in Chromium today: 3σ is the bound, not
+// that measurement.
+// Filters other than a single feDropShadow are not modelled and fail as
+// unmeasurable, so a new kind of filter cannot pass unread.
+//
 // The allowlist below is for a text that crosses an edge on purpose — a caption
 // centred on the whole diagram that spans two regions, a label set across a
 // boundary. Each entry names the file, the rule ('edge' or 'covered'), the
@@ -56,6 +77,9 @@ const BLOG = path.join(ROOT, 'content', 'blog');
 // px a box may run past its shape before the gate fails: anti-aliasing and the
 // kerning the table does not model, not a design allowance.
 const TOLERANCE = 2;
+// How far a drop shadow reaches past the box it is cast from, in units of its
+// stdDeviation: the extent a browser computes for a Gaussian blur.
+const SHADOW_REACH = 3;
 
 const ALLOW = [
   {
@@ -152,11 +176,11 @@ function parseXml(src) {
 
 const PROPS = new Set([
   'fill', 'fill-opacity', 'fill-rule', 'opacity', 'display', 'visibility', 'font-family', 'font-size',
-  'font-weight', 'font-style', 'text-anchor', 'letter-spacing',
+  'font-weight', 'font-style', 'text-anchor', 'letter-spacing', 'stroke', 'stroke-width', 'filter',
 ]);
 const INHERITED = new Set([
   'fill', 'fill-opacity', 'fill-rule', 'visibility', 'font-family', 'font-size', 'font-weight', 'font-style',
-  'text-anchor', 'letter-spacing',
+  'text-anchor', 'letter-spacing', 'stroke', 'stroke-width',
 ]);
 // Properties that would move or reshape text in ways this gate does not model.
 const UNMODELLED = new Set(['font', 'transform', 'font-stretch', 'font-variant', 'word-spacing', 'text-length', 'writing-mode', 'direction']);
@@ -403,11 +427,12 @@ function computeStyle(el, rules, parentStyle) {
   if (el.attrs.style) Object.assign(specified, parseDecls(el.attrs.style, `style attribute at line ${el.line}`));
   for (const [prop, value] of Object.entries(specified)) if (value === 'inherit') delete specified[prop];
 
-  const parent = parentStyle ?? { fill: 'black', 'fill-opacity': '1', 'fill-rule': 'nonzero', visibility: 'visible', 'font-family': 'serif', fontSize: 16, fontWeight: 400, 'font-style': 'normal', 'text-anchor': 'start', letterSpacing: 0 };
+  const parent = parentStyle ?? { fill: 'black', 'fill-opacity': '1', 'fill-rule': 'nonzero', visibility: 'visible', 'font-family': 'serif', fontSize: 16, fontWeight: 400, 'font-style': 'normal', 'text-anchor': 'start', letterSpacing: 0, stroke: 'none', 'stroke-width': '1' };
   const style = {};
   for (const prop of INHERITED) style[prop] = specified[prop] ?? parent[prop];
   style.display = specified.display ?? 'inline';
   style.opacity = specified.opacity ?? '1';
+  style.filter = specified.filter ?? 'none';
 
   const size = specified['font-size'];
   if (size === undefined) style.fontSize = parent.fontSize;
@@ -504,6 +529,133 @@ function layoutText(text, rules, textStyle) {
   return { box, content: chars.map((c) => c.ch).join('') };
 }
 
+// --- drop shadows ----------------------------------------------------------
+
+const union = (a, b) => (a ? { x0: Math.min(a.x0, b.x0), y0: Math.min(a.y0, b.y0), x1: Math.max(a.x1, b.x1), y1: Math.max(a.y1, b.y1) } : b);
+const grow = (b, dx, dy = dx) => ({ x0: b.x0 - dx, y0: b.y0 - dy, x1: b.x1 + dx, y1: b.y1 + dy });
+
+// Share of a Gaussian lying more than k standard deviations out: how opaque a
+// blurred edge still is k·σ past it, as a fraction of its full opacity
+// (erfc after Abramowitz and Stegun 7.1.26, accurate to 1e-7).
+function gaussianTail(k) {
+  const x = Math.abs(k) / Math.SQRT2;
+  const t = 1 / (1 + 0.3275911 * x);
+  const erfc = t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429)))) * Math.exp(-x * x);
+  return k >= 0 ? erfc / 2 : 1 - erfc / 2;
+}
+
+// The object bounding box of an element (geometry only: what objectBoundingBox
+// units are fractions of) and the box it paints (geometry grown by half its
+// stroke: what the shadow is cast from), both in the element's own user space.
+function objectBoxes(el, rules, style, canvas) {
+  const stroked = (b) => grow(b, style.stroke !== 'none' ? (parseFloat(style['stroke-width']) || 0) / 2 : 0);
+  if (el.name === 'text') {
+    const laid = layoutText(el, rules, style);
+    return laid && { geom: laid.box, paint: stroked(laid.box) };
+  }
+  if (el.name === 'line') {
+    const a = el.attrs, W = canvas.x1 - canvas.x0, H = canvas.y1 - canvas.y0;
+    const b = boxOf([[len(a.x1, W), len(a.y1, H)], [len(a.x2, W), len(a.y2, H)]]);
+    return { geom: b, paint: stroked(b) };
+  }
+  if (SHAPES.has(el.name) || el.name === 'polyline') {
+    const geo = shapeGeometry(el, canvas);
+    return geo && { geom: geo.box, paint: stroked(geo.box) };
+  }
+  if (UNSUPPORTED_ELEMENTS.has(el.name)) throw new Unsupported(`<${el.name}> at line ${el.line} is not modelled`);
+  let geom = null, paint = null;
+  for (const child of el.children) {
+    if (!child.name || NOT_RENDERED.has(child.name)) continue;
+    const s = computeStyle(child, rules, style);
+    if (s.display === 'none') continue;
+    const b = objectBoxes(child, rules, s, canvas);
+    if (!b) continue;
+    const m = parseTransform(child.attrs.transform);
+    geom = union(geom, toRoot(m, b.geom));
+    paint = union(paint, toRoot(m, b.paint));
+  }
+  return geom && { geom, paint };
+}
+
+// A <filter> the gate can measure: one feDropShadow, no primitive subregion.
+function readFilter(node) {
+  const where = `filter #${node.attrs.id} at line ${node.line}`;
+  const a = node.attrs;
+  const units = a.filterUnits ?? 'objectBoundingBox';
+  if (units !== 'objectBoundingBox' && units !== 'userSpaceOnUse') throw new Unsupported(`filterUnits "${units}" on ${where} is not modelled`);
+  if ((a.primitiveUnits ?? 'userSpaceOnUse') !== 'userSpaceOnUse') throw new Unsupported(`primitiveUnits on ${where} is not modelled`);
+  if (a.href !== undefined || a['xlink:href'] !== undefined) throw new Unsupported(`href on ${where} is not modelled`);
+  const primitives = node.children.filter((c) => c.name);
+  if (primitives.length !== 1 || primitives[0].name !== 'feDropShadow') {
+    throw new Unsupported(`${where} is not a single feDropShadow (${primitives.map((c) => c.name).join(', ') || 'empty'}), which is all the gate models`);
+  }
+  const fe = primitives[0].attrs;
+  for (const k of ['x', 'y', 'width', 'height']) if (fe[k] !== undefined) throw new Unsupported(`a primitive subregion on ${where} is not modelled`);
+  const sd = numbers(fe.stdDeviation ?? '2');
+  return {
+    id: a.id, line: node.line, units, x: a.x, y: a.y, width: a.width, height: a.height,
+    dx: fe.dx === undefined ? 2 : parseFloat(fe.dx), dy: fe.dy === undefined ? 2 : parseFloat(fe.dy),
+    sx: sd[0], sy: sd[1] ?? sd[0],
+    opacity: fe['flood-opacity'] === undefined ? 1 : parseFloat(fe['flood-opacity']),
+  };
+}
+
+// The filter region in the element's user space.
+function filterRegion(f, box, canvas) {
+  const frac = (v, fallback) => (v === undefined ? fallback : /%$/.test(v.trim()) ? parseFloat(v) / 100 : parseFloat(v));
+  if (f.units === 'objectBoundingBox') {
+    const W = box.x1 - box.x0, H = box.y1 - box.y0;
+    const x = frac(f.x, -0.1), y = frac(f.y, -0.1), w = frac(f.width, 1.2), h = frac(f.height, 1.2);
+    return { x0: box.x0 + x * W, y0: box.y0 + y * H, x1: box.x0 + (x + w) * W, y1: box.y0 + (y + h) * H };
+  }
+  const CW = canvas.x1 - canvas.x0, CH = canvas.y1 - canvas.y0;
+  const x = len(f.x ?? '-10%', CW), y = len(f.y ?? '-10%', CH);
+  return { x0: x, y0: y, x1: x + len(f.width ?? '120%', CW), y1: y + len(f.height ?? '120%', CH) };
+}
+
+const SIDES = ['top', 'bottom', 'left', 'right'];
+
+// Rule 3: the shadow, out to SHADOW_REACH σ past the offset painted box, must
+// lie inside the filter region wherever it falls on the canvas.
+function measureShadow({ el, style, ctm }, filters, rules, canvas) {
+  const ref = style.filter.match(/^url\(\s*['"]?#([^'")\s]+)['"]?\s*\)$/);
+  if (!ref) throw new Unsupported(`filter "${style.filter}" at line ${el.line} is not modelled`);
+  const node = filters.get(ref[1]);
+  if (!node) throw new Unsupported(`<${el.name}> at line ${el.line} references a missing filter #${ref[1]}`);
+  const f = readFilter(node);
+  const boxes = objectBoxes(el, rules, style, canvas);
+  if (!boxes) return null;
+  const { geom, paint } = boxes;
+  if (f.units === 'objectBoundingBox' && (geom.x1 <= geom.x0 || geom.y1 <= geom.y0)) {
+    throw new Unsupported(`<${el.name}> at line ${el.line} has an empty bounding box, which disables its objectBoundingBox filter`);
+  }
+  const region = filterRegion(f, geom, canvas);
+  const cast = { x0: paint.x0 + f.dx, y0: paint.y0 + f.dy, x1: paint.x1 + f.dx, y1: paint.y1 + f.dy };
+  const reach = grow(cast, SHADOW_REACH * f.sx, SHADOW_REACH * f.sy);
+  // How far past the cast box each side of the region lies, in σ.
+  const margin = {
+    top: (cast.y0 - region.y0) / f.sy, bottom: (region.y1 - cast.y1) / f.sy,
+    left: (cast.x0 - region.x0) / f.sx, right: (region.x1 - cast.x1) / f.sx,
+  };
+  // The part of the shadow each side cuts away, and whether it is on the canvas.
+  const lost = {
+    top: { ...reach, y1: Math.min(reach.y1, region.y0) },
+    bottom: { ...reach, y0: Math.max(reach.y0, region.y1) },
+    left: { ...reach, x1: Math.min(reach.x1, region.x0) },
+    right: { ...reach, x0: Math.max(reach.x0, region.x1) },
+  };
+  const cuts = [];
+  for (const side of SIDES) {
+    const l = lost[side];
+    if (l.x1 <= l.x0 || l.y1 <= l.y0) continue;
+    const r = toRoot(ctm, l);
+    const w = Math.min(r.x1, canvas.x1) - Math.max(r.x0, canvas.x0);
+    const h = Math.min(r.y1, canvas.y1) - Math.max(r.y0, canvas.y0);
+    if (w > TOLERANCE && h > TOLERANCE) cuts.push({ side, margin: margin[side], opacity: f.opacity * gaussianTail(margin[side]) });
+  }
+  return { line: el.line, tag: el.name, filter: f, box: geom, paint, region, reach, margin, cuts };
+}
+
 export function checkSvg(src) {
   const svg = parseXml(src);
   const vb = numbers(svg.attrs.viewBox ?? '');
@@ -524,6 +676,7 @@ export function checkSvg(src) {
   // shape under a text that sits on nothing else.
   const painted = [{ tag: 'canvas', line: svg.line, box: canvas, contains: () => true, inverse: IDENTITY, order: -1 }];
   const texts = [];
+  const filtered = [];
   let order = 0;
   const walk = (el, parentStyle, parentCtm) => {
     if (NOT_RENDERED.has(el.name)) return;
@@ -531,6 +684,7 @@ export function checkSvg(src) {
     const style = computeStyle(el, rules, parentStyle);
     if (style.display === 'none' || Number(style.opacity) === 0) return;
     const ctm = el === svg ? IDENTITY : multiply(parentCtm, parseTransform(el.attrs.transform));
+    if (style.filter !== 'none') filtered.push({ el, style, ctm });
     if (el.name === 'text') {
       if (style.visibility === 'hidden') return;
       const laid = layoutText(el, rules, style);
@@ -550,8 +704,19 @@ export function checkSvg(src) {
   };
   walk(svg, null, IDENTITY);
 
+  const filters = new Map();
+  const indexFilters = (node) => {
+    for (const c of node.children ?? []) {
+      if (!c.name) continue;
+      if (c.name === 'filter' && c.attrs.id) filters.set(c.attrs.id, c);
+      indexFilters(c);
+    }
+  };
+  indexFilters(svg);
+  const shadows = filtered.map((f) => measureShadow(f, filters, rules, canvas)).filter(Boolean);
+
   const inFill = (shape, point) => shape.contains(apply(shape.inverse, point), shape.evenOdd);
-  return texts.map((t) => {
+  const measured = texts.map((t) => {
     // Rule 1, the shape under the text: the last one painted before it whose
     // fill holds the box's centre. The box must stay inside its bounds.
     const centre = [(t.box.x0 + t.box.x1) / 2, (t.box.y0 + t.box.y1) / 2];
@@ -578,6 +743,7 @@ export function checkSvg(src) {
     }
     return { ...t, host, over, worst: Math.max(...Object.values(over)), covers };
   });
+  return { texts: measured, shadows };
 }
 
 // --- CLI -------------------------------------------------------------------
@@ -600,19 +766,31 @@ async function main() {
   const rel = (f) => path.relative(ROOT, f).split(path.sep).join('/');
   const fmt = (n) => n.toFixed(1);
 
-  let boxes = 0, allowed = 0;
-  const crossings = [], errors = [];
+  let boxes = 0, allowed = 0, filtered = 0;
+  const crossings = [], cutShadows = [], errors = [];
   const usedAllow = new Set();
   for (const file of files) {
-    let results;
+    let results, shadows;
     try {
-      results = checkSvg(await readFile(file, 'utf8'));
+      ({ texts: results, shadows } = checkSvg(await readFile(file, 'utf8')));
     } catch (err) {
       if (!(err instanceof Unsupported)) throw err;
       errors.push(`${rel(file)}: ${err.message}`);
       continue;
     }
     boxes += results.length;
+    filtered += shadows.length;
+    for (const sh of shadows) {
+      const where = `${rel(file)}:${sh.line}`;
+      const filterName = `filter #${sh.filter.id} (line ${sh.filter.line})`;
+      if (verbose) {
+        const margins = SIDES.map((side) => `${side} ${fmt(sh.margin[side])}σ`).join(', ');
+        console.log(`${where}  <${sh.tag}> ${filterName}  filter region margin beyond the offset shape: ${margins} (needs ${SHADOW_REACH}σ on the canvas)`);
+      }
+      if (!sh.cuts.length) continue;
+      const sides = sh.cuts.map((c) => `${c.side} ${fmt(c.margin)}σ out (${(c.opacity * 100).toFixed(2)}% opaque there)`).join(', ');
+      cutShadows.push(`${where}  <${sh.tag}> ${filterName} cuts off its drop shadow at ${sides}; the region must reach ${SHADOW_REACH}σ out on every side that lands on the canvas`);
+    }
     for (const r of results) {
       const where = `${rel(file)}:${r.line}`;
       const hostName = r.host.tag === 'canvas' ? 'the canvas' : `the ${r.host.tag} at line ${r.host.line}`;
@@ -639,19 +817,21 @@ async function main() {
   const stale = ALLOW.filter((a, i) => scanned.has(a.file) && !usedAllow.has(i));
 
   for (const c of crossings) console.error(c);
+  for (const c of cutShadows) console.error(c);
   for (const a of stale) console.error(`${a.file}  allowlist entry "${a.text.slice(0, 60)}…" no longer matches a crossing; remove it`);
   for (const e of errors) console.error(`${e} (the gate cannot measure this file)`);
-  const summary = `${files.length} SVG${files.length === 1 ? '' : 's'}, ${boxes} text boxes, tolerance ${TOLERANCE}px, ${allowed} allowlisted`;
-  if (crossings.length || stale.length || errors.length) {
+  const summary = `${files.length} SVG${files.length === 1 ? '' : 's'}, ${boxes} text boxes, ${filtered} filtered elements, tolerance ${TOLERANCE}px, ${allowed} allowlisted`;
+  if (crossings.length || cutShadows.length || stale.length || errors.length) {
     const what = [
       crossings.length && `${crossings.length} text box${crossings.length === 1 ? '' : 'es'} crossing the shape under ${crossings.length === 1 ? 'it' : 'them'} or running under a shape painted over ${crossings.length === 1 ? 'it' : 'them'}`,
+      cutShadows.length && `${cutShadows.length} drop shadow${cutShadows.length === 1 ? '' : 's'} cut off by ${cutShadows.length === 1 ? 'its' : 'their'} filter region on the canvas`,
       stale.length && `${stale.length} stale allowlist entr${stale.length === 1 ? 'y' : 'ies'}`,
       errors.length && `${errors.length} unmeasurable file${errors.length === 1 ? '' : 's'}`,
     ].filter(Boolean).join('; ');
     console.error(`svg-text-fit: FAIL — ${what} (${summary})`);
     exit(1);
   }
-  console.log(`svg-text-fit: OK — no text box crosses the shape under it or runs under a shape painted over it (${summary})`);
+  console.log(`svg-text-fit: OK — no text box crosses the shape under it or runs under a shape painted over it, and no drop shadow is cut off by its filter region (${summary})`);
 }
 
 if (import.meta.url === pathToFileURL(argv[1] ?? '').href) await main();

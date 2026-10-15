@@ -1,10 +1,12 @@
 ---
+import { Image } from 'astro:assets';
 import type { CollectionEntry } from 'astro:content';
 import type { Cluster } from '../lib/clusters';
 import { clusterCopy, clusterLabels } from '../lib/cluster-i18n';
 import { blogPath, formatDate, postPath, type Locale } from '../lib/i18n';
 import { builtHubLocale } from '../lib/posts';
 import { termBySlug, termHref, termLabel } from '../lib/terms';
+import { phraseHtml } from '../../scripts/lib/cjk-phrases.mjs';
 
 interface Props {
   cluster: Cluster;
@@ -13,6 +15,8 @@ interface Props {
 }
 
 const { cluster, locale, posts } = Astro.props;
+// zh and ja headings carry a <wbr> between phrases (scripts/lib/cjk-phrases.mjs).
+const ph = (text: string): string => phraseHtml(text, locale);
 const copy = clusterCopy(cluster, locale);
 const labels = clusterLabels(locale);
 // `relatedTerms` is hand-curated, so a term may have no hub in this locale:
@@ -33,17 +37,23 @@ const termLinks = (
     })
   )
 ).filter((link) => link !== undefined);
-const coverSrc = (cover: unknown): string =>
-  typeof cover === 'string'
-    ? cover
-    : (cover as { src?: string })?.src ?? '';
+// A raster cover is served as WebP at the width the reading-path card draws
+// it at, not as the 240-370 KB original JPG. Above 640px the image is a 180px
+// (150px at 641-900px) column as tall as the card's text, about 190-230px, and
+// object-fit: cover fills it by height, so a 1.6:1 or 16:9 cover is drawn
+// 300-370px wide: `sizes` says 400px. On a phone the card stacks and the image
+// is the full column at 16:9, drawn at its own width. The widest candidate
+// covers the phone column at 3x. An SVG cover is a few KB and scales itself,
+// so it is served as is.
+const CARD_WIDTHS = [400, 540, 720, 1080];
+const CARD_SIZES = '(max-width: 640px) calc(100vw - 2rem), 400px';
 ---
 
 <article class="cluster">
   <section class="cluster-hero">
     <div>
       <p class="eyebrow">{copy.eyebrow}</p>
-      <h1>{copy.title}</h1>
+      <h1 set:html={ph(copy.title)} />
       <p class="lead">{copy.lead}</p>
     </div>
     <aside class="hero-rail" aria-label={labels.clusterSignals}>
@@ -86,28 +96,40 @@ const coverSrc = (cover: unknown): string =>
     <div class="section-head">
       <div>
         <p class="section-kicker">{labels.readingPath}</p>
-        <h2>{labels.relatedArticles}</h2>
+        <h2 set:html={ph(labels.relatedArticles)} />
       </div>
       <a href={blogPath(locale)}>{labels.allArticles} <span>→</span></a>
     </div>
     <div class="article-grid">
       {posts.map(({ slug, entry }) => (
         <a class="article-card" href={postPath(locale, slug)}>
-          {entry.data.cover && (
-            <img
-              src={coverSrc(entry.data.cover)}
-              alt={entry.data.title}
-              width="360"
-              height="380"
-              loading="lazy"
-              decoding="async"
-            />
-          )}
+          {entry.data.cover &&
+            (entry.data.cover.format === 'svg' ? (
+              <img
+                src={entry.data.cover.src}
+                alt={entry.data.title}
+                width="360"
+                height="380"
+                loading="lazy"
+                decoding="async"
+              />
+            ) : (
+              <Image
+                src={entry.data.cover}
+                alt={entry.data.title}
+                width={Math.min(CARD_WIDTHS.at(-1)!, entry.data.cover.width)}
+                widths={CARD_WIDTHS}
+                sizes={CARD_SIZES}
+                format="webp"
+                loading="lazy"
+                decoding="async"
+              />
+            ))}
           <div>
             <time datetime={entry.data.date.toISOString().slice(0, 10)}>
               {formatDate(locale, entry.data.date)}
             </time>
-            <h3>{entry.data.title}</h3>
+            <h3 set:html={ph(entry.data.title)} />
             <p>{entry.data.description}</p>
           </div>
         </a>
@@ -166,12 +188,37 @@ const coverSrc = (cover: unknown): string =>
   :global(:root[data-theme='dark']) .section-kicker {
     color: #3fbf8f;
   }
+  /* Page title and section headings take the display face, as on every page;
+     article-card titles stay in the text face. */
+  /* zh and ja headings break only at the <wbr> between phrases
+     (scripts/lib/cjk-phrases.mjs); a phrase wider than the line still breaks,
+     as a last resort. */
+  h1:lang(zh),
+  h1:lang(ja),
+  h2:lang(zh),
+  h2:lang(ja),
+  h3:lang(zh),
+  h3:lang(ja) {
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+    text-wrap: balance;
+  }
   .cluster-hero h1 {
+    font-family: var(--font-display);
     font-size: clamp(2.5rem, 7vw, 5.6rem);
     line-height: 0.96;
     letter-spacing: 0;
     margin: 0 0 1.25rem;
     max-width: 920px;
+    text-wrap: balance;
+  }
+  /* A Japanese title breaks only between phrases, and a katakana word is one
+     phrase: アプリプラットフォーム is eleven characters, which the 744px h1
+     held 8.3 of at 5.6rem and a 360px phone 8.4 of at 2.45rem, so it broke
+     inside the word. Sized to hold eleven at every width. */
+  .cluster-hero h1:lang(ja) {
+    font-size: clamp(1.8rem, 4.4vw, 4.2rem);
+    line-height: 1.08;
   }
   .lead {
     color: var(--ink-soft);
@@ -258,9 +305,11 @@ const coverSrc = (cover: unknown): string =>
     gap: 1rem;
   }
   .section-head h2 {
+    font-family: var(--font-display);
     font-size: clamp(1.8rem, 4vw, 2.8rem);
     line-height: 1.05;
     margin: 0;
+    text-wrap: balance;
   }
   .section-head a {
     color: var(--accent);

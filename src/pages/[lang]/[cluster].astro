@@ -10,8 +10,9 @@ import {
   marketingPagePath,
 } from '../../content-pages/registry';
 import type { MarketingPage } from '../../content-pages/types';
-import { clusterCopy } from '../../lib/cluster-i18n';
+import { clusterCopy, clusterSourceLocale } from '../../lib/cluster-i18n';
 import { CLUSTERS, clusterPath, type Cluster } from '../../lib/clusters';
+import { fallbackRoute } from '../../lib/fallback';
 import { getPostsInLocale, type LocalePost } from '../../lib/posts';
 import { htmlLang, homePath, LOCALES, postPath, segToLocale, type Locale } from '../../lib/i18n';
 
@@ -49,9 +50,11 @@ let title: string;
 let description: string;
 let canonical: string | undefined;
 let noindex = false;
+// The body's language when it is not the page's locale (marketing fallbacks).
+let contentLocale: Locale | undefined;
 let alternates: Partial<Record<Locale, string>>;
-// Only set where the switcher's targets differ from the hreflang set — i.e.
-// marketing pages, which are built in every locale but authored in some.
+// Only set where the switcher's targets differ from the hreflang set — pages
+// that are built in every locale but authored in some.
 let navAlternates: Partial<Record<Locale, string>> | undefined;
 let jsonLd: Record<string, unknown>[];
 let relatedPosts: LocalePost[] = [];
@@ -63,10 +66,14 @@ if (props.kind === 'marketing') {
   const canonicalPath =
     sourceLocale === currentLocale ? pagePath : marketingPagePath(sourceLocale, page.slug);
   const pageUrl = absoluteUrl(pagePath);
-  title = `${page.title} · ObjectOS`;
+  // Most marketing titles already lead with the product name ("ObjectOS
+  // Platform: ..."); appending the brand again reads "ObjectOS ... · ObjectOS"
+  // and spends the end of a title that is already past 60 characters.
+  title = /\bObjectOS\b/.test(page.title) ? page.title : `${page.title} · ObjectOS`;
   description = page.description;
   canonical = canonicalPath;
   noindex = sourceLocale !== currentLocale;
+  contentLocale = sourceLocale;
   alternates = marketingPageAlternates(page.slug);
   navAlternates = marketingPageNavTargets(page.slug);
   jsonLd = [
@@ -125,9 +132,15 @@ if (props.kind === 'marketing') {
   const pageUrl = absoluteUrl(pagePath);
   title = `${copy.title} · ObjectOS`;
   description = copy.description;
-  alternates = Object.fromEntries(
-    LOCALES.map((language) => [language, clusterPath(language, cluster.slug)])
+  // Non-English cluster pages are one template per locale: noindexed and
+  // canonical to the English page until written per cluster (cluster-i18n.ts).
+  const route = fallbackRoute(currentLocale, clusterSourceLocale, (language) =>
+    clusterPath(language, cluster.slug)
   );
+  canonical = route.canonical;
+  noindex = route.isFallback;
+  alternates = route.alternates;
+  navAlternates = route.navAlternates;
   jsonLd = [
     {
       '@context': 'https://schema.org',
@@ -193,6 +206,7 @@ if (props.kind === 'marketing') {
   locale={currentLocale}
   {canonical}
   {noindex}
+  {contentLocale}
   {alternates}
   {navAlternates}
   jsonLd={jsonLd}>

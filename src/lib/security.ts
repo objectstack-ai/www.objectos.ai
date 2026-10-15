@@ -9,19 +9,30 @@ export interface SecurityCopy {
   hero: [string, string];
   lead: string;
   metrics: { value: string; label: string }[];
+  /**
+   * Section kickers (the small uppercase line above each h2). They are short
+   * phrases that say what the section answers, never a copy of the heading
+   * under them: the eyebrow and the h2 used to print the same string five
+   * times on this page.
+   */
+  residencyKicker: string;
   residencyTitle: string;
   residencyLead: string;
   residencyColumns: [string, string, string];
   residencyRows: { data: string; location: string; leaves: string }[];
+  aiKicker: string;
   aiTitle: string;
   aiLead: string;
   aiSteps: { title: string; copy: string }[];
+  permissionKicker: string;
   permissionTitle: string;
   permissionLead: string;
   permissionLayers: { title: string; copy: string }[];
+  deploymentKicker: string;
   deploymentTitle: string;
   deploymentLead: string;
   deployments: { title: string; copy: string }[];
+  faqKicker: string;
   faqTitle: string;
   faqs: { question: string; answer: string }[];
   ctaKicker: string;
@@ -42,6 +53,7 @@ const zhHans: SecurityCopy = {
     { value: 'Tool', label: '受控工具访问' },
     { value: 'Audit', label: '全程审批审计' },
   ],
+  residencyKicker: '数据放在哪里',
   residencyTitle: '数据驻留',
   residencyLead: 'ObjectOS 企业版不要求你把业务数据搬到我们的云上。ObjectStack 运行时连接你的数据库、存储和身份系统，数据驻留边界由你的部署方式决定。',
   residencyColumns: ['数据类别', '存放位置', '是否离开网络'],
@@ -53,6 +65,7 @@ const zhHans: SecurityCopy = {
     { data: '密钥与设置', location: '你的密钥管理器或加密设置存储', leaves: '否' },
     { data: 'AI 请求内容', location: '由你选择的模型提供方或本地模型处理', leaves: '仅在你配置外部模型时' },
   ],
+  aiKicker: 'Agent 如何行动',
   aiTitle: 'AI Agent 安全模型',
   aiLead: 'ObjectOS 不把模型当作超级管理员。AI 先理解业务对象，再通过声明式工具查询、分析或触发动作；工具输入经过校验，写操作进入审批队列，并受同一套权限系统约束。',
   aiSteps: [
@@ -61,6 +74,7 @@ const zhHans: SecurityCopy = {
     { title: '变更先入队', copy: '会修改元数据或关键状态的工具调用先进入待审批队列，审批人看到 diff 后再决定是否应用。' },
     { title: '全程可审计', copy: '对话、工具调用、读取、写入、批准、拒绝和权限变更都可以写入审计日志，方便安全复盘和合规取证。' },
   ],
+  permissionKicker: '谁能做什么',
   permissionTitle: '权限与审计',
   permissionLead: '权限模型沿用企业软件成熟词汇：身份、角色、权限集、记录访问和字段安全。简单应用可以只用权限集，复杂 CRM 或多租户应用可以逐层加上更细边界。',
   permissionLayers: [
@@ -70,6 +84,7 @@ const zhHans: SecurityCopy = {
     { title: '字段安全', copy: '即使用户能看到记录，敏感字段也可以隐藏或设为只读，并在 API、ObjectQL 和 Console 中统一生效。' },
     { title: '审计日志', copy: '记录 CRUD、权限授予、会话撤销、AI 工具调用和审批结果；审计行不可变，只能归档。' },
   ],
+  deploymentKicker: '跑在哪里',
   deploymentTitle: '部署边界',
   deploymentLead: 'ObjectOS 企业版可在企业内网中运营 ObjectStack：一个 Node.js 运行时、你的数据库、你的密钥和你的入口层。需要更严格边界时，也可以使用文件制品和离线镜像。',
   deployments: [
@@ -78,6 +93,7 @@ const zhHans: SecurityCopy = {
     { title: '隔离网络', copy: '使用离线容器镜像和本地 objectstack.json 制品，不配置云控制面，也不需要公共互联网。' },
     { title: '本地模型', copy: '可将 AI 服务指向 Ollama、vLLM 或内部模型端点，避免业务上下文发往外部模型提供方。' },
   ],
+  faqKicker: '常见问题',
   faqTitle: '安全评审常见问题',
   faqs: [
     { question: 'ObjectOS 会回传数据吗？', answer: '自管部署的 ObjectOS 在线校验许可证，企业版离线许可证可离线校验。除此之外，除非你显式配置 OIDC、邮件、AI 提供方、Webhook 或外部存储等集成，否则业务数据不会离开你的部署。开源 ObjectStack 运行时没有遥测、不查许可证、也不检查更新。' },
@@ -104,6 +120,7 @@ const en: SecurityCopy = {
     { value: 'Tool', label: 'governed access path' },
     { value: 'Audit', label: 'approval and evidence' },
   ],
+  residencyKicker: 'Where data lives',
   residencyTitle: 'Data residency',
   residencyLead: 'ObjectOS Enterprise does not require moving business data into our cloud: the ObjectStack runtime connects to your databases, storage, and identity systems, so residency follows your deployment boundary.',
   residencyColumns: ['Data', 'Location', 'Leaves boundary?'],
@@ -115,6 +132,7 @@ const en: SecurityCopy = {
     { data: 'Secrets and settings', location: 'Your secret manager or encrypted settings store', leaves: 'No' },
     { data: 'AI request context', location: 'Your chosen model provider or local model', leaves: 'Only if you configure an external model' },
   ],
+  aiKicker: 'How agents act',
   aiTitle: 'AI agent safety model',
   aiLead: 'ObjectOS does not treat the model as an administrator. Agents work through business objects and use declarative tools to query, analyze, or trigger actions. Tool input is validated, mutating work goes through approval, and every call is checked against the same permission system.',
   aiSteps: [
@@ -123,6 +141,7 @@ const en: SecurityCopy = {
     { title: 'Queues changes', copy: 'Tools that modify metadata or sensitive state enter a pending-action queue so reviewers can inspect the diff before applying it.' },
     { title: 'Leaves evidence', copy: 'Conversations, tool calls, reads, writes, approvals, rejections, and permission changes can be written to audit logs.' },
   ],
+  permissionKicker: 'Who may do what',
   permissionTitle: 'Permissions and audit',
   permissionLead: 'The access model uses enterprise software vocabulary: identity, roles, permission sets, record access, and field security. Simple apps can start with permission sets; regulated, CRM, or multi-tenant apps can add finer boundaries later.',
   permissionLayers: [
@@ -132,6 +151,7 @@ const en: SecurityCopy = {
     { title: 'Field security', copy: 'Sensitive fields can be hidden or read-only even when the record is visible, consistently across API, ObjectQL, and Console.' },
     { title: 'Audit logs', copy: 'Record CRUD, permission grants, session revocation, AI tool calls, and approval decisions; audit rows are immutable and can only be archived.' },
   ],
+  deploymentKicker: 'Where it runs',
   deploymentTitle: 'Deployment boundary',
   deploymentLead: 'ObjectOS Enterprise can operate ObjectStack inside your network: one Node.js runtime, your database, your secrets, and your ingress. Stricter environments can use file-backed artifacts and offline images.',
   deployments: [
@@ -140,6 +160,7 @@ const en: SecurityCopy = {
     { title: 'Air-gapped', copy: 'Use offline container images and a local objectstack.json artifact with no cloud control plane or public internet requirement.' },
     { title: 'Local models', copy: 'Point AI services at Ollama, vLLM, or internal model endpoints to keep business context inside your boundary.' },
   ],
+  faqKicker: 'FAQ',
   faqTitle: 'Security review FAQ',
   faqs: [
     { question: 'Does ObjectOS phone home?', answer: 'Self-managed ObjectOS validates its license online; Enterprise air-gapped licenses validate offline. Beyond that, unless you explicitly configure integrations such as OIDC, email, AI providers, webhooks, or external storage, no business data leaves your deployment. The open-source ObjectStack runtime has no telemetry, no license check, and no update ping.' },
@@ -152,7 +173,7 @@ const en: SecurityCopy = {
   ctaTitle: 'Let agents work with business data without crossing the boundary.',
   ctaCopy: 'Confirm how agents identify users, access objects, trigger actions, enter approval, and leave audit evidence before connecting them to production data.',
   ctaPrimary: 'Read the security docs',
-  ctaSecondary: 'Read how to connect existing systems',
+  ctaSecondary: 'Read the agent security boundaries article',
 };
 
 const ja: SecurityCopy = {
@@ -167,21 +188,26 @@ const ja: SecurityCopy = {
     { value: '5 層', label: 'ID からフィールドまでの権限モデル' },
     { value: 'HITL', label: 'AI 変更の人による承認' },
   ],
+  residencyKicker: 'データの所在',
   residencyTitle: 'データ所在地',
   residencyLead: 'ObjectOS Enterprise は業務データを当社クラウドへ移すことを求めません。ObjectStack ランタイムは自社のデータベース、ストレージ、ID 基盤へ接続します。',
   residencyColumns: ['データ', '保存場所', '外部へ出るか'],
+  aiKicker: 'エージェントの動き方',
   aiTitle: 'AI エージェントの安全モデル',
   aiLead: 'ObjectOS はモデルを管理者として扱いません。AI は宣言的なツールを使い、入力は検証され、変更は承認を通り、同じ権限システムで制約されます。',
+  permissionKicker: '誰が何をできるか',
   permissionTitle: '権限と監査',
   permissionLead: 'ID、ロール、権限セット、レコードアクセス、フィールドセキュリティという企業ソフトウェアの語彙でアクセスを管理します。',
+  deploymentKicker: '動作場所',
   deploymentTitle: 'デプロイ境界',
   deploymentLead: '基本形は 1 つの Node.js ランタイム、自社データベース、自社シークレット、自社 ingress。より厳しい環境ではファイル制品とオフラインイメージを使えます。',
+  faqKicker: 'よくある質問',
   faqTitle: 'セキュリティレビュー FAQ',
   ctaKicker: '次のステップ',
   ctaTitle: '試験導入の後ではなく、最初にセキュリティレビューを置く。',
   ctaCopy: 'AI エージェントを実データへ接続する前に、データ所在地、権限、監査証跡、デプロイ境界を確認します。',
   ctaPrimary: 'セキュリティ文書を読む',
-  ctaSecondary: '既存システム接続の記事を読む',
+  ctaSecondary: 'エージェントのセキュリティ境界の記事を読む',
 };
 
 const de: SecurityCopy = {
@@ -191,21 +217,26 @@ const de: SecurityCopy = {
   eyebrow: 'Sicherheit und Governance',
   hero: ['Daten bleiben in Ihrem Netzwerk.', 'AI arbeitet innerhalb von Berechtigungen.'],
   lead: `ObjectOS ist ${positioning.de.descriptor}. ObjectOS Enterprise betreibt die ObjectStack Runtime in Ihrer Infrastruktur; Geschäftsdaten, Identitäten, Audit-Logs, Dateien und Secrets bleiben unter Ihrer Kontrolle.`,
+  residencyKicker: 'Wo Daten liegen',
   residencyTitle: 'Datenresidenz',
   residencyLead: 'ObjectOS Enterprise verlangt nicht, Geschäftsdaten in unsere Cloud zu verschieben. Die ObjectStack Runtime verbindet sich mit Ihren Datenbanken, Speichern und Identitätssystemen.',
   residencyColumns: ['Daten', 'Speicherort', 'Verlässt es das Netzwerk?'],
+  aiKicker: 'Wie Agents handeln',
   aiTitle: 'Sicherheitsmodell für AI Agents',
   aiLead: 'ObjectOS behandelt das Modell nicht als Administrator. AI arbeitet über deklarative Tools, Eingaben werden validiert, Änderungen werden freigegeben und alle Aufrufe folgen demselben Berechtigungssystem.',
+  permissionKicker: 'Wer was darf',
   permissionTitle: 'Berechtigungen und Audit',
   permissionLead: 'Das Modell nutzt die vertraute Sprache von Unternehmenssoftware: Identität, Rollen, Berechtigungssätze, Datensatz-Zugriff und Feldsicherheit.',
+  deploymentKicker: 'Wo es läuft',
   deploymentTitle: 'Deployment-Grenze',
   deploymentLead: 'Die Standardform ist netzwerkfreundlich: eine Node.js Runtime, Ihre Datenbank, Ihre Secrets und Ihr Ingress. Strengere Umgebungen können file-backed Artefakte und Offline-Images nutzen.',
+  faqKicker: 'Häufige Fragen',
   faqTitle: 'FAQ für Sicherheitsreviews',
   ctaKicker: 'Nächster Schritt',
   ctaTitle: 'Sicherheitsreview zuerst, nicht nach dem Pilot.',
   ctaCopy: 'Bestätigen Sie Datenresidenz, Berechtigungen, Audit-Nachweise und Deployment-Form, bevor AI Agents echte Geschäftsdaten berühren.',
   ctaPrimary: 'Sicherheitsdokumentation lesen',
-  ctaSecondary: 'Artikel zum Verbinden bestehender Systeme lesen',
+  ctaSecondary: 'Artikel zu den Sicherheitsgrenzen für Agents lesen',
 };
 
 const es: SecurityCopy = {
@@ -215,21 +246,26 @@ const es: SecurityCopy = {
   eyebrow: 'Seguridad y gobierno',
   hero: ['Los datos permanecen en tu red.', 'La AI trabaja dentro de permisos.'],
   lead: `ObjectOS es ${positioning.es.descriptor}. ObjectOS Enterprise opera el runtime de ObjectStack en tu infraestructura; registros de negocio, identidades, auditoría, archivos y secretos siguen bajo tu control.`,
+  residencyKicker: 'Dónde viven los datos',
   residencyTitle: 'Residencia de datos',
   residencyLead: 'ObjectOS Enterprise no exige mover datos de negocio a nuestra nube. El runtime de ObjectStack se conecta a tus bases de datos, almacenamiento e identidad.',
   residencyColumns: ['Datos', 'Ubicación', '¿Sale de la red?'],
+  aiKicker: 'Cómo actúan los agentes',
   aiTitle: 'Modelo de seguridad para agentes de AI',
   aiLead: 'ObjectOS no trata al modelo como administrador. La AI usa herramientas declarativas, las entradas se validan, los cambios pasan por aprobación y cada llamada respeta el mismo sistema de permisos.',
+  permissionKicker: 'Quién puede hacer qué',
   permissionTitle: 'Permisos y auditoría',
   permissionLead: 'El modelo usa vocabulario de software empresarial: identidad, roles, conjuntos de permisos, acceso a registros y seguridad de campos.',
+  deploymentKicker: 'Dónde se ejecuta',
   deploymentTitle: 'Límite de despliegue',
   deploymentLead: 'La forma predeterminada es amigable para redes empresariales: un runtime Node.js, tu base de datos, tus secretos y tu entrada. Entornos más estrictos pueden usar artefactos locales e imágenes offline.',
+  faqKicker: 'Preguntas frecuentes',
   faqTitle: 'FAQ de revisión de seguridad',
   ctaKicker: 'Siguiente paso',
   ctaTitle: 'Pon la revisión de seguridad primero, no después del piloto.',
   ctaCopy: 'Confirma residencia de datos, permisos, auditoría y despliegue antes de conectar agentes de AI a datos reales.',
   ctaPrimary: 'Leer documentación de seguridad',
-  ctaSecondary: 'Leer cómo conectar sistemas existentes',
+  ctaSecondary: 'Leer el artículo sobre los límites de seguridad de los agentes',
 };
 
 const fr: SecurityCopy = {
@@ -239,21 +275,26 @@ const fr: SecurityCopy = {
   eyebrow: 'Sécurité et gouvernance',
   hero: ['Les données restent dans votre réseau.', 'L’AI agit dans les permissions.'],
   lead: `ObjectOS est ${positioning.fr.descriptor}. ObjectOS Enterprise exploite le runtime ObjectStack dans votre infrastructure ; données métier, identités, journaux d’audit, fichiers et secrets restent sous votre contrôle.`,
+  residencyKicker: 'Où vivent les données',
   residencyTitle: 'Résidence des données',
   residencyLead: 'ObjectOS Enterprise n’exige pas de déplacer vos données métier dans notre cloud. Le runtime ObjectStack se connecte à vos bases de données, stockages et systèmes d’identité.',
   residencyColumns: ['Données', 'Emplacement', 'Sort du réseau ?'],
+  aiKicker: 'Comment agissent les agents',
   aiTitle: 'Modèle de sécurité des agents AI',
   aiLead: 'ObjectOS ne traite pas le modèle comme un administrateur. L’AI passe par des outils déclaratifs, les entrées sont validées, les changements sont approuvés et chaque appel respecte le même système de permissions.',
+  permissionKicker: 'Qui peut faire quoi',
   permissionTitle: 'Permissions et audit',
   permissionLead: 'Le modèle utilise le vocabulaire du logiciel d’entreprise : identité, rôles, ensembles de permissions, accès aux enregistrements et sécurité des champs.',
+  deploymentKicker: 'Où ça tourne',
   deploymentTitle: 'Frontière de déploiement',
   deploymentLead: 'La forme par défaut convient au réseau d’entreprise : un runtime Node.js, votre base, vos secrets et votre ingress. Les environnements stricts peuvent utiliser des artefacts locaux et des images offline.',
+  faqKicker: 'Questions fréquentes',
   faqTitle: 'FAQ de revue sécurité',
   ctaKicker: 'Étape suivante',
   ctaTitle: 'Placez la revue sécurité avant le pilote.',
   ctaCopy: 'Validez résidence des données, permissions, preuves d’audit et déploiement avant de connecter des agents AI aux données réelles.',
   ctaPrimary: 'Lire la documentation sécurité',
-  ctaSecondary: 'Lire comment connecter les systèmes existants',
+  ctaSecondary: 'Lire l’article sur les frontières de sécurité des agents',
 };
 
 const ko: SecurityCopy = {
@@ -263,21 +304,26 @@ const ko: SecurityCopy = {
   eyebrow: '보안 및 거버넌스',
   hero: ['데이터는 네트워크 안에 유지하고,', 'AI는 권한 경계 안에서 작동합니다'],
   lead: `ObjectOS는 ${positioning.ko.descriptor}입니다. ObjectOS Enterprise는 ObjectStack 런타임을 사용자의 인프라에서 운영하며, 비즈니스 기록, ID, 감사 로그, 파일과 시크릿은 사용자가 통제합니다.`,
+  residencyKicker: '데이터가 있는 곳',
   residencyTitle: '데이터 레지던시',
   residencyLead: 'ObjectOS Enterprise는 비즈니스 데이터를 당사 클라우드로 옮기라고 요구하지 않습니다. ObjectStack 런타임은 사용자의 데이터베이스, 스토리지, ID 시스템에 연결됩니다.',
   residencyColumns: ['데이터', '위치', '네트워크 이탈 여부'],
+  aiKicker: '에이전트의 동작 방식',
   aiTitle: 'AI 에이전트 안전 모델',
   aiLead: 'ObjectOS는 모델을 관리자로 취급하지 않습니다. AI는 선언형 도구를 사용하고 입력은 검증되며 변경은 승인 절차를 거치고 모든 호출은 동일한 권한 시스템의 제약을 받습니다.',
+  permissionKicker: '누가 무엇을 할 수 있는가',
   permissionTitle: '권한 및 감사',
   permissionLead: '접근 모델은 엔터프라이즈 소프트웨어의 언어인 ID, 역할, 권한 세트, 레코드 접근, 필드 보안을 사용합니다.',
+  deploymentKicker: '실행 위치',
   deploymentTitle: '배포 경계',
   deploymentLead: '기본 형태는 하나의 Node.js 런타임, 사용자의 데이터베이스, 시크릿, ingress입니다. 더 엄격한 환경은 파일 기반 아티팩트와 오프라인 이미지를 사용할 수 있습니다.',
+  faqKicker: '자주 묻는 질문',
   faqTitle: '보안 검토 FAQ',
   ctaKicker: '다음 단계',
   ctaTitle: '파일럿 이후가 아니라 처음부터 보안 검토를 시작하세요.',
   ctaCopy: 'AI 에이전트를 실제 비즈니스 데이터에 연결하기 전에 데이터 레지던시, 권한, 감사 증거, 배포 형태를 확인하세요.',
   ctaPrimary: '보안 문서 읽기',
-  ctaSecondary: '기존 시스템 연결 글 읽기',
+  ctaSecondary: '에이전트 보안 경계 글 읽기',
 };
 
 const toHant = (value: unknown): unknown => {
@@ -299,3 +345,30 @@ export const securityCopy: Record<Locale, SecurityCopy> = {
   fr,
   ko,
 };
+
+/**
+ * The fields of a locale's security copy that are still the English text. The
+ * ja/de/es/fr/ko copies are partial translations written as `{ ...en, ... }`,
+ * so every field they do not override is the English value itself — the same
+ * array for the lists, the same string for the rest. That is what this
+ * detects; a translator overriding a field removes it from the set with no
+ * second list to keep in step.
+ */
+export function securityEnglishFields(locale: Locale): Set<keyof SecurityCopy> {
+  if (locale === 'en') return new Set();
+  const copy = securityCopy[locale];
+  return new Set(
+    (Object.keys(en) as (keyof SecurityCopy)[]).filter((field) => copy[field] === en[field])
+  );
+}
+
+/**
+ * Whose copy a locale's security page stands for. A locale counts as authored
+ * only when nothing is inherited from English: a partly translated page is an
+ * English page with a translated frame, so it falls back — noindexed and
+ * canonicalized to /en/security/ by `fallbackRoute` — while the translated
+ * parts stay on the page for the reader, and the English parts are marked
+ * `lang="en"` (SecurityPage.astro).
+ */
+export const securitySourceLocale = (locale: Locale): Locale =>
+  securityEnglishFields(locale).size === 0 ? locale : 'en';

@@ -2,6 +2,7 @@
 import { access, readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { cwd, exit } from 'node:process';
+import { decodeEntities, languageMismatches } from './lib/text-lang.mjs';
 
 const ROOT = cwd();
 const DIST = path.join(ROOT, 'dist');
@@ -70,6 +71,11 @@ const CLUSTER_SLUGS = [
 const CLUSTER_PATHS = LOCALES.flatMap((locale) =>
   CLUSTER_SLUGS.map((slug) => `/${locale}/${slug}/`)
 );
+// Only the English cluster pages are written per cluster; every other locale's
+// is one template with the name swapped (src/lib/cluster-i18n.ts), so those are
+// fallbacks: noindexed, canonical to English, and out of llms.txt and the
+// sitemap. When a locale gets real per-cluster copy, this list grows with it.
+const CLUSTER_AUTHORED_LOCALES = new Set(['en']);
 
 async function readDist(file) {
   try {
@@ -150,8 +156,14 @@ for (const locale of ['en', 'zh-Hans']) {
   }
 }
 for (const clusterPath of CLUSTER_PATHS) {
-  requireContains('llms.txt', llms, `${SITE}${clusterPath}`, `missing cluster page ${clusterPath}`);
-  requireContains('sitemap-0.xml', sitemap, `${SITE}${clusterPath}`, `missing cluster page ${clusterPath}`);
+  const url = `${SITE}${clusterPath}`;
+  if (CLUSTER_AUTHORED_LOCALES.has(clusterPath.split('/')[1])) {
+    requireContains('llms.txt', llms, url, `missing cluster page ${clusterPath}`);
+    requireContains('sitemap-0.xml', sitemap, url, `missing cluster page ${clusterPath}`);
+  } else {
+    requireExcludes('llms.txt', llms, `(${url})`, `lists templated cluster page ${clusterPath}`);
+    requireExcludes('sitemap-0.xml', sitemap, `<loc>${url}</loc>`, `lists templated cluster page ${clusterPath}`);
+  }
 }
 
 // The 404 surface. Cloudflare Pages treats a deployment with no top-level
@@ -458,16 +470,73 @@ if (postEntriesChecked === 0) {
   );
 }
 
-const htmlFiles = (await walk(DIST))
+// ─── Every built page, read once ───────────────────────────────────────────
+//
+// The sweeps below are invariants over the whole build rather than lists of
+// expected URLs: a fallback page has many producers (the marketing and
+// glossary registries, src/lib/fallback.ts for pricing, legal and security,
+// the templated cluster pages, thin topic hubs), and asserting the shape of
+// the result catches a new producer that gets the rule wrong without this
+// script having to learn about it first.
+const allHtmlFiles = (await walk(DIST))
   .filter((file) => file.endsWith('.html'))
   .map((file) => path.relative(DIST, file).split(path.sep).join('/'))
+  .sort();
+const servedUrl = (file) => `${SITE}/${file.replace(/(^|\/)index\.html$/, '$1')}`;
+const attrOf = (tag, name) => {
+  const m = new RegExp(`\\s${name}="([^"]*)"`).exec(tag);
+  return m ? decodeEntities(m[1]) : undefined;
+};
+const TAG = (name) => new RegExp(`<${name}\\b(?:[^>"']|"[^"]*"|'[^']*')*>`, 'g');
+const pages = new Map();
+for (const file of allHtmlFiles) {
+  const html = await readDist(file);
+  const headEnd = html.indexOf('</head>');
+  const head = headEnd === -1 ? html : html.slice(0, headEnd);
+  const metas = [...head.matchAll(TAG('meta'))].map(([tag]) => tag);
+  const links = [...head.matchAll(TAG('link'))].map(([tag]) => tag);
+  const meta = (key, value) => attrOf(metas.find((tag) => attrOf(tag, key) === value) ?? '', 'content');
+  pages.set(file, {
+    file,
+    html,
+    url: servedUrl(file),
+    noindex: /\bnoindex\b/.test(meta('name', 'robots') ?? ''),
+    refresh: metas.some((tag) => (attrOf(tag, 'http-equiv') ?? '').toLowerCase() === 'refresh'),
+    canonical: attrOf(links.find((tag) => attrOf(tag, 'rel') === 'canonical') ?? '', 'href'),
+    hreflangs: links
+      .filter((tag) => attrOf(tag, 'rel') === 'alternate' && attrOf(tag, 'hreflang'))
+      .map((tag) => ({ hreflang: attrOf(tag, 'hreflang'), href: attrOf(tag, 'href') })),
+    ogUrl: meta('property', 'og:url'),
+    ogLocale: meta('property', 'og:locale'),
+    ogImageAlt: meta('property', 'og:image:alt'),
+    ogImageWidth: meta('property', 'og:image:width'),
+    ogImageHeight: meta('property', 'og:image:height'),
+  });
+}
+const pageAt = (href) => {
+  let url;
+  try {
+    url = new URL(href);
+  } catch {
+    return undefined;
+  }
+  if (url.origin !== SITE) return undefined;
+  const rel = decodeURIComponent(url.pathname).replace(/^\//, '');
+  return pages.get(rel === '' || rel.endsWith('/') ? `${rel}index.html` : rel);
+};
+// Indexable = no `noindex` and its own canonical: the only pages a sitemap may
+// list or an hreflang / canonical annotation may point at.
+const isIndexable = (page) => Boolean(page) && !page.noindex && page.canonical === page.url;
+const isNotFound = (file) => /(^|\/)404\.html$/.test(file);
+
+const htmlFiles = allHtmlFiles
   .filter((file) => file !== 'index.html')
   // Checked above: a 404 page has no canonical URL and no hreflang set.
-  .filter((file) => !/(^|\/)404\.html$/.test(file));
+  .filter((file) => !isNotFound(file));
 
 for (const file of htmlFiles) {
-  const html = await readDist(file);
-  const expectedPath = `/${file.replace(/index\.html$/, '')}`;
+  const page = pages.get(file);
+  const { html } = page;
   // Glossary paths are matched first: `<locale>/glossary/index.html` also
   // satisfies the two-segment marketing pattern, and falling through to it
   // would compute the wrong canonical for the fallback locales.
@@ -475,44 +544,59 @@ for (const file of htmlFiles) {
   const glossaryIndexMatch = file.match(/^([^/]+)\/glossary\/index\.html$/);
   const marketingMatch = file.match(/^([^/]+)\/([^/]+)\/index\.html$/);
 
-  let canonicalPath = expectedPath;
-  let isFallbackContent = false;
+  // A fallback the registries name, with the canonical it must carry. Other
+  // fallbacks (pricing, legal, security, thin hubs) are held to the generic
+  // canonical rule below instead of a second copy of their source tables.
+  let registryCanonicalPath = null;
   if (glossaryTermMatch && LOCALES.includes(glossaryTermMatch[1])) {
     const [, locale, slug] = glossaryTermMatch;
     const contentLocales = glossaryContentLocales.get(slug);
     if (contentLocales && !contentLocales.has(locale)) {
-      isFallbackContent = true;
-      canonicalPath = `/${FALLBACK_LOCALE}/glossary/${slug}/`;
+      registryCanonicalPath = `/${FALLBACK_LOCALE}/glossary/${slug}/`;
     }
   } else if (glossaryIndexMatch && LOCALES.includes(glossaryIndexMatch[1])) {
     if (!glossaryLocales.has(glossaryIndexMatch[1])) {
-      isFallbackContent = true;
-      canonicalPath = `/${FALLBACK_LOCALE}/glossary/`;
+      registryCanonicalPath = `/${FALLBACK_LOCALE}/glossary/`;
     }
   } else if (marketingMatch && LOCALES.includes(marketingMatch[1])) {
-    const contentLocales = marketingContentLocales.get(marketingMatch[2]);
-    if (contentLocales && !contentLocales.has(marketingMatch[1])) {
-      isFallbackContent = true;
-      canonicalPath = `/${FALLBACK_LOCALE}/${marketingMatch[2]}/`;
+    const [, locale, slug] = marketingMatch;
+    const contentLocales = marketingContentLocales.get(slug);
+    if (contentLocales && !contentLocales.has(locale)) {
+      registryCanonicalPath = `/${FALLBACK_LOCALE}/${slug}/`;
+    } else if (CLUSTER_SLUGS.includes(slug) && !CLUSTER_AUTHORED_LOCALES.has(locale)) {
+      registryCanonicalPath = `/${FALLBACK_LOCALE}/${slug}/`;
     }
   }
-  const canonical = `${SITE}${canonicalPath}`;
-  requireContains(file, html, `<link rel="canonical" href="${canonical}">`, 'missing expected canonical URL');
-  requireContains(file, html, `<meta property="og:url" content="${canonical}">`, 'missing expected Open Graph URL');
-  if (isFallbackContent) {
+  if (registryCanonicalPath !== null) {
+    const canonical = `${SITE}${registryCanonicalPath}`;
+    requireContains(file, html, `<link rel="canonical" href="${canonical}">`, 'missing expected canonical URL');
     requireContains(
       file,
       html,
       '<meta name="robots" content="noindex, nofollow">',
       'fallback-content page must be noindexed'
     );
+  } else if (page.canonical !== page.url && !page.noindex) {
+    // A page may name another URL as canonical only as a fallback, and a
+    // fallback is noindexed: an indexable page that canonicalizes elsewhere
+    // asks to be indexed and merged at once.
+    issues.push(
+      `${file}: canonical ${page.canonical ?? '(none)'} is not the page's own URL, but the page is not noindexed`
+    );
+  }
+  if (page.ogUrl !== page.canonical) {
+    issues.push(`${file}: og:url ${page.ogUrl ?? '(none)'} differs from the canonical ${page.canonical ?? '(none)'}`);
   }
   requireContains(file, html, 'type="application/ld+json"', 'missing JSON-LD structured data');
 
   const locale = LOCALES.find((candidate) => file.startsWith(`${candidate}/`));
   if (locale) {
     requireContains(file, html, `<html lang="${locale}">`, 'missing matching html lang');
-    requireContains(file, html, 'rel="alternate" hreflang="x-default"', 'missing x-default hreflang');
+    // A noindexed page may have no indexable equivalent at all (a thin hub in
+    // every locale), and then it has no hreflang set to anchor an x-default.
+    if (!page.noindex) {
+      requireContains(file, html, 'rel="alternate" hreflang="x-default"', 'missing x-default hreflang');
+    }
     requireContains(file, html, `href="${SITE}/${locale}/rss.xml"`, 'missing locale RSS discovery link');
   }
 
@@ -520,6 +604,221 @@ for (const file of htmlFiles) {
     requireContains(file, html, '"@type":"BlogPosting"', 'missing BlogPosting JSON-LD');
     requireContains(file, html, '"@type":"BreadcrumbList"', 'missing BreadcrumbList JSON-LD');
   }
+  if (/^[^/]+\/blog\/topics\/.+\/index\.html$/.test(file)) {
+    requireContains(file, html, '"@type":"BreadcrumbList"', 'topic hub missing BreadcrumbList JSON-LD');
+    requireContains(file, html, '"@type":"ItemList"', 'topic hub missing ItemList JSON-LD');
+  }
+}
+
+// ─── 1. The sitemap lists only indexable, self-canonical pages ──────────────
+//
+// A noindexed URL in the sitemap is Search Console's "Submitted URL marked
+// noindex"; a URL that canonicalizes elsewhere submits a duplicate. 190 noindexed
+// fallback pages were listed before the sitemap filter read the built pages
+// (astro.config.mjs). Checked against the built page each entry names, so the
+// filter cannot drift from what the page says about itself.
+let sitemapChecked = 0;
+for (const { loc } of sitemapEntries) {
+  if (!loc) continue;
+  sitemapChecked += 1;
+  const page = pageAt(loc);
+  if (!page) issues.push(`sitemap-0.xml: lists ${loc}, which is not a built page`);
+  else if (page.noindex) issues.push(`sitemap-0.xml: lists noindexed page ${loc}`);
+  else if (page.canonical !== loc) {
+    issues.push(`sitemap-0.xml: lists ${loc}, whose canonical is ${page.canonical ?? '(none)'}`);
+  }
+}
+const noindexedBuilt = [...pages.values()].filter((page) => page.noindex && !isNotFound(page.file)).length;
+
+// ─── 2. Canonical and hreflang point only at indexable pages ────────────────
+//
+// An hreflang annotation claims its target is a real, indexable page in that
+// language; a canonical claims its target is the page to index. Pointing
+// either at a noindexed or non-canonical URL is the pattern that indexed 20
+// English pricing/legal pages as de/es/fr/ja/ko: each was self-canonical and
+// listed in every locale's hreflang set.
+let annotationsChecked = 0;
+for (const page of pages.values()) {
+  if (page.file === 'index.html') continue;
+  if (page.canonical && page.canonical !== page.url) {
+    annotationsChecked += 1;
+    const target = pageAt(page.canonical);
+    if (!isIndexable(target)) {
+      issues.push(`${page.file}: canonical ${page.canonical} is not an indexable, self-canonical page`);
+    }
+  }
+  for (const { hreflang, href } of page.hreflangs) {
+    annotationsChecked += 1;
+    if (!isIndexable(pageAt(href))) {
+      issues.push(`${page.file}: hreflang="${hreflang}" points at ${href}, which is not an indexable, self-canonical page`);
+    }
+  }
+}
+
+// ─── 3. The body is written in the language it declares ─────────────────────
+//
+// Every block of prose inside `<main>` must be in the language of its nearest
+// `lang` (scripts/lib/text-lang.mjs). This is what failed on 215 pages: the
+// marketing, glossary, pricing and legal fallbacks rendered English under
+// `lang="de"`/`"ja"`/..., and the partly translated security pages mixed
+// English sections into a translated frame — wrong for a screen reader (WCAG
+// 3.1.1/3.1.2) and wrong for a crawler deciding what language a page is in.
+// Checked on every page, indexable or not: a noindexed fallback is still read.
+let langBlocksJudged = 0;
+const judgedLangs = new Set();
+for (const page of pages.values()) {
+  if (page.file === 'index.html') continue;
+  const result = languageMismatches(page.html);
+  if (result === null) {
+    issues.push(`${page.file}: has no <main> — its body language cannot be checked`);
+    continue;
+  }
+  langBlocksJudged += result.judged;
+  for (const lang of result.confirmed) judgedLangs.add(lang);
+  if (result.mismatches.length === 0) continue;
+  const first = result.mismatches[0];
+  issues.push(
+    `${page.file}: ${result.mismatches.length} of ${result.judged} judged blocks in <main> are not in their ` +
+      `declared language — e.g. lang="${first.lang}" but written in ${first.detected}: ` +
+      `"${first.text.slice(0, 80)}…" (mark it with lang="${first.detected}", or fix the producer)`
+  );
+}
+for (const locale of LOCALES) {
+  if (!judgedLangs.has(locale)) {
+    issues.push(
+      `language check: no ${locale} block was confidently identified anywhere in the build — ` +
+        'the check measured nothing for that locale, which is not a pass'
+    );
+  }
+}
+
+// ─── 4. No internal link redirects ──────────────────────────────────────────
+//
+// A link that redirects costs the reader a round trip and tells a crawler the
+// linked URL is not the real one. Cloudflare Pages answers a directory page
+// requested without its trailing slash (or as `.../index.html`) with a 308 to
+// the slash form; `/` is the language-redirect page; a `_redirects` source is
+// a redirect by definition. Host and scheme variants (`http://`, the apex) are
+// not this build's to answer for and are not judged.
+const redirectRules = (await readFile(path.join(DIST, '_redirects'), 'utf8').catch(() => ''))
+  .split('\n')
+  .map((line) => line.trim())
+  .filter((line) => line && !line.startsWith('#'))
+  .map((line) => {
+    const source = line.split(/\s+/)[0];
+    const pattern = source
+      .split('*')
+      .map((part) => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/:[A-Za-z]\w*/g, '[^/]+'))
+      .join('.*');
+    return { source, re: new RegExp(`^${pattern}$`) };
+  });
+function redirectReason(url) {
+  const pathname = decodeURIComponent(url.pathname);
+  const rule = redirectRules.find(({ re }) => re.test(pathname));
+  if (rule) return `matches the _redirects source ${rule.source}`;
+  if (pathname === '/') return 'is the root language redirect (meta refresh to /en/)';
+  const rel = pathname.replace(/^\//, '');
+  if (rel.endsWith('/index.html') && pages.has(rel)) return 'is served at its directory URL (Pages answers 308)';
+  if (!rel.endsWith('/') && !path.extname(rel) && pages.has(`${rel}/index.html`)) {
+    return 'has no trailing slash (Pages answers 308 to the slash form)';
+  }
+  return null;
+}
+let internalLinksChecked = 0;
+const redirecting = new Map(); // "href — reason" -> files
+for (const page of pages.values()) {
+  const bodyStart = page.html.indexOf('<body');
+  const refs = [
+    ...[...page.html.slice(bodyStart).matchAll(TAG('a'))].map(([tag]) => attrOf(tag, 'href')),
+    page.canonical,
+    page.ogUrl,
+    ...page.hreflangs.map(({ href }) => href),
+  ];
+  for (const href of refs) {
+    if (!href || href.startsWith('#')) continue;
+    let url;
+    try {
+      url = new URL(href, page.url);
+    } catch {
+      continue;
+    }
+    if (url.origin !== SITE) continue;
+    internalLinksChecked += 1;
+    const reason = redirectReason(url);
+    if (!reason) continue;
+    const key = `${href} — ${reason}`;
+    redirecting.set(key, [...(redirecting.get(key) ?? []), page.file]);
+  }
+}
+for (const [key, files] of redirecting) {
+  const unique = [...new Set(files)];
+  issues.push(
+    `internal link ${key}; linked from ${unique.length} page${unique.length === 1 ? '' : 's'}: ` +
+      `${unique.slice(0, 3).join(', ')}${unique.length > 3 ? ', …' : ''}`
+  );
+}
+if (internalLinksChecked === 0) {
+  issues.push('redirect check: found no internal links — an empty match is a failure, not a pass');
+}
+
+// ─── The root page ──────────────────────────────────────────────────────────
+//
+// `/` is a redirect (zero-delay meta refresh to /en/ plus a language script),
+// so it names /en/ as its canonical, its hreflang alternates are absolute (a
+// relative hreflang href is ignored), and it is not also noindexed — that pair
+// asks for the page to be dropped and merged at once.
+{
+  const root = pages.get('index.html');
+  if (root) {
+    if (root.canonical !== `${SITE}/en/`) {
+      issues.push(`index.html: canonical is ${root.canonical ?? '(none)'}, expected ${SITE}/en/`);
+    }
+    if (root.noindex && root.refresh) issues.push('index.html: combines noindex with a meta refresh');
+    if (root.hreflangs.length !== LOCALES.length + 1) {
+      issues.push(`index.html: expected ${LOCALES.length + 1} hreflang links, found ${root.hreflangs.length}`);
+    }
+    for (const { hreflang, href } of root.hreflangs) {
+      if (!href?.startsWith(`${SITE}/`)) issues.push(`index.html: hreflang="${hreflang}" href "${href}" is not absolute`);
+    }
+  }
+}
+
+// ─── Cache headers for hashed assets ────────────────────────────────────────
+//
+// Every file astro writes under /_astro/ has a content hash in its name, so it
+// can be cached forever; without `_headers` Pages serves them with max-age=0.
+// The rule is only safe while the names really are hashed, so that is checked
+// too.
+{
+  const headers = await readFile(path.join(DIST, '_headers'), 'utf8').catch(() => null);
+  if (!headers) issues.push('_headers: missing — /_astro/* is served with max-age=0');
+  else if (!/^\/_astro\/\*\s*\n[ \t]+Cache-Control:\s*public,\s*max-age=31536000,\s*immutable\s*$/m.test(headers)) {
+    issues.push('_headers: no "/_astro/*  Cache-Control: public, max-age=31536000, immutable" rule');
+  }
+  const assets = await readdir(path.join(DIST, '_astro')).catch(() => []);
+  const unhashed = assets.filter((name) => !/\.[A-Za-z0-9_-]{8}(?:_[A-Za-z0-9_-]+)?\.[a-z0-9]+$/.test(name));
+  if (assets.length === 0) issues.push('_astro/: no assets found — the immutable rule covers nothing');
+  for (const name of unhashed) issues.push(`_astro/${name}: not content-hashed, but /_astro/* is cached as immutable`);
+}
+
+// ─── Open Graph and the Organization node ───────────────────────────────────
+const OG_LOCALES = new Set(['en_US', 'zh_CN', 'zh_TW', 'ja_JP', 'de_DE', 'es_ES', 'fr_FR', 'ko_KR']);
+for (const page of pages.values()) {
+  if (page.file === 'index.html') continue;
+  if (!OG_LOCALES.has(page.ogLocale)) {
+    issues.push(`${page.file}: og:locale "${page.ogLocale ?? '(none)'}" is not one of ${[...OG_LOCALES].join(', ')}`);
+  }
+  if (!page.ogImageAlt) issues.push(`${page.file}: missing og:image:alt`);
+  if (!page.ogImageWidth !== !page.ogImageHeight) {
+    issues.push(`${page.file}: og:image:width and og:image:height must be given together`);
+  }
+  requireContains(
+    page.file,
+    page.html,
+    '"@type":"Organization","@id":"https://www.objectos.ai/#organization"',
+    'Organization JSON-LD has no @id'
+  );
+  requireContains(page.file, page.html, '"sameAs":["https://github.com/', 'Organization JSON-LD has no sameAs');
 }
 
 if (issues.length > 0) {
@@ -528,4 +827,8 @@ if (issues.length > 0) {
   exit(1);
 }
 
-console.log(`SEO smoke test passed (${htmlFiles.length} HTML pages checked)`);
+console.log(
+  `SEO smoke test passed (${htmlFiles.length} HTML pages checked; ${sitemapChecked} sitemap URLs against ` +
+    `${noindexedBuilt} noindexed pages; ${annotationsChecked} canonical/hreflang annotations; ` +
+    `${langBlocksJudged} prose blocks language-checked; ${internalLinksChecked} internal links redirect-checked)`
+);

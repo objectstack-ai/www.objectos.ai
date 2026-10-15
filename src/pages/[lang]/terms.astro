@@ -1,7 +1,8 @@
 ---
 import Base from '../../layouts/Base.astro';
 import LegalPage from '../../components/LegalPage.astro';
-import { LOCALES, segToLocale, termsPath } from '../../lib/i18n';
+import { fallbackRoute, sourceLocaleByIdentity } from '../../lib/fallback';
+import { LOCALES, termsPath, segToLocale } from '../../lib/i18n';
 import { termsCopy } from '../../lib/legal';
 
 export function getStaticPaths() {
@@ -10,9 +11,19 @@ export function getStaticPaths() {
 
 const locale = segToLocale(Astro.params.lang!)!;
 const copy = termsCopy[locale];
-const alternates = Object.fromEntries(LOCALES.map((language) => [language, termsPath(language)]));
+// ja/de/es/fr/ko render the English policy: noindexed, canonical to the English
+// URL, and absent from hreflang (src/lib/fallback.ts).
+const route = fallbackRoute(locale, sourceLocaleByIdentity(termsCopy), termsPath);
 ---
 
-<Base title={`${copy.title} · ObjectOS`} description={copy.description} {locale} {alternates}>
+<Base
+  title={`${copy.title} · ObjectOS`}
+  description={copy.description}
+  {locale}
+  contentLocale={route.sourceLocale}
+  canonical={route.canonical}
+  noindex={route.isFallback}
+  alternates={route.alternates}
+  navAlternates={route.navAlternates}>
   <LegalPage {copy} />
 </Base>

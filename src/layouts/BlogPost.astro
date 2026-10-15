@@ -1,9 +1,15 @@
 ---
+import { Image } from 'astro:assets';
 import Base from './Base.astro';
-import type { CollectionEntry } from 'astro:content';
+import { getEntry, type CollectionEntry } from 'astro:content';
+import { OG_IMAGE, ogImagePath, postCoverFile } from '../../scripts/lib/og-image.mjs';
+import { phraseHtml } from '../../scripts/lib/cjk-phrases.mjs';
 import { formatDate, ui, blogPath, postPath, STATUS_COLOR, type Locale } from '../lib/i18n';
 import { termBySlug, termHref, termLabel } from '../lib/terms';
 import { getPostsInLocale, isPublicPost } from '../lib/posts';
+import { clusterCopy, clusterLabels } from '../lib/cluster-i18n';
+import { CLUSTERS, clusterPath } from '../lib/clusters';
+import { ORGANIZATION_ID } from '../lib/organization';
 
 interface Props {
   data: CollectionEntry<'blog'>['data'];
@@ -23,15 +29,34 @@ const displayDate = formatDate(locale, data.date);
 const updatedStr = data.updated ? data.updated.toISOString().slice(0, 10) : null;
 const updatedDisplay = data.updated ? formatDate(locale, data.updated) : null;
 const modifiedIso = (data.updated ?? data.date).toISOString();
-const coverSrc =
-  typeof data.cover === 'string'
-    ? data.cover
-    : (data.cover as { src?: string } | undefined)?.src;
+// The header cover is the LCP element on a phone, so a raster cover is served
+// as WebP at the width the column needs instead of the 1.5-1.9 MB original:
+// the article is at most 860px wide, and the phone column is the viewport less
+// the 1rem gutters. The widest candidate covers a 2x desktop screen; Astro
+// caps the list at the file's own width. An SVG cover is already a few KB and
+// scales itself, so it is served as is.
+const COVER_WIDTHS = [480, 720, 960, 1280, 1600];
+const COVER_SIZES = '(min-width: 908px) 860px, calc(100vw - 2rem)';
 const site = Astro.site?.toString().replace(/\/$/, '') ?? '';
 const absoluteUrl = (href: string): string =>
   site ? new URL(href, `${site}/`).toString() : new URL(href, Astro.url).toString();
 const currentUrl = site ? `${site}${Astro.url.pathname}` : Astro.url.href;
-const imageUrl = coverSrc ? absoluteUrl(coverSrc) : absoluteUrl('/images/objectos-home-hero.png');
+// The share image (`og:image`, `twitter:image`, `BlogPosting.image`): a
+// 1200x630 JPEG that scripts/og-images.mjs renders from the cover after
+// `astro build`, because the networks draw no card for an SVG and the PNG
+// covers are 1.5-1.9 MB. Its URL comes from the rule the renderer uses too
+// (scripts/lib/og-image.mjs), which reads the cover path from the post's
+// frontmatter: `data.cover` only carries the built asset, so the entry is
+// looked up for its file. That script fails the build if a page names a file
+// it did not render, or a size that is not the file's.
+const entry = await getEntry('blog', locale === 'en' ? slug : `${slug}.${locale}`);
+const coverFile: string | undefined = entry?.filePath ? postCoverFile(entry.filePath) : undefined;
+if (data.cover && !coverFile) {
+  throw new Error(`BlogPost: ${locale}/${slug} has a cover, but its file could not be resolved`);
+}
+const shareImage = coverFile
+  ? { url: absoluteUrl(ogImagePath(coverFile)), width: OG_IMAGE.width, height: OG_IMAGE.height, alt: data.title }
+  : undefined;
 const topic = termBySlug(data.topic)!;
 const relatedPosts = (await getPostsInLocale(locale))
   .filter((post) => post.slug !== slug && post.entry.data.status !== 'archived')
@@ -47,6 +72,16 @@ const relatedPosts = (await getPostsInLocale(locale))
   .filter((post) => post.score > 0)
   .sort((a, b) => b.score - a.score || b.entry.data.date.getTime() - a.entry.data.date.getTime())
   .slice(0, 3);
+// The pillar pages that list this post in their reading path. Each links the
+// post; the post links back, so a reader who lands on one article from search
+// finds the guide it belongs to, and the pillar is not an orphan that only the
+// home page links (src/components/FooterClusters.astro has the other half).
+// Titles only: outside English a cluster's description is one template with
+// the name swapped, and five of them stacked under a post read as exactly that.
+const readingPaths = CLUSTERS.filter((cluster) => cluster.articleSlugs.includes(slug)).map(
+  (cluster) => ({ href: clusterPath(locale, cluster.slug), copy: clusterCopy(cluster, locale) })
+);
+const readingPathLabel = clusterLabels(locale).readingPath;
 const jsonLd = [
   {
     '@context': 'https://schema.org',
@@ -61,6 +96,7 @@ const jsonLd = [
     },
     publisher: {
       '@type': 'Organization',
+      '@id': ORGANIZATION_ID,
       name: 'ObjectStack AI LLC',
       logo: {
         '@type': 'ImageObject',
@@ -69,7 +105,7 @@ const jsonLd = [
     },
     mainEntityOfPage: currentUrl,
     url: currentUrl,
-    image: imageUrl,
+    image: shareImage?.url,
     articleSection: termLabel(data.topic, locale),
     keywords: data.tags,
     inLanguage: locale,
@@ -184,7 +220,10 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
   title={data.title}
   description={data.description}
   canonical={data.canonical_url}
-  image={coverSrc}
+  image={shareImage?.url}
+  imageAlt={shareImage?.alt}
+  imageWidth={shareImage?.width}
+  imageHeight={shareImage?.height}
   type="article"
   noindex={!isPublicPost(data)}
   publishedTime={data.date.toISOString()}
@@ -237,22 +276,36 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
         <span>{t.by} {data.author}</span>
       </div>
 
-      <h1 id="article-title">{data.title}</h1>
+      <h1 id="article-title" set:html={phraseHtml(data.title, locale)} />
       {data.description && <p class="lead">{data.description}</p>}
 
       {
-        coverSrc && (
-          <img
-            class="cover"
-            src={coverSrc}
-            alt={data.title}
-            width="1200"
-            height="675"
-            loading="eager"
-            decoding="async"
-            fetchpriority="high"
-          />
-        )
+        data.cover &&
+          (data.cover.format === 'svg' ? (
+            <img
+              class="cover"
+              src={data.cover.src}
+              alt={data.title}
+              width={data.cover.width}
+              height={data.cover.height}
+              loading="eager"
+              decoding="async"
+              fetchpriority="high"
+            />
+          ) : (
+            <Image
+              class="cover"
+              src={data.cover}
+              alt={data.title}
+              width={Math.min(COVER_WIDTHS.at(-1)!, data.cover.width)}
+              widths={COVER_WIDTHS}
+              sizes={COVER_SIZES}
+              format="webp"
+              loading="eager"
+              decoding="async"
+              fetchpriority="high"
+            />
+          ))
       }
 
       {
@@ -284,9 +337,24 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
     </div>
 
     {
+      readingPaths.length > 0 && (
+        <aside class="reading-path" aria-labelledby="reading-path-title">
+          <p class="reading-path-label" id="reading-path-title">{readingPathLabel}</p>
+          <ul>
+            {readingPaths.map((path) => (
+              <li>
+                <a href={path.href}>{path.copy.title} <span aria-hidden="true">→</span></a>
+              </li>
+            ))}
+          </ul>
+        </aside>
+      )
+    }
+
+    {
       relatedPosts.length > 0 && (
         <aside class="related" aria-labelledby="related-title">
-          <h2 id="related-title">{t.relatedTitle}</h2>
+          <h2 id="related-title" set:html={phraseHtml(t.relatedTitle, locale)} />
           <ul>
             {relatedPosts.map((post) => (
               <li>
@@ -363,6 +431,18 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
       letter-spacing: 0;
       margin: 0 0 1rem;
     }
+    /* zh and ja: the title breaks only at the <wbr> between phrases
+       (scripts/lib/cjk-phrases.mjs); a phrase wider than the line still
+       breaks, as a last resort. The body's own headings get theirs from the
+       markdown pipeline (rehypeCjkHeadingPhrases) and the rule below. */
+    h1:lang(zh),
+    h1:lang(ja),
+    h2:lang(zh),
+    h2:lang(ja) {
+      word-break: keep-all;
+      overflow-wrap: anywhere;
+      text-wrap: balance;
+    }
     .lead {
       font-size: 1.15rem;
       line-height: 1.55;
@@ -412,6 +492,38 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
       background: var(--accent-soft);
       padding: 0.1rem 0.5rem;
       border-radius: 999px;
+    }
+    .reading-path {
+      margin-top: 3rem;
+      padding: 1rem 1.1rem;
+      border: 1px solid var(--line);
+      border-left: 3px solid var(--accent);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+    .reading-path-label {
+      margin: 0 0 0.5rem;
+      color: var(--ink-soft);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .reading-path ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 0.45rem;
+    }
+    .reading-path a {
+      color: var(--ink);
+      font-weight: 700;
+      line-height: 1.35;
+      text-decoration: none;
+    }
+    .reading-path a:hover {
+      color: var(--accent);
     }
     .related {
       margin-top: 3rem;
@@ -482,6 +594,14 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
       font-size: 1.22rem;
       margin: 2rem 0 0.75rem;
       scroll-margin-top: 104px;
+    }
+    /* zh and ja body headings carry a <wbr> between phrases, added at build
+       time by rehypeCjkHeadingPhrases (scripts/lib/cjk-phrases.mjs), and break
+       nowhere else. */
+    .prose :is(h1, h2, h3, h4, h5, h6):is(:lang(zh), :lang(ja)) {
+      word-break: keep-all;
+      overflow-wrap: anywhere;
+      text-wrap: balance;
     }
     .prose p {
       margin: 0 0 1.25rem;

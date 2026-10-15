@@ -42,7 +42,7 @@ export const CLUSTERS: Cluster[] = [
       'Object modeling for customers, orders, cases, devices, contracts, approvals, and other business records.',
       'Metadata-driven screens, workflows, APIs, and agent tools generated from the same business specification.',
       'Permission-aware execution so users and AI agents operate inside the same governance boundary.',
-      'Integration with existing systems so the platform can extend what already runs instead of forcing a migration.',
+      'Federation of a database you already run — read-only by default, and early — so the platform can read what already runs instead of forcing a migration.',
     ],
     useCases: [
       'Turn a repair, service, approval, or internal operations requirement into a running application.',
@@ -83,16 +83,16 @@ export const CLUSTERS: Cluster[] = [
       'A practical guide to modernizing legacy business systems with AI by connecting existing databases, modeling business objects, and avoiding risky migrations.',
     eyebrow: 'Modernization cluster',
     lead:
-      'Legacy modernization does not always start with a rebuild. For many teams, the lower-risk path is to connect existing systems, model the records that matter, and add AI-native workflows on top.',
+      'Legacy modernization does not always start with a rebuild. For many teams, the lower-risk path is to connect existing systems read-only first, model the records that matter, and add AI-native workflows on top.',
     definition:
-      'AI-assisted modernization keeps the system of record in place while creating a governed object layer for AI, APIs, workflows, dashboards, and new applications. The old system remains operational; the new layer makes its data and processes understandable.',
+      'AI-assisted modernization keeps the system of record in place while creating a governed object layer for AI, APIs, workflows, dashboards, and new applications. The old system remains operational and keeps writing its rows; the new layer federates them — read-only by default, and early — and makes its data and processes understandable.',
     whyNow: [
       'Many core systems still run the business but are too brittle for frequent change.',
       'AI creates pressure to expose old data safely without opening direct database access.',
       'Modernization budgets work better when teams can prove value before migration decisions.',
     ],
     capabilities: [
-      'Connect to existing databases and applications without moving every record first.',
+      'Connect an existing database as a read-only datasource first — federation is read-only by default, and early — and model the tables that matter as objects without moving a record.',
       'Describe legacy tables as business objects that agents, workflows, and users can understand.',
       'Add new screens, reports, and automations around the old system while preserving the source of truth.',
       'Route AI actions through permissions, approvals, and audit logs rather than ad hoc scripts.',
@@ -106,7 +106,7 @@ export const CLUSTERS: Cluster[] = [
       {
         question: 'Can AI modernization avoid a full migration?',
         answer:
-          'Often, yes. A governed object layer can connect to the existing system of record, expose business concepts, and let teams add AI workflows without moving every process to a new platform immediately.',
+          'Often, yes. A governed object layer can connect to the existing system of record — read-only by default, with writes enabled deliberately per object — expose business concepts, and let teams add AI workflows without moving every process to a new platform immediately. Federation is early: expect the read path to be the mature one.',
       },
       {
         question: 'What should be modernized first?',
@@ -137,14 +137,14 @@ export const CLUSTERS: Cluster[] = [
     lead:
       'Self-hosted AI is not only about where the model runs. Once AI reads business data and calls tools, the application runtime that controls objects, permissions, approvals, and audit evidence becomes the critical control point.',
     definition:
-      'A self-hosted AI application platform lets enterprises run the governed business runtime in their own infrastructure. The model can be local or external, but data access, tools, workflow execution, and audit policy stay under enterprise control.',
+      'A self-hosted AI application platform lets enterprises run the governed business runtime in their own infrastructure. The model can be local or external, but data access, tools, workflow execution, and audit policy stay under enterprise control. Two things answer to that description here: the free, Apache-2.0 ObjectStack framework, and licensed self-managed ObjectOS — Business Self-Managed or ObjectOS Enterprise — which adds the in-product AI on top of it.',
     whyNow: [
       'AI agents increasingly need access to sensitive customer, operational, and financial records.',
       'Regulated teams need evidence of who accessed what, which action ran, and which approval was required.',
       'Security teams need a clear place to enforce identity, network, key, and logging policies.',
     ],
     capabilities: [
-      'Run the business object layer, tool registry, approvals, and audit logs in controlled infrastructure.',
+      'Run the business object layer, tool registry, approvals, and audit logs in controlled infrastructure — free on the open-source ObjectStack framework, or licensed as self-managed ObjectOS when you want the in-product AI Builder and Ask on your own infrastructure.',
       'Connect external or local models through explicit policy rather than hardwired assumptions.',
       'Keep files, records, logs, and credentials aligned with existing enterprise controls.',
       'Give agents scoped tools instead of unrestricted administrator credentials.',
@@ -169,6 +169,11 @@ export const CLUSTERS: Cluster[] = [
         question: 'How should agents access business data in a self-hosted setup?',
         answer:
           'Agents should act on behalf of a user or governed service identity, inherit permission scope, call explicit tools, and write audit logs for every material action.',
+      },
+      {
+        question: 'Is self-hosting free, and what does ObjectOS add?',
+        answer:
+          'Free self-hosting is the open-source ObjectStack framework (Apache-2.0): the protocol, kernel, CLI, production runtime, Console UI, and MCP server, with no feature gate between development and production — bring your own AI over MCP. Self-managed ObjectOS is licensed: Business Self-Managed is a single-node delivery with the in-product AI Builder and Ask, AI governance, and bring-your-own-model; ObjectOS Enterprise is the full private deployment with clustering, air-gapped operation, SCIM, compliance attestations, and SLA support. On either edition you can export your ontology and run it on the open-source runtime. To start: npm create objectstack@latest, point your coding agent at the generated project and its AGENTS.md, then npx os dev --ui.',
       },
     ],
     articleSlugs: [
@@ -247,7 +252,7 @@ export const CLUSTERS: Cluster[] = [
       'Work orders, reports, and exceptions offer clear value before larger transformation programs.',
     ],
     capabilities: [
-      'Connect production, inventory, equipment, quality, and work order data as business objects.',
+      'Connect production, inventory, equipment, quality, and work order data as business objects — federated read-only by default from the databases that already run production.',
       'Use AI to explain report changes, spot exceptions, and summarize operational context.',
       'Build case-style workflows for maintenance, quality issues, and supply chain follow-up.',
       'Keep source systems stable while adding modern dashboards, workflows, and agent assistance.',
@@ -266,7 +271,7 @@ export const CLUSTERS: Cluster[] = [
       {
         question: 'Does manufacturing AI require replacing ERP or MES?',
         answer:
-          'No. A practical first architecture connects existing systems and models the relevant records as business objects so AI can assist without taking over the source systems.',
+          'No. A practical first architecture connects the existing databases as read-only datasources — federation is read-only by default, and early — and models the relevant records as business objects so AI can read and analyze without taking over the source systems.',
       },
       {
         question: 'What makes manufacturing AI difficult?',

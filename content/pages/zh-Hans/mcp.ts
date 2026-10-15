@@ -1,4 +1,7 @@
 import type { MarketingPage } from '../../../src/content-pages/types';
+import { positioning } from '../../../src/lib/positioning';
+
+const p = positioning['zh-Hans'];
 
 const page = {
     slug: 'mcp',
@@ -9,9 +12,9 @@ const page = {
     eyebrow: '工具与 MCP',
     heroTitle: '你的业务对象，成为任意 AI 的受治理工具。',
     lead:
-      '多数公司用手写的胶水代码把 AI 接到数据上，绕过了自己建立的所有控制。ObjectStack 运行时则直接从元数据生成受治理工具：无论你的模型是 Claude、Cursor 还是完全本地的模型，它都走和员工一样的权限、审批与审计。ObjectOS 为同一应用增加生产运营体验。',
-    primary: { label: '对比版本与定价', href: '/en/pricing/' },
-    secondary: { label: '阅读文档', href: 'https://docs.objectos.ai' },
+      `多数公司用手写的胶水代码把 AI 接到数据上，绕过了自己建立的所有控制。ObjectStack 运行时则直接从元数据生成受治理工具：无论你的模型是 Claude、Cursor 还是完全本地的模型，它都走和员工一样的权限、审批与审计。MCP 服务器随开源框架发布，在每个版本中默认开启；ObjectOS 是${p.descriptor}，跑的是同一个服务器。`,
+    primary: { label: '阅读 MCP 文档', href: 'https://docs.objectos.ai/docs/configure/mcp' },
+    secondary: { label: '把你的 Agent 指向 ObjectStack', href: '/en/agent-developer/' },
     metrics: [
       { value: '自动接线', label: '查询、schema 和动作工具从你的对象自动注册' },
       { value: '任意客户端', label: 'Claude、Cursor、本地模型或你自己的 Agent 运行时' },

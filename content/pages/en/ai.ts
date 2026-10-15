@@ -14,7 +14,7 @@ const page = {
     secondary: { label: 'See how agents write metadata', href: '/en/agent-developer/' },
     metrics: [
       { value: '2 paths', label: 'Build with a coding agent in source, or by conversation in the cloud' },
-      { value: '<150k tokens', label: 'A complete CRM, including UI, held in one context window' },
+      { value: 'Held whole', label: 'Apps small enough for AI to hold whole — the bundled CRM loads end-to-end' },
       { value: 'Business+', label: 'AI action audit, guardrails, and permission scoping start on ObjectOS Business' },
     ],
     artifact: {
@@ -36,7 +36,7 @@ const page = {
         eyebrow: 'AI Build',
         title: 'Two ways to build — one reviewable definition',
         copy:
-          'Whether the AI works in your repository or in an ObjectOS chat panel, the output is the same typed ObjectStack metadata a human reviews and owns. A complete CRM is under 150k tokens: business logic — objects, workflows, and permissions — stays under 100k, and UI metadata adds about 50k.',
+          'Whether the AI works in your repository or in an ObjectOS chat panel, the output is the same typed ObjectStack metadata a human reviews and owns. The definition stays small enough for an agent to hold whole: the objectstack README’s bundled CRM — objects, views, a dashboard, a lead-conversion flow, permission sets, actions, translations — loads end-to-end and refactors in one change.',
         items: [
           {
             title: 'In source, with your coding agent',
@@ -86,7 +86,7 @@ const page = {
         items: [
           {
             title: 'Agent writes source files',
-            body: 'Claude Code, Cursor, or any coding agent edits ObjectStack definitions in your repo; review happens as ordinary git diffs.',
+            body: 'npm create objectstack@latest scaffolds a project and writes an AGENTS.md, so Claude Code, Cursor, or any coding agent starts with the protocol’s rules loaded; it edits ObjectStack definitions in your repo, npx os dev --ui renders them, and review happens as ordinary git diffs.',
           },
           {
             title: 'Any MCP client can ask',

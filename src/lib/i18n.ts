@@ -36,6 +36,23 @@ export const postPath = (l: Locale, slug: string): string =>
 /** BCP-47 lang attribute (the locale codes are already valid). */
 export const htmlLang = (l: Locale): string => l;
 
+/**
+ * `og:locale` value. Open Graph takes `language_TERRITORY` (Facebook's locale
+ * list), not a BCP-47 tag: `en` and `zh_Hans` are not values it knows, and a
+ * consumer that does not recognize the value falls back to `en_US` for every
+ * page. Script subtags map to the territory each script is read in.
+ */
+export const OG_LOCALE: Record<Locale, string> = {
+  en: 'en_US',
+  'zh-Hans': 'zh_CN',
+  'zh-Hant': 'zh_TW',
+  ja: 'ja_JP',
+  de: 'de_DE',
+  es: 'es_ES',
+  fr: 'fr_FR',
+  ko: 'ko_KR',
+};
+
 /** Human-readable date in the active locale; keep ISO dates in `datetime`. */
 export const formatDate = (locale: Locale, date: Date): string =>
   new Intl.DateTimeFormat(htmlLang(locale), {
@@ -191,7 +208,7 @@ const en: Strings = {
   all: 'Home',
   audience: 'Audience',
   articlesTitle: 'Articles',
-  articlesLead: (n) => `${n} ${n === 1 ? 'article' : 'articles'} on AI-written enterprise software, runtime governance, and agent-ready applications.`,
+  articlesLead: (n) => `${n} ${n === 1 ? 'article' : 'articles'} on executable business ontologies, runtime governance, and agent-operated applications.`,
   backToList: 'All articles',
   alsoOn: 'Also published on',
   references: 'References',

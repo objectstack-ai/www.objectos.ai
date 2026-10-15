@@ -3,14 +3,14 @@ import type { MarketingPage } from '../../../src/content-pages/types';
 const page = {
     slug: 'approvals',
     navLabel: '审批',
-    title: 'ObjectOS 审批：业务变更与 AI 动作的多级签核',
+    title: '审批：业务变更与 AI 动作的多级签核',
     description:
-      '多级审批，按用户、角色、团队与管理层级解析审批人，配备三页签审批收件箱、升级与记录锁定——AI 编写的结构性变更在上线前也要过同一个队列。',
+      '多级审批，按用户、角色、团队与管理层级解析审批人，配备三页签审批收件箱、升级与记录锁定，都在开源控制台里；在 ObjectOS 上，AI Builder 的元数据变更另走一条受审路径：带 diff 的待审动作队列、独立的批准权限与审计记录。',
     eyebrow: '审批',
     heroTitle: '每个有分量的变更，都要等一个"同意"。',
     lead:
-      '一笔超过 15% 的折扣批下来是什么样？流程停驻、订单锁定，财务在审批收件箱里看到请求——记录快照、谁在什么时候做了什么，一目了然；批准放行，驳回带评论退回，超时自动升级。AI 刚提议的 schema 变更，走的也是这同一个队列。',
-    primary: { label: '对比版本与定价', href: '/en/pricing/' },
+      '一笔超过 15% 的折扣批下来是什么样？流程停驻、订单锁定，财务在审批收件箱里看到请求——记录快照、谁在什么时候做了什么，一目了然；批准放行，驳回带评论退回，超时自动升级。ObjectOS AI Builder 刚提议的 schema 变更也同样要等——在它自己的待审动作队列里，审批人读完 diff 才会生效。',
+    primary: { label: '阅读审批文档', href: 'https://docs.objectos.ai/docs/build/automation/approvals' },
     secondary: { label: '查看权限与安全', href: '/en/permissions/' },
     metrics: [
       { value: '4 种路由', label: '指定用户、角色、团队或管理层级' },
@@ -130,17 +130,17 @@ export const DiscountApproval = defineFlow({
       {
         id: 'ai-gate',
         eyebrow: 'AI 治理闸门',
-        title: '审人的队列，同样审 AI',
+        title: '人和 AI 都要过审，才有东西上线',
         copy:
-          '这就是让 AI 编写的软件可治理的机制：Agent 提出的结构性变更不会直接上线——它们排队。',
+          '这就是让 AI 编写的软件可治理的机制：Agent 提出的结构性变更不会直接上线——它要等人。在开源运行时上，等的是你的 git diff；在 ObjectOS 上，等的是 AI Builder 的待审动作队列。',
         items: [
           {
             title: '结构性变更排队',
-            body: 'Agent 提议新对象、字段、流程或权限变更时，变更以紧凑 diff 的形式落入同一个审批收件箱。',
+            body: 'ObjectOS AI Builder 提议新的包、对象、字段、动作或流程时，变更落入一个独立于记录审批的待审动作队列，审批人在点击批准前看到提议的 diff；每一次批准或驳回都连同发起它的对话写入审计日志。',
           },
           {
             title: 'diff 就是请求本身',
-            body: '审阅者看到的正是将要发生的变化——schema、权限、自动化——而不是一段转述。',
+            body: '审阅者看到的正是将要发生的变化——schema、权限、自动化——而不是一段转述。批准是一项独立权限 ai:approve：默认只有 Setup Administrator 持有，也可以在权限集里按包限定范围。',
           },
           {
             title: '敏感动作也设闸',
@@ -155,7 +155,7 @@ export const DiscountApproval = defineFlow({
         ['15% 以上的折扣要过财务', '变更上的一个审批步骤', '路由、收件箱、锁定、决策记录'],
         ['大额退款需要两级批准', '一条多级审批链', '按序签核，带升级与退回修改'],
         ['不让流程卡死在一个收件箱', '一个超时与升级路径', '自动升级与提醒'],
-        ['AI 的 schema 变更必须有人审', '提议的 diff 本身', '部署之前的那道审批队列'],
+        ['AI 的 schema 变更必须有人审', '提议的 diff 本身', 'AI Builder 的待审动作队列，横在部署之前'],
       ],
     },
     checklistTitle: '审批评审应确认',
@@ -164,7 +164,7 @@ export const DiscountApproval = defineFlow({
       '路由基于角色与层级，而不是写死的人名。',
       '每一步都定义了超时与升级。',
       '决策未定时记录被锁定。',
-      'AI 提议的结构性变更无法绕过队列。',
+      'AI 提议的结构性变更无法绕过审阅——ObjectOS 上是待审动作队列，开源运行时上是 git diff。',
     ],
     faqs: [
       {
@@ -173,9 +173,9 @@ export const DiscountApproval = defineFlow({
           '不是——审批是流程里的一个持久步骤。整个过程只有一个执行模型：流程暂停，人来决定，流程继续。',
       },
       {
-        question: '审批收件箱在开源 ObjectStack 里吗？',
+        question: '这里哪些是开源的，ObjectOS 又加了什么？',
         answer:
-          '在。三页签收件箱、侧栏时间线、评论、撤回与退回修改、键盘快捷键，连同多级审批、审批人解析、升级、记录锁定与审计轨迹，都是开源 ObjectStack 的一部分。',
+          '多级审批、审批人解析、升级、记录锁定、审计轨迹，以及三页签收件箱连同侧栏、评论、撤回、退回修改和键盘快捷键，都随开源 ObjectStack Console 发布，Apache-2.0。ObjectOS 加的是第二类要审的东西：产品内 AI Builder 的元数据变更会进入待审动作队列，审批人在点击批准前看到提议的 diff——默认只有 Setup Administrator 持有这项权限——每一次批准或驳回都连同发起它的对话写入审计日志。',
       },
     ],
   } satisfies MarketingPage;

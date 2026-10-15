@@ -40,7 +40,7 @@ const EN_UI: MarketingPageUi = {
   decisionTitle: 'What changes, who reviews it, what runs',
   checklistEyebrow: 'Review checklist',
   faqEyebrow: 'FAQ',
-  faqTitle: 'Questions this page should answer',
+  faqTitle: 'Frequently asked questions',
   nextEyebrow: 'Next pages',
   nextTitle: 'Keep building the evaluation packet.',
 };
@@ -68,7 +68,7 @@ const ZH_HANS_UI: MarketingPageUi = {
   decisionTitle: '改什么、谁来审、跑什么',
   checklistEyebrow: '评审清单',
   faqEyebrow: 'FAQ',
-  faqTitle: '这一页应该回答的问题',
+  faqTitle: '常见问题',
   nextEyebrow: '下一步',
   nextTitle: '继续完善你的评估材料。',
 };

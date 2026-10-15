@@ -12,6 +12,15 @@ import { pathToFileURL } from 'node:url';
 import { cwd, argv, exit } from 'node:process';
 import yaml from 'js-yaml';
 import { splitFrontmatter as splitFence } from './lib/frontmatter.mjs';
+import {
+  OPAQUE_ELEMENTS,
+  SEGMENT_BREAK,
+  TRANSPARENT_ELEMENTS,
+  firstChar,
+  isCjkWide,
+  lastChar,
+} from './lib/cjk-segment-break.mjs';
+import { LOW_OPENERS, OPAQUE_INLINE, isApostrophe } from './lib/cjk-quotes.mjs';
 
 const ROOT = cwd();
 const BLOG = path.join(ROOT, 'content', 'blog');
@@ -423,10 +432,390 @@ async function checkBuiltLinks() {
   return 1;
 }
 
+// ─── Built HTML: no segment break left between two CJK characters ─────────
+//
+// A hard-wrapped CJK source puts a newline between two characters of one
+// sentence, and the HTML carries it as a segment break. CSS Text 3 removes such
+// a break between two wide characters, but Chromium and Safari render it as a
+// space, so the reader sees 「数据 也已经」 mid-sentence. The rehype step in
+// astro.config.mjs removes these from everything Markdown/MDX renders; this
+// reads what the build actually emitted, so it also fails when that step is not
+// wired, or when CJK prose reaches a page by a road the step never sees (an
+// .astro template, a data file, a new renderer).
+//
+// Which characters count, which elements are prose and which are opaque is
+// defined once in scripts/lib/cjk-segment-break.mjs and shared with the fix;
+// the HTML scanning below is this gate's own. A break next to code, between
+// CJK and Latin, after an ambiguous-width `——`, or between two Hangul words is
+// a real space and is not flagged.
+
+/**
+ * Runs of inline prose: text joined across transparent phrasing elements
+ * (`<strong>`, `<a>`, …) and cut at every other tag, with opaque elements
+ * (code, pre, scripts, …) dropped entirely, as the rehype step sees them.
+ */
+function proseRuns(html) {
+  const runs = [];
+  let run = '';
+  let opaqueDepth = 0;
+  const cut = () => {
+    if (run) runs.push(run);
+    run = '';
+  };
+  let i = 0;
+  while (i < html.length) {
+    const lt = html.indexOf('<', i);
+    const stop = lt === -1 ? html.length : lt;
+    if (stop > i && opaqueDepth === 0) run += decodeEntities(html.slice(i, stop));
+    if (lt === -1) break;
+    if (html.startsWith('<!--', lt)) {
+      cut();
+      const end = html.indexOf('-->', lt + 4);
+      i = end === -1 ? html.length : end + 3;
+      continue;
+    }
+    if (html.startsWith('<!', lt)) {
+      cut();
+      const end = tagEnd(html, lt + 2);
+      i = end === -1 ? html.length : end + 1;
+      continue;
+    }
+    const tag = /^<(\/?)([a-zA-Z][a-zA-Z0-9-]*)/.exec(html.slice(lt, lt + 64));
+    if (!tag) {
+      if (opaqueDepth === 0) run += '<';
+      i = lt + 1;
+      continue;
+    }
+    const closing = tag[1] === '/';
+    const name = tag[2].toLowerCase();
+    const end = tagEnd(html, lt + tag[0].length);
+    if (end === -1) break;
+    const selfClosing = html[end - 1] === '/';
+    i = end + 1;
+    if (!closing && RAW_TEXT_ELEMENTS.has(name)) {
+      // Skip the body and its closing tag, so the closing tag is never
+      // mistaken for the end of an enclosing opaque element.
+      cut();
+      const close = html.toLowerCase().indexOf(`</${name}`, i);
+      const closeEnd = close === -1 ? -1 : tagEnd(html, close + name.length + 2);
+      i = closeEnd === -1 ? html.length : closeEnd + 1;
+      continue;
+    }
+    if (OPAQUE_ELEMENTS.has(name)) {
+      cut();
+      if (closing) opaqueDepth = Math.max(0, opaqueDepth - 1);
+      else if (!selfClosing) opaqueDepth++;
+      continue;
+    }
+    // A transparent element does not end the run it sits in; any other does.
+    if (!TRANSPARENT_ELEMENTS.has(name)) cut();
+  }
+  cut();
+  return runs;
+}
+
+/**
+ * A page whose document language is Chinese or Japanese: where a CJK line
+ * break would show. Counted so a build without them fails as unmeasured (every
+ * page carries CJK in its language menu, so "has CJK text" would not do).
+ */
+const CJK_LANG = /<html\b[^>]*\blang\s*=\s*["']?(?:zh|ja)(?:-|["'\s>])/i;
+
+async function checkBuiltCjkBreaks() {
+  const pages = (await distFiles(DIST)).filter((file) => file.endsWith('.html')).sort();
+  const offenders = [];
+  let cjkPages = 0;
+  let total = 0;
+  for (const page of pages) {
+    const html = await readFile(path.join(DIST, page), 'utf8');
+    if (CJK_LANG.test(html)) cjkPages++;
+    const hits = [];
+    for (const run of proseRuns(html)) {
+      for (const m of run.matchAll(SEGMENT_BREAK)) {
+        const end = m.index + m[0].length;
+        if (!isCjkWide(lastChar(run.slice(0, m.index))) || !isCjkWide(firstChar(run.slice(end)))) continue;
+        hits.push(`${run.slice(Math.max(0, m.index - 16), m.index)}⏎${run.slice(end, end + 16)}`.replace(/\s+/g, ' '));
+      }
+    }
+    total += hits.length;
+    if (hits.length > 0) offenders.push({ page, hits });
+  }
+  if (cjkPages === 0) {
+    console.error(
+      `✗ content lint --dist found no zh or ja page (by \`<html lang>\`) among ${pages.length} built ` +
+        `page${pages.length === 1 ? '' : 's'} under ${path.relative(ROOT, DIST)}/.\n` +
+        `  The zh-Hans, zh-Hant and ja pages are where a CJK line break would show, so a build without them ` +
+        `checked nothing, which is not the same as nothing being wrong.`
+    );
+    return 1;
+  }
+  if (offenders.length === 0) {
+    console.log(
+      `✓ content lint --dist CJK line breaks passed (${pages.length} built pages, ${cjkPages} in zh/ja, ` +
+        `0 segment breaks between CJK characters)`
+    );
+    return 0;
+  }
+  for (const { page, hits } of offenders) {
+    console.log(`✗ ${page}: ${hits.length} line break${hits.length === 1 ? '' : 's'} between CJK characters in rendered prose`);
+    for (const hit of hits.slice(0, 5)) console.log(`    …${hit}…`);
+    if (hits.length > 5) console.log(`    … and ${hits.length - 5} more`);
+  }
+  console.error(
+    `\n✗ content lint --dist failed (${total} segment break${total === 1 ? '' : 's'} between CJK characters on ` +
+      `${offenders.length} page${offenders.length === 1 ? '' : 's'}; ⏎ marks each)\n` +
+      `  Chromium and Safari render a source line break between two CJK characters as a space mid-sentence.\n` +
+      `  Markdown and MDX are fixed by \`rehypeCjkSegmentBreaks\` (scripts/lib/cjk-segment-break.mjs), wired in\n` +
+      `  astro.config.mjs \`markdown.rehypePlugins\`: if these pages are posts, that step did not run. If the text\n` +
+      `  came from somewhere else (an .astro template, a data file), join the line in that source.`
+  );
+  return 1;
+}
+
+// ─── Built HTML: quotation marks in prose point the right way ──────────────
+//
+// Smartypants curls an ASCII quote by its neighbours, so in Chinese, which puts
+// no space before a quotation, the opening mark of a pair after a character
+// comes out closing: 「大多数”给你的业务加上 AI”的说辞」. It also reads a whole
+// document as one string, so a heading or table cell that starts with a quote
+// takes its direction from the block before it, in every locale (the Korean
+// headings, an English table cell printed ”What exists in our business?”). It
+// opens an elided century (Next ‘26), and closes German „Wort" with the English
+// ”. The remark step in astro.config.mjs sets each mark by its position in its
+// pair; this reads what the build actually emitted, on every page, so it also
+// fails when that step is not wired, or when prose reaches a page by a road the
+// step never sees (an .astro template, a data file).
+//
+// The rule is the step's own, defined once in scripts/lib/cjk-quotes.mjs: in
+// one block of prose, curly double marks alternate “ ” and end closed, and so
+// do single marks, except an apostrophe (`isApostrophe`), which is always ’. A
+// low mark („ ‚) only opens, and its pair closes with “ or ‘ (`LOW_OPENERS`).
+// The rule has no per-locale branch, so neither has this gate. The HTML
+// scanning below is this gate's own. Straight ASCII marks have no direction
+// and are not read; marks inside code, pre, kbd and samp are not prose and are
+// not read either.
+
+/** Elements that sit inside a sentence without ending its block of prose. */
+const QUOTE_INLINE_ELEMENTS = new Set([...TRANSPARENT_ELEMENTS, 'br', 'wbr', 'img']);
+
+/**
+ * Blocks of prose: text joined across inline elements and cut at every other
+ * tag. An opaque element (code, kbd, svg, …) is one `OPAQUE_INLINE` in the
+ * block, as it is to the remark step: a quotation may wrap inline code.
+ */
+function quoteBlocks(html) {
+  const blocks = [];
+  let block = '';
+  let opaqueDepth = 0;
+  const cut = () => {
+    if (block) blocks.push(block);
+    block = '';
+  };
+  let i = 0;
+  while (i < html.length) {
+    const lt = html.indexOf('<', i);
+    const stop = lt === -1 ? html.length : lt;
+    if (stop > i && opaqueDepth === 0) block += decodeEntities(html.slice(i, stop));
+    if (lt === -1) break;
+    if (html.startsWith('<!--', lt)) {
+      const end = html.indexOf('-->', lt + 4);
+      i = end === -1 ? html.length : end + 3;
+      continue;
+    }
+    if (html.startsWith('<!', lt)) {
+      cut();
+      const end = tagEnd(html, lt + 2);
+      i = end === -1 ? html.length : end + 1;
+      continue;
+    }
+    const tag = /^<(\/?)([a-zA-Z][a-zA-Z0-9-]*)/.exec(html.slice(lt, lt + 64));
+    if (!tag) {
+      if (opaqueDepth === 0) block += '<';
+      i = lt + 1;
+      continue;
+    }
+    const closing = tag[1] === '/';
+    const name = tag[2].toLowerCase();
+    const end = tagEnd(html, lt + tag[0].length);
+    if (end === -1) break;
+    const selfClosing = html[end - 1] === '/';
+    i = end + 1;
+    if (!closing && RAW_TEXT_ELEMENTS.has(name)) {
+      cut();
+      const close = html.toLowerCase().indexOf(`</${name}`, i);
+      const closeEnd = close === -1 ? -1 : tagEnd(html, close + name.length + 2);
+      i = closeEnd === -1 ? html.length : closeEnd + 1;
+      continue;
+    }
+    if (OPAQUE_ELEMENTS.has(name)) {
+      if (closing) {
+        opaqueDepth = Math.max(0, opaqueDepth - 1);
+        if (opaqueDepth === 0) block += OPAQUE_INLINE;
+      } else if (selfClosing) {
+        if (opaqueDepth === 0) block += OPAQUE_INLINE;
+      } else {
+        opaqueDepth++;
+      }
+      continue;
+    }
+    if (opaqueDepth > 0) continue;
+    if (name === 'br') block += '\n';
+    else if (name === 'img') block += OPAQUE_INLINE;
+    else if (!QUOTE_INLINE_ELEMENTS.has(name)) cut();
+  }
+  cut();
+  return blocks;
+}
+
+/**
+ * Every curly mark in one block whose direction disagrees with its position
+ * in its pair, plus a pair left open at the end of the block. Returns the
+ * number of marks read and the hits, each with its sentence for the report.
+ */
+function misdirectedQuotes(block) {
+  const hits = [];
+  let marks = 0;
+  let doubleOpen = false;
+  let singleOpen = false;
+  // The mark that opened the open pair: a low one („ ‚) sets its closer.
+  let doubleOpener = '';
+  let singleOpener = '';
+  // Where the open pair started, or -1 when its opening mark was already
+  // reported as misdirected (a lone `”` is one problem, not two).
+  let doubleAt = -1;
+  let singleAt = -1;
+  const context = (at, problem) =>
+    `${problem}: …${block.slice(Math.max(0, at - 14), at)}⟦${block[at] ?? ''}⟧${block.slice(at + 1, at + 15)}…`
+      .replace(/\s+/g, ' ')
+      .replaceAll(OPAQUE_INLINE, '▯');
+  const neverClosed = (at) => context(at, `a ${block[at]} never closed in its block`);
+  const close = (at, opener, fallback) => {
+    const expected = LOW_OPENERS.get(opener) ?? fallback;
+    if (block[at] !== expected) {
+      hits.push(context(at, `a closing mark printed as ${block[at]}${LOW_OPENERS.has(opener) ? `, after ${opener}` : ''}`));
+    }
+  };
+  for (let i = 0; i < block.length; i++) {
+    const ch = block[i];
+    if (ch === '„' || ch === '‚') {
+      // A low mark only opens. One met inside an open pair leaves that pair open.
+      marks++;
+      if (ch === '„') {
+        if (doubleOpen && doubleAt !== -1) hits.push(neverClosed(doubleAt));
+        [doubleOpen, doubleOpener, doubleAt] = [true, ch, i];
+      } else {
+        if (singleOpen && singleAt !== -1) hits.push(neverClosed(singleAt));
+        [singleOpen, singleOpener, singleAt] = [true, ch, i];
+      }
+    } else if (ch === '“' || ch === '”') {
+      marks++;
+      if (doubleOpen) {
+        close(i, doubleOpener, '”');
+        doubleOpen = false;
+      } else {
+        if (ch !== '“') hits.push(context(i, 'an opening mark printed as ”'));
+        [doubleOpen, doubleOpener, doubleAt] = [true, ch, ch === '“' ? i : -1];
+      }
+    } else if (ch === '‘' || ch === '’') {
+      marks++;
+      if (isApostrophe(lastChar(block.slice(0, i)), block.slice(i + 1, i + 6), singleOpen)) {
+        if (ch === '‘') hits.push(context(i, 'an apostrophe printed as ‘'));
+        continue;
+      }
+      if (singleOpen) {
+        close(i, singleOpener, '’');
+        singleOpen = false;
+      } else {
+        if (ch !== '‘') hits.push(context(i, 'an opening mark printed as ’'));
+        [singleOpen, singleOpener, singleAt] = [true, ch, ch === '‘' ? i : -1];
+      }
+    }
+  }
+  if (doubleOpen && doubleAt !== -1) hits.push(neverClosed(doubleAt));
+  if (singleOpen && singleAt !== -1) hits.push(neverClosed(singleAt));
+  return { marks, hits };
+}
+
+/** A page's document language, from `<html lang>`, for the summary line. */
+const HTML_LANG = /<html\b[^>]*\blang\s*=\s*["']?([A-Za-z]+(?:-[A-Za-z0-9]+)*)/i;
+
+async function checkBuiltQuotes() {
+  const pages = (await distFiles(DIST)).filter((file) => file.endsWith('.html')).sort();
+  const offenders = [];
+  // Pages and curly marks read, per document language, so the summary shows
+  // which locales were measured.
+  const langs = new Map();
+  let marks = 0;
+  let total = 0;
+  for (const page of pages) {
+    const html = await readFile(path.join(DIST, page), 'utf8');
+    const lang = HTML_LANG.exec(html)?.[1] ?? 'no lang';
+    const seen = langs.get(lang) ?? { pages: 0, marks: 0 };
+    langs.set(lang, seen);
+    seen.pages++;
+    const hits = [];
+    for (const block of quoteBlocks(html)) {
+      const result = misdirectedQuotes(block);
+      seen.marks += result.marks;
+      marks += result.marks;
+      hits.push(...result.hits);
+    }
+    total += hits.length;
+    if (hits.length > 0) offenders.push({ page, lang, hits });
+  }
+  if (pages.length === 0 || marks === 0) {
+    console.error(
+      `✗ content lint --dist found ${pages.length === 0 ? 'no built page' : 'no curly quotation mark on any built page'} ` +
+        `under ${path.relative(ROOT, DIST)}/ (${pages.length} page${pages.length === 1 ? '' : 's'}).\n` +
+        `  Those are the pages where a quotation mark can point the wrong way, so this checked nothing, ` +
+        `which is not the same as nothing being wrong.`
+    );
+    return 1;
+  }
+  const perLang = [...langs]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([lang, seen]) => `${lang} ${seen.pages}/${seen.marks}`)
+    .join(', ');
+  if (offenders.length === 0) {
+    console.log(
+      `✓ content lint --dist quotation marks passed (${pages.length} built pages, ${marks} curly marks, ` +
+        `0 pointing the wrong way or left open; pages/marks by <html lang>: ${perLang})`
+    );
+    return 0;
+  }
+  const offendingLangs = new Map();
+  for (const { page, lang, hits } of offenders) {
+    const tally = offendingLangs.get(lang) ?? { pages: 0, hits: 0 };
+    offendingLangs.set(lang, tally);
+    tally.pages++;
+    tally.hits += hits.length;
+    console.log(`✗ ${page}: ${hits.length} quotation mark${hits.length === 1 ? '' : 's'} pointing the wrong way or left open`);
+    for (const hit of hits.slice(0, 5)) console.log(`    ${hit}`);
+    if (hits.length > 5) console.log(`    … and ${hits.length - 5} more`);
+  }
+  const byLang = [...offendingLangs]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([lang, tally]) => `${lang} ${tally.hits} on ${tally.pages}`)
+    .join(', ');
+  console.error(
+    `\n✗ content lint --dist failed (${total} quotation mark${total === 1 ? '' : 's'} pointing the wrong way or left open on ` +
+      `${offenders.length} page${offenders.length === 1 ? '' : 's'}: ${byLang}; ⟦ ⟧ marks each)\n` +
+      `  In one paragraph, heading or table cell, the first mark of a pair opens and the next closes; a pair\n` +
+      `  opened by „ or ‚ closes with “ or ‘, and an apostrophe is always ’.\n` +
+      `  Markdown and MDX in every locale are set by \`remarkQuotes\` (scripts/lib/cjk-quotes.mjs), wired in\n` +
+      `  astro.config.mjs \`markdown.remarkPlugins\`: if these pages are posts, that step did not run, or a\n` +
+      `  paragraph holds an odd number of marks (a stray \`"\`, or a quotation that runs over two paragraphs; close it\n` +
+      `  in each). If the text came from somewhere else (an .astro template, a data file), fix the marks in that source.`
+  );
+  return 1;
+}
+
 if (args.has('--dist')) {
   const prose = await checkBuiltProse();
+  const cjkBreaks = await checkBuiltCjkBreaks();
+  const quotes = await checkBuiltQuotes();
   const links = await checkBuiltLinks();
-  exit(prose || links);
+  exit(prose || cjkBreaks || quotes || links);
 }
 
 // The frontmatter taxonomy, derived from the module that declares it instead of
@@ -502,6 +891,37 @@ function splitFrontmatter(source, file) {
     raw: split.raw,
     body: split.body.trim(),
   };
+}
+
+// ─── Search-snippet width ──────────────────────────────────────────────────
+//
+// A results page shows about 60 columns of a title and 160 of a description
+// (it truncates by pixel width; columns are the portable stand-in). A CJK
+// character is two columns: "AI 编写的企业软件" is 10 characters and 18 columns,
+// and counting characters would let a Chinese or Japanese title run to twice
+// the width an English one may. Past the limit the end of the line — often the
+// part that distinguishes one post from another — is replaced by an ellipsis.
+//
+// This is a warning, never an error: a longer query-shaped title (writing rule
+// 2) can be the right call. Posts first published before SNIPPET_WIDTH_SINCE
+// are counted in one summary line rather than listed — about 400 of them when
+// the check landed — so the warning stays readable for the post being written
+// now; `--snippets` lists every one. `date`, not `updated`, decides: a title
+// is written at first publication, and a revision sweep that touches 18 posts
+// (setting `updated`) does not make their titles new.
+const SNIPPET_WIDTH = { title: 60, description: 160 };
+const SNIPPET_WIDTH_SINCE = new Date('2026-10-06T00:00:00Z');
+const listAllSnippets = args.has('--snippets');
+
+/** Display columns: East Asian wide and fullwidth characters count two. */
+function displayWidth(text) {
+  let width = 0;
+  for (const ch of text) {
+    width += /[\u1100-\u115F\u2E80-\uA4CF\uAC00-\uD7A3\uF900-\uFAFF\uFE30-\uFE4F\uFF00-\uFF60\uFFE0-\uFFE6]/u.test(ch)
+      ? 2
+      : 1;
+  }
+  return width;
 }
 
 function words(text) {
@@ -1058,6 +1478,7 @@ registries.locales = routableLocales(registries.blog, registries.glossary, regis
 const files = await walk(BLOG);
 const posts = [];
 const issues = [];
+const snippetBacklog = { title: 0, description: 0 };
 
 for (const file of files) {
   const rel = path.relative(ROOT, file);
@@ -1115,10 +1536,30 @@ for (const file of files) {
     }
   }
 
-  if (typeof data.title === 'string') {
-    if (data.title.length > 95) {
-      addIssue(issues, rel, data, 'warn', `Title is long (${data.title.length} chars)`);
+  // Measured against the search snippet (see SNIPPET_WIDTH); a pre-existing
+  // post is counted in the summary instead of listed, unless --snippets.
+  const snippetListed =
+    listAllSnippets || Boolean(data.date && new Date(data.date) >= SNIPPET_WIDTH_SINCE);
+  const snippetWarn = (field, value) => {
+    const width = displayWidth(value);
+    if (width <= SNIPPET_WIDTH[field]) return;
+    if (!snippetListed) {
+      snippetBacklog[field] += 1;
+      return;
     }
+    const noun = field === 'title' ? 'Title' : 'Description';
+    addIssue(
+      issues,
+      rel,
+      data,
+      'warn',
+      `${noun} is ${width} columns wide (${[...value].length} chars); search results show about ` +
+        `${SNIPPET_WIDTH[field]}, so the end is cut`
+    );
+  };
+
+  if (typeof data.title === 'string') {
+    snippetWarn('title', data.title);
     if (data.title.length < 12) {
       addIssue(issues, rel, data, 'warn', 'Title is very short');
     }
@@ -1128,8 +1569,11 @@ for (const file of files) {
     if (data.description.length < 55) {
       addIssue(issues, rel, data, 'warn', `Description is short (${data.description.length} chars)`);
     }
+    // AGENTS.md's ceiling for cards; the snippet width below it is advisory.
     if (data.description.length > 230) {
       addIssue(issues, rel, data, 'warn', `Description is long (${data.description.length} chars)`);
+    } else {
+      snippetWarn('description', data.description);
     }
   }
 
@@ -1459,6 +1903,15 @@ const checked = `${posts.length} file${posts.length === 1 ? '' : 's'}, ${terms.l
 // that is the whole difference between a documented decision and a silent gap.
 for (const exemption of [...honouredExemptions].sort()) {
   console.log(`honoured exemption: ${exemption}`);
+}
+// Printed on a passing run too: it is the size of the backlog, not a pass.
+if (snippetBacklog.title + snippetBacklog.description > 0) {
+  console.log(
+    `• snippet width: ${snippetBacklog.title} title${snippetBacklog.title === 1 ? '' : 's'} over ` +
+      `${SNIPPET_WIDTH.title} columns and ${snippetBacklog.description} description` +
+      `${snippetBacklog.description === 1 ? '' : 's'} over ${SNIPPET_WIDTH.description} in posts dated ` +
+      `before ${SNIPPET_WIDTH_SINCE.toISOString().slice(0, 10)} (list them: pnpm content:lint --snippets)`
+  );
 }
 
 if (issues.length === 0) {
