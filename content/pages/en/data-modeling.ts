@@ -156,7 +156,7 @@ export const Subscription = ObjectSchema.create({
       {
         question: 'What is open source here, and what does ObjectOS add?',
         answer:
-          'All of the data layer: objects, relationships, validations, formulas, migrations, the query engine, REST APIs, file storage, and the object designer, ER diagram, and datasource sync in the Console — Apache-2.0, with no feature gate between development and production. ObjectOS adds the in-app AI Builder, whose built-in tools create packages and objects and add, modify, and delete fields from a chat, queued for human approval before they go live — on Cloud, Business Self-Managed, and Enterprise.',
+          'All of the data layer: objects, relationships, validations, formulas, migrations, the query engine, REST APIs, file storage, and the object designer, ER diagram, and datasource sync in the Console — Apache-2.0, with no feature gate between development and production. ObjectOS adds the in-app AI Builder, whose built-in tools create packages and objects and add, modify, and delete fields from a chat, queued for human approval before they go live — on Cloud and on Enterprise, from its single-node Business Self-Managed entry up.',
       },
     ],
   } satisfies MarketingPage;

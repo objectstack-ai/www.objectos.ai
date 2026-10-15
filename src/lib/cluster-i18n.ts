@@ -422,7 +422,7 @@ const EXTRA_FAQ: Partial<Record<string, Partial<Record<TemplateLocale, ClusterFa
       {
         question: '自托管是免费的吗？ObjectOS 又加了什么？',
         answer:
-          '免费自托管指的是开源的 ObjectStack 框架（Apache-2.0）：协议、内核、CLI、生产运行时、Console UI 与 MCP 服务器，开发与生产之间没有功能门槛——经 MCP 自带你的 AI。自管部署的 ObjectOS 是付费许可的：Business Self-Managed 是单节点交付，带产品内 AI Builder 与 Ask、AI 治理与自带模型；ObjectOS 企业版是完整私有部署，提供集群、离线隔离、SCIM、合规鉴证与 SLA 支持。无论哪个版本，你都可以导出本体，拿到开源运行时上运行。起步：npm create objectstack@latest，把编码 Agent 指向生成的项目及其 AGENTS.md，然后 npx os dev --ui。',
+          '免费自托管指的是开源的 ObjectStack 框架（Apache-2.0）：协议、内核、CLI、生产运行时、Console UI 与 MCP 服务器，开发与生产之间没有功能门槛——经 MCP 自带你的 AI。自管部署的 ObjectOS 即 ObjectOS 企业版，按许可付费：其单节点入门选项 Business Self-Managed 在单个节点上提供产品内 AI Builder 与 Ask、AI 治理与自带模型；单节点以上，企业版再提供集群、离线隔离、SCIM、合规鉴证与 SLA 支持。无论哪个版本，你都可以导出本体，拿到开源运行时上运行。起步：npm create objectstack@latest，把编码 Agent 指向生成的项目及其 AGENTS.md，然后 npx os dev --ui。',
       },
     ],
   },
