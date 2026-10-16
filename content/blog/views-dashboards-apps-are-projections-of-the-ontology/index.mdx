@@ -1,0 +1,124 @@
+---
+title: "Views, Dashboards and Apps Are Projections of the Ontology: What That Changes for Review"
+description: "Add one field to a bundled ObjectStack app: the table, REST API, MCP describe call and Console form follow by themselves; the pinned views, dataset and translation do not. The naming test says which is which."
+author: ObjectStack Team
+date: 2026-11-10
+status: published
+topic: app-building
+audience: developer
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Ontology
+  - Executable business ontology
+  - Reviewable diff
+  - Metadata review
+---
+
+This is the whole diff. Five lines, one field, added to the `todo_task` object of the Todo example that ships in the ObjectStack repository:
+
+```diff
+     actual_hours: Field.number({
+       label: 'Actual Hours',
+       scale: 2,
+       min: 0,
+     }),
++
++    budget: Field.currency({
++      label: 'Budget',
++      min: 0,
++    }),
+```
+
+Booted on the ObjectStack runtime, those five lines changed the database table, the REST read and write, the metadata endpoint, the MCP `describe_object` and `query_records` answers and the Console's create form — seven surfaces, none of which was edited. They did not change the three list views, the dashboard's dataset or the Chinese translation, because each of those names fields by name. The first group is derived from the definition; the second is pinned to it. **The naming test** sorts any projection into one of the two before you open it: *if it names the field, you review it; if it names only the object, the runtime already did.* The rest of this post is the measurement behind that sentence, taken on ObjectStack `18.0.0-next.2` with the example's source at commit `43567a8f`, and what it changes about reading a diff.
+
+## Where the definition of a projection lives
+
+Three places already define what a projection is, and this post does not restate them. [The definition post](/en/blog/what-does-the-ontology-is-the-software-mean/) names the four projections and gives the removal test for telling core from projection. [The ontology page](/en/ontology/) states the rule in one line: change the core and the projections follow; remove a projection and the business it showed is unchanged. The [glossary entry](/en/glossary/ontology-projection/) adds the consequence for a reviewer: a diff that touches only projections changes presentation, and a diff that touches the core changes authority.
+
+What none of them says is *how* a projection follows. "Follow" covers two different mechanisms, and a reviewer needs to know which one is in front of them. That is the question the run below answers.
+
+## The run: one field, eleven readings
+
+The setup is the bundled Todo example (`examples/app-todo`), copied out of the repository at commit `43567a8f` and run on the published `18.0.0-next.2` packages with `os dev`. The database is the default SQLite file; the API key was minted over REST from the seeded dev admin. Every reading was taken twice: once on the committed definition, once after the five-line diff above and a restart with `--compile`. "Before" and "after" are the two answers.
+
+| Surface | How it was read | Before | After | Follows? |
+| :--- | :--- | :--- | :--- | :--- |
+| Database table `todo_task` | `PRAGMA table_info` on the SQLite file | 27 columns | 28; `budget float` added to the existing table | Derived |
+| REST read | `GET /api/v1/data/todo_task` | 27 keys per record | 28 keys | Derived |
+| REST write | `POST /api/v1/data/todo_task` with `budget: 1200` | `400` — `Unknown field 'budget' on object 'todo_task'`, code `INVALID_FIELD` | `201`, record created | Derived |
+| Metadata endpoint | `GET /api/v1/meta/object/todo_task` | 27 fields | 28; `{ label: 'Budget', type: 'currency', min: 0, … }` | Derived |
+| MCP `describe_object` | `tools/call` on `/api/v1/mcp` | 19 fields | 20 | Derived |
+| MCP `query_records` | `where: { budget: { $gte: 1000 } }, fields: ['subject', 'budget']` | — | `[["Renew the domain", 1200]]` | Derived |
+| Console create form | `/_console/apps/todo_app/todo_task/new` | 16 inputs | 17; *Budget* between *Actual Hours* and *Notes*, in declaration order | Derived |
+| Console record detail | the new record's page | — | `BUDGET 1,200.00` in *Details* | Derived |
+| Console list view *All Tasks* | `GET /api/v1/meta/view` → `todo_task.default` | 6 columns | 6 columns, unchanged | Pinned |
+| Translation, `zh-CN` | `GET /api/v1/meta/object/todo_task` with `Accept-Language: zh-CN` | `subject` → 主题 | `budget` → `Budget` (English falls through) | Pinned |
+| Dashboard dataset `task_metrics` | the dataset definition | 6 dimensions, 3 measures, each naming a field | unchanged; nothing can chart `budget` until a measure names it | Pinned |
+
+Two readings did not move and are not projections: the OpenAPI document still lists 14 paths for `todo_task` with no per-field schema, and the MCP `tools/list` still answers the same 12 tools (`list_objects`, `describe_object`, `validate_expression`, `query_records`, `aggregate_records`, `get_record`, `create_record`, `update_record`, `delete_record`, `list_actions`, `run_action`, `resume_run`). Both describe objects, not fields; the field shows up inside their answers, not in their shape.
+
+![The naming test: one five-line diff in the middle; on the left the surfaces that name only the object and followed it without an edit, with their before and after readings; on the right the projections that name the field and stayed exactly as authored; at the foot, the build gate's own warning that the new field has no consumer](./naming-test-en.svg)
+
+One more reading came for free. `os dev --compile` runs the author-time rules before it writes the artifact, and this is what the gate printed about the new field:
+
+```text
+⚠ object "todo_task" · field "budget": declared, but nothing in this stack displays or reads it (inert)
+  fix: add it to a view column or a form section, or remove the declaration
+  rule: field-no-consumers  at objects[0].fields.budget
+```
+
+`os explain field-no-consumers` defines a consumer as "a view column, an inline grid column, a form section, a page binding, a flow node, a dataset or cube member, a dashboard widget, a formula, a validation, a hook or an action that names it", and separates it from a carrier, which "names a field without reading it", such as "a translation label, a seed value, an import-mapping target, a permission grant". The gate's list is the right-hand column of the table. It is the runtime telling you, before boot, which projections are pinned to a field and that none of them has picked this one up yet.
+
+## The naming test
+
+Why do seven surfaces follow and four stay put? Not because some are more important. Because of what each one names.
+
+The table, the REST routes, the metadata endpoint and the MCP tools are generated from the object. The SQL driver's schema sync walks `obj.fields` and creates a column for every entry; the data routes are registered per object and read whatever fields the object has; `describe_object` maps `Object.entries(def.fields)` into its answer; the Console, finding no form view declared for `todo_task`, lays out the object's own fields. None of these holds a list of field names. They hold the object's name and ask the definition for the rest on every call, which is why the field reached all of them with no edit and why it reached them in declaration order.
+
+The list views, the dataset and the translation bundle are authored metadata too, and each one spells out field names: `columns: [{ field: 'subject' }, { field: 'status' }, …]`, `measures: [{ name: 'est_hours', field: 'estimated_hours', … }]`, `fields: { subject: { label: '主题' }, … }`. A projection that names the field is making a choice about it — this column, this label, this aggregate — and the runtime honours the choice exactly. It does not add what you did not ask for.
+
+So the test, stated for a reviewer:
+
+> **The naming test.** For each projection the diff could reach, ask whether it names the field or only the object. If it names only the object, it is derived: the diff you are reading is the whole change, and the runtime has already propagated it. If it names the field, it is pinned: it did not move, and whether it should have is your call.
+
+It composes with the removal test from the definition post. The removal test sorts a definition into core or projection. The naming test sorts the projections a core change can reach into derived and pinned. Between them a reviewer knows, from the diff alone, what the runtime did and what is still waiting for a decision.
+
+## What this changes about reading the diff
+
+The practical consequence is an order of work, and it is shorter than the one most teams follow.
+
+**First, the definition line is the review for every derived surface.** There is no table migration to read alongside it, no serializer, no controller, no tool manifest. In the run above, the `budget` column exists because the field does; the REST write accepts `budget` because the field does; the agent's `describe_object` shows it because the field does. If the field is right, those are right, and if the field is wrong, they are wrong in exactly the way the field is. Reviewing the five lines reviewed seven surfaces, which is the sentence the title promised and the sentence the glossary entry means by "a diff that touches the core changes authority".
+
+**Second, search the pinned projections for the field's name — and expect to find nothing.** An added field will not appear in any view, dataset or translation, because none of them has been edited. That is not an omission the runtime hides; it is the warning the gate printed. The reviewer's question is the one the gate's `fix:` line poses: should this field have a consumer, and which one? For `budget`, probably a column on *All Tasks* and a `zh-CN` label; probably not a dashboard measure yet. Those are three small, deliberate edits to three named files, and each is as reviewable as the first five lines.
+
+**Third, treat a removal as a different kind of change.** Everything above is about an added field. The driver's schema sync is additive only: it creates missing tables and adds missing columns, and it never alters or drops existing ones, so a removed or renamed field leaves its column behind as drift that `os migrate` reports and a human reconciles. The derived surfaces follow a removal instantly — the REST record loses the key, `describe_object` loses the field — while the table does not. And every pinned projection that still names the removed field is now wrong, which the same gate will tell you about as a dangling binding. The naming test still applies; the list of things to look at is simply longer, and it starts with the migration.
+
+This ordering is also the missing half of the [four-pass review checklist](/en/blog/how-to-review-ai-generated-app-changes/), whose fourth pass is "fields and views, last". The naming test says which views: the ones that name the field. The rest were reviewed when the field was.
+
+## In defence of pinning
+
+It would be easy to read the right-hand column of the table as a limitation, and the honest reading is the opposite.
+
+A grid that added every new column automatically would reorder a screen every time a developer added a field for a flow to write into. A dashboard that charted every numeric field would chart `recurrence_interval`. A translation that invented labels would be a translation nobody wrote. Pinned projections are pinned because a human made a presentation decision, and a runtime that silently overrode it would be the thing this whole format exists to prevent: behaviour that nobody declared. The Console's own fallback — lay out every field when no form view is declared — is the exception that proves it: it applies only where nobody has decided anything yet.
+
+What the format gives the reviewer is not that pinned projections follow, but that they are *findable*. They are metadata in the same repository, they name the field, and the gate enumerates them. The alternative, in a hand-written codebase, is a column list in a React component, a serializer in another directory, a label in a JSON file and a chart config in a third system, with nothing that knows they are about the same field.
+
+## What this does not cover
+
+A measurement on one example is a measurement on one example. Four things stay outside it.
+
+**Hand-tuned views stay hand-tuned.** Every list view in the Todo example declares its columns, and so does every view in the CRM example. A new field reaches a pinned grid only when someone adds it, and that someone is often the agent that added the field, in the same PR. The naming test tells you to look there; it does not do the looking.
+
+**Translations must be written.** The runtime falls back to the declared label, so a missing `zh-CN` entry renders `Budget` rather than nothing. That is the right default and still a gap a Chinese user sees. A translation is a pinned projection in the strictest sense: every string in it is a decision.
+
+**External consumers are outside the stack.** The gate says so itself: "a consumer can legitimately live outside the stack — an API client, a hook or package this stack does not carry, a Studio-authored view". A dashboard in another tool that selects `estimated_hours` by name is pinned to that field and nothing in the repository knows it. The naming test applies to it; the enumeration does not.
+
+**Semantic changes are not structural changes.** Adding a field is the easy case, which is why it was chosen for a clean before-and-after. Change the *meaning* of a field instead — add a `cancelled` option to `status`, say — and the derived surfaces follow just as faithfully, but the Todo example's *Overdue Tasks* view and its *Overdue Tasks* metric both encode overdue as `status != completed`, so a cancelled task with a past due date would count as overdue on both. That is a reading of the view and dataset definitions, not a measurement, and it is the kind of consequence the naming test points you at — both projections name `status` — without deciding for you.
+
+## Point your agent at it
+
+The run above is reproducible from the repository and takes about a minute once the packages are installed, which means it is also something your agent can do for you. Point a coding agent at an ObjectStack project — the scaffolder writes an `AGENTS.md` and installs the skills bundle, the running app serves MCP at `/api/v1/mcp`, and [how to configure it](/en/blog/how-to-point-your-agent-at-objectstack/) covers the rule file, the skills and the tool server — and when it opens a change to a field, ask it for the naming-test table of its own diff: which surfaces followed, which projections name the field, and what it proposes to do about each. The gate's `field-no-consumers` line is the first row of that table, and the agent can read it before you do.
+
+Everything in this post ran on the open-source stack. "Want the same loop hosted, in the browser, nothing to install? That's ObjectOS, the commercial runtime environment built on ObjectStack." ObjectOS runs hosted in the browser with nothing to install (ObjectOS Cloud) or self-managed on your own infrastructure (ObjectOS Enterprise), and on either edition you can export your ontology and run it on the open-source ObjectStack runtime. The naming test does not change with the host; the definition it reads is the same file.
