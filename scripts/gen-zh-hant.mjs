@@ -10,6 +10,7 @@ import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { CONVERSION_CASES, s2t, unresolvedLocatives } from '../src/lib/zhconvert.ts';
+import { CLUSTERS } from '../src/lib/clusters.ts';
 
 // The conversion itself — the preset, the two shadowed phrase entries and the
 // locative repair — lives in `src/lib/zhconvert.ts`, because the site derives
@@ -27,6 +28,7 @@ const MARKER =
 const ROOT = process.cwd();
 const BLOG = path.join(ROOT, 'content', 'blog');
 const GLOSSARY = path.join(ROOT, 'content', 'glossary');
+const PAGES = path.join(ROOT, 'content', 'pages');
 
 // ─── Cross-locale body links ───────────────────────────────────────────────
 //
@@ -59,11 +61,16 @@ const GLOSSARY = path.join(ROOT, 'content', 'glossary');
 //   * glossary terms and marketing pages derive zh-Hant from zh-Hans and fall
 //     back to English (`src/glossary/registry.ts`, `src/content-pages/registry.ts`),
 //     so the two locales resolve together or not at all. The one thing that can
-//     still be false is the term existing anywhere, which is checked.
-//   * clusters are emitted for every locale unconditionally, but a bare
-//     `/zh-Hans/<slug>/` is ambiguous between a cluster and a marketing page
-//     without importing `src/lib/clusters.ts`, so an unmatched single segment is
-//     reported rather than rewritten.
+//     still be false is the term or page existing anywhere, which is checked —
+//     against `content/glossary/<locale>/` and `content/pages/<locale>/`, read by
+//     filename the way `scripts/content-lint.mjs` reads them. The page modules
+//     cannot be imported here: they import other modules without an extension,
+//     which Node's resolver refuses.
+//   * clusters are emitted for every locale unconditionally. A bare
+//     `/zh-Hans/<slug>/` is either a cluster or a marketing page — both come from
+//     `src/pages/[lang]/[cluster].astro` — so it builds when the slug is in
+//     `CLUSTERS` (imported from `src/lib/clusters.ts`, as content-lint does) or
+//     names a page. A single segment that is neither is reported, not rewritten.
 //
 // WHERE THE REWRITE NEVER APPLIES. Link targets only. Fenced blocks and inline
 // spans are masked out first, using the same two patterns `scripts/content-lint.mjs`
@@ -87,6 +94,17 @@ const STATIC_ROUTES = new Set([
 /** Locales the glossary/marketing registries can serve a zh-Hant page from. */
 const HANT_SOURCE_LOCALES = ['zh-Hant', 'zh-Hans', 'en'];
 
+/** Cluster slugs, from the module `src/pages/[lang]/[cluster].astro` reads. */
+const CLUSTER_SLUGS = new Set(CLUSTERS.map((cluster) => cluster.slug));
+
+/** Does `/zh-Hant/<slug>/` build? Yes for a cluster, or for a page authored anywhere. */
+function singleSegmentBuilds(slug) {
+  if (CLUSTER_SLUGS.has(slug)) return true;
+  return HANT_SOURCE_LOCALES.some((locale) =>
+    existsSync(path.join(PAGES, locale, `${slug}.ts`))
+  );
+}
+
 /** Fenced code blocks and inline code spans. Mirrors content-lint's stripCode. */
 const CODE = /^ {0,3}(`{3,}|~{3,})[\s\S]*?^ {0,3}\1|`[^`\n]*`/gm;
 
@@ -100,11 +118,13 @@ const HREF_ATTRIBUTE = /(\bhref=["'])(\/[^"'\s]*)(["'])/g;
  * Will the site build `/zh-Hant<rest>`? `rest` is the path after the locale
  * segment, e.g. `/blog/some-slug/`. Unproven shapes answer false so the caller
  * leaves the Simplified link in place rather than inventing a 404.
+ * `slugBuilds` answers a single segment that is not a static route; it is a
+ * parameter only so the fixtures below can run this function off a stub.
  */
-function zhHantTargetBuilds(rest) {
+function zhHantTargetBuilds(rest, slugBuilds = singleSegmentBuilds) {
   const segments = rest.split('/').filter(Boolean);
   if (segments.length === 0) return true; // locale home
-  if (segments.length === 1 && STATIC_ROUTES.has(segments[0])) return true;
+  if (segments.length === 1) return STATIC_ROUTES.has(segments[0]) || slugBuilds(segments[0]);
 
   if (segments.length === 2 && segments[0] === 'blog') {
     const slug = segments[1];
@@ -225,6 +245,15 @@ function selfTest() {
       '[a](/zh-Hans/blog/known/)\n```\n/zh-Hans/blog/known/\n```\n[b](/zh-Hans/blog/known/)',
       '[a](/zh-Hant/blog/known/)\n```\n/zh-Hans/blog/known/\n```\n[b](/zh-Hant/blog/known/)',
     ],
+  ]);
+
+  // A single segment — a cluster or a marketing page — runs the real
+  // `zhHantTargetBuilds` with only its slug registry stubbed, so these fail if a
+  // single segment stops consulting that registry.
+  const singles = (rest) => zhHantTargetBuilds(rest, (slug) => slug === 'known');
+  check('link-rewrite', (input) => rewriteBodyLinks(input, singles, () => {}), [
+    ['[t](/zh-Hans/known/)', '[t](/zh-Hant/known/)'],
+    ['[t](/zh-Hans/ghost/)', '[t](/zh-Hans/ghost/)'],
   ]);
 
   // The conversion cases live beside the rules they pin, in
