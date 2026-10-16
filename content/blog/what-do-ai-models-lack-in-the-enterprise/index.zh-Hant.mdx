@@ -43,11 +43,13 @@ objectstack.ai 的首頁用三句話陳述這個想法，頁面原始碼裡原�
 
 ObjectStack README 的一行定義是「一份可執行的業務本體。AI 編寫它，執行時執行它，Agent 操作它，你擁有它。」概念頁把它的核心列為六類東西：物件與欄位、關係、動作、權限、流程、Agent 與工具定義。本文的主張是：這六類正好歸入三樣供給，而執行時把每一樣都變成 Agent 直接可用的東西，中間不需要任何人寫膠水程式碼。下面是對照表。所有出處都是 `objectstack-ai/objectstack` 倉庫在提交 `1ecb08a1`（2026-10-16 的 `origin/main`）上的檔案，或者從同一倉庫構建出來的文件頁。
 
-| 模型缺的 | 在企業裡，它是 | 本體裡供給它的 | 執行時機制，以及寫在哪裡 |
-| :--- | :--- | :--- | :--- |
-| **一個世界** | 名詞：有哪些實體，每個是什麼型別，彼此什麼關係 | 物件與欄位；關係（六類中的兩類） | 一份型別化定義編譯成 `objectstack.json`；執行時從它推匯出資料庫結構、REST 與即時 API、Console 介面和一個 MCP 伺服器（`content/docs/concepts/ontology.mdx:64-70`）。Agent 用 `list_objects` 和 `describe_object` 讀這個世界（`content/docs/ai/connect-mcp.mdx:225-227`）。 |
-| **一雙手** | 動詞：可以對這些名詞做什麼 | 動作、流程，以及記錄本身 | 執行中的應用就是一個 MCP 伺服器，位於 `/api/v1/mcp`，預設開啟；物件自動暴露，動作要用 `ai: { exposed: true }` 主動開啟（`README.md:161-177`）。這個開關是一個 schema 欄位，預設 `false`，開啟時必須附一段不少於 40 個字元、面向模型的描述（`packages/spec/src/ui/action.zod.ts:764-771`）。 |
-| **一道圍欄** | 誰可以做什麼、對哪些行哪些欄位，每次呼叫都查，查完留痕 | 權限、行級與欄位級安全、共享、審計 | 安全是註冊在 ObjectQL 引擎上的中介軟體，引擎的每一次操作都要經過它（`packages/plugins/plugin-security/src/security-plugin.ts:2293-2294`）。MCP 工具以呼叫者的身份執行，走的是「與 REST API 相同的權限/RLS 強制路徑」（`packages/mcp/src/mcp-http-tools.ts:7-11`）。審計行由引擎鉤子在每一次插入、更新、刪除時寫入（`packages/plugins/plugin-audit/src/audit-writers.ts:2180-2185`）。 |
+| 模型缺的 | 本體裡供給它的 | 執行時機制，以及寫在哪裡 |
+| :--- | :--- | :--- |
+| **一個世界**——名詞：有哪些實體，每個是什麼型別，彼此什麼關係 | 物件與欄位；關係（六類中的兩類） | 一份型別化定義編譯成 `objectstack.json`；執行時從它推匯出資料庫結構、REST 與即時 API、Console 介面和一個 MCP 伺服器（`ontology.mdx:64-70`）。Agent 用 `list_objects` 和 `describe_object` 讀這個世界（`connect-mcp.mdx:225-227`）。 |
+| **一雙手**——動詞：可以對這些名詞做什麼 | 動作、流程，以及記錄本身 | 執行中的應用就是一個 MCP 伺服器，位於 `/api/v1/mcp`，預設開啟；物件自動暴露，動作要用 `ai: { exposed: true }` 主動開啟（`README.md:161-177`）。這個開關是一個 schema 欄位，預設 `false`，開啟時必須附一段不少於 40 個字元、面向模型的描述（`action.zod.ts:764-771`）。 |
+| **一道圍欄**——誰可以做什麼、對哪些行哪些欄位，每次呼叫都查，查完留痕 | 權限、行級與欄位級安全、共享、審計 | 安全是註冊在 ObjectQL 引擎上的中介軟體，引擎的每一次操作都要經過它（`security-plugin.ts:2293-2294`）。MCP 工具以呼叫者的身份執行，走的是「與 REST API 相同的權限/RLS 強制路徑」（`mcp-http-tools.ts:7-11`）。審計行由引擎鉤子在每一次插入、更新、刪除時寫入（`audit-writers.ts:2180-2185`）。 |
+
+這些檔案在哪裡，方便按出處翻開：`README.md` 在倉庫根；`ontology.mdx` 在 `content/docs/concepts/`，`connect-mcp.mdx` 在 `content/docs/ai/`；`action.zod.ts` 在 `packages/spec/src/ui/`；`security-plugin.ts` 在 `packages/plugins/plugin-security/src/`；`mcp-http-tools.ts` 在 `packages/mcp/src/`；`audit-writers.ts` 在 `packages/plugins/plugin-audit/src/`。行號以提交 `1ecb08a1` 為準。
 
 概念頁把右邊那一列壓成一句話，值得整句保留：執行時「在每一次呼叫上強制執行這份定義。RBAC、行級與欄位級安全、共享和審計，對一個 REST 請求、一次 Console 點選和一次 Agent 的工具呼叫一視同仁。執行時不做任何推理：跑的就是校驗過的。」（原文：enforces the definition on every call. RBAC, row-level and field-level security, sharing, and audit apply to a REST request, a Console click and an agent's tool call alike. Nothing is reasoned over at runtime: what runs is what was validated.）
 
