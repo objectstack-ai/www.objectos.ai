@@ -9,7 +9,7 @@ const page = {
     eyebrow: '数据建模',
     heroTitle: '描述业务对象，数据库和 API 随之而来。',
     lead:
-      '以一个订阅计费系统为例：客户、套餐、席位、MRR、续约日、状态。在开源 ObjectStack 运行时上，这就是一份紧凑的对象定义——表、迁移、查询引擎和 REST 端点由运行时供给；你的 Agent 能写它，你的团队能在对象设计器里逐字段微调它，而在 ObjectOS 上，产品内 AI Builder 能从一句描述起草出同样的对象与字段。',
+      '以一个订阅计费系统为例：客户、套餐、席位、MRR、续约日、状态。这些对象、它们的字段，以及它们之间的关系，就是你的业务本体的核心；在开源 ObjectStack 运行时上，这个核心就是一份紧凑的定义——表、迁移、查询引擎和 REST 端点由运行时供给；你的 Agent 能写它，你的团队能在对象设计器里逐字段微调它，而在 ObjectOS 上，产品内 AI Builder 能从一句描述起草出同样的对象与字段。',
     primary: { label: '阅读数据建模文档', href: 'https://docs.objectos.ai/docs/build/data' },
     secondary: { label: '查看流程自动化', href: '/en/automation/' },
     metrics: [
@@ -18,7 +18,7 @@ const page = {
       { value: '先只读', label: '已在运行的数据库原地联邦接入——默认只读、写权限按需开启、尚在早期' },
     ],
     artifact: {
-      eyebrow: '模型即源码',
+      eyebrow: '本体即源码',
       title: '一份对象定义，schema、规则和 API 全在里面。',
       body:
         '这就是那个订阅对象：字段、关系、校验和历史追踪都在一份可审阅的定义里。运行时把它变成表和迁移，在每条写路径上执行规则，并对外提供 API——同一份定义，Agent 能读懂扩展，设计器能打开微调。',
@@ -59,7 +59,7 @@ export const Subscription = ObjectSchema.create({
         eyebrow: '为业务建模',
         title: '把订阅系统一步步建出来',
         copy:
-          '定义贴着业务的说法走：客户、套餐、续约。没有 ORM 类，没有散落各处的 schema 文件——下面每一步都停留在同一份定义里。',
+          '本体贴着业务的说法走：客户、套餐、续约。没有 ORM 类，没有散落各处的 schema 文件——下面每一步都停留在同一份定义里。',
         items: [
           {
             title: '对象与关系',

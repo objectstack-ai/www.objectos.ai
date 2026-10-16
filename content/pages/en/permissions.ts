@@ -9,7 +9,7 @@ const page = {
     eyebrow: 'Permissions & security',
     heroTitle: 'Who sees what, who changes what — enforced at runtime.',
     lead:
-      'Take a sales organization: reps see only their team’s accounts, the cost field is masked for them, managers see the whole region, and audit wants to know who changed that discount. On the ObjectStack runtime that boundary is one reviewable definition — enforced on every query, API call, and AI tool call, whether the agent is your own over MCP or ObjectOS’s in-app AI.',
+      'Take a sales organization: reps see only their team’s accounts, the cost field is masked for them, managers see the whole region, and audit wants to know who changed that discount. On the ObjectStack runtime that boundary is part of the ontology itself — permissions are declared beside the objects they protect, not in a second policy system — and it is the one fence people and agents share: enforced on every query, API call, and AI tool call, whether the agent is your own over MCP or ObjectOS’s in-app AI.',
     primary: { label: 'Read the permissions docs', href: 'https://docs.objectos.ai/docs/configure/permissions' },
     secondary: { label: 'Review the trust model', href: '/en/trust-center/' },
     metrics: [
@@ -108,7 +108,7 @@ const page = {
         eyebrow: 'AI under the same rules',
         title: 'Agents get your permission model, not a service account',
         copy:
-          'The fastest way to lose control of AI is to give it superuser access. The ObjectStack runtime never does: every agent action runs as the signed-in user who asked for it.',
+          'The fastest way to lose control of AI is to give it superuser access. The ObjectStack runtime never does: every agent action runs as the signed-in user who asked for it, inside the same fence as that user.',
         items: [
           {
             title: 'User-scoped execution',
