@@ -12,7 +12,7 @@ const page = {
     eyebrow: 'Agent developer',
     heroTitle: 'Do not teach every developer to hand-write apps. Teach your agent the target format.',
     lead:
-      `${p.t2} The agent is the writer and you are the reviewer: the scaffolder writes an AGENTS.md so the agent starts with the protocol’s rules loaded, Strict TypeScript, Zod schemas, and os validate reject invalid output before it reaches the runtime, and the whole app stays small enough for AI to hold whole.`,
+      `${p.t2} The ontology is what the agent writes — ${p.t3[1]}, in the README’s four promises — and you are the reviewer: the scaffolder writes an AGENTS.md so the agent starts with the protocol’s rules loaded, Strict TypeScript, Zod schemas, and os validate reject invalid output before it reaches the runtime, and the whole app stays small enough for AI to hold whole.`,
     primary: { label: 'Follow the README path', href: 'https://github.com/objectstack-ai/objectstack#try-it-in-five-minutes' },
     secondary: { label: 'See template patterns', href: '/en/templates/' },
     metrics: [
@@ -51,8 +51,8 @@ npx os dev --ui   # -> http://localhost:3000/_console/`,
             meta: 'Context',
           },
           {
-            title: '2. Generate metadata',
-            body: 'The agent edits object, view, workflow, action, dashboard, translation, and tool definitions as Strict TypeScript rather than generating app glue code.',
+            title: '2. Write the ontology',
+            body: 'The agent edits the ontology — objects and fields, relations, actions, permissions, flows, and tool definitions — and its projections — views, dashboards, translations — as Strict TypeScript rather than generating app glue code.',
             meta: 'Write',
           },
           {

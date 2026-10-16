@@ -9,7 +9,7 @@ const page = {
     eyebrow: '应用界面',
     heroTitle: '没人手写的界面，人人信得过的视图。',
     lead:
-      '拿一个客服工作台来说：客服在网格里处理待办工单，主管拖着按状态分组的看板，所有人都会看截止日历。在开源 ObjectStack 运行时上这是一份视图定义——按用户渲染、随记录实时变化，还能在视图设计器里调整，不碰一个文件。在 ObjectOS 上，产品内 AI Builder 能从一句描述注册出同样的视图。',
+      '拿一个客服工作台来说：客服在网格里处理待办工单，主管拖着按状态分组的看板，所有人都会看截止日历。在开源 ObjectStack 运行时上这是一份视图定义——本体的投影，而不是本体的一部分——按用户渲染、随记录实时变化，还能在视图设计器里调整，不碰一个文件。在 ObjectOS 上，产品内 AI Builder 能从一句描述注册出同样的视图。',
     primary: { label: '阅读界面文档', href: 'https://docs.objectos.ai/docs/build/interface' },
     secondary: { label: '查看报表与分析', href: '/en/analytics/' },
     metrics: [
@@ -19,7 +19,7 @@ const page = {
     ],
     artifact: {
       eyebrow: '界面即元数据',
-      title: '视图是可审阅定义的一部分。',
+      title: '视图是本体的投影——同时仍是一份可审阅的 diff。',
       body:
         '这就是那个工作台：带列的网格、按状态分组的看板、截止日历，还有一个存好的"待办工单"列表——一份定义。Agent 加一个字段时，受影响的界面就在同一份小 diff 里，而不是另开一张前端工单。',
       code: `import { defineView } from '@objectstack/spec';
@@ -58,10 +58,10 @@ export const CaseViews = defineView({
     sections: [
       {
         id: 'surfaces',
-        eyebrow: '从元数据渲染',
+        eyebrow: '本体的投影',
         title: '把工作台一个面一个面看过去',
         copy:
-          '类型化字段自带控件与格式，生成的界面外观行为天然一致——不需要先做一个设计系统项目。',
+          '视图、仪表盘、应用和翻译是本体的投影，不是本体的一部分：改对象，界面跟着变；删掉一个界面，它所展示的业务原封不动。类型化字段自带控件与格式，投影出来的界面外观行为天然一致——不需要先做一个设计系统项目。',
         items: [
           {
             title: '视图与列表',
