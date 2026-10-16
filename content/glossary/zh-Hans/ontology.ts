@@ -33,7 +33,7 @@ const term = {
     'enterprise-ontology-platform-comparison',
     'objectos-action-tools',
   ],
-  pageSlugs: ['data-modeling', 'app-ui', 'permissions', 'mcp', 'agent-developer', 'platform', 'ai'],
+  pageSlugs: ['ontology', 'compare', 'data-modeling', 'app-ui', 'permissions', 'mcp', 'agent-developer', 'platform', 'ai'],
 } satisfies GlossaryTerm;
 
 export default term;
