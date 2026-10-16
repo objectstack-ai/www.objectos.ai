@@ -29,13 +29,16 @@ const page = {
       title: '一份定义进去，其余全部派生。',
       body:
         '本体以类型化元数据写在 objectstack.config.ts 里，编译成 objectstack.json 工件。运行时从这个工件派生可更换驱动之上的数据库结构、生成的 REST 与实时 API、Console 的服务端驱动界面，以及一个 MCP 服务器——并在每一次调用时强制执行这份定义。RBAC、行级与字段级安全、共享和审计，对一次 REST 请求、一次 Console 点击和一次 Agent 工具调用一视同仁。运行时不做任何推理：跑的就是被校验过的东西。',
-      code: `objectstack.config.ts      # 本体：你用类型化元数据写下的定义
+      code: `objectstack.config.ts
+  # 本体：用类型化元数据写下的定义
         │  编译
         ▼
-objectstack.json           # 运行时加载的工件
+objectstack.json
+  # 运行时加载的工件
         │  派生
         ▼
-数据库结构 · REST 与实时 API · 服务端驱动界面 · MCP 服务器
+数据库结构 · REST 与实时 API
+服务端驱动界面 · MCP 服务器
         │  每一次调用都强制执行
         ▼
 RBAC · 行级与字段级安全 · 共享 · 审计`,

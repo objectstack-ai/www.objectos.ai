@@ -30,16 +30,20 @@ const page = {
       title: 'One definition in. Everything else is derived.',
       body:
         'The ontology is authored as typed metadata in objectstack.config.ts and compiled into the objectstack.json artifact. From that artifact the runtime derives the database schema on an interchangeable driver, a generated REST and realtime API, server-driven UI for the Console, and an MCP server — and it enforces the definition on every call. RBAC, row-level and field-level security, sharing and audit apply to a REST request, a Console click and an agent’s tool call alike. Nothing is reasoned over at runtime: what runs is what was validated.',
-      code: `objectstack.config.ts      # the ontology, authored as typed metadata
+      code: `objectstack.config.ts
+  # the ontology, as typed metadata
         │  compiled
         ▼
-objectstack.json           # the artifact the runtime loads
+objectstack.json
+  # the artifact the runtime loads
         │  derives
         ▼
-database schema · REST and realtime API · server-driven UI · MCP server
+database schema · REST and realtime API
+server-driven UI · MCP server
         │  enforces, on every call
         ▼
-RBAC · row-level and field-level security · sharing · audit`,
+RBAC · row- and field-level security
+sharing · audit`,
     },
     sections: [
       {
