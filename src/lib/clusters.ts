@@ -27,7 +27,7 @@ export const CLUSTERS: Cluster[] = [
     // page and llms.txt link this page in every locale — but the copy defines
     // the product by the ontology, not by the category.
     slug: 'ai-native-app-platform',
-    title: 'What Is an AI-Native App Platform? One Executable Business Ontology',
+    title: 'AI-Native App Platform: One Executable Ontology',
     shortTitle: 'Executable business ontology',
     description:
       'An AI-native app platform, defined the way ObjectStack defines it: one executable business ontology that AI writes, an open runtime runs, agents operate, and you own — how that differs from low-code and from AI code generation, and where ObjectOS fits.',
