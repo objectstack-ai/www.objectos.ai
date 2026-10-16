@@ -51,6 +51,8 @@ interface HomeCopy {
   positioningKicker: string;
   positioningTitle: [string, string];
   positioningCopy: string;
+  /** The text link under the positioning copy, to the /[lang]/ontology/ pillar. */
+  positioningLink: string;
   capabilitiesKicker: string;
   capabilitiesTitle: [string, string];
   capabilitiesLink: string;
@@ -116,6 +118,7 @@ const zhHans: HomeCopy = {
   imageNote: '正在连接应用、数据与 Agent',
   positioningKicker: positioning['zh-Hans'].t1,
   positioningTitle: ['保留已经有效的系统，', '补上 Agent 可治理运行时。'],
+  positioningLink: '什么是可执行的业务本体',
   positioningCopy: '企业 AI 不需要又一次重建，也不需要更多不可审的生成代码。它需要一份 Agent 能写、人能审、运行时能治理的定义，把旧系统、新应用和 AI Agent 接在一起。你的对象与字段、关系、动作、权限、流程，以及 Agent 与工具定义，就是这份定义——你的业务本体：开放、带版本、归你所有，而不是锁在别人平台里的资产。',
   capabilitiesKicker: '平台能力',
   capabilitiesTitle: ['从业务结构出发，', '而不是从空白代码开始'],
@@ -204,6 +207,7 @@ const en: HomeCopy = {
   imageNote: 'Connecting applications, data, and agents',
   positioningKicker: positioning.en.t1,
   positioningTitle: ['Keep the systems that work.', 'Add a governed runtime for agents.'],
+  positioningLink: 'What an executable business ontology is',
   positioningCopy: 'Enterprise AI does not need another rebuild project or another pile of generated code. It needs one definition agents can write, humans can review, and a runtime can govern across legacy systems, new applications, and AI agents. Your objects and fields, relations, actions, permissions, flows, and agent and tool definitions are that definition — your business ontology: open, versioned, and yours, not an asset locked inside someone else’s platform.',
   capabilitiesKicker: 'Platform capabilities',
   capabilitiesTitle: ['Start with the business model,', 'not a blank codebase'],
@@ -293,6 +297,7 @@ const ja: HomeCopy = {
   imageNote: 'アプリ、データ、エージェントを接続中',
   positioningKicker: positioning.ja.t1,
   positioningTitle: ['今あるシステムを活かし、', 'エージェント用の統制ランタイムを加える。'],
+  positioningLink: '実行可能なビジネスオントロジーとは',
   positioningCopy: 'エンタープライズ AI に必要なのは、また一つの再構築プロジェクトでも、レビュー不能な生成コードの山でもありません。エージェントが書き、人がレビューでき、ランタイムが統制する、ひとつの定義です。オブジェクトとフィールド、リレーション、アクション、権限、フロー、そしてエージェントとツールの定義がその定義 — あなたのビジネスオントロジーです。オープンで、バージョン管理され、あなたのもの。誰かのプラットフォームに閉じ込められた資産ではありません。',
   capabilitiesKicker: 'プラットフォーム機能',
   capabilitiesTitle: ['白紙のコードではなく、', '業務構造から始める'],
@@ -382,6 +387,7 @@ const de: HomeCopy = {
   imageNote: 'Verbindet Anwendungen, Daten und Agents',
   positioningKicker: positioning.de.t1,
   positioningTitle: ['Bewährte Systeme behalten.', 'Eine kontrollierte Runtime für Agents ergänzen.'],
+  positioningLink: 'Was eine ausführbare Geschäftsontologie ist',
   positioningCopy: 'Enterprise AI braucht kein weiteres Neuaufbauprojekt und keinen weiteren Stapel generierten Codes. Sie braucht eine Definition, die Agents schreiben, Menschen prüfen und eine Runtime über Legacy-Systeme, neue Anwendungen und AI Agents hinweg kontrolliert. Ihre Objekte und Felder, Beziehungen, Aktionen, Berechtigungen, Flows sowie Agent- und Tool-Definitionen sind diese Definition — Ihre Geschäftsontologie: offen, versioniert und in Ihrem Besitz, kein Asset in der Plattform eines anderen.',
   capabilitiesKicker: 'Plattformfunktionen',
   capabilitiesTitle: ['Mit der Geschäftsstruktur beginnen,', 'nicht mit einer leeren Codebasis'],
@@ -471,6 +477,7 @@ const es: HomeCopy = {
   imageNote: 'Conectando aplicaciones, datos y agentes',
   positioningKicker: positioning.es.t1,
   positioningTitle: ['Conserva los sistemas que funcionan.', 'Añade un runtime gobernado para agentes.'],
+  positioningLink: 'Qué es una ontología de negocio ejecutable',
   positioningCopy: 'La AI empresarial no necesita otro proyecto de reconstrucción ni otra pila de código generado. Necesita una definición que los agentes puedan escribir, las personas revisar y un runtime gobernar entre sistemas heredados, nuevas aplicaciones y agentes de AI. Tus objetos y campos, relaciones, acciones, permisos, flujos y definiciones de agentes y herramientas son esa definición — tu ontología de negocio: abierta, versionada y tuya, no un activo encerrado en la plataforma de otro.',
   capabilitiesKicker: 'Capacidades de la plataforma',
   capabilitiesTitle: ['Empieza por la estructura del negocio,', 'no por código en blanco'],
@@ -560,6 +567,7 @@ const fr: HomeCopy = {
   imageNote: 'Connexion des applications, données et agents',
   positioningKicker: positioning.fr.t1,
   positioningTitle: ['Conservez les systèmes efficaces.', 'Ajoutez un runtime gouverné pour agents.'],
+  positioningLink: 'Ce qu’est une ontologie métier exécutable',
   positioningCopy: 'L’AI en entreprise n’a pas besoin d’un nouveau chantier de reconstruction ni d’une nouvelle pile de code généré. Elle a besoin d’une définition que les agents peuvent écrire, que les humains peuvent relire, et qu’un runtime gouverne à travers systèmes existants, nouvelles applications et agents AI. Vos objets et champs, relations, actions, permissions, flux, et définitions d’agents et d’outils sont cette définition — votre ontologie métier : ouverte, versionnée et à vous, pas un actif enfermé dans la plateforme d’un autre.',
   capabilitiesKicker: 'Capacités de la plateforme',
   capabilitiesTitle: ['Partez de la structure métier,', 'pas d’une base de code vide'],
@@ -649,6 +657,7 @@ const ko: HomeCopy = {
   imageNote: '애플리케이션, 데이터와 에이전트 연결 중',
   positioningKicker: positioning.ko.t1,
   positioningTitle: ['이미 잘 작동하는 시스템은 유지하고,', '에이전트를 위한 거버넌스 런타임을 더하세요.'],
+  positioningLink: '실행 가능한 비즈니스 온톨로지란',
   positioningCopy: '엔터프라이즈 AI에 필요한 것은 또 하나의 재구축 프로젝트도, 검토하기 어려운 생성 코드 더미도 아닙니다. 에이전트가 작성하고 사람이 검토하며 런타임이 기존 시스템, 새 애플리케이션, AI 에이전트 전반에서 거버넌스를 유지하는 하나의 정의입니다. 객체와 필드, 관계, 작업, 권한, 플로, 그리고 에이전트와 도구 정의가 그 정의 — 당신의 비즈니스 온톨로지입니다. 열려 있고, 버전 관리되며, 당신의 것이지, 남의 플랫폼에 갇힌 자산이 아닙니다.',
   capabilitiesKicker: '플랫폼 기능',
   capabilitiesTitle: ['빈 코드가 아니라,', '업무 구조에서 시작합니다'],
