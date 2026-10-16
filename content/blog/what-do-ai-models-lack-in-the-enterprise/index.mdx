@@ -1,0 +1,173 @@
+---
+title: "What Do AI Models Lack in the Enterprise? A World, Hands and a Fence"
+description: "Not intelligence. In a company a model lacks a world to reason about, hands to act with and a fence around the acting. One executable business ontology supplies all three; a sourced table maps each to its runtime mechanism."
+author: ObjectStack Team
+date: 2026-11-03
+status: published
+topic: ai-agents
+audience: it
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - AI agents
+  - Executable business ontology
+  - MCP
+  - Agent permissions
+---
+
+**World.** What exists in this business, how each thing is typed, and how the things connect.
+
+**Hands.** The operations an agent may perform on that world, offered as tools it can call.
+
+**Fence.** Who may do what, decided on every call rather than once, and recorded afterwards.
+
+Those are the three things an AI model is missing when it arrives in an enterprise, and intelligence is not on the list. The sentence is ObjectStack's, from the "00 · The idea" section of its front page: "What the model lacks is not intelligence: a world, hands, and a fence." This post makes the narrower, checkable claim behind it: an executable business ontology supplies all three from one artifact, and each supply maps to a named runtime mechanism you can read in the source. The table below is that map, with file and line for every cell. After it: what each supply is, one number measured on the bundled CRM example, the strongest alternative stated fairly, and what none of this solves.
+
+## Where the sentence comes from
+
+The front page of objectstack.ai states the idea in three sentences, kept verbatim in the page's source (`apps/docs/app/[lang]/page.tsx`, lines 127–131):
+
+> An enterprise is definition plus execution. When execution is nearly free, it is its definition.
+>
+> What the model lacks is not intelligence: a world, hands, and a fence.
+>
+> An ontology written clearly enough is software. Models change; the ontology stays.
+
+Read the middle sentence as a diagnosis. Every enterprise AI pilot connects a capable model to a company and then discovers, one incident at a time, that the model did not know what an "account" was in this company (no world), could not actually change one (no hands), or changed one it should not have touched (no fence). The usual response is to buy each missing piece separately: a retrieval layer for the world, a function-calling layer for the hands, a policy layer for the fence. That is a reasonable response, and the second half of this post gives it its due. The first and third sentences say why ObjectStack takes a different one: if the definition of the business is written precisely enough to execute, then the same definition is the world, declares the hands, and carries the fence, and it outlives whichever model is reading it this quarter.
+
+## Three supplies, one artifact
+
+The ObjectStack README's one-line definition is "One executable business ontology. AI writes it, the runtime runs it, agents operate it, you own it." The concepts page lists its core as six kinds of thing: objects and fields, relations, actions, permissions, flows, and agent and tool definitions. The claim of this post is that those six kinds sort into the three supplies, and that the runtime turns each into something the agent can use without anyone writing glue. Here is the map. Every source is a file in `objectstack-ai/objectstack` at commit `1ecb08a1` (`origin/main` on 2026-10-16), or a page of its docs, which are built from the same repository.
+
+| The model lacks | In an enterprise, that is | Supplied by (in the ontology) | The runtime mechanism, and where it is written |
+| :--- | :--- | :--- | :--- |
+| **A world** | The nouns: which entities exist, how each is typed, how they relate | Objects and fields; relations (two of the six kinds) | One typed definition is compiled into `objectstack.json`; from it the runtime derives the database schema, the REST and realtime API, the Console UI and an MCP server (`content/docs/concepts/ontology.mdx:64-70`). The agent reads that world with `list_objects` and `describe_object` (`content/docs/ai/connect-mcp.mdx:225-227`). |
+| **Hands** | The verbs: what may be done to those nouns | Actions, flows, and the records themselves | The running app is an MCP server at `/api/v1/mcp`, on by default; objects are exposed automatically, actions opt in with `ai: { exposed: true }` (`README.md:161-177`). The opt-in is a schema field that defaults to `false` and requires an LLM-facing description of at least 40 characters (`packages/spec/src/ui/action.zod.ts:764-771`). |
+| **A fence** | Who may do what, on which rows and fields, checked on every call and recorded | Permissions, row-level and field-level security, sharing, audit | Security is middleware registered on the ObjectQL engine, so every engine operation passes through it (`packages/plugins/plugin-security/src/security-plugin.ts:2293-2294`). MCP tools run under the caller's principal through "the SAME permission/RLS-enforcing path the REST API uses" (`packages/mcp/src/mcp-http-tools.ts:7-11`). Audit rows are written by engine hooks on every insert, update and delete (`packages/plugins/plugin-audit/src/audit-writers.ts:2180-2185`). |
+
+The concepts page compresses the right-hand column into one sentence that is worth keeping whole: the runtime "enforces the definition on every call. RBAC, row-level and field-level security, sharing, and audit apply to a REST request, a Console click and an agent's tool call alike. Nothing is reasoned over at runtime: what runs is what was validated."
+
+![One executable business ontology, compiled from objectstack.config.ts into objectstack.json, supplies three things: a world (objects, fields and relations, which the runtime derives the database, API and describe_object tool from), hands (actions that opt in with ai exposed true, flows and records, served as MCP tools at /api/v1/mcp), and a fence (permission sets, row-level and field-level security, sharing and audit, enforced by security middleware on every engine call and recorded by audit hooks)](./three-supplies-en.svg)
+
+The rest of the post walks the three rows.
+
+## The world: a definition the runtime also reads
+
+A model's world has to satisfy two readers at once. The model needs it small and explicit enough to hold whole; the runtime needs it precise enough to execute. Documents satisfy the first reader and not the second: a retrieved policy PDF tells the model what an opportunity is, and nothing checks that the database agrees.
+
+An executable ontology's world is the typed definition itself. The concepts page: the ontology "is the definition of your business that the runtime executes: authored as typed metadata in `objectstack.config.ts`, compiled into the `objectstack.json` artifact." Objects and fields declare the entities and their typed attributes; relations declare lookups and master-detail links. The runtime derives the tables and the endpoints from that definition, and the MCP server's `describe_object` tool answers from the same definition. So the world the agent reads is, by construction, the world that runs. There is no second description to drift.
+
+Two consequences follow, and both are already argued elsewhere on this blog, so they are pointed at rather than repeated. First, the world is bounded: views, dashboards, apps and translations are projections of the ontology, not part of it, which is what lets an agent reason about the business from the core rather than from every screen ([the definition post](/en/blog/what-does-the-ontology-is-the-software-mean/) has the removal test for telling the two apart). Second, the world is validated before it is run: `os validate` rejects a definition that type-checks but would fail silently at runtime, including a missing security posture, so the world an agent is handed has already been refused once for every dangling reference in it.
+
+## The hands: tools the author armed, not tools the model guessed
+
+Hands are the part most enterprise AI stacks already have, in the form of function calling. The difference an executable ontology makes is in who decides which hands exist.
+
+Objects come with hands by default. Because the definition is typed, the runtime serves it as an MCP server: "Objects are tools, actions are tools, permissions decide what an agent may call, and audit records what it did" (`README.md:163-164`). The connect-mcp page lists what an agent gets as "Twelve tools, generated from your metadata": discovery (`list_objects`, `describe_object`, `validate_expression`), reads (`query_records`, `get_record`, `aggregate_records`), writes (`create_record`, `update_record`, `delete_record`), and actions (`list_actions`, `run_action`, `resume_run`). Nobody writes a tool definition for a new object; the object is the tool.
+
+Actions do not come with hands by default, and this is the deliberate part. An action becomes callable by an agent only when its author sets `ai: { exposed: true }` and writes the description the model will choose it by. The schema comment in `action.zod.ts` says why: "This is a deliberate governance gate: in an AI-authoring world the platform's value is that a human can govern exactly which capabilities the agent fleet is allowed to invoke — a half-finished or unreviewed action must never be silently armed." The smallest bundled example, the todo app, arms one like this (`examples/app-todo/src/actions/task.actions.ts`, with the UI-only keys trimmed):
+
+```ts
+export const CompleteTaskAction = defineAction({
+  name: 'complete_task',
+  label: 'Mark Complete',
+  objectName: 'todo_task',
+  type: 'script',
+  target: 'completeTask',
+  ai: {
+    exposed: true,
+    description: 'Mark a todo task as complete. Use when the user says a task is done or finished.',
+  },
+});
+```
+
+The bundled CRM, by contrast, arms none. Its one action, Convert Lead, is a `flow` action with no `ai` block, so an agent connected to that app has every data tool over its six objects and an empty answer from `list_actions`. That is not a gap in the example; it is the rule working. Hands over business logic are granted by a reviewed line in the definition, never assumed from the fact that a button exists.
+
+Why write operations in particular need this one governed definition rather than a second tool path beside the UI is the subject of [the ontology actions post](/en/blog/objectos-action-tools/), and is not repeated here.
+
+## The fence: decided on every call, by the runtime
+
+A fence that lives in the prompt is a request. A fence that lives in a policy service in front of the tools is a gate on calls. The fence an executable ontology carries is on the data path itself, and the distinction decides what a mistake can reach.
+
+The mechanism is middleware. `plugin-security` registers its enforcement on the ObjectQL engine (`ql.registerMiddleware(...)`, `security-plugin.ts:2294`), which is the engine every read and write goes through, whether the request came from a REST route, a Console click or an MCP tool. The MCP tool module says in its own header that it never touches the data engine directly: "all reads/writes go through an injected McpDataBridge that the host wires to the SAME permission/RLS-enforcing path the REST API uses. This module owns the tool shape; the bridge owns execution + security." There is no agent-specific fence to keep in sync with the human one, because there is one fence. Where exactly each check runs, and why filtering the model's output is too late, is argued in [where agent permissions are enforced](/en/blog/objectos-agent-permission-boundaries/).
+
+Three properties of that fence are worth naming, because the alternative stacks usually lack at least one.
+
+**It decides on rows and fields, not only on calls.** Permission sets grant object-level create, read, edit and delete; row-level security filters which records a caller can see; field-level security masks which columns. The security service contract states the failure stance for the row filter plainly: "Access-narrowing answers fail CLOSED ... a resolution failure returns a DENY filter (zero rows), never `undefined`" (`packages/spec/src/contracts/security-service.ts:28-31`). A model that asks for everything gets what its user may see.
+
+**It gates business logic separately, because logic has no backstop.** Object CRUD is bounded by RLS and FLS on every row. An action body is not: once invoked it "executes as TRUSTED app code," so the bridge "gates at invoke time: `ai.exposed` (the author's explicit AI opt-in, ADR-0011) + the ADR-0066 D4 capability gate" (`mcp-http-tools.ts:1128-1133`). Hands and fence meet exactly here: the same line that arms an action is the line the fence checks.
+
+**It records.** Audit writers are engine hooks on `afterInsert`, `afterUpdate` and `afterDelete` (`audit-writers.ts:2180-2185`), so a row changed by an agent's `update_record` lands in the audit log the same way a row changed in the Console does, with the acting identity. The README's fourth gate puts the consequence in one line: "The runtime enforces permissions and audit on every call, so even a wrong app stays inside the fence."
+
+## Measured on the bundled CRM
+
+One number, taken with the command the README prints under "measure it yourself", on `examples/app-crm` at commit `1ecb08a1`:
+
+```bash
+find examples/app-crm/src -name '*.ts' -not -name '*.test.ts' | xargs cat | wc -l
+# 1844
+```
+
+**1,844 lines across 30 files** is the whole application. Sorting its directories into the three supplies:
+
+| Supply | Directory | Lines | What is in it |
+| :--- | :--- | ---: | :--- |
+| World | `src/objects/` | 486 | Six objects (account, contact, lead, opportunity, opportunity line item, activity) with their fields and lookups |
+| Hands | `src/actions/` + `src/flows/` | 240 | One action, Convert Lead, and the screen flow it launches |
+| Fence | `src/security/` | 88 | `sales-positions.ts` is 78 of them: two permission sets, three positions |
+| Plumbing | tool registration, authorization middleware, audit code | 0 | A search for `registerTool`, `middleware`, `authoriz`, `checkPermission` and `audit` across `src/` finds two matches, both in comments |
+
+The rest is projections (views, a dashboard, an app, a page, translations, an analytics dataset) and seed data, which this post is not about.
+
+Call the headline figure **78 lines of fence**. That is the entire authorization declaration of a six-object CRM, and the same 78 lines govern the REST API, the Console and all twelve MCP tools, because all three reach the data through the engine the fence is mounted on. The complementary figure is the zero: the application declares its world, its hands and its fence, and contains no code that wires any of them to the model. The wiring is the runtime's, which is the whole content of the phrase "one artifact."
+
+Two honest footnotes on the measurement. The 78 lines are the app's own declaration; the row filter and field masking they imply are computed by the runtime from `sharingModel` on each object and from those permission sets, so "the fence" in the running system is larger than its declaration, as it should be. And this CRM, as noted above, exposes no action to AI, so its hands over business logic are zero until an author arms one.
+
+## The alternative, stated fairly
+
+The common way to supply the three things is a stack: retrieval over documents and schemas for the world, function calling (or a tool server you write) for the hands, and a policy engine or gateway in front of the tools for the fence. It deserves a fair hearing, because it is the right answer in several situations.
+
+It works with the systems you already run. Nothing is migrated; the retriever indexes what exists and the tools wrap APIs that already exist. Each layer is best of breed and swappable, so a better retriever or a stricter policy engine can be dropped in without touching the others. The patterns are well understood, the vendors are many, and a team that already owns a tool gateway has most of the fence in place. For an agent whose job is to read across a dozen legacy systems and write to none, this stack is probably what you want, and an executable ontology over those systems is read-only and early.
+
+What it does not solve is the thing the front page's first sentence is about: the three supplies are three artifacts, with three owners, and nothing checks that they agree.
+
+| | RAG + function calling + a policy layer | One executable ontology |
+| :--- | :--- | :--- |
+| **World** | A corpus the model reads; the systems do not read it | The definition the runtime executes; `describe_object` answers from it |
+| **Hands** | Tool schemas written by hand, one per operation, maintained beside the systems | Objects are tools automatically; actions opt in with one reviewed line |
+| **Fence** | A gate on tool calls, usually with a service account's authority behind each tool | Middleware on the data path, under the calling user's permissions, rows and fields included |
+| **Drift** | Three descriptions of the business, each able to be stale | One artifact, validated before it runs |
+| **Audit** | The call is logged; the row change is the downstream system's problem | The row change is logged with the identity, on every path |
+
+The fence row is the one that matters most in an incident. A policy layer in front of a `get_customer` tool can decide whether the agent may call it. It usually cannot decide which rows the agent's user is allowed to see inside the result, because the tool runs with whatever credential the integration was given. Row-level and field-level security on the data path answers that question for every caller, and answers it the same way for a human and an agent.
+
+## What this does not solve
+
+A post about a fence should say where the fence ends.
+
+**It does not supply judgment.** The fence makes a wrong call refusable and traceable; it does not make the call right. A model can still pick the wrong tool, misread a field or ask for an action it should not want. The world and the fence bound the damage. Intelligence, the thing the model does bring, is still what chooses.
+
+**The opt-in gate guards the doors the runtime owns.** The `ai.exposed` gate is enforced at the action door reached from the MCP `run_action` tool. The spec's own note is explicit that "REST `/actions` is NOT `ai.exposed`-gated and sits OUTSIDE this gate, so a human in front of that route is still yours to arrange" (`packages/spec/src/ai/tool.zod.ts:95-98`). Permissions still apply on that route; the AI opt-in does not.
+
+**Read audit is narrower than write audit.** Every insert, update and delete is recorded. Recording record-detail views is a per-object opt-in, and list and search results are not audited (`packages/plugins/plugin-audit/src/audit-plugin.ts:38-49`). An agent that reads widely leaves a smaller trail than one that writes.
+
+**The world is the apps the runtime runs.** For systems it does not run, federating an external datasource is read-only by default and described as early. The three supplies cover what the ontology executes; the rest of the estate still needs the stack above, or a migration.
+
+**An exposed action is trusted code.** The `run_action` tool says so to the model in its own description: the action body "runs as trusted application code with the app's full data authority." Arming an action is therefore a review decision, not a toggle, and `requiresConfirmation: true` exists for the ones that should ask a human first.
+
+## Hosted, or on your own infrastructure
+
+Everything above is the open stack, Apache-2.0, in one repository: the definition is a file you hold. The README then adds: "Want the same loop hosted, in the browser, nothing to install? That's ObjectOS, the commercial runtime environment built on ObjectStack." ObjectOS runs hosted in the browser with nothing to install (ObjectOS Cloud) or self-managed on your own infrastructure (ObjectOS Enterprise), and on either edition you can export your ontology and run it on the open-source ObjectStack runtime. The three supplies travel with the artifact, on every host it runs on.
+
+## Point your agent at it
+
+None of this requires taking the mapping on faith; the running app will show it to any MCP client.
+
+1. Scaffold a project with `npm create objectstack@latest my-app`. The scaffolder writes an `AGENTS.md` and installs the skills bundle, so a coding agent starts with the protocol's rules loaded, and [how to point your agent at ObjectStack](/en/blog/how-to-point-your-agent-at-objectstack/) covers the rule file and the tool server.
+2. Ask the agent for the world: a few objects with fields and a lookup between them. Ask it to run `npm run validate`, and read the diff before the Console.
+3. Start the app with `npx os dev --ui` and point any MCP client at `http://localhost:3000/api/v1/mcp`. The agent connects as a user, through the deployment's own OAuth server or an API key, and `describe_object` returns the world you just reviewed.
+4. Arm one hand: give one action `ai: { exposed: true }` with a description, validate again, and watch `list_actions` go from empty to one.
+5. Test the fence with a second user who lacks a permission the first has, and read the refusal and the audit row.
+
+The [Connect an MCP Client](https://objectstack.ai/docs/ai/connect-mcp) page has every client's one-liner, and the [Business Ontology](https://objectstack.ai/docs/concepts/ontology) page is the authority on the definition itself. Hand both to your agent. The world, the hands and the fence are in the same file it is about to write.
