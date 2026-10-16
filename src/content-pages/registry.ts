@@ -3,8 +3,10 @@ import { s2t } from '../lib/zhconvert';
 import type { MarketingPage } from './types';
 
 const PAGE_ORDER = [
+  'ontology',
   'product-tour',
   'platform',
+  'compare',
   'ai',
   'mcp',
   'permissions',

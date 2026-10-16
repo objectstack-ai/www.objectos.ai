@@ -6,7 +6,8 @@ import type { MarketingPage } from '../content-pages/types';
 import { marketingPageUi } from '../content-pages/ui';
 import { cardSpans } from '../lib/card-rows';
 import { phraseHtml } from '../../scripts/lib/cjk-phrases.mjs';
-import { pricingPath, securityPath, type Locale } from '../lib/i18n';
+import { postPath, pricingPath, securityPath, type Locale } from '../lib/i18n';
+import { getPostsInLocale } from '../lib/posts';
 
 interface Props {
   page: MarketingPage;
@@ -18,7 +19,17 @@ const pages = getMarketingPages(locale);
 const ui = marketingPageUi(locale);
 const relatedPages = pages.filter((item) => item.slug !== page.slug);
 const marketingSlugs = new Set(pages.map((item) => item.slug));
+// Blog posts are built only for the locales that have a file, so a post link
+// is localized only where that locale's post exists; otherwise the English
+// post is the right target, not a 404. Same rule as content-lint's
+// cross-locale check and gen-zh-hant's link rewrite.
+const localePostSlugs = new Set((await getPostsInLocale(locale)).map((post) => post.slug));
 const localizeHref = (href: string): string => {
+  const post = href.match(/^\/en\/blog\/([^/#]+)\/?(#.*)?$/);
+  if (post) {
+    const [, slug, hash = ''] = post;
+    return localePostSlugs.has(slug) ? `${postPath(locale, slug)}${hash}` : href;
+  }
   const match = href.match(/^\/en\/([^/#]+)\/?(#.*)?$/);
   if (!match) return href;
   const [, slug, hash = ''] = match;
@@ -145,8 +156,8 @@ const ph = (text: string): string => phraseHtml(text, locale);
     page.table && (
       <section class="table-section" aria-labelledby="table-title">
         <div class="section-head compact">
-          <p class="eyebrow">{ui.decisionEyebrow}</p>
-          <h2 id="table-title" set:html={ph(ui.decisionTitle)} />
+          <p class="eyebrow">{page.table.eyebrow ?? ui.decisionEyebrow}</p>
+          <h2 id="table-title" set:html={ph(page.table.title ?? ui.decisionTitle)} />
         </div>
         <div class="table-wrap" tabindex="0" role="group" aria-labelledby="table-title">
           <table>
