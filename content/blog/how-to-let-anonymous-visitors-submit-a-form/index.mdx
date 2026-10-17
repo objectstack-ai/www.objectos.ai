@@ -2,7 +2,7 @@
 title: "How Do You Let Anonymous Visitors Submit a Form Into a Governed Business App? One Public Door, Five Fields Wide"
 description: "Since v17 anonymous data access is always denied. The one open door is a public form view: the runtime derives a grant from the form itself — create one row, read back that row, five fields, nothing else. Measured on 17.7.0."
 author: ObjectStack Team
-date: 2026-10-26
+date: 2026-10-22
 status: published
 topic: app-building
 audience: business
@@ -187,7 +187,7 @@ One more place the example and the guide part ways: the guide's step three is "S
 
 - **No rate limiting, no captcha, no spam control.** None is documented for the public form path, and I found none: the probes in this article created ten leads with no credentials, and nothing in the runtime counted or slowed them. Put the usual edge protection in front of `/api/v1/forms/*`; the runtime guards what gets written, not how often.
 - **The form's `required` is not enforced on the public submit.** The web-to-lead form marks `email` required; a `POST` without it answered `201` with `email: null`. The object's `required` is enforced — a `POST` without `name` answered `400 VALIDATION_FAILED` with `"Lead Name is required"`. If a field must be present, require it on the object or check it in a hook; the form flag is a rendering hint on this path.
-- **The `201` echoes the whole row.** The read-back the grant allows is the row the visitor created, including server-stamped values and defaults — `organization_id` among them. Nothing sensitive was in mine. If your intake object carries internal fields with meaningful defaults, assume the submitter will see them once.
+- **The `201` echoes the whole row.** The read-back the grant allows is the row the visitor created, including server-stamped values and defaults — `organization_id` among them. Nothing sensitive was in mine. If your intake object carries internal fields with meaningful defaults, assume the submitter will see them once. The same goes for whatever a `beforeInsert` or `afterInsert` hook on the target object stamps, including values it derives from existing records. On 17.7.0, keep hooks that look up existing records — de-duplication, round-robin assignment — out of the insert path of a public-intake object, and do that routing after intake, in a flow or a scheduled job.
 - **The owner is nobody.** `owner_id` stays `null` on a public submission; the security plugin leaves it "for object hooks / the first-admin bootstrap to assign". If your pipeline assigns leads, do it in a hook or a flow — do not expect the row to belong to a person.
 - **A withdrawal takes a rebuild — and `os dev` will tell you if you forgot.** My first attempt at step five changed nothing, because `objectstack dev --no-watch` served the previous `dist/objectstack.json` and said so in its fifth log line: "dist/objectstack.json is OLDER than your sources — this boot serves the STALE build." The fix it printed worked. I mention it because an agent-driven loop that only reads status codes would have concluded the switch does not work.
 - **Withdrawal across metadata layers has edges this post did not walk.** An organization's saved copy of a view, and forms shipped by packages, follow their own rules in the guide. The single switch tested here is the one most apps need.

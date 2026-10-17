@@ -3,7 +3,7 @@
 title: 怎樣讓匿名訪客把表單提交進一個受治理的業務應用？一道公開的門，五個欄位寬
 description: v17 起匿名訪問物件資料一律拒絕。唯一開著的門是公開表單檢視：執行時從表單自身推導授權——建立一行、讀回這一行、五個欄位，僅此而已。在 17.7.0 上實測。
 author: ObjectStack Team
-date: 2026-10-26
+date: 2026-10-22
 status: published
 topic: app-building
 audience: business
@@ -188,7 +188,7 @@ POST /api/v1/forms/contact-us/submit  → 404 {"code":"FORM_NOT_FOUND","error":"
 
 - **沒有限流、沒有驗證碼、沒有反垃圾。** 公開表單路徑沒有任何相關文件，我也沒有找到任何實現：本文的探測在沒有任何憑據的情況下建立了十條線索，執行時既沒有計數也沒有減速。把常規的邊緣防護放在 `/api/v1/forms/*` 前面；執行時守的是寫進去什麼，不是寫得多頻繁。
 - **表單上的 `required` 在公開提交時不被強制。** web-to-lead 表單把 `email` 標為必填；不帶它的 `POST` 答 `201`，`email: null`。物件上的 `required` 會被強制——不帶 `name` 的 `POST` 答 `400 VALIDATION_FAILED`，附「Lead Name is required」。如果一個欄位必須存在，就在物件上要求它，或者在鉤子裡檢查；在這條路徑上，表單的標記只是渲染提示。
-- **`201` 回顯整行。** 授權允許的讀回就是訪客建立的那一行，包括服務端蓋章的值和預設值——`organization_id` 也在其中。我的這次沒有任何敏感內容。如果你的錄入物件帶有預設值有實際含義的內部欄位，就假定提交者會看到它們一次。
+- **`201` 回顯整行。** 授權允許的讀回就是訪客建立的那一行，包括服務端蓋章的值和預設值——`organization_id` 也在其中。我的這次沒有任何敏感內容。如果你的錄入物件帶有預設值有實際含義的內部欄位，就假定提交者會看到它們一次。物件上的 `beforeInsert` 或 `afterInsert` 鉤子蓋上去的任何值也是一樣，包括它從已有記錄推匯出來的值。在 17.7.0 上，把會查詢已有記錄的鉤子——去重、輪詢分派——放在公開錄入物件的插入路徑之外，錄入之後再做這類路由，比如放進流程或定時任務。
 - **所有者是「無人」。** 公開提交的 `owner_id` 保持 `null`；安全外掛把它留給「object hooks / the first-admin bootstrap to assign」（物件鉤子或首位管理員引導流程來分配）。如果你的流程要分派線索，在鉤子或流程裡做——別指望這一行天然屬於某個人。
 - **撤回需要重新構建——忘了的話 `os dev` 會提醒你。** 我第五步的第一次嘗試什麼都沒變，因為 `objectstack dev --no-watch` 提供的是上一次的 `dist/objectstack.json`，並在日誌第五行明說了：「dist/objectstack.json is OLDER than your sources — this boot serves the STALE build」（dist/objectstack.json 比你的原始碼舊——本次啟動提供的是過期構建）。它列印的修法有效。我提這件事，是因為一個只讀狀態碼的 Agent 驅動迴圈會得出「這個開關不起作用」的結論。
 - **跨後設資料層的撤回有本文沒走到的邊緣。** 組織儲存的檢視副本、包隨附的表單，在指南中各有規則。這裡測的單個開關，是大多數應用需要的那一個。

@@ -2,7 +2,7 @@
 title: 怎样让匿名访客把表单提交进一个受治理的业务应用？一道公开的门，五个字段宽
 description: v17 起匿名访问对象数据一律拒绝。唯一开着的门是公开表单视图：运行时从表单自身推导授权——创建一行、读回这一行、五个字段，仅此而已。在 17.7.0 上实测。
 author: ObjectStack Team
-date: 2026-10-26
+date: 2026-10-22
 status: published
 topic: app-building
 audience: business
@@ -187,7 +187,7 @@ POST /api/v1/forms/contact-us/submit  → 404 {"code":"FORM_NOT_FOUND","error":"
 
 - **没有限流、没有验证码、没有反垃圾。** 公开表单路径没有任何相关文档，我也没有找到任何实现：本文的探测在没有任何凭据的情况下创建了十条线索，运行时既没有计数也没有减速。把常规的边缘防护放在 `/api/v1/forms/*` 前面；运行时守的是写进去什么，不是写得多频繁。
 - **表单上的 `required` 在公开提交时不被强制。** web-to-lead 表单把 `email` 标为必填；不带它的 `POST` 答 `201`，`email: null`。对象上的 `required` 会被强制——不带 `name` 的 `POST` 答 `400 VALIDATION_FAILED`，附「Lead Name is required」。如果一个字段必须存在，就在对象上要求它，或者在钩子里检查；在这条路径上，表单的标记只是渲染提示。
-- **`201` 回显整行。** 授权允许的读回就是访客创建的那一行，包括服务端盖章的值和默认值——`organization_id` 也在其中。我的这次没有任何敏感内容。如果你的录入对象带有默认值有实际含义的内部字段，就假定提交者会看到它们一次。
+- **`201` 回显整行。** 授权允许的读回就是访客创建的那一行，包括服务端盖章的值和默认值——`organization_id` 也在其中。我的这次没有任何敏感内容。如果你的录入对象带有默认值有实际含义的内部字段，就假定提交者会看到它们一次。对象上的 `beforeInsert` 或 `afterInsert` 钩子盖上去的任何值也是一样，包括它从已有记录推导出来的值。在 17.7.0 上，把会查询已有记录的钩子——去重、轮询分派——放在公开录入对象的插入路径之外，录入之后再做这类路由，比如放进流程或定时任务。
 - **所有者是「无人」。** 公开提交的 `owner_id` 保持 `null`；安全插件把它留给「object hooks / the first-admin bootstrap to assign」（对象钩子或首位管理员引导流程来分配）。如果你的流程要分派线索，在钩子或流程里做——别指望这一行天然属于某个人。
 - **撤回需要重新构建——忘了的话 `os dev` 会提醒你。** 我第五步的第一次尝试什么都没变，因为 `objectstack dev --no-watch` 提供的是上一次的 `dist/objectstack.json`，并在日志第五行明说了：「dist/objectstack.json is OLDER than your sources — this boot serves the STALE build」（dist/objectstack.json 比你的源码旧——本次启动提供的是过期构建）。它打印的修法有效。我提这件事，是因为一个只读状态码的 Agent 驱动循环会得出「这个开关不起作用」的结论。
 - **跨元数据层的撤回有本文没走到的边缘。** 组织保存的视图副本、包随附的表单，在指南中各有规则。这里测的单个开关，是大多数应用需要的那一个。
