@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-label="同一个拼错的字段名种在自带 CRM 的三个地方，以及 @objectstack/cli 17.7.0 上 os validate 的回答。在流程的 update_record 节点里：一个错误，flow-node-write-unknown-field，带「你是不是想写 converted_opportunity」，退出码 1，以数据审阅。在写成 ctx.input.probabilty 的钩子体里：一个警告，hook-body-write-unknown-field，退出码 0、构建是绿的，以代码审阅。在 CRM 随仓发布的钩子体里，通过 ctx.input 的本地别名：什么都没有，退出码 0，输出与干净运行完全相同。底部一条横栏：运行时三者都被 INVALID_FIELD 400 拒绝，这个兜底在远离写它的那一行的地方点出字段名">
+  <defs>
+    <style>
+      text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Noto Sans SC",sans-serif;fill:#173a36}
+      .h{font-size:26px;font-weight:780}
+      .note{font-size:14px;fill:#5e716b}
+      .cap{font-size:12px;font-weight:780;letter-spacing:.07em}
+      .name{font-size:20px;font-weight:780}
+      .sub{font-size:13px;fill:#5e716b}
+      .code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;fill:#173a36}
+      .row{font-size:14px}
+      .small{font-size:13px;fill:#5e716b}
+      .verdict{font-size:22px;font-weight:800}
+      .exit{font-size:13px;font-weight:760}
+    </style>
+  </defs>
+  <rect width="1200" height="720" fill="#fbfdfc"/>
+
+  <text x="60" y="52" class="h">同一个拼错的字段，os validate 的三种回答</text>
+  <text x="60" y="80" class="note">同一个错误分别种进 CRM 的流程和钩子，在 @objectstack/cli 17.7.0 上测得。运行时三者都拒绝；门禁不是。</text>
+
+  <!-- 1 · flow node -->
+  <g transform="translate(60 112)">
+    <rect width="350" height="430" rx="22" fill="#eef7f2" stroke="#2a7468" stroke-width="2"/>
+    <text x="22" y="34" class="cap" style="fill:#2a7468">1 · 流程节点 · 以数据审阅</text>
+    <text x="22" y="66" class="name">update_record 的字段映射</text>
+    <text x="22" y="90" class="sub">src/flows/convert-lead.flow.ts</text>
+    <rect x="22" y="106" width="306" height="54" rx="10" fill="#ffffff" stroke="#c9d8d1"/>
+    <text x="36" y="129" class="code">fields: { status: 'converted', …</text>
+    <text x="36" y="149" class="code">  converted_oportunity: '{…}' }</text>
+    <text x="22" y="200" class="verdict" style="fill:#b3261e">✗ 错误</text>
+    <text x="22" y="226" class="row">flow-node-write-unknown-field</text>
+    <text x="22" y="252" class="row">「你是不是想写 'converted_opportunity'？」</text>
+    <text x="22" y="278" class="row">「这会让构建失败而不是警告：</text>
+    <text x="22" y="298" class="row">键是字面量，对象也是。」</text>
+    <g transform="translate(22 346)">
+      <rect width="306" height="60" rx="12" fill="#ffffff" stroke="#2a7468" stroke-width="1.5"/>
+      <text x="16" y="25" class="exit" style="fill:#2a7468">退出码 1——构建失败</text>
+      <text x="16" y="45" class="small">字面量的键挨着字面量的对象：确定的事实</text>
+    </g>
+  </g>
+
+  <!-- 2 · hook body, literal -->
+  <g transform="translate(425 112)">
+    <rect width="350" height="430" rx="22" fill="#ffffff" stroke="#e6d3b6" stroke-width="1.5"/>
+    <text x="22" y="34" class="cap" style="fill:#8a6a3a">2 · 钩子体 · 以代码审阅</text>
+    <text x="22" y="66" class="name">直接写 ctx.input</text>
+    <text x="22" y="90" class="sub">写入集检查能识别的那种形状</text>
+    <rect x="22" y="106" width="306" height="54" rx="10" fill="#fdf4e8" stroke="#e6d3b6"/>
+    <text x="36" y="129" class="code">if (ctx.input.stage === 'closed_won')</text>
+    <text x="36" y="149" class="code">  ctx.input.probabilty = 100;</text>
+    <text x="22" y="200" class="verdict" style="fill:#8a6a3a">⚠ 警告</text>
+    <text x="22" y="226" class="row">hook-body-write-unknown-field</text>
+    <text x="22" y="252" class="row">「钩子体向其输入写入 'probabilty'，</text>
+    <text x="22" y="272" class="row">但对象 'crm_opportunity' 没有声明这个字段」</text>
+    <text x="22" y="298" class="row">基于从内联处理函数降级出的钩子体判定</text>
+    <g transform="translate(22 346)">
+      <rect width="306" height="60" rx="12" fill="#fdf4e8" stroke="#e6d3b6"/>
+      <text x="16" y="25" class="exit" style="fill:#8a6a3a">退出码 0——构建是绿的</text>
+      <text x="16" y="45" class="small">解析器的尽力而为：设计上只是建议</text>
+    </g>
+  </g>
+
+  <!-- 3 · hook body, aliased -->
+  <g transform="translate(790 112)">
+    <rect width="350" height="430" rx="22" fill="#ffffff" stroke="#c9d8d1" stroke-width="1.5"/>
+    <text x="22" y="34" class="cap" style="fill:#5e716b">3 · 随仓发布的钩子体 · 以代码审阅</text>
+    <text x="22" y="66" class="name">通过别名写入</text>
+    <text x="22" y="90" class="sub">src/hooks/opportunity.hook.ts，仓库里的原样</text>
+    <rect x="22" y="106" width="306" height="54" rx="10" fill="#f6f8f7" stroke="#c9d8d1"/>
+    <text x="36" y="129" class="code">const input = ctx.input;</text>
+    <text x="36" y="149" class="code">if (…) input.probabilty = 100;</text>
+    <text x="22" y="200" class="verdict" style="fill:#5e716b">—— 什么都没有</text>
+    <text x="22" y="226" class="row">没有规则触发；v1 不做数据流分析</text>
+    <text x="22" y="252" class="row">输出与干净的那次运行逐字节相同</text>
+    <text x="22" y="278" class="row">「没有警告，</text>
+    <text x="22" y="298" class="row">不等于健康证明。」</text>
+    <g transform="translate(22 346)">
+      <rect width="306" height="60" rx="12" fill="#f6f8f7" stroke="#c9d8d1"/>
+      <text x="16" y="25" class="exit" style="fill:#5e716b">退出码 0——沉默</text>
+      <text x="16" y="45" class="small">要到第一次真实写入才发现，而不是在 validate 时</text>
+    </g>
+  </g>
+
+  <!-- runtime bar -->
+  <g transform="translate(60 568)">
+    <rect width="1080" height="92" rx="16" fill="#173a36"/>
+    <text x="24" y="34" class="cap" style="fill:#b9dcd0">运行时 · 三者都一样</text>
+    <text x="24" y="62" class="code" style="fill:#ffffff">400  { "code": "INVALID_FIELD", "error": "Unknown field 'probabilty' on object 'crm_opportunity'" }</text>
+    <text x="24" y="82" class="small" style="fill:#b9dcd0">兜底在每个驱动上都一样。不同的是你什么时候知道，以及消息有没有点出写它的那一行。</text>
+  </g>
+
+  <text x="60" y="694" class="small">测得：已发布的 @objectstack/cli 17.7.0 上 examples/app-crm 的 os validate 与 REST API；引文出自钩子文档与钩子体文档。</text>
+</svg>
