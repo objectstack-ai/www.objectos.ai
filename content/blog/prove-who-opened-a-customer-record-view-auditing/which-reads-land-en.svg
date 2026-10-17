@@ -1,0 +1,157 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-label="Five reads on ObjectStack 17.7.0 and which of them land in sys_audit_log. Read A, a person's GET of one contact by id over REST, and read B, an agent's MCP get_record with an API key, pass four conditions: the object is in readAudit.objects, the read succeeded, it materialized exactly one record, and its predicate pinned the primary key; each writes one read row. Read C, a list of contacts, fails the one-record condition. Read D, a detail read of crm_account, is not an opted-in object. Read E, a refused read answered 403, never reaches the afterFind hook. System reads and reads with no principal also write no row.">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#2a7468"/>
+    </marker>
+    <marker id="arrno" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#b0452a"/>
+    </marker>
+    <style>
+      text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:#173a36}
+      .h{font-size:22px;font-weight:800;fill:#173a36}
+      .sub{font-size:14px;fill:#657872}
+      .tag{font-size:12px;font-weight:780;letter-spacing:.08em;fill:#2a7468}
+      .tagno{font-size:12px;font-weight:780;letter-spacing:.08em;fill:#b0452a}
+      .card{font-size:15px;font-weight:760;fill:#173a36}
+      .t{font-size:13px;fill:#3f554f}
+      .m{font-family:ui-monospace,Menlo,monospace;font-size:12px;fill:#173a36}
+      .ok{font-family:ui-monospace,Menlo,monospace;font-size:12px;fill:#2a7468}
+      .no{font-family:ui-monospace,Menlo,monospace;font-size:12px;fill:#b0452a}
+      .rule{font-size:13px;font-weight:720;fill:#173a36}
+      .rules{font-size:12px;fill:#3f554f}
+      .num{font-size:14px;font-weight:800;fill:#ffffff}
+      .row{font-family:ui-monospace,Menlo,monospace;font-size:12px;fill:#173a36}
+      .rowh{font-size:11px;font-weight:760;letter-spacing:.04em;fill:#5d736b}
+    </style>
+  </defs>
+  <rect width="1200" height="720" fill="#f6faf8"/>
+
+  <text x="40" y="44" class="h">Five reads, two rows: the rule that sorts a read into the ledger</text>
+  <text x="40" y="68" class="sub">examples/app-crm with readAudit.objects = ['crm_contact'], @objectstack/cli 17.7.0 — every value is from the measured run</text>
+
+  <!-- column 1: five reads -->
+  <text x="40" y="104" class="tag">FIVE READS</text>
+
+  <g transform="translate(40 116)">
+    <rect width="340" height="92" rx="14" fill="#ffffff" stroke="#9fd6c4" stroke-width="2"/>
+    <text x="16" y="26" class="card">A · Dana, a person, signed in</text>
+    <text x="16" y="48" class="m">GET /api/v1/data/crm_contact/h7UV6R…</text>
+    <text x="16" y="70" class="ok">200 · one record · findOne where { id }</text>
+  </g>
+  <g transform="translate(40 220)">
+    <rect width="340" height="92" rx="14" fill="#ffffff" stroke="#9fd6c4" stroke-width="2"/>
+    <text x="16" y="26" class="card">B · an AI agent, x-api-key</text>
+    <text x="16" y="48" class="m">MCP get_record crm_contact HwvcWK…</text>
+    <text x="16" y="70" class="ok">200 · one record · same getData path</text>
+  </g>
+  <g transform="translate(40 324)">
+    <rect width="340" height="92" rx="14" fill="#ffffff" stroke="#d5e4de"/>
+    <text x="16" y="26" class="card">C · Dana lists contacts</text>
+    <text x="16" y="48" class="m">GET /api/v1/data/crm_contact</text>
+    <text x="16" y="70" class="no">200 · three records · an array</text>
+  </g>
+  <g transform="translate(40 428)">
+    <rect width="340" height="92" rx="14" fill="#ffffff" stroke="#d5e4de"/>
+    <text x="16" y="26" class="card">D · Dana opens an account</text>
+    <text x="16" y="48" class="m">GET /api/v1/data/crm_account/eSLGuo…</text>
+    <text x="16" y="70" class="no">200 · not in readAudit.objects</text>
+  </g>
+  <g transform="translate(40 532)">
+    <rect width="340" height="92" rx="14" fill="#ffffff" stroke="#d5e4de"/>
+    <text x="16" y="26" class="card">E · nobody, no position</text>
+    <text x="16" y="48" class="m">GET /api/v1/data/crm_contact/h7UV6R…</text>
+    <text x="16" y="70" class="no">403 PERMISSION_DENIED</text>
+  </g>
+
+  <!-- arrows into the rule box -->
+  <line x1="384" y1="162" x2="436" y2="162" stroke="#2a7468" stroke-width="2.5" marker-end="url(#arr)"/>
+  <line x1="384" y1="266" x2="436" y2="266" stroke="#2a7468" stroke-width="2.5" marker-end="url(#arr)"/>
+  <line x1="384" y1="370" x2="436" y2="370" stroke="#b0452a" stroke-width="2.5" marker-end="url(#arrno)"/>
+  <line x1="384" y1="474" x2="436" y2="474" stroke="#b0452a" stroke-width="2.5" marker-end="url(#arrno)"/>
+  <line x1="384" y1="578" x2="436" y2="578" stroke="#b0452a" stroke-width="2.5" marker-end="url(#arrno)"/>
+
+  <!-- column 2: the rule -->
+  <text x="444" y="104" class="tag">RECORDED WHEN ALL FOUR HOLD</text>
+  <g transform="translate(444 116)">
+    <rect width="320" height="508" rx="16" fill="#ffffff" stroke="#d5e4de"/>
+
+    <g transform="translate(16 18)">
+      <rect width="28" height="28" rx="8" fill="#2a7468"/><text x="9" y="20" class="num">1</text>
+      <text x="40" y="14" class="rule">The object is opted in</text>
+      <text x="40" y="32" class="rules">readAudit.objects names it; the hook is</text>
+      <text x="40" y="48" class="rules">registered on those objects only</text>
+    </g>
+    <g transform="translate(16 86)">
+      <rect width="28" height="28" rx="8" fill="#2a7468"/><text x="9" y="20" class="num">2</text>
+      <text x="40" y="14" class="rule">The read succeeded</text>
+      <text x="40" y="32" class="rules">afterFind runs after a 200, never after</text>
+      <text x="40" y="48" class="rules">a 403 — refused reads leave no trace</text>
+    </g>
+    <g transform="translate(16 154)">
+      <rect width="28" height="28" rx="8" fill="#2a7468"/><text x="9" y="20" class="num">3</text>
+      <text x="40" y="14" class="rule">Exactly one record came back</text>
+      <text x="40" y="32" class="rules">a findOne that returned a record; an</text>
+      <text x="40" y="48" class="rules">array is never a detail view</text>
+    </g>
+    <g transform="translate(16 222)">
+      <rect width="28" height="28" rx="8" fill="#2a7468"/><text x="9" y="20" class="num">4</text>
+      <text x="40" y="14" class="rule">The predicate pinned the id</text>
+      <text x="40" y="32" class="rules">where: { id }, also AND-composed with</text>
+      <text x="40" y="48" class="rules">RLS; $or or $not disqualifies the read</text>
+    </g>
+
+    <line x1="16" y1="300" x2="304" y2="300" stroke="#d5e4de" stroke-width="2" stroke-dasharray="6 6"/>
+    <text x="16" y="326" class="tagno">AND NEVER WHEN</text>
+    <text x="16" y="350" class="rules">session.isSystem — sudo(), formulas, roll-ups</text>
+    <text x="16" y="368" class="rules">no user id and no actor on the session</text>
+
+    <line x1="16" y1="392" x2="304" y2="392" stroke="#d5e4de" stroke-width="2" stroke-dasharray="6 6"/>
+    <text x="16" y="418" class="tagno">WHERE C, D AND E STOP</text>
+    <text x="16" y="442" class="no">C fails 3 — list reads are never recorded</text>
+    <text x="16" y="462" class="no">D fails 1 — crm_account is not named</text>
+    <text x="16" y="482" class="no">E fails 2 — the hook was never reached</text>
+  </g>
+
+  <!-- arrows out of the rule box -->
+  <line x1="768" y1="162" x2="820" y2="162" stroke="#2a7468" stroke-width="2.5" marker-end="url(#arr)"/>
+  <line x1="768" y1="266" x2="820" y2="266" stroke="#2a7468" stroke-width="2.5" marker-end="url(#arr)"/>
+
+  <!-- column 3: the ledger -->
+  <text x="828" y="104" class="tag">SYS_AUDIT_LOG · action = read</text>
+  <g transform="translate(828 116)">
+    <rect width="332" height="508" rx="16" fill="#ffffff" stroke="#d5e4de"/>
+
+    <g transform="translate(14 14)">
+      <rect width="304" height="110" rx="12" fill="#eef7f2"/>
+      <text x="14" y="22" class="rowh">ROW 1 · FROM READ A</text>
+      <text x="14" y="44" class="row">user_id   PdP4MC… (Dana)</text>
+      <text x="14" y="62" class="row">record    crm_contact / h7UV6R…</text>
+      <text x="14" y="80" class="row">created   02:33:05.512 — the view</text>
+      <text x="14" y="98" class="row">old/new   null / null · ip null</text>
+    </g>
+    <g transform="translate(14 136)">
+      <rect width="304" height="110" rx="12" fill="#eef7f2"/>
+      <text x="14" y="22" class="rowh">ROW 2 · FROM READ B</text>
+      <text x="14" y="44" class="row">user_id   S8My56… (the agent)</text>
+      <text x="14" y="62" class="row">record    crm_contact / HwvcWK…</text>
+      <text x="14" y="80" class="row">created   02:33:05.618 — the view</text>
+      <text x="14" y="98" class="row">old/new   null / null · ip null</text>
+    </g>
+
+    <text x="14" y="282" class="rowh">WHAT THE TWO ROWS SHARE</text>
+    <text x="14" y="304" class="t">Same hook, same rule, same columns:</text>
+    <text x="14" y="322" class="t">nothing on row 2 says "agent" or "MCP".</text>
+    <text x="14" y="340" class="t">The row names the principal the key</text>
+    <text x="14" y="358" class="t">was minted on — so mint it on an identity</text>
+    <text x="14" y="376" class="t">that is the agent and nothing else.</text>
+
+    <text x="14" y="414" class="rowh">WHEN THEY LANDED</text>
+    <text x="14" y="436" class="t">updated_at 02:33:07.5 — the batch drained</text>
+    <text x="14" y="454" class="t">two seconds after the view (flushIntervalMs).</text>
+    <text x="14" y="472" class="t">Under os dev the table lives in the sibling</text>
+    <text x="14" y="490" class="t">objectstack.telemetry.db, not objectstack.db.</text>
+  </g>
+
+  <text x="40" y="668" class="sub">A "no such table: sys_audit_log" on the primary database is the usual cause of an empty answer: the ledger routes to the telemetry datasource whenever one is registered.</text>
+  <text x="40" y="692" class="sub">List and search reads are never recorded — including a list that returned exactly one record. Read this as "record-detail views", not "reads".</text>
+</svg>

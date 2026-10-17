@@ -1,0 +1,179 @@
+---
+title: "¿Puedes probar quién abrió un registro de cliente, incluido un agente de AI? Auditoría de visualización de registros y las cuatro cosas que una fila de lectura nunca registra"
+description: "En 17.7.0, la lectura REST de una persona y el get_record MCP de un agente dejan una fila read cada uno en sys_audit_log; lista, objeto no registrado y lectura rechazada, ninguna. Qué guarda la fila y qué nunca guarda."
+author: ObjectStack Team
+date: 2026-10-26
+status: published
+topic: governance
+audience: it
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Pista de auditoría
+  - Auditoría de visualización
+  - Agentes de AI
+  - Cumplimiento
+---
+
+Dos filas. Esa es toda la respuesta a «¿quién abrió esta tarde los registros de contacto de Ada Lovelace y Linus Torvalds?», tal como la devuelve el libro de registro de un CRM que corre en `@objectstack/cli` 17.7.0:
+
+| `created_at` | `action` | `user_id` | `object_name` | `record_id` | `old_value` | `new_value` | `ip_address` |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `02:33:05.512Z` | `read` | `PdP4MC…` (Dana, comercial, por REST) | `crm_contact` | `h7UV6R…` (Ada) | `null` | `null` | `null` |
+| `02:33:05.618Z` | `read` | `S8My56…` (la API key de un agente, por MCP) | `crm_contact` | `HwvcWK…` (Linus) | `null` | `null` | `null` |
+
+Cinco lecturas produjeron esas dos filas. Una persona abrió un contacto por la API REST; un agente de AI obtuvo otro por MCP `get_record` con su propia API key; la misma persona listó después todos los contactos; abrió una cuenta (un objeto que el despliegue no había registrado); y un usuario sin ningún puesto intentó abrir un contacto y recibió `403`. La lista, la cuenta y el rechazo no dejaron nada. Esa es la afirmación que este artículo defiende, medida de principio a fin: **la auditoría de visualización de registros de ObjectStack registra quién abrió qué registro y cuándo, para personas y agentes por igual, y está declarada con la suficiente estrechez como para que lo que no registra sea tan legible como lo que sí.** El concepto que vale la pena conservar es **límites declarados en vez de descubiertos**: una función de cumplimiento cuyos bordes están escritos supera a una cuyos bordes se encuentran durante la auditoría.
+
+## La pregunta que la capa de permisos no puede responder
+
+Toda capa de permisos responde *quién puede ver este registro*: permisos de objeto, seguridad a nivel de fila, enmascarado de campos. Una revisión regulada empieza por la pregunta siguiente. La propia documentación de ObjectStack sobre auditoría de visualización lo dice en su segunda frase: la página «responde a la pregunta que viene después, y con la que empieza toda revisión en una industria regulada: **¿quién lo abrió realmente, y cuándo?**» (`content/docs/permissions/record-view-auditing.mdx`, líneas 8–9 en la etiqueta 17.7.0).
+
+El [artículo sobre el EU AI Act](/es/blog/eu-ai-act-runtime-audit/) de este blog sostenía que un auditor pide el registro de *una* acción, no un documento de política. El [artículo sobre límites de permisos](/en/blog/objectos-agent-permission-boundaries/) trataba de *dónde* se ejecuta la comprobación. Ninguno cubría las lecturas. Una lectura es la única acción que no cambia nada y que, por tanto, no deja nada a menos que algo esté construido para notarla; en ObjectStack ese algo es la acción `read` en `sys_audit_log`, escrita por `@objectstack/plugin-audit` desde un hook `afterFind`. El mismo libro lleva las filas `create`, `update` y `delete` de los hooks de ciclo de vida y las filas `login` / `logout` a través del slot `services.audit`; las filas de visualización son la tercera superficie, y la única apagada por defecto.
+
+## Activarlo es un argumento de constructor, y nada más
+
+El conjunto auditado se da una sola vez, donde se instala el plugin. En una app servida por la CLI, ese lugar es el array `plugins` del stack. El ejemplo de CRM usado más abajo necesitó dos cambios: `pnpm add @objectstack/plugin-audit@17.7.0` y esto en `objectstack.config.ts`:
+
+```ts
+import { AuditPlugin } from '@objectstack/plugin-audit';
+
+export default defineStack({
+  // …manifest, objects, views, permissions…
+  plugins: [
+    new AuditPlugin({ readAudit: { objects: ['crm_contact'] } }),
+  ],
+});
+```
+
+`readAudit` acepta exactamente tres claves: `objects` (la inclusión cerrada por objeto, vacía por defecto), `maxBatchSize` (50 por defecto) y `flushIntervalMs` (2000 por defecto). Una lista vacía «no registra ningún hook en absoluto», así que un despliegue que no incluye nada no paga nada en su ruta de lectura.
+
+Lo que falta a propósito importa más que lo que hay. La documentación lo dice en negrita: «**No hay clave de metadatos de objeto ni variable de entorno.**» `enable.auditReads` no existe, ningún bloque `audit:` en la configuración del stack nombra objetos, y `requires: ['audit']` convierte el plugin en requisito de arranque pero «construye el plugin sin opciones y no ofrece ningún sitio donde nombrar objetos». La razón que se da es la que convierte este artículo en una pieza de gobernanza y no en una nota de configuración: una clave declarable «puede fijarse en un objeto de un despliegue que nunca instala este plugin, produciendo metadatos que *se leen* como auditados y no registran nada; y en una superficie de cumplimiento, una declaración que un revisor confunde con cobertura es peor que una función ausente».
+
+Esa forma tiene una consecuencia visible en la CLI. `os serve` y `os dev` registran automáticamente su propio `AuditPlugin` sin opciones antes de recorrer tus `plugins`, y un registro posterior con el mismo nombre reemplaza al anterior. El log de arranque de la ejecución medida lleva la línea que prueba que la inclusión surtió efecto:
+
+```text
+WARN Plugin superseded: 'com.objectstack.audit' — the later registration (v1.0.0)
+REPLACED the earlier one (v1.0.0). Only the later instance is initialized and
+started; the earlier one is discarded without ever running init().
+```
+
+La documentación es explícita: esta línea «**es la inclusión funcionando**, no una mala configuración». Es también la única señal de arranque que se obtiene: en 17.7.0 la línea «record-view auditing installed on N object(s)» se escribe en `info`, por debajo del nivel `warn` por defecto del servidor de desarrollo, así que un arranque por defecto muestra el aviso de superseded.
+
+## Cinco lecturas, dos filas
+
+La app es `examples/app-crm` del repositorio de ObjectStack en la etiqueta `@objectstack/cli@17.7.0`, con cada dependencia `@objectstack/*` fijada a los paquetes 17.7.0 publicados y la entrada `plugins` de arriba añadida. Se arrancó con `objectstack dev --compile --no-watch`, que compila el artefacto en este arranque en vez de servir un `dist/objectstack.json` obsoleto. Se crearon tres cuentas por la API de administración: Dana, una persona con el puesto `sales_rep`; `agent-svc`, la identidad sobre la que se acuña la API key de un agente de AI, también `sales_rep`; y `nobody`, sin ningún puesto. El puesto `sales_rep` lleva `crm_contact: { allowRead: true, … }` en el conjunto de permisos del ejemplo, así que Dana y el agente pueden leer contactos y `nobody` no.
+
+Antes de las lecturas, la consulta al libro devuelve una página vacía:
+
+```bash
+curl -s -b admin.cookies 'http://localhost:49200/api/v1/data/sys_audit_log?filter={"action":"read"}'
+```
+
+```json
+{ "object": "sys_audit_log", "records": [], "total": 0, "hasMore": false }
+```
+
+Luego las cinco lecturas, en orden.
+
+| # | Quién | Lectura | Respuesta | ¿Fila? |
+| --- | --- | --- | --- | --- |
+| A | Dana, con sesión | `GET /api/v1/data/crm_contact/h7UV6R…` | `200`, el registro de Ada | **sí** |
+| B | el agente, `x-api-key: osk_…` | MCP `tools/call` `get_record` `{ objectName: "crm_contact", recordId: "HwvcWK…" }` | `200`, el registro de Linus | **sí** |
+| C | Dana | `GET /api/v1/data/crm_contact` | `200`, tres registros | no |
+| D | Dana | `GET /api/v1/data/crm_account/eSLGuo…` | `200`, el registro de Acme | no |
+| E | `nobody` | `GET /api/v1/data/crm_contact/h7UV6R…` | `403 PERMISSION_DENIED` | no |
+
+La llamada del agente es una petición MCP ordinaria al endpoint `/api/v1/mcp` de la app, autenticada solo por la key:
+
+```bash
+curl -s -X POST http://localhost:49200/api/v1/mcp -H "x-api-key: $KEY" \
+  -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"get_record",
+       "arguments":{"objectName":"crm_contact","recordId":"HwvcWKZh3n1TM55l"}}}'
+```
+
+```json
+{ "result": { "content": [ { "type": "text",
+  "text": "{ \"id\": \"HwvcWKZh3n1TM55l\", \"first_name\": \"Linus\", \"last_name\": \"Torvalds\", \"email\": \"linus@globex.example\", … }" } ] },
+  "jsonrpc": "2.0", "id": 3 }
+```
+
+Cinco segundos después, pasado el intervalo de vaciado de 2 000 ms, la misma consulta al libro como administrador devuelve exactamente las dos filas del inicio de este artículo, `"total": 2`.
+
+![Cinco lecturas en ObjectStack 17.7.0 y cuáles de ellas acaban en sys_audit_log: una lectura de detalle REST por una persona y un get_record MCP por un agente producen una fila read cada una; una lectura de lista, una lectura de detalle de un objeto fuera de readAudit.objects y una lectura rechazada no producen ninguna.](./which-reads-land-en.svg)
+
+La regla que las separa son dos condiciones, ambas de la documentación y ambas visibles en los resultados medidos. Una lectura se registra cuando «materializó exactamente un registro» y «su predicado fijó la clave primaria». `GET /data/:object/:id` llega al motor como `findOne(object, { where: { id } })`; lo mismo hace la herramienta MCP `get_record`, que en el transporte HTTP se resuelve por el mismo protocolo de datos y la misma ruta `getData` que la ruta REST. La lectura C falla la primera condición (un array «nunca es una vista de detalle, así que `find` nunca califica»). La lectura D no es rechazada por la regla en absoluto; `crm_account` simplemente no estaba en `readAudit.objects`, y el hook se registra solo en los objetos nombrados. La lectura E nunca llegó al hook: el log del servidor para esa petición dice `Access denied: operation 'findOne' on object 'crm_contact' is not permitted for positions [org_member, everyone]`, y «el hook `afterFind` solo lo alcanza una lectura que tuvo éxito».
+
+La ficha de este artículo predijo que el `get_record` de un agente *debería* calificar, como inferencia de la regla del predicado. Califica, en 17.7.0, y la prueba es la fila B.
+
+## Qué registra una fila de visualización
+
+Leyendo las filas medidas frente a la tabla de columnas documentada:
+
+| Columna | Documentado | Medido (fila B, el agente) |
+| --- | --- | --- |
+| `action` | `read` | `read` |
+| `created_at` | «El instante en que el registro fue **visto**, no el instante en que su lote se vació» | `02:33:05.618Z`; el `updated_at` de la fila es `02:33:07.513Z`, el vaciado dos segundos después |
+| `user_id` | «El sujeto `sys_user` que lo abrió» | `S8My5629…`, la identidad sobre la que se acuñó la key |
+| `actor` | «La etiqueta del principal, con `user_id` como respaldo» | `S8My5629…`, el respaldo |
+| `object_name` / `record_id` | el objeto y el registro abiertos | `crm_contact` / `HwvcWKZh3n1TM55l` |
+| `tenant_id` / `organization_id` | «La organización propia del **registro visto**, con la organización de sesión del lector como respaldo» | el `org_mvbs…` del lector, porque el contacto sembrado lleva `organization_id: null` |
+| `old_value` / `new_value` | «Siempre `null`» | `null` / `null` |
+
+Dos detalles de esa tabla pesan para un auditor. La marca de tiempo es la visualización, no la escritura, así que un libro lento no puede desplazar cuándo ocurrió algo. Y el sello de inquilino sigue al registro y no al lector; la razón de la documentación es que una fila sobre un registro de la organización A sellada con la organización B del lector «quedaría detrás del muro de inquilino de B, invisible para la única administradora de inquilino a la que la fila concierne».
+
+## Las cuatro cosas que una fila de visualización nunca registra
+
+Esta es la mitad de la función que una matriz de cobertura suele describir mal, y la mitad a la que la documentación dedica una sección entera. Las cuatro se observaron en las filas medidas.
+
+1. **Ningún valor de campo, nunca.** `old_value` y `new_value` se quedan en `null`. El hook «se ejecuta *dentro* del middleware de seguridad, **antes de su enmascarado de campos**, así que el registro que ve es texto plano previo al enmascarado». Copiar valores «acuñaría una copia en claro de exactamente lo que la seguridad a nivel de campo retiene, dentro de la única tabla a la que el personal de cumplimiento recibe acceso amplio». Así que el libro sabe deliberadamente menos que el lector.
+2. **No lo que el lector vio en realidad.** Se sigue de la primera: una fila dice que un registro fue abierto, nunca qué campos eran visibles tras el enmascarado. Si tu control exige «qué columnas vio esta persona», esta superficie no lo responde.
+3. **Ni dirección IP ni user agent.** Ambas columnas existen en `sys_audit_log` y ambas son `null` en las dos filas. Se sellan en las filas `login` y `logout`, no en las de visualización. Por eso también las filas A y B se parecen: el libro registra el **principal**, no el canal. Nada en la fila del agente dice «MCP», «API key» ni «agente»; dice `S8My5629…`, el usuario al que pertenece la key.
+4. **Nada sobre lecturas rechazadas o fallidas.** La lectura E es la prueba. Una lectura denegada «no deja rastro aquí»; el rastro que dejó es la línea `WARN [Security] Access denied` del log del servidor, que es otra superficie con otra retención.
+
+Dos límites más están declarados en vez de dejados al descubrimiento. Una lectura elevada a sistema no escribe fila: cualquier cosa que lleve `session.isSystem`, como una ruta `api.sudo()`, un recálculo de fórmula o un roll-up, «es la plataforma leyendo para su propia contabilidad, no una persona abriendo un registro», y como `sudo()` conserva el id de usuario del llamante, ese flag es lo único que separa ambos casos. Y una lectura sin principal no escribe fila, porque «una fila que no nombra a nadie solo añade ruido a la única consulta para la que existe esta capacidad».
+
+## «Incluido un agente de AI» significa: como la identidad que le diste
+
+La fila B responde a la pregunta del título, con una condición. La apertura del agente acabó en el mismo libro, por el mismo hook, bajo la misma regla de dos condiciones que la de Dana, porque `get_record` es un `findOne` por id bajo el principal del llamante. No hay ruta de auditoría específica para agentes que configurar, ni ninguna que olvidar.
+
+La condición es el punto 3 de arriba. La fila nombra al principal, así que lo que el libro puede probar sobre un agente es exactamente tan bueno como la identidad sobre la que se acuñó su key. La guía de conexión MCP de 17.7.0 plantea la elección sin rodeos: «para un agente local con plena autoridad, acuña la key sobre un administrador de plataforma o una identidad de **servicio** dedicada; para uno acotado, acúñala sobre un usuario con exactamente el acceso que debe tener». Acuña la key del agente sobre la cuenta de una persona y el libro informará, con verdad, de que esa persona abrió el registro. La ejecución medida la acuñó sobre `agent-svc`, un usuario que existe solo para ser el agente, y por eso la fila B es atribuible al agente. Es una decisión de aprovisionamiento, no una función de auditoría, y es la única decisión que este artículo te pide.
+
+## Dónde están las filas, y cómo fallan
+
+Bajo `os dev`, `sys_audit_log` no vive en la base de datos de la aplicación. Su clase de ciclo de vida `audit` lo enruta a una fuente de datos `telemetry` dedicada siempre que haya una registrada, y el servidor de desarrollo «aprovisiona una por defecto como archivo SQLite hermano». Abriendo ambos archivos de la ejecución medida con el propio driver SQLite de la app:
+
+```text
+objectstack.db            -> no such table: sys_audit_log
+objectstack.telemetry.db  -> [{"action":"create","n":40},{"action":"login","n":5},
+                              {"action":"read","n":2},{"action":"update","n":4}]
+```
+
+Las filas `read` son las dos de la tabla inicial. Si alguna vez una consulta de auditoría vuelve vacía donde esperabas filas, esta separación es la causa habitual, y el propio mensaje de fallo del plugin lo dice: un «no such table» en una escritura al libro «suele significar que la escritura se ejecutó contra una fuente de datos DISTINTA de aquella en la que se creó la tabla».
+
+Lo otro que conviene saber antes de confiar en esto es la postura ante fallos. El hook «encola y vuelve»; no espera nada, y un fallo de auditoría nunca convierte una lectura válida en un error. Las filas se persisten en un tick posterior, cuando hay `maxBatchSize` visualizaciones en búfer o ha pasado `flushIntervalMs` desde la primera del lote, y `destroy()` vacía la cola en un apagado limpio. Ni un desbordamiento del búfer (pasado un techo fijo de 10 000 visualizaciones, se descartan las más antiguas, con un aviso una vez por proceso) ni una escritura fallida (el lote se pierde, se informa una vez por causa) se reintentan. El propio aviso de la documentación es la frase para tu runbook: ambos fallos «son invisibles desde cualquier otro sitio. Las lecturas en sí tuvieron éxito y devolvieron 200 … La consulta resultante devuelve una respuesta segura, errónea y **corta**».
+
+## Lo que esto no resuelve
+
+- **Las lecturas de lista y búsqueda nunca se registran**, «incluida una lectura de lista que casualmente devolvió exactamente un registro». La lectura C es la medición. Una matriz de cobertura «debería leer esto como “vistas de detalle de registro”, no como “lecturas”». Exportar una lista, ejecutar un informe y paginar una tabla no dejan nada aquí.
+- **La pantalla del lector no está en el libro.** Las filas prueban una apertura, no lo que se vio.
+- **El libro es tan atribuible como tus identidades.** Otra vez el punto 3: keys compartidas y keys acuñadas sobre cuentas personales hacen que la fila sea verdadera e inútil a la vez.
+- **Leer el rastro está, a su vez, controlado.** La propia consulta de Dana a `sys_audit_log?filter={"action":"read"}` respondió `403 PERMISSION_DENIED`. Fuera del contexto de sistema, a un llamante solo se le sirve la fila de visualización de un registro que él mismo puede leer, salvo que tenga la capacidad `view_all_audit_log`, que los administradores de plataforma tienen por defecto y cualquier otro solo mediante un conjunto de permisos. Las filas se conservan en caliente 90 días y se archivan siete años donde haya una fuente de datos `archive` registrada. En la app Setup el plugin aporta una lista **Record Views** bajo Diagnostics; en ObjectOS esa superficie está documentada como [de solo lectura e inmutable](https://docs.objectos.ai/docs/operate/audit-logs).
+
+Nada de esto es exclusivo de ObjectStack como *requisito*; cualquier sistema de registro del que lea un agente necesita una [pista de visualización](/en/glossary/audit-trail/) con bordes así de explícitos. El [artículo sobre el incidente](/es/blog/when-ai-agent-deletes-production-database/) de este blog defendió las barreras en tiempo de ejecución frente a los prompts en el lado de escritura; el lado de lectura tiene la misma forma, con un radio de impacto menor y una memoria más larga.
+
+## Apunta tu agente hacia esto
+
+Si un agente escribe tu app, pídele que añada el `AuditPlugin` configurado a `plugins` para cada objeto que contenga datos de clientes, y que rechace cualquier clave de metadatos que afirme hacer lo mismo, porque en 17.7.0 no existe ninguna. Luego revisa el diff: un import y una entrada de array. Si un agente *opera* tu app, acuña su key sobre una identidad que sea el agente y nada más, y ejecuta la consulta al libro de arriba el primer día, antes de que alguien te la pida.
+
+```bash
+npm create objectstack@latest my-app && cd my-app
+pnpm add @objectstack/plugin-audit
+# añade new AuditPlugin({ readAudit: { objects: ['…'] } }) a plugins y luego
+npx os dev --compile
+```
+
+Abre un registro, espera dos segundos, consulta `sys_audit_log` por `action: read`. Una fila, sin valores.
+
+¿Quieres el mismo ciclo alojado, en el navegador, sin instalar nada? Eso es ObjectOS, el entorno de ejecución comercial construido sobre ObjectStack.

@@ -1,0 +1,159 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-label="ObjectStack 17.7.0 上的五次读取，以及其中哪些会落进 sys_audit_log。读取 A，一个人经 REST 按 id 取一条联系人；读取 B，一个 Agent 用 API key 经 MCP get_record 取一条，两者满足四个条件：对象在 readAudit.objects 中、读取成功、恰好物化一条记录、谓词钉住主键，各写一行 read。读取 C，联系人列表，不满足单条记录条件。读取 D，crm_account 的详情读取，不是登记对象。读取 E，被 403 拒绝的读取，从未到达 afterFind 钩子。系统读取与无主体的读取同样不写行。">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#2a7468"/>
+    </marker>
+    <marker id="arrno" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#b0452a"/>
+    </marker>
+    <style>
+      text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;fill:#173a36}
+      .h{font-size:22px;font-weight:800;fill:#173a36}
+      .sub{font-size:14px;fill:#657872}
+      .tag{font-size:12px;font-weight:780;letter-spacing:.08em;fill:#2a7468}
+      .tagno{font-size:12px;font-weight:780;letter-spacing:.08em;fill:#b0452a}
+      .card{font-size:15px;font-weight:760;fill:#173a36}
+      .t{font-size:13px;fill:#3f554f}
+      .m{font-family:ui-monospace,Menlo,monospace;font-size:12px;fill:#173a36}
+      .ok{font-family:ui-monospace,Menlo,monospace;font-size:12px;fill:#2a7468}
+      .no{font-family:ui-monospace,Menlo,monospace;font-size:12px;fill:#b0452a}
+      .okz{font-size:12px;fill:#2a7468}
+      .noz{font-size:12px;fill:#b0452a}
+      .rule{font-size:13px;font-weight:720;fill:#173a36}
+      .rules{font-size:12px;fill:#3f554f}
+      .num{font-size:14px;font-weight:800;fill:#ffffff}
+      .row{font-family:ui-monospace,Menlo,monospace;font-size:12px;fill:#173a36}
+      .rowh{font-size:11px;font-weight:760;letter-spacing:.04em;fill:#5d736b}
+    </style>
+  </defs>
+  <rect width="1200" height="720" fill="#f6faf8"/>
+
+  <text x="40" y="44" class="h">五次读取，两行记录：把一次读取分进账本的规则</text>
+  <text x="40" y="68" class="sub">examples/app-crm，readAudit.objects = ['crm_contact']，@objectstack/cli 17.7.0 — 下方每个值都来自实测运行</text>
+
+  <!-- column 1: five reads -->
+  <text x="40" y="104" class="tag">五次读取</text>
+
+  <g transform="translate(40 116)">
+    <rect width="340" height="92" rx="14" fill="#ffffff" stroke="#9fd6c4" stroke-width="2"/>
+    <text x="16" y="26" class="card">A · Dana，一个人，已登录</text>
+    <text x="16" y="48" class="m">GET /api/v1/data/crm_contact/h7UV6R…</text>
+    <text x="16" y="70" class="okz">200 · 一条记录 · findOne where { id }</text>
+  </g>
+  <g transform="translate(40 220)">
+    <rect width="340" height="92" rx="14" fill="#ffffff" stroke="#9fd6c4" stroke-width="2"/>
+    <text x="16" y="26" class="card">B · 一个 AI Agent，x-api-key</text>
+    <text x="16" y="48" class="m">MCP get_record crm_contact HwvcWK…</text>
+    <text x="16" y="70" class="okz">200 · 一条记录 · 同一条 getData 路径</text>
+  </g>
+  <g transform="translate(40 324)">
+    <rect width="340" height="92" rx="14" fill="#ffffff" stroke="#d5e4de"/>
+    <text x="16" y="26" class="card">C · Dana 列出联系人</text>
+    <text x="16" y="48" class="m">GET /api/v1/data/crm_contact</text>
+    <text x="16" y="70" class="noz">200 · 三条记录 · 一个数组</text>
+  </g>
+  <g transform="translate(40 428)">
+    <rect width="340" height="92" rx="14" fill="#ffffff" stroke="#d5e4de"/>
+    <text x="16" y="26" class="card">D · Dana 打开一条客户</text>
+    <text x="16" y="48" class="m">GET /api/v1/data/crm_account/eSLGuo…</text>
+    <text x="16" y="70" class="noz">200 · 不在 readAudit.objects 中</text>
+  </g>
+  <g transform="translate(40 532)">
+    <rect width="340" height="92" rx="14" fill="#ffffff" stroke="#d5e4de"/>
+    <text x="16" y="26" class="card">E · nobody，没有岗位</text>
+    <text x="16" y="48" class="m">GET /api/v1/data/crm_contact/h7UV6R…</text>
+    <text x="16" y="70" class="no">403 PERMISSION_DENIED</text>
+  </g>
+
+  <!-- arrows into the rule box -->
+  <line x1="384" y1="162" x2="436" y2="162" stroke="#2a7468" stroke-width="2.5" marker-end="url(#arr)"/>
+  <line x1="384" y1="266" x2="436" y2="266" stroke="#2a7468" stroke-width="2.5" marker-end="url(#arr)"/>
+  <line x1="384" y1="370" x2="436" y2="370" stroke="#b0452a" stroke-width="2.5" marker-end="url(#arrno)"/>
+  <line x1="384" y1="474" x2="436" y2="474" stroke="#b0452a" stroke-width="2.5" marker-end="url(#arrno)"/>
+  <line x1="384" y1="578" x2="436" y2="578" stroke="#b0452a" stroke-width="2.5" marker-end="url(#arrno)"/>
+
+  <!-- column 2: the rule -->
+  <text x="444" y="104" class="tag">四个条件全部成立才记录</text>
+  <g transform="translate(444 116)">
+    <rect width="320" height="508" rx="16" fill="#ffffff" stroke="#d5e4de"/>
+
+    <g transform="translate(16 18)">
+      <rect width="28" height="28" rx="8" fill="#2a7468"/><text x="9" y="20" class="num">1</text>
+      <text x="40" y="14" class="rule">对象已登记</text>
+      <text x="40" y="32" class="rules">readAudit.objects 点名了它；钩子只</text>
+      <text x="40" y="48" class="rules">注册在这些对象上</text>
+    </g>
+    <g transform="translate(16 86)">
+      <rect width="28" height="28" rx="8" fill="#2a7468"/><text x="9" y="20" class="num">2</text>
+      <text x="40" y="14" class="rule">读取成功了</text>
+      <text x="40" y="32" class="rules">afterFind 在 200 之后运行，403 之后</text>
+      <text x="40" y="48" class="rules">从不运行——被拒绝的读取不留痕迹</text>
+    </g>
+    <g transform="translate(16 154)">
+      <rect width="28" height="28" rx="8" fill="#2a7468"/><text x="9" y="20" class="num">3</text>
+      <text x="40" y="14" class="rule">恰好返回了一条记录</text>
+      <text x="40" y="32" class="rules">一次返回了记录的 findOne；数组</text>
+      <text x="40" y="48" class="rules">永远不是详情查看</text>
+    </g>
+    <g transform="translate(16 222)">
+      <rect width="28" height="28" rx="8" fill="#2a7468"/><text x="9" y="20" class="num">4</text>
+      <text x="40" y="14" class="rule">谓词钉住了 id</text>
+      <text x="40" y="32" class="rules">where: { id }，与 RLS 做 AND 也算；</text>
+      <text x="40" y="48" class="rules">路径上出现 $or 或 $not 即不符合</text>
+    </g>
+
+    <line x1="16" y1="300" x2="304" y2="300" stroke="#d5e4de" stroke-width="2" stroke-dasharray="6 6"/>
+    <text x="16" y="326" class="tagno">以下情况永远不记</text>
+    <text x="16" y="350" class="rules">session.isSystem — sudo()、公式、汇总</text>
+    <text x="16" y="368" class="rules">会话上既没有 user id 也没有 actor</text>
+
+    <line x1="16" y1="392" x2="304" y2="392" stroke="#d5e4de" stroke-width="2" stroke-dasharray="6 6"/>
+    <text x="16" y="418" class="tagno">C、D、E 止步于此</text>
+    <text x="16" y="442" class="noz">C 不满足 3 — 列表读取永远不记录</text>
+    <text x="16" y="462" class="noz">D 不满足 1 — crm_account 未被点名</text>
+    <text x="16" y="482" class="noz">E 不满足 2 — 钩子从未被到达</text>
+  </g>
+
+  <!-- arrows out of the rule box -->
+  <line x1="768" y1="162" x2="820" y2="162" stroke="#2a7468" stroke-width="2.5" marker-end="url(#arr)"/>
+  <line x1="768" y1="266" x2="820" y2="266" stroke="#2a7468" stroke-width="2.5" marker-end="url(#arr)"/>
+
+  <!-- column 3: the ledger -->
+  <text x="828" y="104" class="tag">SYS_AUDIT_LOG · action = read</text>
+  <g transform="translate(828 116)">
+    <rect width="332" height="508" rx="16" fill="#ffffff" stroke="#d5e4de"/>
+
+    <g transform="translate(14 14)">
+      <rect width="304" height="110" rx="12" fill="#eef7f2"/>
+      <text x="14" y="22" class="rowh">第 1 行 · 来自读取 A</text>
+      <text x="14" y="44" class="row">user_id   PdP4MC… (Dana)</text>
+      <text x="14" y="62" class="row">record    crm_contact / h7UV6R…</text>
+      <text x="14" y="80" class="row">created   02:33:05.512 — 查看时刻</text>
+      <text x="14" y="98" class="row">old/new   null / null · ip null</text>
+    </g>
+    <g transform="translate(14 136)">
+      <rect width="304" height="110" rx="12" fill="#eef7f2"/>
+      <text x="14" y="22" class="rowh">第 2 行 · 来自读取 B</text>
+      <text x="14" y="44" class="row">user_id   S8My56… (Agent)</text>
+      <text x="14" y="62" class="row">record    crm_contact / HwvcWK…</text>
+      <text x="14" y="80" class="row">created   02:33:05.618 — 查看时刻</text>
+      <text x="14" y="98" class="row">old/new   null / null · ip null</text>
+    </g>
+
+    <text x="14" y="282" class="rowh">两行的共同点</text>
+    <text x="14" y="304" class="t">同一个钩子、同一条规则、同样的列：</text>
+    <text x="14" y="322" class="t">第 2 行上没有任何东西写着「Agent」或「MCP」。</text>
+    <text x="14" y="340" class="t">这一行点名的是 key 所铸造在其上的主体，</text>
+    <text x="14" y="358" class="t">所以请把 key 铸在一个只是这个 Agent、</text>
+    <text x="14" y="376" class="t">别无其他的身份上。</text>
+
+    <text x="14" y="414" class="rowh">它们何时落地</text>
+    <text x="14" y="436" class="t">updated_at 02:33:07.5 — 批次在查看两秒后</text>
+    <text x="14" y="454" class="t">落盘（flushIntervalMs）。在 os dev 下，</text>
+    <text x="14" y="472" class="t">这张表在同级的 objectstack.telemetry.db，</text>
+    <text x="14" y="490" class="t">不在 objectstack.db。</text>
+  </g>
+
+  <text x="40" y="668" class="sub">主库上的「no such table: sys_audit_log」是空答案的常见原因：只要注册了 telemetry 数据源，账本就会路由过去。</text>
+  <text x="40" y="692" class="sub">列表与搜索读取永远不被记录——包括恰好只返回一条的列表。请把它读作「记录详情查看」，而不是「读取」。</text>
+</svg>
