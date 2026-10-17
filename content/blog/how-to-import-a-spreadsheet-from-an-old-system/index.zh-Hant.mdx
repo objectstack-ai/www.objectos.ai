@@ -181,7 +181,7 @@ POST /api/v1/data/crm_lead/import
 
 **對映裡的自定義程式碼。** `TransformType` 聲明瞭七個值：`none`、`constant`、`map`、`split`、`join`、`lookup` 和 `javascript`。前五個逐行執行，`lookup` 是有意為之的直通、交給匯入自己的引用解析，`javascript` 則被拒絕，因為「沒有服務端沙箱，而悄悄跳過一個聲明瞭的轉換會損壞資料」。這個拒絕的兩半在 17.7.0 上都測過。把包內對映的一個條目改成 `transform: 'javascript'`，`objectstack build` 失敗，資訊是 "Mapping 'crm_lead_feed' uses transform 'javascript', which the import path does not execute (no server-side sandbox). Use none/constant/map/split/join/lookup, or model the logic as a flow."。把同樣的東西通過 `PUT /api/v1/meta/mapping/...` 在執行時儲存，儲存被接受，而第一次按名字引用它的匯入被拒絕，`400 UNSUPPORTED_TRANSFORM`。超出這五種轉換的邏輯，文件的答案是在提交之前先轉換資料，或者在目標物件上建模成一個 flow。對評審者來說這也是正確的邊界：能一口氣讀完的對映，才是能批准的對映。
 
-**當規則讀取檔案裡沒有的欄位時，對更新的試執行。** 有一個實測結果與本文的主旨相悖，所以它屬於本文。在三行都已存在之後，對同一檔案做試執行——此時每一行都會解析成 `updated`——三行全部失敗，`code: "rule_violation"`，落在 Lead 物件的 `lead_score_range` 校驗規則上：規則的謂詞讀取 `record.lead_score`，檔案裡沒有這一列，預覽只拿進來的單元格去評估了規則。片刻之後同一請求體的真實匯入答 `updated: 3`，用同樣四個欄位直接更新一條記錄也成功了。所以在 17.7.0 上，對一行匯入將要**更新**的記錄，當預覽報出 `rule_violation`、而規則讀取的是你的檔案裡沒有的欄位時，這是對規則的一個問題，而不是對這一行的判定。對將要**建立**的行，這裡的每一次執行裡預覽與寫入都一致。ObjectStack 團隊已經拿到了這份測量。
+**當規則讀取檔案裡沒有的欄位時，對更新的試執行。** 有一個實測結果與本文的主旨相悖，所以它屬於本文。在三行都已存在之後，對同一檔案做試執行——此時每一行都會解析成 `updated`——三行全部失敗，`code: "rule_violation"`，落在 Lead 物件的 `lead_score_range` 校驗規則上：規則的謂詞讀取 `record.lead_score`，檔案裡沒有這一列，預覽只拿進來的單元格去評估了規則。片刻之後同一請求體的真實匯入答 `updated: 3`，用同樣四個欄位直接更新一條記錄也成功了。所以在 17.7.0 上，對一行匯入將要**更新**的記錄，當預覽報出 `rule_violation`、而規則讀取的是你的檔案裡沒有的欄位時，這是對規則的一個問題，而不是對這一行的判定。對將要**建立**的行，這裡的每一次執行裡預覽與寫入都一致。
 
 **決定舊的那一列是什麼意思。** 對映記錄了「`Partner Referral` 就是 `partner`」這個決定，但它不做這個決定。仍然需要一個同時瞭解兩個系統的人來說，一個 `Trade Show` 線索屬於六個來源值裡的哪一個，以及一個沒有 email 的線索算不算線索。
 

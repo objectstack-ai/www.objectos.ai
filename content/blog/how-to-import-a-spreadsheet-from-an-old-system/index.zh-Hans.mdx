@@ -180,7 +180,7 @@ POST /api/v1/data/crm_lead/import
 
 **映射里的自定义代码。** `TransformType` 声明了七个值：`none`、`constant`、`map`、`split`、`join`、`lookup` 和 `javascript`。前五个逐行执行，`lookup` 是有意为之的直通、交给导入自己的引用解析，`javascript` 则被拒绝，因为「没有服务端沙箱，而悄悄跳过一个声明了的转换会损坏数据」。这个拒绝的两半在 17.7.0 上都测过。把包内映射的一个条目改成 `transform: 'javascript'`，`objectstack build` 失败，信息是 "Mapping 'crm_lead_feed' uses transform 'javascript', which the import path does not execute (no server-side sandbox). Use none/constant/map/split/join/lookup, or model the logic as a flow."。把同样的东西通过 `PUT /api/v1/meta/mapping/...` 在运行时保存，保存被接受，而第一次按名字引用它的导入被拒绝，`400 UNSUPPORTED_TRANSFORM`。超出这五种转换的逻辑，文档的答案是在提交之前先转换数据，或者在目标对象上建模成一个 flow。对评审者来说这也是正确的边界：能一口气读完的映射，才是能批准的映射。
 
-**当规则读取文件里没有的字段时，对更新的试运行。** 有一个实测结果与本文的主旨相悖，所以它属于本文。在三行都已存在之后，对同一文件做试运行——此时每一行都会解析成 `updated`——三行全部失败，`code: "rule_violation"`，落在 Lead 对象的 `lead_score_range` 校验规则上：规则的谓词读取 `record.lead_score`，文件里没有这一列，预览只拿进来的单元格去评估了规则。片刻之后同一请求体的真实导入答 `updated: 3`，用同样四个字段直接更新一条记录也成功了。所以在 17.7.0 上，对一行导入将要**更新**的记录，当预览报出 `rule_violation`、而规则读取的是你的文件里没有的字段时，这是对规则的一个问题，而不是对这一行的判定。对将要**创建**的行，这里的每一次运行里预览与写入都一致。ObjectStack 团队已经拿到了这份测量。
+**当规则读取文件里没有的字段时，对更新的试运行。** 有一个实测结果与本文的主旨相悖，所以它属于本文。在三行都已存在之后，对同一文件做试运行——此时每一行都会解析成 `updated`——三行全部失败，`code: "rule_violation"`，落在 Lead 对象的 `lead_score_range` 校验规则上：规则的谓词读取 `record.lead_score`，文件里没有这一列，预览只拿进来的单元格去评估了规则。片刻之后同一请求体的真实导入答 `updated: 3`，用同样四个字段直接更新一条记录也成功了。所以在 17.7.0 上，对一行导入将要**更新**的记录，当预览报出 `rule_violation`、而规则读取的是你的文件里没有的字段时，这是对规则的一个问题，而不是对这一行的判定。对将要**创建**的行，这里的每一次运行里预览与写入都一致。
 
 **决定旧的那一列是什么意思。** 映射记录了「`Partner Referral` 就是 `partner`」这个决定，但它不做这个决定。仍然需要一个同时了解两个系统的人来说，一个 `Trade Show` 线索属于六个来源值里的哪一个，以及一个没有 email 的线索算不算线索。
 
