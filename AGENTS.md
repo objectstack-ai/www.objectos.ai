@@ -45,7 +45,10 @@
 
 ## Publishing cadence
 
-**Target: two posts per week. Never more than one post going live in a day.**
+**Target: one post a day, never more than one.** Daily publishing runs only while the
+approved, unpublished queue across all seats holds at least **7** posts — a week of
+buffer. Below 7, posts keep their dated slots, and no gap between two consecutive
+publish days exceeds **3 days** (maintainer, 2026-10-17, #267).
 
 Measured justification — an audit of the English corpus at `676ef13` found 38 posts
 spread across nine dates:
@@ -66,7 +69,16 @@ dump-then-silence site gets crawled like a dead one; publishing 14 posts at once
 any ranking movement unattributable to any topic; and posts published simultaneously
 cannot link to each other, so internal links never compound.
 
-- **Two slots a week** (e.g. Tuesday and Thursday), one post per slot.
+The buffer is part of the ruling (maintainer, 2026-10-17, #267), not a tuning knob:
+daily publishing with no buffer recreates the dump-then-silence shape the table measured,
+only smaller. On the day of the ruling six approved posts were waiting across two seats,
+so daily from the next morning would have published for six days and then gone silent.
+Seven queued posts is a week of cadence already written before the first daily slot runs.
+
+- **One slot a day**, one post per slot.
+- **One calendar for every seat.** The calendar on #267 is the single slot calendar for
+  every seat that writes posts on this repository. A seat claims a slot there *before*
+  writing a post's `date`, and two posts never share a day.
 - **An agent's `date` is its planned slot.** A post an agent writes carries the slot date
   it will occupy, never stacks onto a day another post holds, and merges on that day.
 - **Merge time is publish time.** The site is a static build deployed on push to `main`
@@ -84,11 +96,18 @@ cannot link to each other, so internal links never compound.
   The one exception is not an author's or the seat's call: rewriting `date` takes a
   maintainer ruling recorded on the card (precedent: #128, 2026-09-02 — a cluster of six
   posts that all landed on one day, spread backward by maintainer instruction).
+- **Switch-over.** When the approved queue reaches 7, the queued posts are re-dated onto
+  consecutive daily slots on the calendar, and the `updated` stamps that their PRs write
+  on the published posts they link back from move with them, since that revision lands at
+  the same merge. This is allowed because the re-dated posts are unpublished: a queued post's
+  `date` is a plan, not a record. It is not an exception to forward-only and creates none:
+  no published post's `date` moves at a switch-over; on a published post the switch-over
+  touches `updated` only.
 
 ### `date` vs `updated` — two different facts
 
-`date` is the **first-publication** date and is immutable. `updated` (optional) records a
-later substantive revision.
+`date` is the **first-publication** date and is immutable once the post is published.
+`updated` (optional) records a later substantive revision.
 
 - Refreshing a published article sets `updated`. It never touches `date`.
 - `updated` must be **≥** `date`. Both the collection schema (`src/content.config.ts`)
@@ -131,7 +150,11 @@ Doing it properly is three coupled parts, not one field:
 
 At two posts a week, holding a merge for a day or two is not a real cost, and the queue
 is already visible as open PRs. Revisit when the cadence is actually running and
-merge-day scheduling is measurably in the way; land part 1 before part 2.
+merge-day scheduling is measurably in the way; land part 1 before part 2. The daily
+cadence ruled on 2026-10-17 (#267) meets the first condition this paragraph named for
+revisiting it: once the queue holds 7 posts a merge falls due every day, so the question
+is live. Whether merge-day scheduling is measurably in the way is still to be measured;
+nothing here is implemented by that ruling, and part 1 still lands before part 2.
 
 ## Working in this repo with agents
 
@@ -142,8 +165,11 @@ merge-day scheduling is measurably in the way; land part 1 before part 2.
   attribute loses to a stylesheet class, and text with neither inherits the dark default, so
   dark-on-dark text passes every gate.
 - **A visual defect is work, not a note** (maintainer, 2026-08-26).
-- **Merge time is publish time.** Never batch-merge posts; `date` is rewritten only by an
-  explicit maintainer ruling recorded on the card.
+- **Merge time is publish time.** One post a day, never more, and daily only while the
+  approved queue holds at least 7 posts (#267); never batch-merge posts. A published
+  post's `date` is rewritten only by an explicit maintainer ruling recorded on the card;
+  a queued post's `date` is its planned slot and moves only onto a slot claimed on the
+  shared calendar on #267.
 
 ## Localization
 
