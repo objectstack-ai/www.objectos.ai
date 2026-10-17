@@ -1,0 +1,229 @@
+---
+title: "Wie testet man eine von AI geschriebene App, ohne Tests zu schreiben? Was os verify auf ObjectStack 17.7.0 in zwei Stufen beweist"
+description: "os verify läuft auf 17.7.0 in zwei Stufen — Autorzeit-Regeln, dann ein echter In-Process-Start — und die zweite beginnt nie, wenn die erste ablehnt. Drei Mitschnitte, einer absichtlich rot, und was ein grüner Lauf nicht bewies."
+author: ObjectStack Team
+date: 2026-10-24
+status: published
+topic: app-building
+audience: developer
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - AI-Agenten
+  - Verifikation
+---
+
+Führen Sie das aus, bevor Sie weiterlesen. Auf einer sauberen Maschine dauert es unter zwei Minuten, und die letzte Zeile ist der ganze Beitrag in einem Zeichen.
+
+```bash
+npm create objectstack@latest verify-demo && cd verify-demo
+npx os verify --json > report.json; echo $?
+```
+
+```text
+0
+```
+
+**Die kurze Antwort.** Die Geschäftslogik einer von AI geschriebenen App lässt sich nicht testen, ohne Tests zu schreiben, und nichts im Folgenden behauptet das Gegenteil. Was Sie mit einem Befehl tun können, ist zwei engere Dinge beweisen, die zu beweisen die Runtime in der Lage ist: dass die Definition **durchsetzbar** ist — dieselben Autorzeit-Regeln, die `os validate` ausführt — und dass die App **sich verhält**: Sie startet, und jedes Objekt schickt einen Datensatz durch den echten HTTP-Stack und wieder zurück. Auf ObjectStack **17.7.0**, der Version, die `npm create objectstack@latest` heute installiert, heißt dieser Befehl `os verify`. Er führt diese zwei Stufen der Reihe nach aus, **die zweite Stufe beginnt nie, wenn die erste ablehnt**, und der Exit-Code wird aus einem einzigen Zähler gelesen, `hardFailures`. Der Rest dieses Beitrags sind drei echte Läufe davon: das leere Scaffold, das CRM-Beispiel mit seinen drei deklarierten Positionen und ein Lauf, der absichtlich fehlschlägt — denn das Nützlichste, was ein Prüfer zeigen kann, ist, was er ablehnt, und das Zweitnützlichste, was er zugibt, nicht bewiesen zu haben.
+
+## Zwei Stufen, ein Zähler
+
+Die CLI-Referenz fasst den Vertrag in einen Satz: „Die Fertig-Linie (done-bar): `os verify` grün heißt, die Autorzeit-Regeln bestehen **und** die App verhält sich zur Laufzeit. Es laufen zwei Stufen, der Reihe nach, und die zweite beginnt nur, wenn die erste besteht.“ Zwei Wörter lohnt es, von hier an auseinanderzuhalten. `os validate` ist das **Gate**: Es entscheidet, ob eine Definition durchsetzbar ist. `os verify` ist die **Fertig-Linie**: durchsetzbar *und* verhält sich.
+
+| Stufe | Was läuft | Wie ein Fehlschlag aussieht |
+| :--- | :--- | :--- |
+| **1 · Autorzeit-Regeln** | Die Regel-Registry, die `os validate` ausführt — 49 Regeln auf 17.7.0 — über den Stack, so vorbereitet, wie `os validate` ihn vorbereitet | Exit 1 und ein JSON-Dokument mit `error` und `errors[]`; die Laufzeitstufe lief nicht |
+| **2 · Laufzeit** | Die App in-process starten und für jedes Objekt einen aus seinen Feldern abgeleiteten Datensatz über den echten HTTP-Stack anlegen, zurücklesen, vergleichen | `createFailed`, `readFailed` und `fidelityGaps` zählen je zu `hardFailures` |
+| **Auf Anforderung · `--rls`** | Ein zweiter, frischer Start beweist die Invariante über Besitzergrenzen — „ein Mitglied darf nicht schreiben, was es nicht lesen kann“ — für eine Sonden-Persona und für eine Persona je deklarierter Position | Ein `hole`, eine degradierte Sonden-Persona oder eine deklarierte Position, die der Lauf nicht bereitstellen konnte, zählen je zu `hardFailures` |
+
+![os verify auf 17.7.0, Stufe für Stufe: erst die Autorzeit-Regeln, bei Ablehnung Exit 1, bevor irgendetwas startet; dann ein In-Process-Start, der je Objekt einen Datensatz anlegt, zurückliest und vergleicht; dann, auf Anforderung, die RLS-Sonde über Besitzergrenzen mit einer Persona je deklarierter Position; die sechs Terme von hardFailures und der daraus gelesene Exit-Code, samt der Status, die der Zähler nicht enthält](./two-stages-en.svg)
+
+Der Zähler, den der Exit-Code liest, hat sechs Terme, und die Quelle nennt sie klarer als jede Umschreibung:
+
+```ts
+const hardFailures =
+  crud.summary.createFailed +
+  crud.summary.readFailed +
+  crud.summary.fidelityGaps +
+  (rls?.totals.holes ?? 0) +
+  (rls?.probe.degraded ? 1 : 0) +
+  (rls?.positionCoverage.notRun.length ?? 0);
+```
+
+Merken Sie sich, was *nicht* in dieser Liste steht — `needsFixture`, `skipped`, `memberVisible`. Sie kehren im CRM-Lauf zurück, und sie sind der Grund, warum der Exit-Code das Zweite ist, das Sie lesen sollten, nicht das Erste.
+
+## Stufe eins schließt ein falsches Grün — und das ist neu in 17.7.0
+
+Die Reihenfolge ist kein Detail. Vor 17.7.0 startete `os verify` die App, lief den Rundlauf und sonst nichts. Das Changelog von 17.7.0 hält mit eigenen Worten fest, was das durchließ:
+
+> Ein Stack mit einem Lookup auf ein Objekt, das nicht existiert, mit einem `visible`-Ausdruck einer Aktion, der ein Feld ohne `record.` nennt, oder mit einer Listenspalte, die kein Feld nennt, startete, schickte seine Datensätze im Rundlauf und druckte `✓ verify passed` mit Exit 0, während `os validate`, `os build` und `os lint` ihn allesamt ablehnten. Die dokumentierte Fertig-Linie („`objectstack verify` ist grün“) war grün auf einem Stack, den der Build nicht ausliefert.
+
+Nennen wir diese Form ein **falsches Grün**: ein Prüfer, der durchlässt, was der Build ablehnt. Es ist der schlimmste Defekt, den ein Prüfer haben kann, denn der ganze Sinn, einen laufen zu lassen, ist, derjenige zu sein, der es bemerkt. 17.7.0 schließt ihn, indem das Gate zuerst läuft, und am schnellsten sieht man den Verschluss, wenn man das Loch absichtlich öffnet. Nehmen Sie das eine Objekt des Scaffolds und geben Sie ihm einen Lookup auf ein Objekt, das nicht existiert — vier Zeilen, genau das, was ein Agent schreibt, wenn er ein Ziel benennt, bevor er es anlegt:
+
+```diff
+   fields: {
+     title: Field.text({ label: 'Title', required: true, searchable: true, maxLength: 200, group: 'details' }),
+     body: Field.textarea({ label: 'Body', group: 'details' }),
++    project: Field.lookup('verify_demo_project', {
++      label: 'Project',
++      group: 'details',
++    }),
+   },
+```
+
+Dann die Fertig-Linie erneut, auf 17.7.0:
+
+```text
+$ npx os verify; echo $?
+  → Running author-time rules (49)...
+
+  ✗ Author-time rules failed (1 issue) — the runtime stage did not run
+  • object "verify_demo_note" · field "project": lookup target "verify_demo_project"
+    resolves to no object defined in this stack. The reference is inert at runtime —
+    nothing reports the miss. Did you mean "verify_demo_note"?
+      Point it at one of this stack's objects, or at a platform object by its full
+      name (the platform user object is "sys_user", not "user"). The record picker
+      has no object to query, `$expand` has nothing to resolve, and the form renders
+      a relationship control that can never resolve a value. Defined objects: verify_demo_note.
+      rule: object-reference-unknown  at objects[0].fields.project.reference
+1
+```
+
+Und die maschinenlesbare Seite derselben Ablehnung:
+
+```text
+$ npx os verify --json > report.json; echo $?
+1
+$ cat report.json
+{"error":"Author-time rules failed (1 issue) — the runtime stage did not run",
+ "errors":[{"severity":"error","rule":"object-reference-unknown",
+   "where":"object \"verify_demo_note\" · field \"project\"",
+   "path":"objects[0].fields.project.reference",
+   "message":"lookup target \"verify_demo_project\" resolves to no object defined in this stack. …",
+   "hint":"Point it at one of this stack's objects, or at a platform object by its full name …"}]}
+```
+
+Drei Dinge in dieser Ausgabe sind der Mechanismus. Der Satz *the runtime stage did not run* ist wörtlich gemeint: Der Lauf schrieb **0 Zeilen** nach stderr, wo ein Lauf, der startet, 317 schreibt (nächster Abschnitt) — kein Plugin geladen, kein Server gestartet, keine Datenbank berührt. Der Befund ist derselbe, den `os validate` für denselben Stack druckt, gleicher Regelname, gleicher Pfad, gleicher Hinweis, sodass ein Agent, der eines von beiden liest, dieselbe Korrekturanweisung bekommt, mit einem *Did you mean* darin. Und der Exit-Code ist 1 mit dem Dokument auf stdout — die Form, auf die ein CI-Schritt und ein Skript beide reagieren können, ohne Prosa zu parsen.
+
+## Stufe zwei: ein Datensatz je Objekt, durch den echten HTTP-Stack
+
+Stellen Sie das Feld wieder her, und die Fertig-Linie erreicht ihre zweite Stufe. Das ist der vollständige Bericht des Scaffolds — ein Objekt, zwei Felder:
+
+```json
+{
+  "app": "com.example.verify-demo",
+  "config": "/…/verify-demo/objectstack.config.ts",
+  "multiTenant": false,
+  "crud": {
+    "app": "com.example.verify-demo",
+    "results": [
+      { "object": "verify_demo_note", "status": "verified", "checked": 2 }
+    ],
+    "summary": {
+      "objects": 1, "verified": 1, "fidelityGaps": 0, "createFailed": 0,
+      "needsFixture": 0, "readFailed": 0, "skipped": 0, "mismatchTotal": 0
+    }
+  },
+  "hardFailures": 0
+}
+```
+
+`checked: 2` sind die zwei Felder, die der Prüfer geschrieben und zurückgelesen hat; `mismatchTotal: 0` sagt, dass jeder Wert so zurückkam, wie er geschrieben wurde. Was nicht in der Datei steht, ist so gewollt wie das, was drinsteht: Das eigene Protokoll des gestarteten Stacks — Plugin-Ladungen, der Security-Bootstrap, der Server-Stopp — ging nach stderr, **317 Zeilen** davon bei dieser Ein-Objekt-App, und stdout trug genau ein JSON-Dokument. Auch dieser Vertrag ist der von 17.7.0. Das Changelog hat das vorherige Verhalten gemessen: Auf einem Zwei-Objekt-Stack landeten 318 Protokollzeilen vor dem Bericht auf stdout, sodass `os verify --json > report.json` „mit Exit 0 endete und eine Datei hinterließ, die kein JSON-Parser akzeptiert“. Jetzt liest `JSON.parse` die Datei am Stück, und genau das macht `report.json` zu einem Artefakt, das man an einen Pull Request hängen kann, statt zu einem Screenshot.
+
+Ein „aus seinen Feldern abgeleiteter“ Datensatz ist der Datensatz des Prüfers, nicht Ihrer, und das hat eine Folge, die das Scaffold zu klein ist, um sie zu zeigen. Hier ist das CRM-Beispiel — `examples/app-crm` am Tag `@objectstack/cli@17.7.0`, sechs Objekte, gegen die veröffentlichten 17.7.0-Pakete ausgeführt — auf der Textseite:
+
+```text
+=== objectstack verify — com.example.crm ===
+  ✓ crm_account  (4 fields)
+  ✓ crm_activity  (7 fields)
+  ✓ crm_contact  (3 fields)
+  ✓ crm_lead  (10 fields)
+  ~ crm_opportunity  needs-fixture (app validation rejected the auto-record):
+    {"error":"Discount cannot exceed 40% without an approved exception.; Close Date must be
+    today or a future date.","code":"VALIDATION_FAILED", …}
+  – crm_opportunity_line_item  skipped: required relation "opportunity" → no created
+    "crm_opportunity" record
+  ── 4 verified, 0 gaps, 0 FAILED, 1 needs-fixture, 1 skipped (0 mismatches)
+```
+
+Vier von sechs Objekten liefen rund. Das fünfte, `crm_opportunity`, trägt zwei eigene Validierungsregeln — eine Rabattobergrenze und eine Untergrenze für das Abschlussdatum — und der vom Prüfer abgeleitete Datensatz erfüllte keine von beiden, also lehnte die App ihn mit `400` ab. Das wird als **`needs-fixture`** gemeldet, mit der eigenen Ablehnung der App zitiert, und es ist *kein* Fehlschlag: Der Prüfer sagt Ihnen, dass er keinen Datensatz konstruieren konnte, der Ihre Regel besteht, nicht, dass das Objekt kaputt ist. Das sechste ist **`skipped`**, weil eine Positionszeile eine Opportunity verlangt und keine angelegt wurde. Keiner der beiden Begriffe steht in der Summe von `hardFailures`, also endet dieser Lauf mit 0 — ehrlich, weil nichts, was er ausgeübt hat, falsch war, und lesbar, weil die zwei Objekte, die er nicht ausgeübt hat, mit Begründung benannt sind. Lesen Sie die Zusammenfassungszeile vor dem Exit-Code.
+
+## Auf Anforderung: die Invariante über Besitzergrenzen, eine Persona je deklarierter Position
+
+Der Rundlauf beweist Treue. Er beweist nichts darüber, wer was schreiben darf, und `os verify` tut standardmäßig nicht so. Mit `--rls` startet es einen zweiten, frischen Stack und beweist eine Invariante — die Referenz formuliert sie als „ein Mitglied darf nicht schreiben, was es nicht lesen kann“ — für eine Sonden-Persona, die es selbst bereitstellt, und auf 17.7.0 für eine Persona je Position, die die App deklariert. Das CRM deklariert drei, in `src/security/sales-positions.ts`: `sales_rep`, `sales_manager` und `finance_approver`. Also prägte `npx os verify --rls --json` vier Personas, und der `rls`-Block des Berichts sagt, was jede davon festgestellt hat:
+
+```json
+"rls": {
+  "probe": { "label": "verify-rls-probe@objectstack.test", "grantedObjects": 6 },
+  "results": [
+    { "object": "crm_account", "status": "rls-consistent", "target": "created",
+      "detail": "the probe cannot read (GET 404) and could not mutate (PATCH 404, row unchanged)" },
+    …
+  ],
+  "summary":  { "objects": 6,  "consistent": 6, "holes": 0, "memberVisible": 0,  "proven": 6, "unproven": 0  },
+  "positionCoverage": {
+    "declared": ["sales_rep", "sales_manager", "finance_approver"],
+    "ran":      ["sales_rep", "sales_manager", "finance_approver"],
+    "notRun":   []
+  },
+  "totals":   { "objects": 24, "consistent": 6, "holes": 0, "memberVisible": 18, "proven": 6, "unproven": 18 }
+},
+"hardFailures": 0
+```
+
+Die Basis-Sonden-Persona bewies die Invariante auf allen sechs Objekten: Sie konnte die Zeile eines anderen Besitzers nicht lesen (`GET 404`), und als sie diese Zeile trotzdem per id zu schreiben versuchte, wurde der Schreibzugriff abgelehnt und die Zeile blieb unverändert (`PATCH 404`). Das ist die Klasse von Loch beim Schreiben per id — die, bei der ein Datensatz, den man nicht *sehen* kann, trotzdem *bearbeitet* werden kann, wenn man seine id errät — und auf dieser App ist sie geschlossen.
+
+Dann lesen Sie die Positions-Personas, wo die Textseite deutlicher ist als das JSON:
+
+```text
+  ── position personas (each holds one declared position and nothing else) — 3 of 3 declared position(s) probed
+  ▸ sales_rep  (verify-rls-pos-sales_rep@objectstack.test)  0 PROVEN (0 consistent, 0 HOLES) · 6 NOT PROVEN (6 member-visible, 0 probe-blocked, 0 skipped)
+      ⚠ this persona proved NOTHING — every object was member-visible, probe-blocked or skipped.
+  ▸ sales_manager  …  0 PROVEN · 6 NOT PROVEN (6 member-visible, …)
+      ⚠ this persona proved NOTHING — every object was member-visible, probe-blocked or skipped.
+  ▸ finance_approver  …  0 PROVEN · 6 NOT PROVEN (6 member-visible, …)
+      ⚠ this persona proved NOTHING — every object was member-visible, probe-blocked or skipped.
+  ══ all personas: 6 PROVEN (6 consistent, 0 HOLES) · 18 NOT PROVEN (18 member-visible, 0 probe-blocked, 0 skipped)   [unit: one object × persona probe]
+✓ verify passed — no runtime failures
+```
+
+**18 von 24 Proben bewiesen nichts, und der Lauf ist grün.** Beide Hälften dieses Satzes stimmen, und der Bericht ist so gebaut, dass Sie beide sehen. Das CRM bindet einen Berechtigungssatz, `crm_sales_user`, an alle drei Positionen, und dieser Satz gewährt Lesen auf jedem CRM-Objekt; fünf der sechs Objekte deklarieren `sharingModel: 'public_read_write'`, das sechste folgt seinem Master. Eine Persona, die jede Zeile lesen kann, ist nie in einer Situation über Besitzergrenzen, also gibt es kein Loch zu finden, und der Prüfer meldet genau das — `member-visible`, *nicht bewiesen* — statt eine Probe, die er nicht ausführen konnte, als bestanden zu zählen. Die fünf Status sind eine geschlossene Liste:
+
+| Status | Urteil | Bedeutung |
+| :--- | :--- | :--- |
+| `rls-consistent` | bewiesen | Die Persona konnte die Zeile nicht lesen und nicht verändern |
+| `rls-hole` | bewiesenes Loch | Die Persona konnte die Zeile nicht lesen, veränderte sie aber per id — zählt zu `hardFailures` |
+| `member-visible` | nicht bewiesen | Die Persona kann die Zeile lesen, es gibt also kein Szenario über Besitzergrenzen zu testen |
+| `probe-blocked` | nicht bewiesen | Das Objekt-Gate wies die Persona ab, der Datensatz-Scope wurde nie befragt |
+| `skipped` | nicht bewiesen | Es konnte kein Probenziel hergestellt werden |
+
+Eine Regel beherrscht den ganzen Block, und sie ist die zweite Idee, die sich aus diesem Beitrag mitzunehmen lohnt: **Abdeckung wird gemeldet, nie fallen gelassen.** Eine deklarierte Position, die der Lauf nicht bereitstellen konnte, verkleinert den Lauf nicht stillschweigend — sie landet in `positionCoverage.notRun`, und die Länge dieser Liste ist ein Term in `hardFailures`, sodass ein Prüfer, der weniger abgedeckt hat, als seine Zahlen vorgeben, *fehlschlägt*, statt zu bestehen. Eine Persona, die lief, aber nichts bewies, wird ebenfalls behalten, als `unproven`, mit Begründung je Objekt. Der Exit-Code sagt Ihnen, dass nichts Falsches gefunden wurde; `totals.unproven` sagt Ihnen, wie viel der Frage tatsächlich gestellt wurde. Auf dieser App ist die Antwort ein Viertel, und Sie wissen jetzt, welches Viertel.
+
+## Was ein grünes os verify nicht sagt
+
+Sechs Grenzen, klar benannt, denn ein Prüfer, der übertreibt, ist das falsche Grün in anderem Gewand.
+
+1. **Nichts über Korrektheit.** Die 40-%-Rabattobergrenze wird durchgesetzt; ob 40 die richtige Zahl ist, ob die Finanzabteilung genehmigen sollte, ob das Objekt existieren sollte — `os verify` hat keine Meinung und keinen Mechanismus. Das ist die dritte Sprosse von [deklariert → durchsetzbar → korrekt](/en/blog/how-to-review-ai-generated-app-changes/), und sie bleibt die Aufgabe des Reviewers. Wenn Ihre Geschäftslogik Regeln hat, die es zu bewahren lohnt, schreiben Sie Tests dafür; die Fertig-Linie ist der Boden unter diesen Tests, kein Ersatz.
+2. **Nicht ganz `os validate`.** Die Referenz ist explizit: Stufe eins ist die Regel-Registry, und „die `defineStack`-Herkunftsablehnung …, das Package-Docs-Lint, die Capability-Provider-Prüfung, die Picklist-Referenz- und View-Container-Namensprüfungen und `--strict` bleiben bei `os validate`, also führen Sie es ebenfalls aus“. Hinweise — `warning`- und `info`-Befunde — lassen `os verify` ebenfalls nie fehlschlagen; der CRM-Lauf zählte 9 davon und verwies zum Lesen auf `os validate`.
+3. **`needs-fixture` und `skipped` sind keine Fehlschläge.** Zwei der sechs CRM-Objekte liefen nie rund, und der Lauf endete mit 0. Die Zusammenfassungszeile sagt es; der Exit-Code kann es nicht.
+4. **`--rls` beweist eine Invariante, eine Klasse, wo ein Szenario existiert.** Es sagt nichts darüber, ob der Berechtigungssatz der *richtige* ist — das ist [Durchgang 2 des Reviews: die Werte prüfen, nicht die Schlüssel](/en/blog/how-to-review-ai-generated-app-changes/) — und auf einer App, deren Personas alles lesen können, beweist es nichts über sie und sagt das auch.
+5. **Es ist Opt-in und standardmäßig Single-Tenant.** Ohne `--rls` wird keine Persona geprägt; ohne `--multi-tenant` ist der Start Einzel-Organisation, Mandantentrennungsrichtlinien wurden also nicht ausgeübt.
+6. **Es ist nicht das menschliche Verify.** Schritt 4 der Einstiegsschleife ist „Sie verifizieren in der Console UI“ — ein Mensch, der auf die laufende App schaut. Gleiches Wort, andere Handlung. `os verify` ist die mechanische Hälfte; es schaut auf keinen Bildschirm.
+
+## Wo es in der Schleife sitzt
+
+Die Schleife, die diese Website immer wieder beschreibt, hat eine Eingabe- und eine Ausgabeseite. Auf der Eingabeseite [richten Sie Ihren Agenten auf ObjectStack](/en/blog/how-to-point-your-agent-at-objectstack/) — die Regeldatei, das Skills-Bündel, der Tool-Server — und er schreibt typisierte Metadaten. Auf der Ausgabeseite gehen die Metadaten durch das Gate (`os validate`: durchsetzbar, oder abgelehnt mit einer Meldung, auf die der Agent reagieren kann), dann die Fertig-Linie (`os verify`: startet und verhält sich, mit einem Bericht darüber, was bewiesen wurde und was nicht), dann das [Review](/en/blog/how-to-review-ai-generated-app-changes/) für die eine Sprosse, die kein Gate erklimmt, dann zu einer Person in der Console. Der [CRM-Build](/en/blog/how-to-build-a-crm-with-an-ai-agent/) auf dieser Website führte das Gate, den Build und den Dev-Server aus, und nie die Fertig-Linie; das hier ist der Schritt zwischen jenem und der Abnahme, und in CI ist es eine Zeile:
+
+```bash
+npx os validate && npx os verify --rls --json > verify-report.json
+node -e "const r=require('./verify-report.json'); console.log('hardFailures', r.hardFailures, '· rls unproven', r.rls?.totals.unproven ?? 'n/a')"
+```
+
+Hängen Sie `verify-report.json` an den Pull Request. Ein Reviewer liest dann drei Zeilen vor dem Diff: den Exit-Code, `crud.summary` und `rls.totals.unproven` — und weiß, bevor er sich eine Meinung bildet, was mechanisch festgestellt wurde und was eine Frage des Urteils bleibt. Diese Teilung ist das ganze Argument für ein deklariertes, [durchgesetztes](/en/glossary/declared-vs-enforced/) Zielformat, wenn der Autor ein Modell ist: Die Maschine nimmt die Sprossen, die sie nehmen kann, und meldet die, die sie nicht nehmen kann.
+
+Richten Sie Ihren Agenten auf dieses Ziel und lassen Sie ihn die Fertig-Linie selbst ausführen. Die Beschreibung des Befehls in der README ist das ganze Versprechen, und nicht mehr: `os verify  # Boot the app in-process and verify it over real HTTP`. Dieselbe Schleife gehostet, im Browser, ohne Installation? Das ist ObjectOS, die kommerzielle Laufzeitumgebung auf Basis von ObjectStack.
+
+---
+
+*Verifiziert gegen ObjectStack 17.7.0 — `create-objectstack` 17.7.0 und `@objectstack/cli` 17.7.0, so wie `npm create objectstack@latest` sie installiert hat, auf Node 22. Das CRM ist `examples/app-crm` am Tag `@objectstack/cli@17.7.0`, gegen die veröffentlichten 17.7.0-Pakete ausgeführt. Jeder Befehl und jeder Ausgabeblock oben wurde ausgeführt, nicht rekonstruiert; die Ausgabe ist gekürzt, wo eine Auslassung markiert ist, und nirgends umgeschrieben.*
