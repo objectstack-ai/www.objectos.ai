@@ -1,0 +1,229 @@
+---
+title: "テストを書かずに AI が書いたアプリをどう検証する？ObjectStack 17.7.0 の os verify が二段階で証明すること"
+description: "公開済みの 17.7.0 では os verify は二段階で動く——まず作成時ルール、次に本物のインプロセス起動——そして第一段階が拒めば第二段階は始まらない。三つの実録、うち一つはわざと失敗させたもの、そして緑の実行が自ら「証明していない」と言う 18 件のプローブ。"
+author: ObjectStack Team
+date: 2026-10-24
+status: published
+topic: app-building
+audience: developer
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - AI エージェント
+  - 検証
+---
+
+読む前にこれを実行してほしい。クリーンなマシンで二分かからず、最後の一行がこの記事の一文字版だ。
+
+```bash
+npm create objectstack@latest verify-demo && cd verify-demo
+npx os verify --json > report.json; echo $?
+```
+
+```text
+0
+```
+
+**結論を先に。** テストを書かずに AI が書いたアプリのビジネスロジックを検証することはできないし、以下のどこにもそう主張する箇所はない。一つのコマンドでできるのは、ランタイムが証明する立場にある、より狭い二つのことを証明することだ。定義が**強制可能**であること——`os validate` が実行するのと同じ作成時ルール——と、アプリが**振る舞う**こと——起動し、すべてのオブジェクトが本物の HTTP スタックを通してレコードを往復させること。今日 `npm create objectstack@latest` がインストールするバージョン、ObjectStack **17.7.0** では、そのコマンドが `os verify` だ。二つの段階を順に実行し、**第一段階が拒めば第二段階は決して始まらず**、終了コードは一つのカウント `hardFailures` から読まれる。本稿の残りは、その三つの実際の実行だ。空のスキャフォールド、三つの宣言済みポジションを持つ CRM の例、そしてわざと失敗させた一回——検証器が示せる最も有用なものは何を拒んだかであり、次に有用なのは何を証明しなかったと認めるかだからだ。
+
+## 二つの段階、一つのカウント
+
+CLI リファレンスは契約を一文で述べる。「完了ライン（done-bar）：`os verify` が緑なら、作成時ルールが通り、**かつ**アプリがランタイムで振る舞う。二つの段階を順に実行し、第二段階は第一段階が通ったときにのみ始まる。」ここから先、二つの言葉を分けておく価値がある。`os validate` は**ゲート**で、定義が強制可能かを決める。`os verify` は**完了ライン**で、強制可能*かつ*振る舞う、だ。
+
+| 段階 | 何が動くか | 失敗はどう見えるか |
+| :--- | :--- | :--- |
+| **1 · 作成時ルール** | `os validate` が実行するルールレジストリ——17.7.0 で 49 ルール——を、`os validate` が準備するのと同じ方法で準備したスタックに対して | 終了 1 と、`error` と `errors[]` を持つ JSON ドキュメント。ランタイム段階は実行されなかった |
+| **2 · ランタイム** | アプリをインプロセスで起動し、オブジェクトごとにフィールドからレコードを導出し、本物の HTTP スタックを通して作成し、読み戻し、比較する | `createFailed`、`readFailed`、`fidelityGaps` がそれぞれ `hardFailures` に加算される |
+| **要求時 · `--rls`** | 二度目の新規起動で、所有者をまたぐ不変条件——「メンバーは読めないものを書いてはならない」——をプローブ用ペルソナと、宣言済みポジションごとの一ペルソナについて証明する | `hole`、劣化したプローブ用ペルソナ、プロビジョニングできなかった宣言済みポジションがそれぞれ `hardFailures` に加算される |
+
+![17.7.0 の os verify を段階ごとに：まず作成時ルールで、拒否は何も起動する前に終了コード 1 で終わる。次にインプロセス起動で、オブジェクトごとに一レコードを作成・読み戻し・比較する。そして要求時に、宣言済みポジションごとの一ペルソナで所有者をまたぐ RLS プローブを実行する。hardFailures を構成する六項と、そこから読まれる終了コード、そしてカウントに含まれないステータス](./two-stages-en.svg)
+
+終了コードが読むカウントは六項で、ソースはどんな言い換えよりも平明に述べている。
+
+```ts
+const hardFailures =
+  crud.summary.createFailed +
+  crud.summary.readFailed +
+  crud.summary.fidelityGaps +
+  (rls?.totals.holes ?? 0) +
+  (rls?.probe.degraded ? 1 : 0) +
+  (rls?.positionCoverage.notRun.length ?? 0);
+```
+
+このリストに*ない*ものを覚えておいてほしい——`needsFixture`、`skipped`、`memberVisible`。CRM の実行で戻ってくるし、終了コードが最初ではなく二番目に読むべきものである理由がそこにある。
+
+## 第一段階は偽の緑を塞ぐ——そしてそれは 17.7.0 の新機能だ
+
+順序は細部ではない。17.7.0 以前、`os verify` はアプリを起動して往復を実行し、それ以外は何もしなかった。17.7.0 の変更履歴は、それが何を通していたかを自身の言葉で記録している。
+
+> 存在しないオブジェクトへのルックアップ、`record.` なしでフィールドを名指すアクションの `visible` 式、あるいはフィールドを名指さないリスト列を持つスタックは、起動し、レコードを往復させ、終了コード 0 で `✓ verify passed` を出力した——`os validate`、`os build`、`os lint` のすべてがそれを拒んでいたにもかかわらず。文書化された完了ライン（「`objectstack verify` が緑」）は、ビルドが出荷を拒むスタックで緑だった。
+
+この形を**偽の緑**と呼ぼう。ビルドが拒むものを通す検証器だ。検証器が持ちうる最悪の欠陥である。検証器を実行する意味のすべては、気づく側であることだからだ。17.7.0 はゲートを先に実行することでこれを塞ぎ、その塞ぎ方を見る最速の方法は、わざと穴を開けることだ。スキャフォールドの唯一のオブジェクトに、存在しないオブジェクトへのルックアップを与える——四行、エージェントがターゲットを作る前に名前を付けるときに書く類のものだ。
+
+```diff
+   fields: {
+     title: Field.text({ label: 'Title', required: true, searchable: true, maxLength: 200, group: 'details' }),
+     body: Field.textarea({ label: 'Body', group: 'details' }),
++    project: Field.lookup('verify_demo_project', {
++      label: 'Project',
++      group: 'details',
++    }),
+   },
+```
+
+そして 17.7.0 で完了ラインをもう一度実行する。
+
+```text
+$ npx os verify; echo $?
+  → Running author-time rules (49)...
+
+  ✗ Author-time rules failed (1 issue) — the runtime stage did not run
+  • object "verify_demo_note" · field "project": lookup target "verify_demo_project"
+    resolves to no object defined in this stack. The reference is inert at runtime —
+    nothing reports the miss. Did you mean "verify_demo_note"?
+      Point it at one of this stack's objects, or at a platform object by its full
+      name (the platform user object is "sys_user", not "user"). The record picker
+      has no object to query, `$expand` has nothing to resolve, and the form renders
+      a relationship control that can never resolve a value. Defined objects: verify_demo_note.
+      rule: object-reference-unknown  at objects[0].fields.project.reference
+1
+```
+
+同じ拒否の機械可読な面はこうだ。
+
+```text
+$ npx os verify --json > report.json; echo $?
+1
+$ cat report.json
+{"error":"Author-time rules failed (1 issue) — the runtime stage did not run",
+ "errors":[{"severity":"error","rule":"object-reference-unknown",
+   "where":"object \"verify_demo_note\" · field \"project\"",
+   "path":"objects[0].fields.project.reference",
+   "message":"lookup target \"verify_demo_project\" resolves to no object defined in this stack. …",
+   "hint":"Point it at one of this stack's objects, or at a platform object by its full name …"}]}
+```
+
+この出力の三箇所が仕組みそのものだ。*the runtime stage did not run* という文は文字どおりで、この実行は stderr に **0 行**を書いた——起動する実行なら 317 行書く（次節）——プラグインは一つもロードされず、サーバーは起動せず、データベースには触れていない。この所見は同じスタックに対して `os validate` が出力するものと同一で、同じルール名、同じパス、同じヒントなので、どちらを読むエージェントも同じ是正指示を、*Did you mean* 付きで受け取る。そして終了コードは 1、ドキュメントは stdout 上にあり、これは CI のステップとスクリプトのどちらも散文を解析せずに扱える形だ。
+
+## 第二段階：オブジェクトごとに一レコード、本物の HTTP スタックを通して
+
+フィールドを元に戻すと、完了ラインは第二段階に到達する。これがスキャフォールドの完全なレポートだ——一オブジェクト、二フィールド。
+
+```json
+{
+  "app": "com.example.verify-demo",
+  "config": "/…/verify-demo/objectstack.config.ts",
+  "multiTenant": false,
+  "crud": {
+    "app": "com.example.verify-demo",
+    "results": [
+      { "object": "verify_demo_note", "status": "verified", "checked": 2 }
+    ],
+    "summary": {
+      "objects": 1, "verified": 1, "fidelityGaps": 0, "createFailed": 0,
+      "needsFixture": 0, "readFailed": 0, "skipped": 0, "mismatchTotal": 0
+    }
+  },
+  "hardFailures": 0
+}
+```
+
+`checked: 2` は検証器が書いて読み戻した二つのフィールドで、`mismatchTotal: 0` はすべての値が書いたとおりに戻ったと言っている。ファイルにないものも、あるものと同じく意図的だ。起動したスタック自身のログ——プラグインのロード、セキュリティのブートストラップ、サーバー停止——は stderr に行き、この一オブジェクトのアプリで **317 行**、stdout はちょうど一つの JSON ドキュメントだけを運んだ。この契約も 17.7.0 のものだ。変更履歴は以前の挙動を測っていて、二オブジェクトのスタックで 318 行のログがレポートの前に stdout に落ち、`os verify --json > report.json` は「終了コード 0 で終わり、どの JSON パーサーも受け付けないファイルを残していた」。いまは `JSON.parse` がファイルを丸ごと読める。それこそが `report.json` を、スクリーンショットではなくプルリクエストに添付できる成果物にしているものだ。
+
+「フィールドから導出した」レコードは検証器のレコードであってあなたのものではなく、そこにはスキャフォールドが小さすぎて示せない帰結がある。CRM の例——`@objectstack/cli@17.7.0` タグの `examples/app-crm`、六オブジェクト、公開済みの 17.7.0 パッケージに対して実行——のテキスト面がこれだ。
+
+```text
+=== objectstack verify — com.example.crm ===
+  ✓ crm_account  (4 fields)
+  ✓ crm_activity  (7 fields)
+  ✓ crm_contact  (3 fields)
+  ✓ crm_lead  (10 fields)
+  ~ crm_opportunity  needs-fixture (app validation rejected the auto-record):
+    {"error":"Discount cannot exceed 40% without an approved exception.; Close Date must be
+    today or a future date.","code":"VALIDATION_FAILED", …}
+  – crm_opportunity_line_item  skipped: required relation "opportunity" → no created
+    "crm_opportunity" record
+  ── 4 verified, 0 gaps, 0 FAILED, 1 needs-fixture, 1 skipped (0 mismatches)
+```
+
+六オブジェクトのうち四つが往復した。五つ目の `crm_opportunity` は自前の検証ルールを二つ持ち——割引の上限とクローズ日の下限——検証器が導出したレコードはどちらも満たさなかったので、アプリは `400` で拒んだ。それは **`needs-fixture`** として、アプリ自身の拒否を引用して報告され、失敗では*ない*。検証器は、あなたのルールを通るレコードを構築できなかったと言っているのであって、オブジェクトが壊れていると言っているのではない。六つ目は **`skipped`** で、明細行には商談が必要なのに一つも作られなかったからだ。どちらの語も `hardFailures` の和には入っておらず、この実行は 0 で終了する——誠実に、というのも実際に試したものは何一つ間違っていなかったからで、明瞭に、というのも試さなかった二つのオブジェクトは理由付きで名指しされているからだ。終了コードより先にサマリー行を読もう。
+
+## 要求時：所有者をまたぐ不変条件を、宣言済みポジションごとに一ペルソナで
+
+往復が証明するのは忠実さだ。誰が何を書けるかについては何も証明しないし、`os verify` は既定ではそのふりをしない。`--rls` を付けると、二つ目の新しいスタックを起動し、一つの不変条件——リファレンスの言い回しでは「メンバーは読めないものを書いてはならない」——を、自らプロビジョニングするプローブ用ペルソナと、17.7.0 ではアプリが宣言するポジションごとの一ペルソナについて証明する。CRM は `src/security/sales-positions.ts` で三つを宣言している。`sales_rep`、`sales_manager`、`finance_approver` だ。したがって `npx os verify --rls --json` は四つのペルソナを発行し、レポートの `rls` ブロックはそれぞれが何を確立したかを述べる。
+
+```json
+"rls": {
+  "probe": { "label": "verify-rls-probe@objectstack.test", "grantedObjects": 6 },
+  "results": [
+    { "object": "crm_account", "status": "rls-consistent", "target": "created",
+      "detail": "the probe cannot read (GET 404) and could not mutate (PATCH 404, row unchanged)" },
+    …
+  ],
+  "summary":  { "objects": 6,  "consistent": 6, "holes": 0, "memberVisible": 0,  "proven": 6, "unproven": 0  },
+  "positionCoverage": {
+    "declared": ["sales_rep", "sales_manager", "finance_approver"],
+    "ran":      ["sales_rep", "sales_manager", "finance_approver"],
+    "notRun":   []
+  },
+  "totals":   { "objects": 24, "consistent": 6, "holes": 0, "memberVisible": 18, "proven": 6, "unproven": 18 }
+},
+"hardFailures": 0
+```
+
+基本のプローブ用ペルソナは六オブジェクトすべてで不変条件を証明した。別の所有者の行を読めず（`GET 404`）、それでも id でその行を書こうとしたとき、書き込みは拒まれ、行は変わらなかった（`PATCH 404`）。これが id 書き込みクラスの穴——*見えない*レコードでも id を当てれば*編集できる*という穴——で、このアプリでは塞がっている。
+
+次にポジションのペルソナを読むと、テキスト面は JSON より率直だ。
+
+```text
+  ── position personas (each holds one declared position and nothing else) — 3 of 3 declared position(s) probed
+  ▸ sales_rep  (verify-rls-pos-sales_rep@objectstack.test)  0 PROVEN (0 consistent, 0 HOLES) · 6 NOT PROVEN (6 member-visible, 0 probe-blocked, 0 skipped)
+      ⚠ this persona proved NOTHING — every object was member-visible, probe-blocked or skipped.
+  ▸ sales_manager  …  0 PROVEN · 6 NOT PROVEN (6 member-visible, …)
+      ⚠ this persona proved NOTHING — every object was member-visible, probe-blocked or skipped.
+  ▸ finance_approver  …  0 PROVEN · 6 NOT PROVEN (6 member-visible, …)
+      ⚠ this persona proved NOTHING — every object was member-visible, probe-blocked or skipped.
+  ══ all personas: 6 PROVEN (6 consistent, 0 HOLES) · 18 NOT PROVEN (18 member-visible, 0 probe-blocked, 0 skipped)   [unit: one object × persona probe]
+✓ verify passed — no runtime failures
+```
+
+**24 プローブのうち 18 が何も証明せず、それでも実行は緑だ。** この文の両半分は正しく、レポートは両方が見えるように作られている。CRM は一つの権限セット `crm_sales_user` を三つのポジションすべてに結び付け、そのセットはすべての CRM オブジェクトに読み取りを与える。六つのオブジェクトのうち五つが `sharingModel: 'public_read_write'` を宣言し、六つ目は親に従う。すべての行を読めるペルソナは所有者をまたぐ状況に決して置かれないので、見つけるべき穴はなく、検証器はまさにそれを——`member-visible`、*証明されず*——報告する。実行できなかったプローブを合格に数えたりはしない。五つのステータスは閉じたリストだ。
+
+| ステータス | 判定 | 意味 |
+| :--- | :--- | :--- |
+| `rls-consistent` | 証明済み | ペルソナはその行を読めず、変更もできなかった |
+| `rls-hole` | 証明済みの穴 | ペルソナはその行を読めないのに id で変更できた——`hardFailures` に数えられる |
+| `member-visible` | 証明されず | ペルソナはその行を読めるので、テストすべき所有者をまたぐ場面がない |
+| `probe-blocked` | 証明されず | オブジェクトのゲートがペルソナを拒んだので、レコードのスコープは参照されなかった |
+| `skipped` | 証明されず | プローブ対象を確立できなかった |
+
+ブロック全体を一つのルールが支配しており、それが本稿から持ち帰る価値のある二つ目のアイデアだ。**カバレッジは報告され、決して落とされない。** 実行がプロビジョニングできなかった宣言済みポジションは、実行を黙って縮めたりしない——`positionCoverage.notRun` に入り、そのリストの長さは `hardFailures` の一項なので、数字が読ませるより少ししかカバーしなかった検証器は通るのではなく*失敗する*。実行したが何も証明しなかったペルソナも、オブジェクトごとの理由付きで `unproven` として残される。終了コードは、何も間違いが見つからなかったと言う。`totals.unproven` は、問いの実際どれだけが問われたかを言う。このアプリではその答えは四分の一で、どの四分の一かもいまあなたは知っている。
+
+## 緑の os verify が言っていないこと
+
+六つの限界を平明に述べる。誇張する検証器は、別の衣をまとった偽の緑だからだ。
+
+1. **正しさについては何も。** 40% の割引上限は強制されている。40 が正しい数か、財務が承認すべきか、そのオブジェクトが存在すべきか——`os verify` には意見も仕組みもない。それは[宣言 → 強制可能 → 正しい](/en/blog/how-to-review-ai-generated-app-changes/)の三段目で、いまもレビュアーの仕事だ。ビジネスロジックに守る価値のあるルールがあるなら、そのためのテストを書こう。完了ラインはそのテストの下の床であって、代替ではない。
+2. **`os validate` の全部ではない。** リファレンスは明示的だ。第一段階はルールレジストリであり、「`defineStack` の来歴拒否……、パッケージドキュメントの lint、能力プロバイダーのチェック、ピックリスト参照とビューコンテナ名のチェック、そして `--strict` は `os validate` のものにとどまるので、それも実行すること」。アドバイザリ——`warning` と `info` の所見——も `os verify` を失敗させることはない。CRM の実行は 9 件を数え、読むなら `os validate` だと指し示した。
+3. **`needs-fixture` と `skipped` は失敗ではない。** CRM の六オブジェクトのうち二つは一度も往復せず、実行は 0 で終了した。サマリー行はそう言う。終了コードには言えない。
+4. **`--rls` は一つの不変条件、一つのクラスを、場面がある場所でのみ証明する。** 権限セットが*正しい*ものかについては何も言わない——それは[レビューの二つ目のパス：キーではなく値を確認する](/en/blog/how-to-review-ai-generated-app-changes/)だ——そしてペルソナが何でも読めるアプリでは、それらについて何も証明しないし、そう言う。
+5. **オプトインであり、既定ではシングルテナントだ。** `--rls` なしではペルソナは発行されず、`--multi-tenant` なしでは起動は単一組織なので、テナント分離ポリシーは試されたものではない。
+6. **人間の verify ではない。** 入門ループのステップ 4 は「あなたが Console UI で verify する」——人が、動いているアプリを見る。同じ言葉、違う行為。`os verify` は機械的な半分で、画面を見ることはない。
+
+## ループのどこに位置するか
+
+このサイトが描き続けているループには入力側と出力側がある。入力側では、[エージェントを ObjectStack に向け](/en/blog/how-to-point-your-agent-at-objectstack/)——ルールファイル、スキルバンドル、ツールサーバー——エージェントが型付きメタデータを書く。出力側では、メタデータはゲート（`os validate`：強制可能、あるいはエージェントが行動できるメッセージ付きで拒否）、次に完了ライン（`os verify`：起動して振る舞う、何が証明され何が証明されなかったかのレポート付き）、次にどのゲートも登れない一段のための[レビュー](/en/blog/how-to-review-ai-generated-app-changes/)、そして Console の前の人へと進む。このサイトの [CRM 構築](/en/blog/how-to-build-a-crm-with-an-ai-agent/)はゲート、ビルド、開発サーバーを実行し、完了ラインは一度も実行しなかった。本稿はその一歩とサインオフの間にあるステップで、CI では一行だ。
+
+```bash
+npx os validate && npx os verify --rls --json > verify-report.json
+node -e "const r=require('./verify-report.json'); console.log('hardFailures', r.hardFailures, '· rls unproven', r.rls?.totals.unproven ?? 'n/a')"
+```
+
+`verify-report.json` をプルリクエストに添付する。レビュアーは diff の前に三行を読む——終了コード、`crud.summary`、`rls.totals.unproven`——そして意見を持つ前に、何が機械的に確立され、何が判断の問題として残っているかを知る。その区分こそ、書き手がモデルであるときに、宣言され[強制される](/en/glossary/declared-vs-enforced/)ターゲットフォーマットを選ぶ論拠のすべてだ。機械は登れる段を登り、登れない段を報告する。
+
+エージェントをそのターゲットに向け、完了ラインを自分で実行させよう。README によるこのコマンドの説明が約束のすべてであり、それ以上ではない。`os verify  # Boot the app in-process and verify it over real HTTP`。同じループをホスト型で、ブラウザだけで、何もインストールせずに使いたい？それが ObjectOS — ObjectStack の上に構築された商用ランタイム環境です。
+
+---
+
+*ObjectStack 17.7.0 で検証——`npm create objectstack@latest` がインストールした `create-objectstack` 17.7.0 と `@objectstack/cli` 17.7.0、Node 22。CRM は `@objectstack/cli@17.7.0` タグの `examples/app-crm` を、公開済みの 17.7.0 パッケージに対して実行したもの。上のすべてのコマンドとすべての出力ブロックは実行したものであり、再構成したものではない。出力は省略記号を付けた箇所で切り詰めており、どこも書き換えていない。*
