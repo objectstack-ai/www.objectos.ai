@@ -10,9 +10,9 @@ const page = {
     description:
       '编码 Agent 的 README 路径：npm create objectstack@latest 写入 AGENTS.md，Agent 编写类型化元数据，os validate 拒掉运行时会失败的东西，npx os dev --ui 把应用渲染出来供人审阅。',
     eyebrow: 'Agent 开发指南',
-    heroTitle: '别教每个开发者手写应用。教你的 Agent 目标格式。',
+    heroTitle: '别教每个开发者手写应用。教你的 Agent 写本体。',
     lead:
-      `${p.t2}Agent 是作者，你是审阅者：脚手架写入 AGENTS.md，让 Agent 一开始就带着协议规则；Strict TypeScript、Zod schema 与 os validate 会在无效输出进入运行时前将其拒掉；整个应用小到 AI 能整体装下。`,
+      `${p.t2}Agent 写的就是本体——四个承诺里的「${p.t3[1]}」——你是审阅者：脚手架写入 AGENTS.md，让 Agent 一开始就带着协议规则；Strict TypeScript、Zod schema 与 os validate 会在无效输出进入运行时前将其拒掉；整个应用小到 AI 能整体装下。`,
     primary: { label: '照 README 路径走', href: 'https://github.com/objectstack-ai/objectstack#try-it-in-five-minutes' },
     secondary: { label: '查看模板模式', href: '/en/templates/' },
     metrics: [
@@ -51,8 +51,8 @@ npx os dev --ui   # -> http://localhost:3000/_console/`,
             meta: '上下文',
           },
           {
-            title: '2. 生成元数据',
-            body: 'Agent 以 Strict TypeScript 编辑对象、视图、流程、动作、仪表盘、翻译与工具定义，而不是生成应用胶水代码。',
+            title: '2. 编写本体',
+            body: 'Agent 以 Strict TypeScript 编辑本体——对象与字段、关系、动作、权限、流程与工具定义——及其投影——视图、仪表盘、翻译——而不是生成应用胶水代码。',
             meta: '编写',
           },
           {

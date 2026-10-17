@@ -43,13 +43,17 @@ type TextTemplates = {
 };
 
 const NAMES: Record<string, NameMap> = {
+  // The slug and URL keep the category name people search for; the copy no
+  // longer defines the product by it. The name is a noun phrase because the
+  // per-locale templates below interpolate it mid-sentence (ko keeps a final
+  // consonant so the templates' 이/은 particles stay right).
   'ai-native-app-platform': {
-    'zh-Hans': { title: 'AI-native 应用平台', shortTitle: 'AI-native 应用平台' },
-    ja: { title: 'AI-native アプリプラットフォーム', shortTitle: 'AI-native アプリ' },
-    de: { title: 'AI-native App-Plattform', shortTitle: 'AI-native App-Plattform' },
-    es: { title: 'Plataforma de aplicaciones AI-native', shortTitle: 'Plataforma AI-native' },
-    fr: { title: 'Plateforme applicative AI-native', shortTitle: 'Plateforme AI-native' },
-    ko: { title: 'AI-native 앱 플랫폼', shortTitle: 'AI-native 앱 플랫폼' },
+    'zh-Hans': { title: '可执行的业务本体', shortTitle: '可执行业务本体' },
+    ja: { title: '実行可能なビジネスオントロジー', shortTitle: '実行可能なオントロジー' },
+    de: { title: 'Ausführbare Geschäftsontologie', shortTitle: 'Ausführbare Geschäftsontologie' },
+    es: { title: 'Ontología de negocio ejecutable', shortTitle: 'Ontología ejecutable' },
+    fr: { title: 'Ontologie métier exécutable', shortTitle: 'Ontologie exécutable' },
+    ko: { title: '실행 가능한 비즈니스 온톨로지 플랫폼', shortTitle: '실행 가능한 온톨로지' },
   },
   'legacy-system-modernization': {
     'zh-Hans': { title: '用 AI 做遗留系统现代化', shortTitle: '遗留系统现代化' },
@@ -101,11 +105,11 @@ const TEMPLATES: Record<TemplateLocale, TextTemplates> = {
       whyNow: '为什么现在重要',
     },
     description: (name) =>
-      `了解 ${name} 如何连接现有业务系统、建模业务对象，并让 AI 在权限、审批和审计边界内工作。`,
+      `了解 ${name} 如何连接现有业务系统、把业务建模成一份可执行的本体，并让 AI 在权限、审批和审计边界内工作。`,
     lead: (name) =>
-      `${name} 的核心不是再做一个演示页面，而是把真实业务对象、权限、流程、API 和 Agent 工具组织成一个可治理的运行层。`,
+      `${name} 的核心不是再做一个演示页面，而是一份可执行的业务本体：对象与字段、关系、动作、权限、流程，以及 Agent 与工具定义。视图、仪表盘、应用和翻译是它的投影，不是产品本身。`,
     definition: (name) =>
-      `${name} 把客户、工单、订单、设备、合同和审批等业务记录变成 AI 可以理解和调用的结构化对象。ObjectOS 让 AI 使用明确的工具和权限边界，而不是直接绕过系统访问数据。`,
+      `${name} 把客户、工单、订单、设备、合同和审批等业务记录写进同一份本体：对象、权限、动作和流程声明在一起，运行时从中派生数据库、API、界面和 MCP 工具，并在每一次调用上执行权限与审计。ObjectOS 让 AI 使用明确的工具和权限边界，而不是直接绕过系统访问数据。`,
     whyNow: (name) => [
       `${name} 让企业 AI 面向真实业务记录，而不是一次性的导出文件。`,
       '应用生成之后还需要权限、审计、审批和持续演进能力。',
@@ -131,7 +135,7 @@ const TEMPLATES: Record<TemplateLocale, TextTemplates> = {
       {
         question: '这和低代码有什么不同？',
         answer:
-          '低代码主要加速表单和流程搭建。ObjectOS 更关注底层业务对象、权限治理、系统集成、Agent 工具和长期演进。',
+          '低代码平台是最近的亲戚：那里同样由元数据生成表、API 和界面。区别在定义放在哪里、写给谁看。低代码把元数据当作配置存在厂商的数据库里、由人在界面上点出来；ObjectStack 把它写成你仓库里类型化、声明式的 TypeScript——进版本库、按 diff 审阅、运行前经 os validate 校验，并且是为 AI 来写而设计的。',
       },
       {
         question: '是否需要先替换现有系统？',
