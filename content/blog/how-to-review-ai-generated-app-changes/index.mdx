@@ -3,7 +3,7 @@ title: "How to Review AI-Generated Code: A Checklist for Metadata App Changes"
 description: "A four-pass review order for AI-written app changes, worked on a real diff. The validation gate proves a change is enforceable; it never proves the change is correct. That third rung is the reviewer's whole job."
 author: ObjectStack Team
 date: 2026-09-08T10:00:00+08:00
-updated: 2026-10-15T10:00:00+08:00
+updated: 2026-10-23T10:00:00+08:00
 status: published
 topic: app-building
 audience: developer
@@ -79,7 +79,7 @@ Here is the change. The target is the CRM example app in the ObjectStack monorep
 +     crm_opportunity: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: true },
 ```
 
-Thirty-odd lines. Every key in it is real, every key parses, and `os build` is green. It carries three defects and inherits a fourth — and each one announces itself at a different volume: one warning, one info line, and two silences. That spread is exactly why the passes run in the order they do.
+Thirty-odd lines. Every key in it is real, every key parses, and `os validate` is green (on the CRM example, `os build` is not: its committed access-matrix snapshot refuses the delete grant, as measured in [the access-matrix snapshot gate post](/en/blog/catch-ai-silent-permission-change-access-matrix-gate/)). It carries three defects and inherits a fourth — and each one announces itself at a different volume: one warning, one info line, and two silences. That spread is exactly why the passes run in the order they do.
 
 ## Pass 1 — read the findings your build did not fail on
 
@@ -109,7 +109,7 @@ What the gate does guarantee, so you can stop hand-checking it:
 
 What the gate does not, and structurally cannot, tell you:
 
-**`allowDelete: false → true`.** No rule fires. Both values are valid; both are enforceable; the runtime will enforce whichever one you merge. Nothing in the metadata expresses whether sales representatives should be able to delete opportunities, because that is a business fact about your company. This one word is the entire third rung, and it is invisible to every one of the 42 rules.
+**`allowDelete: false → true`.** No rule fires. One gate that is not a rule does fire when the app opts in, the committed [access-matrix snapshot](/en/blog/catch-ai-silent-permission-change-access-matrix-gate/), and it fails `os compile` with a line naming who gains what. Both values are valid; both are enforceable; the runtime will enforce whichever one you merge. Nothing in the metadata expresses whether sales representatives should be able to delete opportunities, because that is a business fact about your company. This one word is the entire third rung, and it is invisible to every one of the 42 rules.
 
 The same holds for a value that is not even in the diff. The example object carries `sharingModel: 'public_read_write'` — in the spec's own words, "everyone reads+writes" — with a source comment saying the wide baseline is deliberate for a demo. Copy that object into a real CRM and you have org-wide read/write on every opportunity, and every gate stays green forever, because the gate's question was *did you declare a baseline*, not *is this the right one*. When a change touches an object, read its OWD even when the diff does not, and read the [record access](https://docs.objectos.ai/docs/configure/permissions/record-access) and [permission sets](https://docs.objectos.ai/docs/configure/permissions/permission-sets) reference if the semantics are not fresh.
 
