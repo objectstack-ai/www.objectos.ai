@@ -1,0 +1,259 @@
+---
+title: "Wie fängt man eine stille Berechtigungsänderung einer AI ab, bevor sie ausgeliefert wird? Das Access-Matrix-Snapshot-Gate, gemessen an einem CRM mit 7 Einträgen"
+description: "Auf @objectstack/cli 17.7.0 lässt os validate allowDelete false→true ohne Befund durch. In einer eingebuchten App lässt os compile den Build scheitern, mit einer Zeile, wer was gewinnt, bis ein Mensch den Snapshot neu erzeugt."
+author: ObjectStack Team
+date: 2026-10-23
+status: published
+topic: governance
+audience: developer
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - AI-Agents
+  - Agent-Berechtigungen
+  - Reviewbarer Diff
+---
+
+**Zuerst die Antwort.** `os validate` liest den *Wert* von `allowDelete` nicht. Ein Agent, der ihn auf einem Permission Set von `false` auf `true` kippt, kommt also ohne Befund durch die Validierung. Genau das meint [die Review-Checkliste](/en/blog/how-to-review-ai-generated-app-changes/) mit „keine Regel schlägt an", und der Satz bleibt wahr. Es gibt ein Gate, das anschlägt, wenn die App sich dafür entscheidet: eine committete **Access-Matrix**, eine Zeile pro (Permission Set × Objekt) mit den effektiven Bits für create, read, edit und delete, die `os compile` bei jedem Build aus den Metadaten neu ableitet und gegen den Snapshot diffst. Ein Drift lässt den Build scheitern, mit einer semantischen Zeile, `'crm_sales_user' gains delete on 'crm_opportunity'`, bis ein Mensch den Snapshot neu erzeugt, und der Git-Diff des Snapshots ist das, was der Reviewer unterschreibt. Gemessen auf dem veröffentlichten `@objectstack/cli` 17.7.0, der Version, die `npm create objectstack@latest` installiert, am mitgelieferten CRM-Beispiel, dessen Matrix **sieben Einträge** hat: eine Änderung, eine Drift-Zeile, eine geänderte JSON-Zeile.
+
+Das Konzept, das man aus diesem Beitrag mitnehmen sollte, heißt **effektive Fähigkeit statt roher Flags**: Die Matrix berichtet, was ein Permission Set tatsächlich *tun kann*, nachdem die Superuser-Bits eingefaltet sind, und trägt die Datensatz-Baseline des Objekts in derselben Zeile. Die Änderung braucht nach wie vor einen Menschen. Sie kann nur nicht mehr still sein.
+
+## Die Änderung, und die zwei Befehle
+
+Das Ziel ist `examples/app-crm` aus dem ObjectStack-Repository am Tag `@objectstack/cli@17.7.0`, installiert gegen die veröffentlichten 17.7.0-Pakete statt gegen das Monorepo. Es ist eingebucht: Neben `objectstack.config.ts` liegt eine `access-matrix.json`. Die Änderung ist die, die der Review-Beitrag durchgearbeitet hat, ein Wort in Zeile 45 von `src/security/sales-positions.ts`:
+
+```diff
+  export const SalesUserPermissionSet = definePermissionSet({
+    name: 'crm_sales_user',
+    label: 'CRM Sales User',
+    objects: {
+      crm_account: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: false },
+      crm_contact: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: false },
+-     crm_opportunity: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: false },
++     crm_opportunity: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: true },
+```
+
+Erste Tür, `npx os validate`. Die Ausgabe ist auf die relevanten Zeilen gekürzt; nichts dazwischen nennt `allowDelete`, `crm_sales_user` oder eine Matrix.
+
+```text
+$ npx os --version
+@objectstack/cli/17.7.0 linux-x64 node-v22.22.2
+
+$ npx os validate
+◆ Validate
+  → Loading configuration...
+  → Validating against ObjectStack Protocol...
+  → Running author-time rules (49)...
+  → Checking that every required capability has a provider installable in this edition...
+  → Checking package docs (ADR-0046)...
+
+  ✓ Validation passed (684ms)
+  Security: 3 Positions  2 Permissions
+$ echo $?
+0
+```
+
+Neunundvierzig Author-Time-Regeln sind gelaufen. Keine davon hat eine Meinung dazu, ob Vertriebsmitarbeiter Opportunities löschen dürfen, denn das ist eine Tatsache über Ihr Unternehmen und keine über die Metadaten. Der Satz des Review-Beitrags stimmt exakt: Beide Werte sind gültig, beide sind durchsetzbar, die Runtime setzt den durch, den Sie mergen.
+
+Zweite Tür, `npx os compile`. Dieselbe Konfiguration, dieselben 49 Regeln, und dann ein Schritt, den `validate` nicht hat:
+
+```text
+$ npx os compile
+◆ Compile
+  → Loading configuration...
+  → Normalizing stack definition...
+  → Validating protocol compliance...
+  → Running author-time rules (49)...
+  → Checking that every required capability has a provider installable in this edition...
+  → Checking access-matrix snapshot (ADR-0090 D6)...
+
+  ✗ Access matrix drift (1 change) — capability changes must be reviewed
+  • 'crm_sales_user' gains delete on 'crm_opportunity'
+  If intended, re-run with --update-access-matrix and commit the snapshot — its diff IS the review artifact.
+$ echo $?
+1
+```
+
+`os build` ist derselbe Befehl unter anderem Namen (im CLI-Quelltext von 17.7.0: `Build extends Compile`) und scheitert mit derselben Zeile. Mit `--json` wird das Scheitern zu einer Payload, die ein CI-Schritt lesen kann:
+
+```json
+{ "success": false, "error": "access matrix drift",
+  "changes": ["'crm_sales_user' gains delete on 'crm_opportunity'"] }
+```
+
+![Zwei Befehle, ein Gate: os validate führt die 49 Author-Time-Regeln aus und besteht, weil keine Regel den Wert von allowDelete liest; os compile führt dieselben Regeln aus, leitet dann die Access-Matrix aus den Metadaten ab, diffst sie gegen die committete access-matrix.json und lässt den Build mit einer semantischen Zeile scheitern, bis ein Mensch den Snapshot neu erzeugt und seinen Diff committet](./two-commands-one-gate-en.svg)
+
+Das ist der ganze Mechanismus. Der Rest dieses Beitrags handelt davon, was die Zeile bedeutet, warum sie *delete* sagt, obwohl im Quelltext `allowDelete` steht, und was das Gate nicht tut.
+
+## Was das Gate ist
+
+Die ObjectStack-Dokumentation beschreibt es in einem Absatz, den man besser zitiert als paraphrasiert:
+
+<blockquote lang="en">
+AI drafts permission metadata on this platform; the one thing it must never do is *silently* change who can do what. The access-matrix gate makes every capability change a **visible, reviewable build event**: the (permission set × object) matrix is derived purely from metadata on every `os compile`, diffed against a committed snapshot, and any drift **fails the build** with a semantic explanation until a human regenerates the snapshot.
+</blockquote>
+
+(AI entwirft auf dieser Plattform Berechtigungsmetadaten; das eine, was sie nie tun darf, ist *still* zu ändern, wer was tun kann. Das Access-Matrix-Gate macht jede Fähigkeitsänderung zu einem **sichtbaren, reviewbaren Build-Ereignis**: Die (Permission Set × Objekt)-Matrix wird bei jedem `os compile` rein aus Metadaten abgeleitet, gegen einen committeten Snapshot gediffst, und jeder Drift **lässt den Build scheitern**, mit einer semantischen Erklärung, bis ein Mensch den Snapshot neu erzeugt.)
+
+Drei Tatsachen dazu, jede auf 17.7.0 geprüft:
+
+- **Es gilt pro App und ist Opt-in.** Man committet eine `access-matrix.json` neben `objectstack.config.ts`; die erste erzeugt `os compile --update-access-matrix`. Keine Datei, kein Gate: Die CLI liest den Pfad einmal und behandelt eine fehlende Datei als „nicht eingebucht". Die beiden mitgelieferten Beispiele `app-crm` und `app-showcase` werden eingebucht ausgeliefert. Ein frisches `npm create objectstack@latest`-Gerüst nicht: Die 17.7.0-Vorlage enthält keine `access-matrix.json`, der erste Befehl des Opt-ins ist also Ihrer.
+- **Es ist keine der 49 Regeln.** Der CLI-Quelltext ordnet es ein als „keine Registry-Regel: Es liest (und mit dem Flag schreibt) eine Datei neben der Konfiguration, statt eine Frage über den Stack zu beantworten." Deshalb sehen `validate` und `lint` es nie: Sie führen die Registry aus, und das Snapshot-Gate wohnt in `compile`.
+- **Es ist klein.** Die gesamte committete Matrix des CRM hat sieben Einträge, und sieben Zeilen sind jede Berechtigung, die die App deklariert: sechs Objekte für `crm_sales_user` und eine reine Einfüge-Zeile für das anonyme `guest_portal`-Profil hinter dem öffentlichen Web-to-Lead-Formular.
+
+| Permission Set | Objekt | create | read | edit | delete | View All | Modify All | Datensatz-Baseline (OWD) |
+| :--- | :--- | :-: | :-: | :-: | :-: | :-: | :-: | :--- |
+| `crm_sales_user` | `crm_account` | ✓ | ✓ | ✓ | – | – | – | `public_read_write` |
+| `crm_sales_user` | `crm_activity` | ✓ | ✓ | ✓ | – | – | – | `public_read_write` |
+| `crm_sales_user` | `crm_contact` | ✓ | ✓ | ✓ | – | – | – | `public_read_write` |
+| `crm_sales_user` | `crm_lead` | ✓ | ✓ | ✓ | – | – | – | `public_read_write` |
+| `crm_sales_user` | `crm_opportunity` | ✓ | ✓ | ✓ | – | – | – | `public_read_write` |
+| `crm_sales_user` | `crm_opportunity_line_item` | ✓ | ✓ | ✓ | – | – | – | `controlled_by_parent` |
+| `guest_portal` | `crm_lead` | ✓ | – | – | – | – | – | `public_read_write` |
+
+Ein Reviewer, der den Quelltext des CRM nie geöffnet hat, kann diese Tabelle in unter einer Minute lesen und sagen, was die App einem Vertriebsnutzer erlaubt. Darum lohnt es sich, sie als committete Datei zu führen: Das Fähigkeitsmodell der Anwendung ist eine Tabelle mit sieben Zeilen im Repository, und jeder Pull Request, der die Tabelle ändert, muss das in seinem Diff sagen.
+
+Auf der Platte ist jede Zeile ein JSON-Objekt. Die Zeile `crm_opportunity`, vor der Änderung:
+
+```json
+{
+  "permissionSet": "crm_sales_user",
+  "object": "crm_opportunity",
+  "create": true,
+  "read": true,
+  "edit": true,
+  "delete": false,
+  "viewAllRecords": false,
+  "modifyAllRecords": false,
+  "sharingModel": "public_read_write"
+}
+```
+
+Die Drift-Zeilen entstehen aus dem Diff zweier solcher Tabellen, und es gibt genau fünf Zeilenformen. Sie sind das Vokabular, das ein Reviewer lesen wird, darum hier aus dem 17.7.0-Quelltext von `diffAccessMatrix`:
+
+| Was sich geändert hat | Die Zeile |
+| :--- | :--- |
+| Eine Zeile ist verschwunden | `'SET' loses ALL access to 'OBJECT' (entry removed)` |
+| Eine Zeile ist erschienen | `'SET' gains access to 'OBJECT' (create, read, …)` |
+| Ein Bit einer bestehenden Zeile ist gekippt | `'SET' gains delete on 'OBJECT'` oder `'SET' loses read on 'OBJECT'`; View All und Modify All in derselben Form |
+| Die Lese- oder Schreibtiefe hat sich bewegt | `'SET' read depth on 'OBJECT': own → org` |
+| Die Datensatz-Baseline des Objekts hat sich bewegt | `'OBJECT' record baseline (OWD): private → public_read_write (affects every principal)` |
+
+Unsere Änderung ist die dritte Form. Die Zeile sagt *gains delete*, statt den Schlüssel zu zitieren, und das ist das Thema des nächsten Abschnitts.
+
+## Effektive Fähigkeit statt roher Flags
+
+Sehen Sie sich die Zeile oben noch einmal an. Sie hat eine Spalte `delete`, keine Spalte `allowDelete`, und der Unterschied ist Absicht: Die Matrix berichtet **effektive** Fähigkeit. In der 17.7.0-Spezifikation entscheidet eine Funktion, ob eine Objektberechtigung ein Verb gewährt, und es ist dieselbe Funktion, die die Durchsetzungstür der Runtime fragt, bevor sie mit 403 antwortet. Ihre Faltung, aus `objectPermissionGrants` in `@objectstack/spec`:
+
+- `read` ist wahr, wenn `allowRead` wahr ist, **oder** `viewAllRecords` wahr ist, **oder** `modifyAllRecords` wahr ist.
+- `edit`, `delete` und `transfer` sind wahr, wenn ihr eigenes Bit wahr ist **oder** `modifyAllRecords` wahr ist.
+- `create` hat keinen Superuser-Bypass: Modify All weitet edit und delete aus, es erzeugt keine create-Berechtigung.
+- `export` ist eine Konjunktion, `allowExport` **und** `read`, sodass ein Set, das Export auf einem Objekt gewährt, das es nicht lesen kann, nichts gewährt. (Die Matrix trägt nur die vier CRUD-Spalten; `transfer` und `export` sind die übrigen Verben der Faltung, hier aufgeführt, weil die Faltung der Punkt ist.)
+
+Der eigene Kommentar der Spezifikation dazu, warum es nicht `permission[target] === true` ist, nennt die Lücke zwischen deklariert und durchgesetzt „in die gefährliche Richtung gewendet: ein Prädikat, das eine Aktion vor dem einen Administrator verbirgt, der die Macht hat, sie zu nutzen." Eine Matrix aus den rohen `allow*`-Bits hätte denselben blinden Fleck. Also fragt die Matrix die Faltung, und die zwei Superuser-Spalten bleiben als rohe Bits daneben stehen, weil sie der Kontext sind, gegen den ein Reviewer die CRUD-Spalten liest.
+
+![Effektive Fähigkeit statt roher Flags: Die sechs rohen Bits eines Permission Sets laufen durch die Faltung der Spezifikation, objectPermissionGrants, in der View All und Modify All read, edit und delete ausweiten und create keinen Bypass hat, und landen als eine Matrixzeile, deren create, read, edit und delete effektiv sind, deren Spalten View All und Modify All die als Kontext behaltenen rohen Bits sind und die die Datensatz-Baseline des Objekts trägt; gemessen auf 17.7.0 erzeugt modifyAllRecords true bei unverändertem allowDelete false zwei Drift-Zeilen, gains delete und gains Modify All Data](./effective-not-raw-en.svg)
+
+Die messbare Folge: Eine andere Ein-Schlüssel-Änderung an derselben Zeile, `allowDelete: false` exakt belassen und `modifyAllRecords: true` ergänzt, erzeugt zwei Zeilen statt einer, und die erste davon ist das delete, das niemand getippt hat:
+
+```text
+$ npx os compile
+  ✗ Access matrix drift (2 changes) — capability changes must be reviewed
+  • 'crm_sales_user' gains delete on 'crm_opportunity'
+  • 'crm_sales_user' gains Modify All Data on 'crm_opportunity'
+```
+
+`npx os validate` auf dieser Änderung: `✓ Validation passed (575ms)`. Das rohe Flag sagt weiterhin `false`; die Matrix sagt `true`, weil die Runtime das Löschen durchlassen würde, und die Aufgabe der Matrix ist es, dem Reviewer zu sagen, was die 403 sagen würde, nicht, was in der Quelldatei steht.
+
+Die letzte Spalte ist aus demselben Grund wichtig. Der zweite Durchgang des Review-Beitrags sagte, man solle das `sharingModel` eines Objekts auch dann lesen, wenn der Diff es nicht berührt, weil `public_read_write` auf einem kopierten Demo-Objekt organisationsweites Lesen und Schreiben bedeutet, bei lauter grünen Gates. Hier steht die Baseline in derselben Zeile neben der Berechtigung, und eine Baseline-Änderung ist eine eigene Drift-Zeile, markiert mit *affects every principal*, weil ein OWD-Ausschlag auf einmal ändert, was jede Zeile für dieses Objekt bedeutet.
+
+## Neu erzeugen, dann den Diff lesen
+
+Die Fehlermeldung sagt, was zu tun ist, wenn die Änderung beabsichtigt ist, und die Schleife sind drei Befehle.
+
+```text
+$ npx os compile --update-access-matrix
+  → Checking that every required capability has a provider installable in this edition...
+  → Access matrix snapshot written to access-matrix.json (ADR-0090 D6) — review the diff.
+  → Writing artifact...
+
+  ✓ Build complete (592ms)
+
+$ git diff -U8 access-matrix.json
+@@ -46,17 +46,17 @@
+       "sharingModel": "public_read_write"
+     },
+     {
+       "permissionSet": "crm_sales_user",
+       "object": "crm_opportunity",
+       "create": true,
+       "read": true,
+       "edit": true,
+-      "delete": false,
++      "delete": true,
+       "viewAllRecords": false,
+       "modifyAllRecords": false,
+       "sharingModel": "public_read_write"
+     },
+
+$ npx os compile
+  → Checking access-matrix snapshot (ADR-0090 D6)...
+  ✓ Build complete (508ms)
+```
+
+Zwei praktische Hinweise aus dem Lauf. Das Flag schreibt die ganze Datei bedingungslos neu; vergleichen Sie nach einer Neuerzeugung also die Zahl der Hunks in `access-matrix.json` mit der Zahl der semantischen Zeilen, die der gescheiterte Compile ausgegeben hat: eine Zeile, ein Hunk, und alles darüber hinaus ist eine Änderung, um die Sie nicht gebeten haben. Und lesen Sie den Hunk mit `-U8` statt mit den voreingestellten drei Kontextzeilen. Die Schlüssel `permissionSet` und `object` der Zeile stehen fünf und sechs Zeilen über dem geänderten Bit; ein voreingestelltes `git diff` zeigt Ihnen `"delete": false → true` mit abgeschnittenem Zeilennamen, und dann ist die semantische Zeile des Compile das Einzige, was Ihnen sagt, *wessen* delete es war.
+
+Der Pull Request trägt jetzt zwei Hunks, die dasselbe in zwei Vokabularen sagen: den Quelltext-Kipp, den ein Agent geschrieben hat, und die Fähigkeitszeile, die ein Mensch neu erzeugt hat. Die Formulierung der Dokumentation für den zweiten ist die richtige, und es ist der Satz, den dieser Beitrag messen sollte: „its diff IS the review artifact", sein Diff IST das Review-Artefakt.
+
+## Wo es zwischen den anderen Verteidigungen steht
+
+Das Gate ist einer von drei Mechanismen auf denselben strukturierten Berechtigungen, und jeder fängt etwas, was die anderen nicht können.
+
+| Mechanismus | Was es fängt | Wann es läuft | Was es tut |
+| :--- | :--- | :--- | :--- |
+| Security-Posture-Linter (ADR-0090 D7) | eine *für sich genommen gefährliche* Deklaration: ein nicht gesetztes OWD, ein hochprivilegierter Anker-Vorschlag, ein stillgelegter Alias | `validate`, `build`, `lint`, als Registry-Regeln | lässt den Build mit der eigenen Meldung der Regel scheitern |
+| Access-Matrix-Snapshot-Gate (ADR-0090 D6) | eine *legitim aussehende* Änderung, deren Wirkungsradius ein Mensch trotzdem abzeichnen sollte | `compile` und `build`, wenn die App eingebucht ist | lässt den Build mit semantischen Zeilen scheitern, bis der Snapshot neu erzeugt ist |
+| Explain-Engine | warum die eine Anfrage eines Principals so entschieden wurde | zur Laufzeit, pro Entscheidung | beantwortet die Frage, setzt nichts Neues durch |
+
+Die Beziehung der letzten beiden fasst die Dokumentation in einem Satz: Die Matrix „is the same evaluation run over representative (permission set × object) pairs; explain is the per-decision zoom lens", ist dieselbe Auswertung über repräsentative (Permission Set × Objekt)-Paare; explain ist die Zoomlinse pro Entscheidung. Und der Grund, warum es alle drei überhaupt gibt, ist derselbe: Berechtigungen sind strukturierte Daten mit geschlossenem Vokabular, also kann ein Build-Schritt eine Tabelle daraus ableiten. Ein Berechtigungsmodell aus freien Prädikaten im Anwendungscode hat keine Tabelle, die man diffen könnte.
+
+## Was das Gate nicht tut
+
+Fünf Grenzen, klar benannt, weil der Satz „der Build fängt Berechtigungsänderungen" von der Sorte ist, die ohne ihre Bedingungen weitererzählt wird.
+
+1. **Es ist Opt-in, und der Standard ist aus.** Ein frisches 17.7.0-Gerüst hat keinen Snapshot, also kein Gate. Das Opt-in ist ein Befehl und eine committete Datei, und der Pull Request, der die Datei hinzufügt, ist der, den man am sorgfältigsten reviewen sollte: Dieser Snapshot ist die Baseline, gegen die jeder spätere Diff gelesen wird.
+2. **Es läuft in `compile` und `build`, nie in `validate` oder `lint`.** Oben gemessen: dieselbe Änderung, `validate` mit Exit 0 und ohne Erwähnung der Matrix, `compile` mit Exit 1. Eine CI-Pipeline, die `os validate` ausführt und die App für geprüft erklärt, hat dieses Gate nicht ausgeführt.
+3. **Es macht die Änderung sichtbar, nicht unmöglich.** `--update-access-matrix` ist ein Flag, und ein Agent kann es selbst ausführen und den neuen Snapshot selbst committen. Was der Agent nicht kann, ist die Fähigkeitsänderung aus dem Pull Request verschwinden lassen: Die Zeile steht im Diff, ob ein Mensch oder ein Modell sie neu erzeugt hat. Die dritte Sprosse der Review-Leiter, *ist das richtig*, bleibt beim Reviewer, und der Beitrag des Gates ist, dass die Frage jetzt mit der Form der Antwort in einer Zeile ankommt.
+4. **Sein Geltungsbereich ist (Permission Set × Objekt).** Create, read, edit, delete, die zwei Superuser-Bits, Lese- und Schreibtiefe und die Baseline des Objekts. Nicht Feldsicherheit, nicht Sharing-Regeln, nicht zeilenweise Prädikate, nicht, welche Nutzer das Set halten (das sind Laufzeitdaten, wie die Grenzen des Review-Beitrags schon sagen), und nicht, was ein Action-Body tut, sobald er läuft.
+5. **Bei einem Ein-Wort-Kipp zeigt der Quelltext-Diff es ohnehin.** Das ist der faire Einwand: `allowDelete: false → true` sieht in `sales-positions.ts` jeder, der den Diff liest. Die Matrix verdient ihren Platz dort, wo Quelltextänderung und Fähigkeitsänderung verschiedene Formen haben. Ein `modifyAllRecords: true` ist eine Quelltextzeile und zwei Fähigkeitszeilen. Eine `sharingModel`-Änderung in einer Objektdatei ist eine Quelltextzeile und eine Zeile auf der Zeile jedes Sets für dieses Objekt. Ein über mehrere Dateien zusammengesetztes Berechtigungsmodell landet trotzdem als eine sortierte Tabelle, die ein Reviewer lesen kann, ohne eine davon zu öffnen. Der Wert des Gates ist nicht, dass es den Kipp sieht. Er ist, dass es den Kipp im Vokabular sieht, das die Runtime durchsetzt.
+
+## Die zwei Zeilen für die Checkliste
+
+Der Review-Beitrag endete mit einer Checkliste. Das Gate fügt ihrem zweiten Durchgang eine Zeile und ihrem ersten eine Frage hinzu.
+
+```text
+[ ] Which door? If the pipeline ran only os validate, the access-matrix gate did not run.
+[ ] Pass 2 — permissions:
+    [ ] access-matrix.json is committed (opt in once: npx os compile --update-access-matrix)
+    [ ] on drift: one semantic line per hunk in access-matrix.json, and the PR says why
+    [ ] read each hunk with -U8, so the permissionSet and object are in it
+    [ ] for every "gains" line, say who gains what, and read the OWD on the same row
+```
+
+## Richten Sie Ihren Agent auf ein Ziel, dessen Berechtigungen eine Tabelle sind
+
+Ein Agent kann in jedem Stack ein Berechtigungsmodell erzeugen. Was er in den meisten nicht kann, ist Ihnen eine Tabelle mit sieben Zeilen zu geben, die der Build bei jedem Lauf neu ableitet und vergleicht, weil das Berechtigungsmodell in den meisten Stacks über Middleware, Query-Filter und ein, zwei Templates verteilt ist und es keine Tabelle zum Vergleichen gibt. Das Gate oben existiert, weil Berechtigungen in ObjectStack typisierte Metadaten mit geschlossenem Vokabular sind, dieselbe Eigenschaft, die den Diff [reviewbar](/en/glossary/reviewable-diff/) macht und verhindert, dass eine deklarierte Berechtigung [nur ein Kommentar](/en/glossary/declared-vs-enforced/) ist. Wer das Argument dafür sucht, wo die Durchsetzung selbst läuft, findet es in [Wo die Berechtigungen von AI-Agents durchgesetzt werden](/en/blog/objectos-agent-permission-boundaries/).
+
+Richten Sie Ihren Agent also auf dieses Ziel, mit [einer Regeldatei](/en/blog/how-to-point-your-agent-at-objectstack/) oder direkt mit der Spezifikation und der MCP-Oberfläche, und machen Sie den Snapshot zum Ersten, was Sie committen:
+
+```bash
+npm create objectstack@latest my-app && cd my-app
+# im Coding-Agent öffnen und beschreiben, was das Geschäft braucht
+npx os compile --update-access-matrix   # der erste Snapshot: lesen, committen
+npx os compile                          # in CI, bei jedem Lauf; os validate allein führt das Gate nicht aus
+```
+
+Von da an darf ein Agent Berechtigungen frei entwerfen, und das Einzige, was er nicht kann, ist zu ändern, wer was tun kann, ohne eine Zeile in der Build-Ausgabe und eine Zeile im Diff.
+
+Dieselbe Schleife gehostet, im Browser, ohne Installation? Das ist ObjectOS, die kommerzielle Laufzeitumgebung auf Basis von ObjectStack.

@@ -1,0 +1,259 @@
+---
+title: "AI が黙って変えた権限を出荷前に捕まえるには？アクセスマトリクス・スナップショットゲートを、7 行の CRM で実測する"
+description: "@objectstack/cli 17.7.0 では、エージェントが allowDelete を false から true に変えても os validate は何も報告しない。オプトインしたアプリでは os compile がビルドを失敗させ、誰が何を得たかを一行で示し、人がスナップショットを再生成するまで止める。"
+author: ObjectStack Team
+date: 2026-10-23
+status: published
+topic: governance
+audience: developer
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - AI エージェント
+  - エージェントの権限
+  - レビューできる diff
+---
+
+**まず答えから。** `os validate` は `allowDelete` の*値*を読まない。だからエージェントが権限セット上でこのキーを `false` から `true` に変えても、検証は何の指摘もなく通る。[レビューのチェックリスト](/en/blog/how-to-review-ai-generated-app-changes/)が「ルールは一つも発火しない」と書いたのはこのことで、その文は今も正しい。ただし、アプリがオプトインしていれば発火するゲートが一つある。コミットされた**アクセスマトリクス**——（権限セット × オブジェクト）ごとに一行、実効的な create・read・edit・delete のビットを持つ表——を、`os compile` がビルドのたびにメタデータから導出し直し、スナップショットと突き合わせる。ドリフトがあればビルドは失敗し、`'crm_sales_user' gains delete on 'crm_opportunity'` という意味のある一行を出して、人がスナップショットを再生成するまで止まる。そしてスナップショットの git diff が、レビュアーが署名する対象になる。公開済みの `@objectstack/cli` 17.7.0——`npm create objectstack@latest` がインストールするバージョン——で、同梱の CRM サンプルに対して計測した。そのマトリクスは**七行**。編集一つ、ドリフト一行、JSON の変更一行。
+
+この記事から持ち帰ってほしい概念は、**生のフラグではなく、実効的な能力**という考え方だ。マトリクスが報告するのは、スーパーユーザーのビットを畳み込んだあとに権限セットが実際に*できること*で、同じ行にオブジェクトのレコード基準値が載っている。変更にはやはり人の判断が要る。だがもう、黙って通ることはない。
+
+## 変更と、二つのコマンド
+
+対象は ObjectStack リポジトリのタグ `@objectstack/cli@17.7.0` にある `examples/app-crm` を、モノレポではなく公開済みの 17.7.0 パッケージに対してインストールしたもの。オプトイン済みで、`objectstack.config.ts` の隣に `access-matrix.json` がある。編集はレビュー記事が辿ったのと同じ、`src/security/sales-positions.ts` の 45 行目、一語だけ。
+
+```diff
+  export const SalesUserPermissionSet = definePermissionSet({
+    name: 'crm_sales_user',
+    label: 'CRM Sales User',
+    objects: {
+      crm_account: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: false },
+      crm_contact: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: false },
+-     crm_opportunity: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: false },
++     crm_opportunity: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: true },
+```
+
+一つ目の扉、`npx os validate`。出力は要点の行だけに切り詰めてある。省いた部分に `allowDelete`、`crm_sales_user`、マトリクスのいずれも登場しない。
+
+```text
+$ npx os --version
+@objectstack/cli/17.7.0 linux-x64 node-v22.22.2
+
+$ npx os validate
+◆ Validate
+  → Loading configuration...
+  → Validating against ObjectStack Protocol...
+  → Running author-time rules (49)...
+  → Checking that every required capability has a provider installable in this edition...
+  → Checking package docs (ADR-0046)...
+
+  ✓ Validation passed (684ms)
+  Security: 3 Positions  2 Permissions
+$ echo $?
+0
+```
+
+四十九本のオーサリング時ルールが走った。営業担当が商談を削除してよいかどうかについて意見を持つルールは一本もない。それはメタデータの事実ではなく、あなたの会社の事実だからだ。レビュー記事の文はそのまま正しい——どちらの値も妥当で、どちらも強制可能で、マージした方をランタイムが強制する。
+
+二つ目の扉、`npx os compile`。同じ設定、同じ 49 本のルール、そのあとに `validate` にはない一手順が加わる。
+
+```text
+$ npx os compile
+◆ Compile
+  → Loading configuration...
+  → Normalizing stack definition...
+  → Validating protocol compliance...
+  → Running author-time rules (49)...
+  → Checking that every required capability has a provider installable in this edition...
+  → Checking access-matrix snapshot (ADR-0090 D6)...
+
+  ✗ Access matrix drift (1 change) — capability changes must be reviewed
+  • 'crm_sales_user' gains delete on 'crm_opportunity'
+  If intended, re-run with --update-access-matrix and commit the snapshot — its diff IS the review artifact.
+$ echo $?
+1
+```
+
+`os build` は同じコマンドの別名で（17.7.0 の CLI ソースでは `Build extends Compile`）、同じ一行で失敗する。`--json` を付ければ、失敗は CI のステップが読めるペイロードになる。
+
+```json
+{ "success": false, "error": "access matrix drift",
+  "changes": ["'crm_sales_user' gains delete on 'crm_opportunity'"] }
+```
+
+![二つのコマンド、一つのゲート：os validate は 49 本のオーサリング時ルールを実行して通る。allowDelete の値を読むルールがないからだ。os compile は同じルールを実行したあと、メタデータからアクセスマトリクスを導出し、コミット済みの access-matrix.json と突き合わせ、意味のある一行を出してビルドを失敗させる。人がスナップショットを再生成してその diff をコミットするまで続く](./two-commands-one-gate-en.svg)
+
+仕組みはこれで全部だ。残りは、この一行が何を意味するか、ソースには `allowDelete` と書いてあるのになぜ *delete* と言うのか、そしてこのゲートが何をしないか、についてになる。
+
+## このゲートとは何か
+
+ObjectStack のドキュメントは一段落で説明している。言い換えずに引用する価値がある。
+
+<blockquote lang="en">
+AI drafts permission metadata on this platform; the one thing it must never do is *silently* change who can do what. The access-matrix gate makes every capability change a **visible, reviewable build event**: the (permission set × object) matrix is derived purely from metadata on every `os compile`, diffed against a committed snapshot, and any drift **fails the build** with a semantic explanation until a human regenerates the snapshot.
+</blockquote>
+
+（このプラットフォームでは AI が権限メタデータの草稿を書く。それが決してしてはならない唯一のことは、誰が何をできるかを*黙って*変えることだ。アクセスマトリクスのゲートは、能力の変更をすべて**目に見える、レビュー可能なビルドイベント**にする。（権限セット × オブジェクト）のマトリクスは `os compile` のたびに純粋にメタデータから導出され、コミット済みのスナップショットと突き合わされ、どんなドリフトも意味のある説明付きで**ビルドを失敗させる**。人がスナップショットを再生成するまで。）
+
+このゲートについての三つの事実。いずれも 17.7.0 で確かめた。
+
+- **アプリ単位で、オプトイン。** `objectstack.config.ts` の隣に `access-matrix.json` をコミットする。最初の一枚は `os compile --update-access-matrix` で生成する。ファイルがなければゲートもない。CLI はこのパスを一度だけ読み、ファイルがなければ「オプトインしていない」と扱う。同梱の二つのサンプル `app-crm` と `app-showcase` はオプトイン済みで出荷されている。一方、`npm create objectstack@latest` で作った新しいスキャフォールドはそうではない。17.7.0 のテンプレートに `access-matrix.json` は含まれていないので、オプトインの最初のコマンドはあなたが打つことになる。
+- **49 本のルールの一つではない。** CLI のソースはこれを「レジストリのルールではない。スタックについての問いに答えるのではなく、設定の隣にあるファイルを読む（フラグ付きなら書く）」と分類している。`validate` と `lint` がこのゲートを一切見ない理由がそこにある。それらが走らせるのはレジストリで、スナップショットのゲートは `compile` に住んでいる。
+- **小さい。** CRM のコミット済みマトリクス全体は七行で、七行がこのアプリの宣言する授権のすべてだ。`crm_sales_user` に六オブジェクト、そして公開の web-to-lead フォームの裏にいる匿名の `guest_portal` プロファイルに、挿入専用の一行。
+
+| 権限セット | オブジェクト | create | read | edit | delete | View All | Modify All | レコード基準値（OWD） |
+| :--- | :--- | :-: | :-: | :-: | :-: | :-: | :-: | :--- |
+| `crm_sales_user` | `crm_account` | ✓ | ✓ | ✓ | – | – | – | `public_read_write` |
+| `crm_sales_user` | `crm_activity` | ✓ | ✓ | ✓ | – | – | – | `public_read_write` |
+| `crm_sales_user` | `crm_contact` | ✓ | ✓ | ✓ | – | – | – | `public_read_write` |
+| `crm_sales_user` | `crm_lead` | ✓ | ✓ | ✓ | – | – | – | `public_read_write` |
+| `crm_sales_user` | `crm_opportunity` | ✓ | ✓ | ✓ | – | – | – | `public_read_write` |
+| `crm_sales_user` | `crm_opportunity_line_item` | ✓ | ✓ | ✓ | – | – | – | `controlled_by_parent` |
+| `guest_portal` | `crm_lead` | ✓ | – | – | – | – | – | `public_read_write` |
+
+CRM のソースを一度も開いたことのないレビュアーでも、この表を一分以内に読み、このアプリが営業ユーザーに何を許しているか言える。コミットされたファイルとして持つ意味はそこにある。アプリケーションの能力モデルがリポジトリ内の七行の表であり、その表を変えるプルリクエストはすべて、自分の diff でそのことを言わなければならない。
+
+ディスク上では、各行は一つの JSON オブジェクトだ。編集前の `crm_opportunity` の行。
+
+```json
+{
+  "permissionSet": "crm_sales_user",
+  "object": "crm_opportunity",
+  "create": true,
+  "read": true,
+  "edit": true,
+  "delete": false,
+  "viewAllRecords": false,
+  "modifyAllRecords": false,
+  "sharingModel": "public_read_write"
+}
+```
+
+ドリフトの行は、この表二枚の diff から生成され、行の形はちょうど五種類しかない。レビュアーが読むことになる語彙なので、17.7.0 の `diffAccessMatrix` のソースから挙げておく。
+
+| 何が変わったか | 出る行 |
+| :--- | :--- |
+| 行が消えた | `'SET' loses ALL access to 'OBJECT' (entry removed)` |
+| 行が現れた | `'SET' gains access to 'OBJECT' (create, read, …)` |
+| 既存の行でビットが一つ反転した | `'SET' gains delete on 'OBJECT'` または `'SET' loses read on 'OBJECT'`。View All と Modify All も同じ形 |
+| 読み書きの深さが動いた | `'SET' read depth on 'OBJECT': own → org` |
+| オブジェクトのレコード基準値が動いた | `'OBJECT' record baseline (OWD): private → public_read_write (affects every principal)` |
+
+今回の編集は三番目の形だ。行はキー名を引用せず *gains delete* と言う。それが次の節の主題になる。
+
+## 生のフラグではなく、実効的な能力
+
+上の行をもう一度見てほしい。列は `allowDelete` ではなく `delete` で、この違いは意図的だ。マトリクスは**実効的な**能力を報告する。17.7.0 の仕様では、あるオブジェクト権限が動詞を許すかどうかを一つの関数が決めており、ランタイムの強制の扉が 403 を返す前に尋ねるのも同じ関数だ。その畳み込みは、`@objectstack/spec` の `objectPermissionGrants` から次の通り。
+
+- `read` は、`allowRead` が true、**または** `viewAllRecords` が true、**または** `modifyAllRecords` が true のとき true。
+- `edit`、`delete`、`transfer` は、それぞれのビットが true **または** `modifyAllRecords` が true のとき true。
+- `create` にスーパーユーザーのバイパスはない。Modify All は edit と delete を広げるが、create の授権を作り出しはしない。
+- `export` は連言で、`allowExport` **かつ** `read`。読めないオブジェクトにエクスポートを許すセットは、何も許していない。（マトリクスが持つのは CRUD の四列だけ。`transfer` と `export` は畳み込みの残りの動詞で、畳み込みそのものが要点なのでここに挙げた。）
+
+なぜ `permission[target] === true` ではないのか、仕様自身のコメントは、宣言と強制のギャップが「危険な向きに現れたもの——その権限を使える唯一の管理者から、述語がアクションを隠してしまう」と説明している。生の `allow*` ビットから組んだマトリクスは同じ盲点を持つ。だからマトリクスは畳み込みに尋ね、スーパーユーザーの二列は生のビットのまま隣に残す。それがレビュアーが CRUD 列を読むときの文脈だからだ。
+
+![生のフラグではなく実効的な能力：権限セットの六つの生ビットが仕様の畳み込み objectPermissionGrants を通る。そこでは View All と Modify All が read・edit・delete を広げ、create にバイパスはない。結果は一つのマトリクス行で、create・read・edit・delete は実効値、View All と Modify All の列は文脈として残した生のビット、さらにオブジェクトのレコード基準値を持つ。17.7.0 で計測すると、allowDelete を false のまま modifyAllRecords を true にしただけで、gains delete と gains Modify All Data の二行のドリフトが出る](./effective-not-raw-en.svg)
+
+計測できる帰結はこうだ。同じ行に対する別の一キーの編集——`allowDelete: false` をそのままにして `modifyAllRecords: true` を足す——は、一行ではなく二行を生み、その一行目は誰も打ち込んでいない delete だ。
+
+```text
+$ npx os compile
+  ✗ Access matrix drift (2 changes) — capability changes must be reviewed
+  • 'crm_sales_user' gains delete on 'crm_opportunity'
+  • 'crm_sales_user' gains Modify All Data on 'crm_opportunity'
+```
+
+この編集に対する `npx os validate` は `✓ Validation passed (575ms)`。生のフラグはまだ `false` と言っている。マトリクスは `true` と言う。ランタイムはその削除を通すからで、マトリクスの仕事はソースファイルが何と書いているかではなく、403 が何と言うかをレビュアーに伝えることだ。
+
+最後の列が重要なのも同じ理由による。レビュー記事の二つ目のパスは、diff が触れていなくてもオブジェクトの `sharingModel` を読めと言った。コピーしてきたデモ用オブジェクトの `public_read_write` は、すべてのゲートが緑のまま組織全体の読み書きを意味するからだ。ここでは基準値が授権の隣の同じ行に載り、基準値の変更はそれ自体がドリフトの一行になって *affects every principal*（すべてのプリンシパルに影響）と印が付く。OWD が振れれば、そのオブジェクトのすべての行の意味が一度に変わるからだ。
+
+## 再生成して、diff を読む
+
+失敗メッセージは、変更が意図したものならどうするかを言っており、ループは三つのコマンドで閉じる。
+
+```text
+$ npx os compile --update-access-matrix
+  → Checking that every required capability has a provider installable in this edition...
+  → Access matrix snapshot written to access-matrix.json (ADR-0090 D6) — review the diff.
+  → Writing artifact...
+
+  ✓ Build complete (592ms)
+
+$ git diff -U8 access-matrix.json
+@@ -46,17 +46,17 @@
+       "sharingModel": "public_read_write"
+     },
+     {
+       "permissionSet": "crm_sales_user",
+       "object": "crm_opportunity",
+       "create": true,
+       "read": true,
+       "edit": true,
+-      "delete": false,
++      "delete": true,
+       "viewAllRecords": false,
+       "modifyAllRecords": false,
+       "sharingModel": "public_read_write"
+     },
+
+$ npx os compile
+  → Checking access-matrix snapshot (ADR-0090 D6)...
+  ✓ Build complete (508ms)
+```
+
+実際に回してわかった実用的な注意が二つ。このフラグはファイル全体を無条件に書き直すので、再生成のあとは `access-matrix.json` のハンク数と、失敗した compile が出した意味のある行の数を比べること。一行に一ハンク、余りは頼んでいない変更だ。もう一つ、ハンクはデフォルトの三行の文脈ではなく `-U8` で読むこと。その行の `permissionSet` と `object` のキーは、変わったビットの五、六行上にある。デフォルトの `git diff` は行の名前を切り落とした `"delete": false → true` を見せるので、*誰の* delete だったかを教えてくれるのは compile の意味のある行だけになってしまう。
+
+プルリクエストにはいま、同じことを二つの語彙で言うハンクが二つある。エージェントが書いたソースの反転と、人が再生成した能力の行。後者についてのドキュメントの言い方が正しく、それがこの記事が計測するために存在した文だ——「its diff IS the review artifact」、その diff こそがレビューの成果物である。
+
+## ほかの防御の中での位置
+
+このゲートは、同じ構造化された授権の上に築かれた三つの仕組みの一つで、それぞれがほかの二つに捕まえられないものを捕まえる。
+
+| 仕組み | 何を捕まえるか | いつ走るか | 何をするか |
+| :--- | :--- | :--- | :--- |
+| セキュリティ姿勢リンター（ADR-0090 D7） | *単体で危険な*宣言：未設定の OWD、高権限のアンカー提案、廃止された別名 | `validate`、`build`、`lint`、レジストリのルールとして | ルール自身のメッセージでビルドを失敗させる |
+| アクセスマトリクス・スナップショットゲート（ADR-0090 D6） | *一見もっともらしい*が、影響範囲に人の署名が要る変更 | `compile` と `build`、アプリがオプトインしているとき | スナップショットが再生成されるまで、意味のある行でビルドを失敗させる |
+| 説明エンジン | あるプリンシパルのある要求が、なぜその結果になったか | ランタイムで、判断ごとに | 問いに答える。新しい強制は何もしない |
+
+後ろ二つの関係を、ドキュメントは一文で言う。マトリクスは「is the same evaluation run over representative (permission set × object) pairs; explain is the per-decision zoom lens」——代表的な（権限セット × オブジェクト）の組に対して同じ評価を走らせたもので、説明エンジンは判断ごとのズームレンズだ。そして三つが存在する理由も一つで、授権が閉じた語彙を持つ構造化データだから、ビルドの一手順が表を導出できる。アプリケーションコード内の自由形式の述語として書かれた権限モデルには、比べる表がない。
+
+## このゲートがしないこと
+
+五つの限界を率直に。「ビルドが権限変更を捕まえる」という文は、条件を落として繰り返されやすい種類の文だからだ。
+
+1. **オプトインで、デフォルトはオフ。** 新しい 17.7.0 のスキャフォールドにはスナップショットがなく、したがってゲートもない。オプトインはコマンド一つとコミットするファイル一つで、そのファイルを追加するプルリクエストこそ最も注意深くレビューすべきものだ。そのスナップショットが、以後のすべての diff が照らされる基準線になる。
+2. **走るのは `compile` と `build` で、`validate` や `lint` では決して走らない。** 上で計測した通り、同じ編集で `validate` は exit 0 かつマトリクスに言及なし、`compile` は exit 1。`os validate` を走らせてアプリを検査済みと呼ぶ CI パイプラインは、このゲートを走らせていない。
+3. **変更を目に見えるようにするのであって、不可能にするのではない。** `--update-access-matrix` はフラグ一つで、エージェントが自分で実行して新しいスナップショットをコミットすることもできる。エージェントにできないのは、能力の変更をプルリクエストから消すことだ。人が再生成しようがモデルが再生成しようが、行は diff の中にある。レビューの梯子の三段目——*これは正しいか*——は依然レビュアーのもので、ゲートの貢献は、その問いが答えの形をした一行と一緒に届くようになったことにある。
+4. **範囲は（権限セット × オブジェクト）。** create、read、edit、delete、二つのスーパーユーザービット、読み書きの深さ、オブジェクトの基準値。フィールドレベルのセキュリティは対象外、共有ルールも、行レベルの述語も、誰がそのセットを持っているか（レビュー記事の限界の節が言う通り、それはランタイムデータだ）も、アクション本体が実行時に何をするかも対象外。
+5. **一語の反転なら、ソースの diff にもう見えている。** これは正当な反論だ。`allowDelete: false → true` は、diff を読む人なら誰でも `sales-positions.ts` の中に見つけられる。マトリクスが価値を持つのは、ソースの変更と能力の変更の形が違う場面だ。`modifyAllRecords: true` 一つはソース一行で能力二行。オブジェクトファイルの `sharingModel` 一箇所の編集はソース一行で、そのオブジェクトに関するすべてのセットの行に一行ずつ。複数のファイルにまたがって組み上げられた権限モデルも、結局は一枚の整列された表に落ち、レビュアーはどのファイルも開かずに読める。ゲートの価値は反転を見ることではない。ランタイムが強制する語彙で反転を見ることだ。
+
+## チェックリストに足す二行
+
+レビュー記事はチェックリストで終わった。このゲートは、その二つ目のパスに一行を、一つ目のパスに問いを一つ足す。
+
+```text
+[ ] Which door? If the pipeline ran only os validate, the access-matrix gate did not run.
+[ ] Pass 2 — permissions:
+    [ ] access-matrix.json is committed (opt in once: npx os compile --update-access-matrix)
+    [ ] on drift: one semantic line per hunk in access-matrix.json, and the PR says why
+    [ ] read each hunk with -U8, so the permissionSet and object are in it
+    [ ] for every "gains" line, say who gains what, and read the OWD on the same row
+```
+
+## 授権が表になっているターゲットにエージェントを向ける
+
+エージェントはどんなスタックでも権限モデルを生成できる。ほとんどのスタックでできないのは、ビルドが毎回導出し直して比較する七行の表を手渡すことだ。ほとんどのスタックでは権限モデルがミドルウェア、クエリフィルタ、一つ二つのテンプレートに散らばっていて、比べる表がないからだ。上のゲートが存在するのは、ObjectStack の授権が閉じた語彙を持つ型付きメタデータだからで、それは diff を[レビューできる](/en/glossary/reviewable-diff/)ものにし、宣言された権限が[ただのコメント](/en/glossary/declared-vs-enforced/)にならないようにするのと同じ性質だ。強制そのものがどこで走るかの議論は、[AI エージェントの権限はどこで強制されるか](/en/blog/objectos-agent-permission-boundaries/)にある。
+
+だからエージェントをそのターゲットに向け——[ルールファイル](/en/blog/how-to-point-your-agent-at-objectstack/)で、あるいは仕様と MCP のサーフェスに直接——スナップショットを最初にコミットするものにしてほしい。
+
+```bash
+npm create objectstack@latest my-app && cd my-app
+# コーディングエージェントで開き、ビジネスが必要とするものを説明する
+npx os compile --update-access-matrix   # 最初のスナップショット：読んで、コミットする
+npx os compile                          # CI で毎回。os validate だけではこのゲートは走らない
+```
+
+それ以降、エージェントは自由に授権の草稿を書ける。できないのはただ一つ、ビルド出力に一行も、diff に一行も残さずに、誰が何をできるかを変えることだ。
+
+同じループをホスト型で、ブラウザだけで、何もインストールせずに使いたい？それが ObjectOS — ObjectStack の上に構築された商用ランタイム環境です。
