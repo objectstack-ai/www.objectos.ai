@@ -1,0 +1,179 @@
+---
+title: "Pouvez-vous prouver qui a ouvert une fiche client, y compris un agent AI ? L’audit des consultations d’enregistrements et les quatre choses qu’une ligne de lecture n’enregistre jamais"
+description: "Sur 17.7.0, la lecture REST d’une personne et le get_record MCP d’un agent laissent chacun une ligne read dans sys_audit_log ; liste, objet non déclaré et lecture refusée, aucune. Ce que la ligne contient, et jamais."
+author: ObjectStack Team
+date: 2026-10-26
+status: published
+topic: governance
+audience: it
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Piste d’audit
+  - Audit des consultations
+  - Agents AI
+  - Conformité
+---
+
+Deux lignes. C’est toute la réponse à « qui a ouvert cet après-midi les fiches contact d’Ada Lovelace et de Linus Torvalds ? », telle que la renvoie le registre d’un CRM qui tourne sur `@objectstack/cli` 17.7.0 :
+
+| `created_at` | `action` | `user_id` | `object_name` | `record_id` | `old_value` | `new_value` | `ip_address` |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `02:33:05.512Z` | `read` | `PdP4MC…` (Dana, commerciale, via REST) | `crm_contact` | `h7UV6R…` (Ada) | `null` | `null` | `null` |
+| `02:33:05.618Z` | `read` | `S8My56…` (la clé API d’un agent, via MCP) | `crm_contact` | `HwvcWK…` (Linus) | `null` | `null` | `null` |
+
+Cinq lectures ont produit ces deux lignes. Une personne a ouvert un contact par l’API REST ; un agent AI en a récupéré un autre par MCP `get_record` avec sa propre clé API ; la même personne a ensuite listé tous les contacts ; a ouvert un compte (un objet que le déploiement n’avait pas déclaré) ; et un utilisateur sans aucun poste a tenté d’ouvrir un contact et a reçu `403`. La liste, le compte et le refus n’ont rien laissé. Voilà l’affirmation que cet article défend, mesurée de bout en bout : **l’audit des consultations d’ObjectStack enregistre qui a ouvert quel enregistrement et quand, pour les personnes comme pour les agents, et il est déclaré assez étroitement pour que ce qu’il n’enregistre pas se lise aussi clairement que ce qu’il enregistre.** Le concept à retenir : **des frontières déclarées plutôt que découvertes**. Une fonction de conformité dont les bords sont écrits vaut mieux qu’une fonction dont on découvre les bords pendant l’audit.
+
+## La question à laquelle la couche de permissions ne peut pas répondre
+
+Chaque couche de permissions répond à *qui a le droit de voir cet enregistrement* : droits d’objet, sécurité au niveau des lignes, masquage des champs. Une revue réglementée commence par la question d’après. La propre documentation d’ObjectStack sur l’audit des consultations le dit dès sa deuxième phrase : la page « répond à la question qui vient ensuite, et par laquelle s’ouvre toute revue dans un secteur réglementé : **qui l’a réellement ouvert, et quand ?** » (`content/docs/permissions/record-view-auditing.mdx`, lignes 8–9 au tag 17.7.0).
+
+L’[article sur l’EU AI Act](/fr/blog/eu-ai-act-runtime-audit/) de ce blog soutenait qu’un auditeur demande la trace d’*une* action, pas un document de politique. L’[article sur les frontières de permissions](/en/blog/objectos-agent-permission-boundaries/) portait sur l’endroit *où* s’exécute la vérification. Aucun ne couvrait les lectures. Une lecture est la seule action qui ne change rien et qui, de ce fait, ne laisse rien à moins que quelque chose soit construit pour la remarquer ; sur ObjectStack, ce quelque chose est l’action `read` dans `sys_audit_log`, écrite par `@objectstack/plugin-audit` depuis un hook `afterFind`. Le même registre porte les lignes `create`, `update` et `delete` issues des hooks de cycle de vie et les lignes `login` / `logout` via le slot `services.audit` ; les lignes de consultation sont la troisième surface, et la seule désactivée par défaut.
+
+## L’activer est un argument de constructeur, et rien d’autre
+
+L’ensemble audité est donné une fois, là où le plugin est installé. Dans une application servie par la CLI, cet endroit est le tableau `plugins` du stack. L’exemple de CRM utilisé ci-dessous a demandé deux changements : `pnpm add @objectstack/plugin-audit@17.7.0`, et ceci dans `objectstack.config.ts` :
+
+```ts
+import { AuditPlugin } from '@objectstack/plugin-audit';
+
+export default defineStack({
+  // …manifest, objects, views, permissions…
+  plugins: [
+    new AuditPlugin({ readAudit: { objects: ['crm_contact'] } }),
+  ],
+});
+```
+
+`readAudit` accepte exactement trois clés : `objects` (l’activation fermée par objet, vide par défaut), `maxBatchSize` (50 par défaut) et `flushIntervalMs` (2000 par défaut). Une liste vide « n’enregistre aucun hook du tout », si bien qu’un déploiement qui n’active rien ne paie rien sur son chemin de lecture.
+
+Ce qui manque délibérément compte plus que ce qui est là. La documentation l’écrit en gras : « **Il n’y a ni clé de métadonnées d’objet ni variable d’environnement.** » `enable.auditReads` n’existe pas, aucun bloc `audit:` dans la configuration du stack ne nomme d’objets, et `requires: ['audit']` fait du plugin une exigence de démarrage mais « construit le plugin sans options et n’offre nulle part où nommer des objets ». La raison avancée est celle qui fait de cet article un texte de gouvernance plutôt qu’une note de configuration : une clé déclarable « peut être posée sur un objet dans un déploiement qui n’installe jamais ce plugin, produisant des métadonnées qui *se lisent* comme auditées et n’enregistrent rien — et sur une surface de conformité, une déclaration qu’un relecteur prend pour une couverture est pire qu’une fonction absente ».
+
+Cette forme a une conséquence visible sur la CLI. `os serve` et `os dev` enregistrent automatiquement leur propre `AuditPlugin` sans options avant de parcourir vos `plugins`, et un enregistrement ultérieur sous le même nom remplace le précédent. Le journal de démarrage de l’exécution mesurée porte la ligne qui prouve que l’activation a pris :
+
+```text
+WARN Plugin superseded: 'com.objectstack.audit' — the later registration (v1.0.0)
+REPLACED the earlier one (v1.0.0). Only the later instance is initialized and
+started; the earlier one is discarded without ever running init().
+```
+
+La documentation est explicite : cette ligne « **est l’activation qui fonctionne**, pas une erreur de configuration ». C’est aussi le seul signal de démarrage que l’on obtient : sur 17.7.0, la ligne « record-view auditing installed on N object(s) » est écrite au niveau `info`, sous le niveau `warn` par défaut du serveur de développement, si bien qu’un démarrage par défaut montre l’avertissement superseded.
+
+## Cinq lectures, deux lignes
+
+L’application est `examples/app-crm` du dépôt ObjectStack au tag `@objectstack/cli@17.7.0`, avec chaque dépendance `@objectstack/*` épinglée aux paquets 17.7.0 publiés et l’entrée `plugins` ci-dessus ajoutée. Elle a été lancée avec `objectstack dev --compile --no-watch`, qui compile l’artefact à ce démarrage plutôt que de servir un `dist/objectstack.json` périmé. Trois comptes ont été créés par l’API d’administration : Dana, une personne qui tient le poste `sales_rep` ; `agent-svc`, l’identité sur laquelle est frappée la clé API d’un agent AI, également `sales_rep` ; et `nobody`, sans aucun poste. Le poste `sales_rep` porte `crm_contact: { allowRead: true, … }` dans le jeu de permissions de l’exemple, donc Dana et l’agent peuvent lire les contacts et `nobody` ne le peut pas.
+
+Avant les lectures, la requête sur le registre renvoie une page vide :
+
+```bash
+curl -s -b admin.cookies 'http://localhost:49200/api/v1/data/sys_audit_log?filter={"action":"read"}'
+```
+
+```json
+{ "object": "sys_audit_log", "records": [], "total": 0, "hasMore": false }
+```
+
+Puis les cinq lectures, dans l’ordre.
+
+| # | Qui | Lecture | Réponse | Ligne ? |
+| --- | --- | --- | --- | --- |
+| A | Dana, connectée | `GET /api/v1/data/crm_contact/h7UV6R…` | `200`, la fiche d’Ada | **oui** |
+| B | l’agent, `x-api-key: osk_…` | MCP `tools/call` `get_record` `{ objectName: "crm_contact", recordId: "HwvcWK…" }` | `200`, la fiche de Linus | **oui** |
+| C | Dana | `GET /api/v1/data/crm_contact` | `200`, trois fiches | non |
+| D | Dana | `GET /api/v1/data/crm_account/eSLGuo…` | `200`, la fiche d’Acme | non |
+| E | `nobody` | `GET /api/v1/data/crm_contact/h7UV6R…` | `403 PERMISSION_DENIED` | non |
+
+L’appel de l’agent est une requête MCP ordinaire vers le point de terminaison `/api/v1/mcp` de l’application, authentifiée par la seule clé :
+
+```bash
+curl -s -X POST http://localhost:49200/api/v1/mcp -H "x-api-key: $KEY" \
+  -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"get_record",
+       "arguments":{"objectName":"crm_contact","recordId":"HwvcWKZh3n1TM55l"}}}'
+```
+
+```json
+{ "result": { "content": [ { "type": "text",
+  "text": "{ \"id\": \"HwvcWKZh3n1TM55l\", \"first_name\": \"Linus\", \"last_name\": \"Torvalds\", \"email\": \"linus@globex.example\", … }" } ] },
+  "jsonrpc": "2.0", "id": 3 }
+```
+
+Cinq secondes plus tard, au-delà de l’intervalle de vidage de 2 000 ms, la même requête sur le registre en tant qu’administrateur renvoie exactement les deux lignes du début de cet article, `"total": 2`.
+
+![Cinq lectures sur ObjectStack 17.7.0 et lesquelles atterrissent dans sys_audit_log : une lecture de détail REST par une personne et un get_record MCP par un agent produisent chacun une ligne read ; une lecture de liste, une lecture de détail d’un objet hors de readAudit.objects et une lecture refusée n’en produisent aucune.](./which-reads-land-en.svg)
+
+La règle qui les trie tient en deux conditions, toutes deux tirées de la documentation et toutes deux visibles dans les résultats mesurés. Une lecture est enregistrée lorsqu’elle « a matérialisé exactement un enregistrement » et que « son prédicat a fixé la clé primaire ». `GET /data/:object/:id` atteint le moteur sous la forme `findOne(object, { where: { id } })` ; de même l’outil MCP `get_record`, qui sur le transport HTTP se résout par le même protocole de données et le même chemin `getData` que la route REST. La lecture C échoue à la première condition (un tableau « n’est jamais une vue de détail, donc `find` ne se qualifie jamais »). La lecture D n’est pas refusée par la règle du tout ; `crm_account` n’était simplement pas dans `readAudit.objects`, et le hook n’est enregistré que sur les objets nommés. La lecture E n’a jamais atteint le hook : le journal du serveur pour cette requête indique `Access denied: operation 'findOne' on object 'crm_contact' is not permitted for positions [org_member, everyone]`, et « le hook `afterFind` n’est atteint que par une lecture qui a réussi ».
+
+La fiche de cet article prédisait que le `get_record` d’un agent *devrait* se qualifier, par inférence depuis la règle du prédicat. C’est le cas, sur 17.7.0, et la preuve est la ligne B.
+
+## Ce qu’une ligne de consultation enregistre
+
+En lisant les lignes mesurées face au tableau de colonnes documenté :
+
+| Colonne | Documenté | Mesuré (ligne B, l’agent) |
+| --- | --- | --- |
+| `action` | `read` | `read` |
+| `created_at` | « L’instant où l’enregistrement a été **consulté**, pas l’instant où son lot a été vidé » | `02:33:05.618Z` ; l’`updated_at` de la ligne est `02:33:07.513Z`, le vidage deux secondes plus tard |
+| `user_id` | « Le sujet `sys_user` qui l’a ouvert » | `S8My5629…`, l’identité sur laquelle la clé a été frappée |
+| `actor` | « L’étiquette du principal, avec repli sur `user_id` » | `S8My5629…`, le repli |
+| `object_name` / `record_id` | l’objet et l’enregistrement ouverts | `crm_contact` / `HwvcWKZh3n1TM55l` |
+| `tenant_id` / `organization_id` | « L’organisation propre de l’**enregistrement consulté**, avec repli sur l’organisation de session du lecteur » | l’`org_mvbs…` du lecteur, parce que le contact de démonstration porte `organization_id: null` |
+| `old_value` / `new_value` | « Toujours `null` » | `null` / `null` |
+
+Deux détails de ce tableau pèsent pour un auditeur. L’horodatage est la consultation, pas l’écriture, donc un registre lent ne peut pas déplacer le moment où quelque chose s’est produit. Et le tampon de tenant suit l’enregistrement plutôt que le lecteur ; la raison de la documentation est qu’une ligne sur un enregistrement de l’organisation A tamponnée avec l’organisation B du lecteur « atterrirait derrière le mur de tenant de B, invisible pour la seule administratrice de tenant que la ligne concerne ».
+
+## Les quatre choses qu’une ligne de consultation n’enregistre jamais
+
+C’est la moitié de la fonction qu’une matrice de couverture décrit souvent mal, et la moitié à laquelle la documentation consacre une section entière. Les quatre ont été observées dans les lignes mesurées.
+
+1. **Aucune valeur de champ, jamais.** `old_value` et `new_value` restent `null`. Le hook « s’exécute *à l’intérieur* du middleware de sécurité, **avant son masquage des champs**, de sorte que l’enregistrement qu’il voit est du texte en clair avant masquage ». Y copier des valeurs « frapperait une copie en clair d’exactement ce que la sécurité au niveau des champs retient, dans la seule table à laquelle le personnel de conformité reçoit un accès large ». Le registre en sait donc délibérément moins que le lecteur.
+2. **Pas ce que le lecteur a réellement vu.** Cela découle du premier point : une ligne dit qu’un enregistrement a été ouvert, jamais quels champs étaient visibles après masquage. Si votre contrôle exige « quelles colonnes cette personne a-t-elle vues », cette surface n’y répond pas.
+3. **Ni adresse IP ni user agent.** Les deux colonnes existent sur `sys_audit_log` et les deux sont `null` sur les deux lignes. Elles sont tamponnées sur les lignes `login` et `logout`, pas sur les lignes de consultation. C’est aussi pourquoi les lignes A et B se ressemblent : le registre enregistre le **principal**, pas le canal. Rien sur la ligne de l’agent ne dit « MCP », « clé API » ou « agent » ; elle dit `S8My5629…`, l’utilisateur auquel la clé appartient.
+4. **Rien sur les lectures refusées ou échouées.** La lecture E en est la preuve. Une lecture refusée « ne laisse aucune trace ici » ; la trace qu’elle a laissée est la ligne `WARN [Security] Access denied` du journal du serveur, qui est une autre surface, avec une autre rétention.
+
+Deux frontières supplémentaires sont déclarées plutôt que laissées à la découverte. Une lecture élevée au niveau système n’écrit aucune ligne : tout ce qui porte `session.isSystem`, comme un chemin `api.sudo()`, un recalcul de formule ou un cumul, « est la plateforme qui lit pour sa propre comptabilité, pas une personne qui ouvre un enregistrement », et comme `sudo()` conserve l’id utilisateur de l’appelant, ce drapeau est la seule chose qui sépare les deux. Et une lecture sans principal n’écrit aucune ligne, parce qu’« une ligne qui ne nomme personne n’ajoute que du bruit à la seule requête pour laquelle cette capacité existe ».
+
+## « Y compris un agent AI » signifie : sous l’identité que vous lui avez donnée
+
+La ligne B répond à la question du titre, avec une condition. L’ouverture par l’agent a atterri dans le même registre, par le même hook, sous la même règle à deux conditions que celle de Dana, parce que `get_record` est un `findOne` par id sous le principal de l’appelant. Il n’y a aucun chemin d’audit propre aux agents à configurer, et aucun à oublier.
+
+La condition est le point 3 ci-dessus. La ligne nomme le principal, donc ce que le registre peut prouver au sujet d’un agent vaut exactement l’identité sur laquelle sa clé a été frappée. Le guide de connexion MCP de 17.7.0 pose le choix sans détour : « pour un agent local à pleine autorité, frappez la clé sur un administrateur de plateforme ou une identité de **service** dédiée ; pour un agent à périmètre restreint, frappez-la sur un utilisateur ayant exactement l’accès qu’il doit avoir ». Frappez la clé de l’agent sur le compte d’une personne, et le registre rapportera, en toute vérité, que cette personne a ouvert l’enregistrement. L’exécution mesurée l’a frappée sur `agent-svc`, un utilisateur qui n’existe que pour être l’agent, et c’est pour cela que la ligne B est attribuable à l’agent. C’est une décision de provisionnement, pas une fonction d’audit, et c’est la seule décision que cet article vous demande.
+
+## Où sont les lignes, et comment elles échouent
+
+Sous `os dev`, `sys_audit_log` ne vit pas dans la base de données de l’application. Sa classe de cycle de vie `audit` l’achemine vers une source de données `telemetry` dédiée dès qu’une est enregistrée, et le serveur de développement « en provisionne une par défaut sous la forme d’un fichier SQLite voisin ». En ouvrant les deux fichiers de l’exécution mesurée avec le propre pilote SQLite de l’application :
+
+```text
+objectstack.db            -> no such table: sys_audit_log
+objectstack.telemetry.db  -> [{"action":"create","n":40},{"action":"login","n":5},
+                              {"action":"read","n":2},{"action":"update","n":4}]
+```
+
+Les lignes `read` sont les deux du tableau initial. Si une requête d’audit revient un jour vide là où vous attendiez des lignes, cette séparation en est la cause habituelle, et le propre message d’échec du plugin le dit : un « no such table » sur une écriture dans le registre « signifie généralement que l’écriture s’est exécutée contre une source de données DIFFÉRENTE de celle dans laquelle la table a été créée ».
+
+L’autre chose à savoir avant de s’y fier est la posture en cas d’échec. Le hook « met en file et retourne » ; il n’attend rien, et un échec d’audit ne transforme jamais une lecture valide en erreur. Les lignes sont persistées à un tick ultérieur, lorsque `maxBatchSize` consultations sont en tampon ou que `flushIntervalMs` s’est écoulé depuis la première du lot, et `destroy()` vide le reste lors d’un arrêt propre. Ni un débordement du tampon (au-delà d’un plafond fixe de 10 000 consultations en tampon, les plus anciennes sont abandonnées, avec un avertissement une fois par processus) ni une écriture échouée (le lot est perdu, signalé une fois par cause) ne sont retentés. Le propre avertissement de la documentation est la phrase à mettre dans votre runbook : les deux échecs « sont invisibles de partout ailleurs. Les lectures elles-mêmes ont réussi et renvoyé 200 … La requête qui en résulte renvoie une réponse assurée, fausse et **courte** ».
+
+## Ce que cela ne résout pas
+
+- **Les lectures de liste et de recherche ne sont jamais enregistrées**, « y compris une lecture de liste qui a par hasard renvoyé exactement un enregistrement ». La lecture C est la mesure. Une matrice de couverture « devrait lire cela comme “consultations de détail d’enregistrement”, pas comme “lectures” ». Exporter une liste, lancer un rapport, paginer une grille : rien de tout cela ne laisse de trace ici.
+- **L’écran du lecteur n’est pas dans le registre.** Les lignes prouvent une ouverture, pas ce qui a été vu.
+- **Le registre n’est attribuable qu’à hauteur de vos identités.** Encore le point 3 : des clés partagées et des clés frappées sur des comptes personnels rendent la ligne vraie et inutile à la fois.
+- **Lire la piste est lui-même soumis à autorisation.** La propre requête de Dana sur `sys_audit_log?filter={"action":"read"}` a répondu `403 PERMISSION_DENIED`. Hors contexte système, un appelant ne reçoit une ligne de consultation que pour un enregistrement qu’il peut lui-même lire, sauf s’il détient la capacité `view_all_audit_log`, que les administrateurs de plateforme détiennent par défaut et que quiconque d’autre ne détient que par un jeu de permissions. Les lignes sont conservées « à chaud » 90 jours puis archivées sept ans là où une source de données `archive` est enregistrée. Dans l’application Setup, le plugin fournit une liste **Record Views** sous Diagnostics ; sur ObjectOS, cette surface est documentée comme [en lecture seule et immuable](https://docs.objectos.ai/docs/operate/audit-logs).
+
+Rien de cela n’est propre à ObjectStack en tant qu’*exigence* ; tout système d’enregistrement dans lequel un agent lit a besoin d’une [piste de consultation](/en/glossary/audit-trail/) aux bords aussi explicites. L’[article sur l’incident](/fr/blog/when-ai-agent-deletes-production-database/) de ce blog a plaidé pour des garde-fous d’exécution plutôt que des prompts côté écriture ; le côté lecture a la même forme, avec un rayon d’impact plus petit et une mémoire plus longue.
+
+## Pointez votre agent dessus
+
+Si un agent écrit votre application, demandez-lui d’ajouter l’`AuditPlugin` configuré à `plugins` pour chaque objet qui contient des données client, et de refuser toute clé de métadonnées qui prétend faire la même chose, parce que sur 17.7.0 il n’y en a aucune. Puis relisez le diff : un import et une entrée de tableau. Si un agent *exploite* votre application, frappez sa clé sur une identité qui est l’agent et rien d’autre, et lancez la requête sur le registre ci-dessus dès le premier jour, avant qu’on vous la demande.
+
+```bash
+npm create objectstack@latest my-app && cd my-app
+pnpm add @objectstack/plugin-audit
+# ajoutez new AuditPlugin({ readAudit: { objects: ['…'] } }) à plugins, puis
+npx os dev --compile
+```
+
+Ouvrez un enregistrement, attendez deux secondes, interrogez `sys_audit_log` sur `action: read`. Une ligne, aucune valeur.
+
+Vous voulez la même boucle, hébergée, dans le navigateur, sans rien installer ? C’est ObjectOS, l’environnement d’exécution commercial construit sur ObjectStack.

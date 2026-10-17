@@ -1,0 +1,179 @@
+---
+title: "Können Sie beweisen, wer einen Kundendatensatz geöffnet hat, auch ein AI-Agent? Record-View-Auditing und die vier Dinge, die eine Lesezeile nie festhält"
+description: "Auf 17.7.0 hinterlassen ein REST-Lesezugriff einer Person und ein MCP get_record eines Agents je eine read-Zeile in sys_audit_log; Liste, fremdes Objekt und abgewiesener Zugriff keine. Was die Zeile enthält, was nie."
+author: ObjectStack Team
+date: 2026-10-26
+status: published
+topic: governance
+audience: it
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Audit-Trail
+  - Record-View-Auditing
+  - AI-Agents
+  - Compliance
+---
+
+Zwei Zeilen. Das ist die ganze Antwort auf die Frage „Wer hat heute Nachmittag die Kontaktdatensätze von Ada Lovelace und Linus Torvalds geöffnet?“, so wie das Ledger eines CRM auf `@objectstack/cli` 17.7.0 sie zurückgibt:
+
+| `created_at` | `action` | `user_id` | `object_name` | `record_id` | `old_value` | `new_value` | `ip_address` |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `02:33:05.512Z` | `read` | `PdP4MC…` (Dana, Vertriebsmitarbeiterin, über REST) | `crm_contact` | `h7UV6R…` (Ada) | `null` | `null` | `null` |
+| `02:33:05.618Z` | `read` | `S8My56…` (der API-Key eines Agents, über MCP) | `crm_contact` | `HwvcWK…` (Linus) | `null` | `null` | `null` |
+
+Fünf Lesezugriffe erzeugten diese zwei Zeilen. Eine Person öffnete einen Kontakt über die REST-API; ein AI-Agent holte einen anderen über MCP `get_record` mit seinem eigenen API-Key; dieselbe Person listete danach alle Kontakte auf, öffnete einen Account (ein Objekt, das das Deployment nicht registriert hatte), und ein Nutzer ohne Position versuchte, einen Kontakt zu öffnen, und bekam `403`. Die Liste, der Account und die Abweisung hinterließen nichts. Das ist die Behauptung, die dieser Beitrag verteidigt, Ende zu Ende gemessen: **ObjectStacks Record-View-Audit hält fest, wer welchen Datensatz wann geöffnet hat, für Menschen wie für Agents, und es ist so eng deklariert, dass das, was es nicht festhält, so lesbar ist wie das, was es festhält.** Das Konzept, das man mitnehmen sollte: **deklarierte statt entdeckte Grenzen**. Eine Compliance-Funktion, deren Ränder aufgeschrieben sind, schlägt eine, deren Ränder man erst während des Audits findet.
+
+## Die Frage, die die Berechtigungsschicht nicht beantworten kann
+
+Jede Berechtigungsschicht beantwortet, *wer diesen Datensatz sehen darf*: Objektrechte, Row-Level-Security, Feldmaskierung. Eine regulierte Prüfung beginnt mit der Frage danach. ObjectStacks eigene Dokumentation zum Record-View-Auditing sagt es im zweiten Satz: Die Seite „beantwortet die Frage, die danach kommt und mit der jede Prüfung in einer regulierten Branche beginnt: **Wer hat ihn tatsächlich geöffnet, und wann?**“ (`content/docs/permissions/record-view-auditing.mdx`, Zeilen 8–9 am Tag 17.7.0).
+
+Der [Beitrag zum EU AI Act](/de/blog/eu-ai-act-runtime-audit/) in diesem Blog argumentierte, dass ein Auditor den Nachweis für *eine* Aktion verlangt, nicht ein Richtliniendokument. Der [Beitrag zu Berechtigungsgrenzen](/en/blog/objectos-agent-permission-boundaries/) handelte davon, *wo* die Prüfung läuft. Keiner behandelte Lesezugriffe. Ein Lesen ist die eine Aktion, die nichts verändert und deshalb nichts hinterlässt, es sei denn, etwas ist gebaut, um es zu bemerken; auf ObjectStack ist dieses Etwas die `read`-Aktion in `sys_audit_log`, geschrieben von `@objectstack/plugin-audit` aus einem `afterFind`-Hook. Dasselbe Ledger trägt `create`-, `update`- und `delete`-Zeilen aus Lifecycle-Hooks und `login`-/`logout`-Zeilen über den Slot `services.audit`; die View-Zeilen sind die dritte Fläche und die einzige, die standardmäßig aus ist.
+
+## Einschalten ist ein Konstruktorargument, und sonst nichts
+
+Die auditierte Menge wird einmal angegeben, dort, wo das Plugin installiert wird. In einer App, die die CLI ausliefert, ist das das `plugins`-Array des Stacks. Das unten verwendete CRM-Beispiel brauchte zwei Änderungen: `pnpm add @objectstack/plugin-audit@17.7.0` und dies in `objectstack.config.ts`:
+
+```ts
+import { AuditPlugin } from '@objectstack/plugin-audit';
+
+export default defineStack({
+  // …manifest, objects, views, permissions…
+  plugins: [
+    new AuditPlugin({ readAudit: { objects: ['crm_contact'] } }),
+  ],
+});
+```
+
+`readAudit` akzeptiert genau drei Schlüssel: `objects` (das geschlossene Opt-in pro Objekt, standardmäßig leer), `maxBatchSize` (Standard 50) und `flushIntervalMs` (Standard 2000). Eine leere Liste „registriert überhaupt keinen Hook“, sodass ein Deployment, das nichts registriert, auf seinem Lesepfad nichts bezahlt.
+
+Was bewusst fehlt, zählt mehr als das, was da ist. Die Dokumentation sagt es fett: „**Es gibt keinen Objekt-Metadatenschlüssel und keine Umgebungsvariable.**“ `enable.auditReads` existiert nicht, kein `audit:`-Block in der Stack-Konfiguration benennt Objekte, und `requires: ['audit']` macht das Plugin zur Boot-Voraussetzung, „konstruiert das Plugin aber ohne Optionen und bietet nirgends Platz, Objekte zu benennen“. Die genannte Begründung ist die, die diesen Beitrag zu einem Governance-Beitrag statt zu einer Konfigurationsnotiz macht: Ein deklarierbarer Schlüssel „kann auf einem Objekt in einem Deployment gesetzt werden, das dieses Plugin nie installiert, und erzeugt Metadaten, die sich als auditiert *lesen* und nichts aufzeichnen — und auf einer Compliance-Fläche ist eine Deklaration, die ein Prüfer für Abdeckung hält, schlimmer als eine fehlende Funktion.“
+
+Diese Form hat eine sichtbare Konsequenz auf der CLI. `os serve` und `os dev` registrieren vor dem Durchlaufen Ihrer `plugins` automatisch ein eigenes `AuditPlugin` ohne Optionen, und eine spätere Registrierung unter demselben Namen ersetzt die frühere. Das Boot-Log des gemessenen Laufs trägt die Zeile, die beweist, dass das Opt-in gegriffen hat:
+
+```text
+WARN Plugin superseded: 'com.objectstack.audit' — the later registration (v1.0.0)
+REPLACED the earlier one (v1.0.0). Only the later instance is initialized and
+started; the earlier one is discarded without ever running init().
+```
+
+Die Dokumentation ist ausdrücklich: Diese Zeile „**ist das funktionierende Opt-in**, keine Fehlkonfiguration“. Sie ist auch das einzige Boot-Signal, das man bekommt: Auf 17.7.0 wird die Zeile „record-view auditing installed on N object(s)“ auf `info` geschrieben, unterhalb der Standardstufe `warn` des Dev-Servers, sodass ein Standard-Boot die superseded-Warnung zeigt.
+
+## Fünf Lesezugriffe, zwei Zeilen
+
+Die App ist `examples/app-crm` aus dem ObjectStack-Repository am Tag `@objectstack/cli@17.7.0`, mit jeder `@objectstack/*`-Abhängigkeit auf die veröffentlichten 17.7.0-Pakete gepinnt und dem `plugins`-Eintrag von oben. Gestartet wurde sie mit `objectstack dev --compile --no-watch`, was das Artefakt bei diesem Boot kompiliert, statt ein veraltetes `dist/objectstack.json` auszuliefern. Drei Konten wurden über die Admin-API angelegt: Dana, eine Person mit der Position `sales_rep`; `agent-svc`, die Identität, auf der der API-Key eines AI-Agents geprägt wird, ebenfalls `sales_rep`; und `nobody`, ganz ohne Position. Die Position `sales_rep` trägt im Berechtigungsset des Beispiels `crm_contact: { allowRead: true, … }`, also dürfen Dana und der Agent Kontakte lesen und `nobody` nicht.
+
+Vor den Lesezugriffen liefert die Ledger-Abfrage eine leere Seite:
+
+```bash
+curl -s -b admin.cookies 'http://localhost:49200/api/v1/data/sys_audit_log?filter={"action":"read"}'
+```
+
+```json
+{ "object": "sys_audit_log", "records": [], "total": 0, "hasMore": false }
+```
+
+Dann die fünf Lesezugriffe, der Reihe nach.
+
+| # | Wer | Zugriff | Antwort | Zeile? |
+| --- | --- | --- | --- | --- |
+| A | Dana, angemeldet | `GET /api/v1/data/crm_contact/h7UV6R…` | `200`, Adas Datensatz | **ja** |
+| B | der Agent, `x-api-key: osk_…` | MCP `tools/call` `get_record` `{ objectName: "crm_contact", recordId: "HwvcWK…" }` | `200`, Linus’ Datensatz | **ja** |
+| C | Dana | `GET /api/v1/data/crm_contact` | `200`, drei Datensätze | nein |
+| D | Dana | `GET /api/v1/data/crm_account/eSLGuo…` | `200`, Acmes Datensatz | nein |
+| E | `nobody` | `GET /api/v1/data/crm_contact/h7UV6R…` | `403 PERMISSION_DENIED` | nein |
+
+Der Aufruf des Agents ist eine gewöhnliche MCP-Anfrage an den Endpunkt `/api/v1/mcp` der App, allein durch den Key authentifiziert:
+
+```bash
+curl -s -X POST http://localhost:49200/api/v1/mcp -H "x-api-key: $KEY" \
+  -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"get_record",
+       "arguments":{"objectName":"crm_contact","recordId":"HwvcWKZh3n1TM55l"}}}'
+```
+
+```json
+{ "result": { "content": [ { "type": "text",
+  "text": "{ \"id\": \"HwvcWKZh3n1TM55l\", \"first_name\": \"Linus\", \"last_name\": \"Torvalds\", \"email\": \"linus@globex.example\", … }" } ] },
+  "jsonrpc": "2.0", "id": 3 }
+```
+
+Fünf Sekunden später, jenseits des Flush-Intervalls von 2 000 ms, liefert dieselbe Ledger-Abfrage als Admin genau die zwei Zeilen vom Anfang dieses Beitrags, `"total": 2`.
+
+![Fünf Lesezugriffe auf ObjectStack 17.7.0 und welche davon in sys_audit_log landen: ein REST-Detailzugriff einer Person und ein MCP get_record eines Agents erzeugen je eine read-Zeile; ein Listenzugriff, ein Detailzugriff auf ein Objekt außerhalb von readAudit.objects und ein abgewiesener Zugriff erzeugen keine.](./which-reads-land-en.svg)
+
+Die Regel, die sie sortiert, besteht aus zwei Bedingungen, beide aus der Dokumentation und beide in den Messergebnissen sichtbar. Ein Lesezugriff wird aufgezeichnet, wenn er „genau einen Datensatz materialisiert hat“ und „sein Prädikat den Primärschlüssel festgenagelt hat“. `GET /data/:object/:id` erreicht die Engine als `findOne(object, { where: { id } })`; ebenso das MCP-Tool `get_record`, das auf dem HTTP-Transport über dasselbe Datenprotokoll und denselben `getData`-Pfad aufgelöst wird. Zugriff C scheitert an der ersten Bedingung (ein Array ist „nie eine Detailansicht, sodass `find` nie qualifiziert“). Zugriff D wird von der Regel gar nicht abgewiesen; `crm_account` stand schlicht nicht in `readAudit.objects`, und der Hook ist nur auf den benannten Objekten registriert. Zugriff E erreichte den Hook nie: Das Server-Log zu dieser Anfrage sagt `Access denied: operation 'findOne' on object 'crm_contact' is not permitted for positions [org_member, everyone]`, und „der `afterFind`-Hook wird nur von einem erfolgreichen Lesezugriff erreicht“.
+
+Die Karte zu diesem Beitrag sagte voraus, dass das `get_record` eines Agents qualifizieren *sollte*, als Schluss aus der Prädikatsregel. Es tut es, auf 17.7.0, und der Beweis ist Zeile B.
+
+## Was eine View-Zeile festhält
+
+Die gemessenen Zeilen gegen die dokumentierte Spaltentabelle gelesen:
+
+| Spalte | Dokumentiert | Gemessen (Zeile B, der Agent) |
+| --- | --- | --- |
+| `action` | `read` | `read` |
+| `created_at` | „Der Moment, in dem der Datensatz **angesehen** wurde, nicht der, in dem sein Batch geschrieben wurde“ | `02:33:05.618Z`; das `updated_at` der Zeile ist `02:33:07.513Z`, das Schreiben zwei Sekunden später |
+| `user_id` | „Das `sys_user`-Subjekt, das ihn geöffnet hat“ | `S8My5629…`, die Identität, auf der der Key geprägt wurde |
+| `actor` | „Das Principal-Label, mit Rückfall auf `user_id`“ | `S8My5629…`, der Rückfall |
+| `object_name` / `record_id` | das geöffnete Objekt und der Datensatz | `crm_contact` / `HwvcWKZh3n1TM55l` |
+| `tenant_id` / `organization_id` | „Die eigene Organisation des **angesehenen Datensatzes**, mit Rückfall auf die Sitzungsorganisation des Betrachters“ | das `org_mvbs…` des Betrachters, weil der Seed-Kontakt `organization_id: null` trägt |
+| `old_value` / `new_value` | „Immer `null`“ | `null` / `null` |
+
+Zwei Details in dieser Tabelle wiegen für einen Auditor. Der Zeitstempel ist die Ansicht, nicht der Schreibvorgang, sodass ein langsames Ledger nicht verschieben kann, wann etwas geschah. Und der Mandantenstempel folgt dem Datensatz statt dem Betrachter; die Begründung der Dokumentation: Eine Zeile über einen Datensatz von Org A, gestempelt mit Org B des Betrachters, „würde hinter der Mandantenwand von Org B landen, unsichtbar für die eine Mandantenadministratorin, die die Zeile betrifft“.
+
+## Die vier Dinge, die eine View-Zeile nie festhält
+
+Das ist die Hälfte der Funktion, die eine Abdeckungsmatrix gern falsch wiedergibt, und die Hälfte, der die Dokumentation einen ganzen Abschnitt widmet. Alle vier wurden in den gemessenen Zeilen beobachtet.
+
+1. **Keine Feldwerte, nie.** `old_value` und `new_value` bleiben `null`. Der Hook „läuft *innerhalb* der Security-Middleware, **vor deren Feldmaskierung**, sodass der Datensatz, den er sieht, Klartext vor der Maskierung ist“. Werte hineinzukopieren „würde eine Klartextkopie genau dessen prägen, was Field-Level-Security zurückhält, in der einen Tabelle, auf die Compliance-Mitarbeiter breiten Zugriff bekommen“. Das Ledger weiß also absichtlich weniger als der Betrachter.
+2. **Nicht, was der Betrachter tatsächlich gesehen hat.** Es folgt aus dem Ersten: Eine Zeile sagt, dass ein Datensatz geöffnet wurde, nie, welche Felder nach der Maskierung sichtbar waren. Wenn Ihre Kontrolle „Welche Spalten hat diese Person gesehen?“ verlangt, beantwortet diese Fläche das nicht.
+3. **Keine IP-Adresse und kein User-Agent.** Beide Spalten existieren auf `sys_audit_log` und beide sind auf den zwei Zeilen `null`. Sie werden auf `login`- und `logout`-Zeilen gestempelt, nicht auf View-Zeilen. Das ist auch der Grund, warum Zeile A und Zeile B gleich aussehen: Das Ledger hält den **Principal** fest, nicht den Kanal. Nichts auf der Zeile des Agents sagt „MCP“, „API-Key“ oder „Agent“; sie sagt `S8My5629…`, den Nutzer, dem der Key gehört.
+4. **Nichts über abgewiesene oder fehlgeschlagene Zugriffe.** Zugriff E ist der Beweis. Ein verweigerter Zugriff „hinterlässt hier keine Spur“; die Spur, die er hinterließ, ist die Zeile `WARN [Security] Access denied` im Server-Log, eine andere Fläche mit anderer Aufbewahrung.
+
+Zwei weitere Grenzen sind deklariert statt der Entdeckung überlassen. Ein systemerhöhter Zugriff schreibt keine Zeile: Alles, was `session.isSystem` trägt, etwa ein `api.sudo()`-Pfad, eine Formelneuberechnung oder ein Roll-up, „ist die Plattform, die für ihre eigene Buchführung liest, nicht eine Person, die einen Datensatz öffnet“, und da `sudo()` die Nutzer-ID des Aufrufers behält, ist dieses Flag das Einzige, was beide trennt. Und ein Zugriff ohne Principal schreibt keine Zeile, weil „eine Zeile, die niemanden benennt, nur Rauschen zu der einen Abfrage hinzufügt, für die diese Fähigkeit existiert“.
+
+## „Auch ein AI-Agent“ heißt: als die Identität, die Sie ihm gegeben haben
+
+Zeile B beantwortet die Frage im Titel, mit einer Bedingung. Das Öffnen des Agents landete im selben Ledger, durch denselben Hook, unter derselben Zwei-Bedingungen-Regel wie Danas, weil `get_record` ein `findOne` nach ID unter dem Principal des Aufrufers ist. Es gibt keinen agentenspezifischen Audit-Pfad zu konfigurieren und keinen zu vergessen.
+
+Die Bedingung ist Punkt 3 oben. Die Zeile benennt den Principal, also ist das, was das Ledger über einen Agent beweisen kann, genau so gut wie die Identität, auf der sein Key geprägt wurde. Der MCP-Verbindungsleitfaden für 17.7.0 formuliert die Wahl klar: „Für einen lokalen Agent mit voller Autorität prägen Sie den Key auf einer Plattform-Admin- oder einer dedizierten **Service**-Identität; für einen eingeschränkten prägen Sie ihn auf einem Nutzer mit genau dem Zugriff, den er haben soll.“ Prägen Sie den Key des Agents auf dem Konto einer Person, und das Ledger wird wahrheitsgemäß berichten, dass diese Person den Datensatz geöffnet hat. Der gemessene Lauf prägte ihn auf `agent-svc`, einem Nutzer, der nur existiert, um der Agent zu sein; deshalb ist Zeile B dem Agent überhaupt zuzurechnen. Das ist eine Provisionierungsentscheidung, keine Audit-Funktion, und die eine Entscheidung, um die dieser Beitrag Sie bittet.
+
+## Wo die Zeilen liegen und wie sie ausfallen
+
+Unter `os dev` liegt `sys_audit_log` nicht in der Anwendungsdatenbank. Seine Lifecycle-Klasse `audit` leitet es an eine dedizierte `telemetry`-Datenquelle, wann immer eine registriert ist, und der Dev-Server „stellt standardmäßig eine als Geschwister-SQLite-Datei bereit“. Beide Dateien des gemessenen Laufs mit dem eigenen SQLite-Treiber der App geöffnet:
+
+```text
+objectstack.db            -> no such table: sys_audit_log
+objectstack.telemetry.db  -> [{"action":"create","n":40},{"action":"login","n":5},
+                              {"action":"read","n":2},{"action":"update","n":4}]
+```
+
+Die `read`-Zeilen sind die zwei aus der Tabelle am Anfang. Wenn eine Audit-Abfrage jemals leer zurückkommt, wo Sie Zeilen erwartet haben, ist diese Aufteilung die übliche Ursache, und die eigene Fehlermeldung des Plugins sagt es: Ein „no such table“ beim Ledger-Schreiben „bedeutet meist, dass das Schreiben gegen eine ANDERE Datenquelle lief als die, in der die Tabelle angelegt wurde“.
+
+Das andere, was man wissen sollte, bevor man sich darauf verlässt, ist das Ausfallverhalten. Der Hook „reiht ein und kehrt zurück“; er wartet auf nichts, und ein Audit-Fehler macht aus einem gültigen Lesezugriff nie einen Fehler. Zeilen werden bei einem späteren Tick persistiert, wenn `maxBatchSize` Ansichten gepuffert sind oder `flushIntervalMs` seit der ersten Ansicht des Batches vergangen ist, und `destroy()` schreibt den Rest bei einem sauberen Shutdown. Weder ein Pufferüberlauf (jenseits einer festen Obergrenze von 10 000 gepufferten Ansichten werden die ältesten verworfen, einmal pro Prozess gewarnt) noch ein fehlgeschlagenes Ledger-Schreiben (der Batch geht verloren, einmal pro Ursache gemeldet) wird wiederholt. Die eigene Warnung der Dokumentation ist der Satz für Ihr Runbook: Beide Fehler „sind von überall sonst unsichtbar. Die Lesezugriffe selbst sind gelungen und haben 200 geliefert … Die resultierende Abfrage liefert eine selbstbewusste, falsche, **kurze** Antwort.“
+
+## Was das nicht löst
+
+- **Listen- und Suchzugriffe werden nie aufgezeichnet**, „auch ein Listenzugriff nicht, der zufällig genau einen Datensatz lieferte“. Zugriff C ist die Messung. Eine Abdeckungsmatrix „sollte das als ‚Datensatz-Detailansichten‘ lesen, nicht als ‚Lesezugriffe‘“. Eine Liste exportieren, einen Bericht ausführen, durch ein Grid blättern — all das hinterlässt hier nichts.
+- **Der Bildschirm des Betrachters steht nicht im Ledger.** Zeilen beweisen ein Öffnen, nicht, was gesehen wurde.
+- **Das Ledger ist nur so zurechenbar wie Ihre Identitäten.** Wieder Punkt 3: Geteilte Keys und Keys auf persönlichen Konten machen die Zeile wahr und nutzlos zugleich.
+- **Das Lesen der Spur ist selbst beschränkt.** Danas eigene Abfrage von `sys_audit_log?filter={"action":"read"}` antwortete `403 PERMISSION_DENIED`. Außerhalb des Systemkontexts bekommt ein Aufrufer eine View-Zeile nur für einen Datensatz, den er selbst lesen kann, es sei denn, er hält die Fähigkeit `view_all_audit_log`, die Plattformadministratoren standardmäßig haben und alle anderen nur über ein Berechtigungsset. Die Zeilen werden 90 Tage „heiß“ aufbewahrt und sieben Jahre archiviert, wo eine `archive`-Datenquelle registriert ist. In der Setup-App steuert das Plugin eine Liste **Record Views** unter Diagnostics bei; auf ObjectOS ist diese Fläche als [schreibgeschützt und unveränderlich](https://docs.objectos.ai/docs/operate/audit-logs) dokumentiert.
+
+Nichts davon ist als *Anforderung* einzigartig für ObjectStack; jedes System of Record, aus dem ein Agent liest, braucht eine [Zugriffsspur](/en/glossary/audit-trail/) mit so expliziten Rändern. Der [Vorfall-Beitrag](/de/blog/when-ai-agent-deletes-production-database/) in diesem Blog hat auf der Schreibseite für Runtime-Leitplanken statt Prompts argumentiert; die Leseseite hat dieselbe Form, mit kleinerem Explosionsradius und längerem Gedächtnis.
+
+## Richten Sie Ihren Agent darauf
+
+Wenn ein Agent Ihre App schreibt, bitten Sie ihn, das konfigurierte `AuditPlugin` für jedes Objekt mit Kundendaten in `plugins` aufzunehmen und jeden Metadatenschlüssel abzulehnen, der dasselbe zu tun behauptet, denn auf 17.7.0 gibt es keinen. Dann prüfen Sie den Diff: ein Import und ein Array-Eintrag. Wenn ein Agent Ihre App *bedient*, prägen Sie seinen Key auf einer Identität, die der Agent ist und sonst nichts, und führen Sie die Ledger-Abfrage von oben am ersten Tag aus, bevor Sie jemand danach fragt.
+
+```bash
+npm create objectstack@latest my-app && cd my-app
+pnpm add @objectstack/plugin-audit
+# new AuditPlugin({ readAudit: { objects: ['…'] } }) zu plugins hinzufügen, dann
+npx os dev --compile
+```
+
+Öffnen Sie einen Datensatz, warten Sie zwei Sekunden, fragen Sie `sys_audit_log` nach `action: read` ab. Eine Zeile, keine Werte.
+
+Dieselbe Schleife gehostet, im Browser, ohne Installation? Das ist ObjectOS, die kommerzielle Laufzeitumgebung auf Basis von ObjectStack.

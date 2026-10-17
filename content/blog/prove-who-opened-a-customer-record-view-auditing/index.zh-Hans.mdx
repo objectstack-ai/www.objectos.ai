@@ -1,0 +1,179 @@
+---
+title: 能证明是谁打开了一条客户记录吗——包括 AI Agent？记录查看审计，以及一行查看记录永远不记的四件事
+description: 在 @objectstack/cli 17.7.0 上，一个人经 REST 的读取和一个 Agent 经 MCP get_record 的读取各在 sys_audit_log 中留下一行 read；列表读取、未登记的对象、被拒绝的读取一行都没有。这一行记了什么，永远不记哪四件事。
+author: ObjectStack Team
+date: 2026-10-26
+status: published
+topic: governance
+audience: it
+solutions: []
+industries: []
+cover: ./cover.svg
+tags:
+  - 审计追踪
+  - 记录查看审计
+  - AI Agent
+  - 合规
+---
+
+两行。这就是「今天下午谁打开过 Ada Lovelace 和 Linus Torvalds 的联系人记录」这个问题的完整答案——一个跑在 `@objectstack/cli` 17.7.0 上的 CRM，它的账本是这样返回的：
+
+| `created_at` | `action` | `user_id` | `object_name` | `record_id` | `old_value` | `new_value` | `ip_address` |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `02:33:05.512Z` | `read` | `PdP4MC…`（Dana，一名销售代表，经 REST） | `crm_contact` | `h7UV6R…`（Ada） | `null` | `null` | `null` |
+| `02:33:05.618Z` | `read` | `S8My56…`（一个 Agent 的 API key，经 MCP） | `crm_contact` | `HwvcWK…`（Linus） | `null` | `null` | `null` |
+
+五次读取，产出这两行。一个人通过 REST API 打开了一条联系人；一个 AI Agent 用自己的 API key 通过 MCP `get_record` 取了另一条；同一个人随后列出了全部联系人；又打开了一条客户（一个该部署没有登记的对象）；一个没有任何岗位的用户试图打开一条联系人，得到 `403`。列表、客户和被拒绝的那次，什么都没留下。这就是本文要端到端实测并为之辩护的论断：**ObjectStack 的记录查看审计记录的是谁在何时打开了哪条记录，对人和 Agent 一视同仁；而且它的范围声明得足够窄，以至于它不记什么和它记什么一样清楚可读**。值得记住的概念是**边界靠声明，而不是靠发现**：一个把边界写明白的合规功能，胜过一个要等审计时才摸清边界的功能。
+
+## 权限层回答不了的那个问题
+
+每一层权限都在回答*谁可以看这条记录*：对象授权、行级安全、字段遮蔽。受监管行业的审查从下一个问题开始。ObjectStack 自己关于记录查看审计的文档第二句话就这么说：这一页「回答的是紧随其后的那个问题，也是每一次受监管行业审查开篇就问的问题：**到底是谁打开了它，什么时候？**」（17.7.0 标签上的 `content/docs/permissions/record-view-auditing.mdx` 第 8–9 行）。
+
+本博客的[《EU AI Act》一文](/zh-Hans/blog/eu-ai-act-runtime-audit/)论证过，审计员要的是*一个*动作的记录，而不是一份政策文件。[《权限边界》一文](/zh-Hans/blog/objectos-agent-permission-boundaries/)讲的是检查发生在*哪里*。两篇都没有涉及读取。读取是唯一一种什么都不改、因此除非专门有东西去留意否则什么痕迹都不留的动作；在 ObjectStack 上，这个「东西」就是 `sys_audit_log` 中的 `read` 动作，由 `@objectstack/plugin-audit` 从一个 `afterFind` 钩子写入。同一本账本还承载着来自生命周期钩子的 `create`、`update`、`delete` 行，以及经 `services.audit` 槽位进入的 `login` / `logout` 行；查看行是第三个面，也是唯一默认关闭的那一个。
+
+## 打开它是一个构造参数，别无他处
+
+被审计的对象集合只给一次，在插件被安装的地方。对于由 CLI 启动的应用，这个地方就是 stack 的 `plugins` 数组。下文用到的 CRM 示例只需要两处改动：`pnpm add @objectstack/plugin-audit@17.7.0`，以及在 `objectstack.config.ts` 中加上：
+
+```ts
+import { AuditPlugin } from '@objectstack/plugin-audit';
+
+export default defineStack({
+  // …manifest、objects、views、permissions…
+  plugins: [
+    new AuditPlugin({ readAudit: { objects: ['crm_contact'] } }),
+  ],
+});
+```
+
+`readAudit` 恰好接受三个键：`objects`（封闭的按对象登记，默认为空）、`maxBatchSize`（默认 50）和 `flushIntervalMs`（默认 2000）。空列表「根本不注册钩子」，所以一个什么都不登记的部署在读取路径上不付任何代价。
+
+刻意缺席的东西比存在的东西更重要。文档用粗体写道：「**没有对象元数据键，也没有环境变量**。」`enable.auditReads` 不存在，stack 配置中没有任何 `audit:` 块可以点名对象，`requires: ['audit']` 只是把插件变成启动硬性要求，但「用无选项构造插件，没有任何地方可以点名对象」。文档给出的理由，正是让本文成为一篇治理文章而不是配置笔记的那条：一个可声明的键「可以被设在一个从未安装本插件的部署里的某个对象上，产生*读起来*像已审计、实际什么都不记的元数据——在合规面上，一条会被审阅者误认为覆盖的声明，比缺席的功能更糟。」
+
+这种形态在 CLI 上有一个看得见的结果。`os serve` 和 `os dev` 会在遍历你的 `plugins` 之前先自动注册一个无选项的 `AuditPlugin`，而同名的后一次注册会替换前一次。实测运行的启动日志里有一行，证明登记生效了：
+
+```text
+WARN Plugin superseded: 'com.objectstack.audit' — the later registration (v1.0.0)
+REPLACED the earlier one (v1.0.0). Only the later instance is initialized and
+started; the earlier one is discarded without ever running init().
+```
+
+文档明确说这一行「**正是登记在起作用**，不是配置错误」。它也是你能拿到的唯一一个启动期信号：在 17.7.0 上，「record-view auditing installed on N object(s)」这行以 `info` 级别写出，低于 dev server 默认的 `warn` 级别，所以默认启动能看到的就是这条 superseded 警告。
+
+## 五次读取，两行记录
+
+应用是 ObjectStack 仓库 `@objectstack/cli@17.7.0` 标签上的 `examples/app-crm`，所有 `@objectstack/*` 依赖钉在已发布的 17.7.0 包上，并加上上面那条 `plugins` 项。用 `objectstack dev --compile --no-watch` 启动，这样本次启动会重新编译产物，而不是拿一份过期的 `dist/objectstack.json` 来服务。通过管理 API 创建了三个账号：Dana，一个持有 `sales_rep` 岗位的人；`agent-svc`，AI Agent 的 API key 所铸造在其上的身份，同样是 `sales_rep`；以及 `nobody`，没有任何岗位。示例的权限集中，`sales_rep` 岗位带有 `crm_contact: { allowRead: true, … }`，所以 Dana 和 Agent 可以读联系人，`nobody` 不可以。
+
+读取之前，账本查询返回空页：
+
+```bash
+curl -s -b admin.cookies 'http://localhost:49200/api/v1/data/sys_audit_log?filter={"action":"read"}'
+```
+
+```json
+{ "object": "sys_audit_log", "records": [], "total": 0, "hasMore": false }
+```
+
+然后是五次读取，按顺序。
+
+| # | 谁 | 读取 | 应答 | 有行？ |
+| --- | --- | --- | --- | --- |
+| A | Dana，已登录 | `GET /api/v1/data/crm_contact/h7UV6R…` | `200`，Ada 的记录 | **有** |
+| B | Agent，`x-api-key: osk_…` | MCP `tools/call` `get_record` `{ objectName: "crm_contact", recordId: "HwvcWK…" }` | `200`，Linus 的记录 | **有** |
+| C | Dana | `GET /api/v1/data/crm_contact` | `200`，三条记录 | 无 |
+| D | Dana | `GET /api/v1/data/crm_account/eSLGuo…` | `200`，Acme 的记录 | 无 |
+| E | `nobody` | `GET /api/v1/data/crm_contact/h7UV6R…` | `403 PERMISSION_DENIED` | 无 |
+
+Agent 的调用是对应用 `/api/v1/mcp` 端点的一次普通 MCP 请求，只凭 key 认证：
+
+```bash
+curl -s -X POST http://localhost:49200/api/v1/mcp -H "x-api-key: $KEY" \
+  -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"get_record",
+       "arguments":{"objectName":"crm_contact","recordId":"HwvcWKZh3n1TM55l"}}}'
+```
+
+```json
+{ "result": { "content": [ { "type": "text",
+  "text": "{ \"id\": \"HwvcWKZh3n1TM55l\", \"first_name\": \"Linus\", \"last_name\": \"Torvalds\", \"email\": \"linus@globex.example\", … }" } ] },
+  "jsonrpc": "2.0", "id": 3 }
+```
+
+五秒之后，已经越过 2 000 毫秒的刷新间隔，以管理员身份再做同一个账本查询，返回的恰好是本文开头那两行，`"total": 2`。
+
+![ObjectStack 17.7.0 上的五次读取，以及其中哪些会落进 sys_audit_log：一个人经 REST 的详情读取和一个 Agent 经 MCP get_record 的读取各产生一行 read；列表读取、对 readAudit.objects 之外对象的详情读取、被拒绝的读取都不产生。](./which-reads-land.svg)
+
+把它们分开的规则是两个条件，都来自文档，也都能在实测结果中看到。一次读取被记录，当它「恰好物化了一条记录」且「它的谓词钉住了主键」。`GET /data/:object/:id` 到达引擎时是 `findOne(object, { where: { id } })`；MCP 的 `get_record` 工具也一样，它在 HTTP 传输上经由同一个数据协议、同一条 `getData` 路径解析。读取 C 不满足第一个条件（数组「永远不是详情查看，所以 `find` 永远不符合」）。读取 D 根本没有被规则拒绝；`crm_account` 只是不在 `readAudit.objects` 里，而钩子只注册在点名的对象上。读取 E 从未到达钩子：那次请求的服务器日志写着 `Access denied: operation 'findOne' on object 'crm_contact' is not permitted for positions [org_member, everyone]`，而「`afterFind` 钩子只会被成功的读取到达」。
+
+本文的选题卡预测 Agent 的 `get_record` *应该*符合条件——那是从谓词规则推出的推断。在 17.7.0 上它确实符合，证据就是第 B 行。
+
+## 一行查看记录记了什么
+
+把实测的行对照文档的列表：
+
+| 列 | 文档 | 实测（第 B 行，Agent） |
+| --- | --- | --- |
+| `action` | `read` | `read` |
+| `created_at` | 「记录被**查看**的那一刻，不是它所在批次落盘的那一刻」 | `02:33:05.618Z`；该行的 `updated_at` 是 `02:33:07.513Z`，两秒后落盘 |
+| `user_id` | 「打开它的 `sys_user` 主体」 | `S8My5629…`，key 所铸造在其上的身份 |
+| `actor` | 「主体标签，回退为 `user_id`」 | `S8My5629…`，即回退值 |
+| `object_name` / `record_id` | 被打开的对象与记录 | `crm_contact` / `HwvcWKZh3n1TM55l` |
+| `tenant_id` / `organization_id` | 「**被查看记录**自身的组织，回退为查看者的会话组织」 | 查看者的 `org_mvbs…`，因为种子联系人的 `organization_id` 为 `null` |
+| `old_value` / `new_value` | 「永远为 `null`」 | `null` / `null` |
+
+表中有两个细节对审计员有分量。时间戳是查看，不是写入，所以慢的账本不会挪动事情发生的时刻。租户戳跟随记录而不是查看者；文档给的理由是，一行关于 A 组织记录的行若打上查看者 B 组织的戳，「会落在 B 组织的租户墙之后，对这一行真正关系到的那位租户管理员不可见」。
+
+## 一行查看记录永远不记的四件事
+
+这是一张覆盖矩阵最容易写错的那一半，也是文档专门用整整一节来写的那一半。四件在实测的行中都观察到了。
+
+1. **永远没有字段值。**`old_value` 和 `new_value` 保持 `null`。钩子「跑在安全中间件*之内*、**在字段遮蔽之前**，所以它看到的记录是遮蔽前的明文」。把值抄进去「会铸出一份明文副本，内容正是字段级安全所隐去的，而且放在合规人员被授予广泛访问权的那张表里」。所以账本刻意比查看者知道得更少。
+2. **不记查看者实际看到了什么**。由第一条推出：一行只说一条记录被打开了，从不说遮蔽之后哪些字段可见。如果你的控制要求「这个人看到了哪些列」，这个面回答不了。
+3. **没有 IP 地址，也没有 user agent**。这两列在 `sys_audit_log` 上存在，在那两行里都是 `null`。它们盖在 `login` 和 `logout` 行上，不在查看行上。这也是为什么第 A 行和第 B 行长得一样：账本记的是**主体**，不是通道。Agent 那一行上没有任何东西写着「MCP」「API key」或「agent」；它写的是 `S8My5629…`，即这把 key 所属的用户。
+4. **关于被拒绝或失败的读取，什么都没有**。读取 E 就是证据。一次被拒的读取「在这里不留痕迹」；它留下的痕迹是服务器日志中的 `WARN [Security] Access denied` 行——那是另一个面，有另一套保留期。
+
+还有两条边界是声明出来的，而不是留给人去发现的。系统提升的读取不写行：任何带有 `session.isSystem` 的东西，比如 `api.sudo()` 路径、公式重算或汇总，「是平台为自己的簿记而读，不是一个人在打开记录」，而且由于 `sudo()` 保留调用者的用户 id，这个标志是区分两者的唯一依据。没有主体的读取不写行，因为「一行谁都不点名的记录，只会给这项能力存在的意义所在的那个查询添噪声」。
+
+## 「包括 AI Agent」的意思是：以你给它的身份
+
+第 B 行回答了标题里的问题，但附带一个条件。Agent 的打开落进了同一本账本，经同一个钩子，受同一条两条件规则，和 Dana 的一样，因为 `get_record` 就是调用者主体之下的一次按 id 的 `findOne`。没有 Agent 专用的审计路径需要配置，也没有哪条会被遗忘。
+
+条件就是上面的第 3 点。这一行点名的是主体，所以账本关于一个 Agent 能证明的东西，恰好和它的 key 所铸造在其上的身份一样好。17.7.0 的 MCP 连接指南把这个选择说得很直白：「对于一个全权限的本地 Agent，把 key 铸造在平台管理员或专用的**服务**身份上；对于一个有范围限制的 Agent，把 key 铸造在一个恰好拥有它应有访问权的用户上。」把 Agent 的 key 铸在某个人的账号上，账本就会如实报告是那个人打开了记录。实测运行把它铸在 `agent-svc` 上，一个只为充当 Agent 而存在的用户，这正是第 B 行能归因到 Agent 的原因。这是一个开通身份时的决定，不是一项审计功能，也是本文请你做的唯一决定。
+
+## 这些行在哪里，以及它们怎样失效
+
+在 `os dev` 下，`sys_audit_log` 不在应用数据库里。它的 `audit` 生命周期类会在注册了 `telemetry` 数据源时把它路由过去，而 dev server「默认配置一个，作为同级的 SQLite 文件」。用应用自己的 SQLite 驱动打开实测运行的两个文件：
+
+```text
+objectstack.db            -> no such table: sys_audit_log
+objectstack.telemetry.db  -> [{"action":"create","n":40},{"action":"login","n":5},
+                              {"action":"read","n":2},{"action":"update","n":4}]
+```
+
+`read` 行就是开头表中的那两行。如果一次审计查询在你预期有行的地方返回空，这个拆分就是通常的原因，插件自己的失败消息也这么说：账本写入上的「no such table」「通常意味着写入执行所在的数据源，与建表的数据源不是同一个」。
+
+另一件在依赖它之前要知道的事，是它的失效姿态。钩子「入队即返回」；它什么都不等待，一次审计失败永远不会把一次合法读取变成错误。行在稍后的某个 tick 落盘：要么缓冲了 `maxBatchSize` 次查看，要么距该批次第一次查看已过 `flushIntervalMs`；`destroy()` 在干净关闭时排空尾批。缓冲区溢出（超过 10 000 条缓冲查看的固定上限后丢弃最旧的，每进程只警告一次）和账本写入失败（该批丢失，每种原因只报告一次）都不重试。文档自己的警告是该放进运维手册的那句话：两种失效「从其他任何地方都看不见。读取本身成功并返回了 200……结果是查询返回一个自信、错误、**偏短**的答案。」
+
+## 这不解决什么
+
+- **列表与搜索读取永远不被记录**，「包括一次恰好只返回一条记录的列表读取」。读取 C 就是实测。一张覆盖矩阵「应当把它读作『记录详情查看』，而不是『读取』」。导出一个列表、跑一份报表、在网格中翻页，在这里都不留任何东西。
+- **查看者的屏幕不在账本中**。行证明的是一次打开，不是看到了什么。
+- **账本的可归因程度只和你的身份一样好**。又是第 3 点：共享的 key、铸在个人账号上的 key，会让这一行同时真实又无用。
+- **读账本本身也受门控**。Dana 自己对 `sys_audit_log?filter={"action":"read"}` 的查询应答了 `403 PERMISSION_DENIED`。在系统上下文之外，调用者只会被提供那些其自身能读的记录的查看行，除非持有 `view_all_audit_log` 能力——平台管理员默认持有，其他人只能通过权限集获得。这些行热保留 90 天，然后在注册了 `archive` 数据源的地方归档七年。在 Setup 应用中，插件在 Diagnostics 下贡献了一个 **Record Views** 列表；在 ObjectOS 上，该面被文档描述为[只读且不可变](https://docs.objectos.ai/docs/operate/audit-logs)。
+
+作为一项*要求*，这些都不是 ObjectStack 独有的；任何会被 Agent 读取的记录系统，都需要一条边界如此明确的[查看追踪](/zh-Hans/glossary/audit-trail/)。本博客的[那篇事故文章](/zh-Hans/blog/when-ai-agent-deletes-production-database/)在写入侧论证了运行时护栏胜过提示词；读取侧形态相同，爆炸半径更小，记忆更长。
+
+## 把你的 Agent 指向它
+
+如果一个 Agent 在写你的应用，请它为每一个持有客户数据的对象把配置好的 `AuditPlugin` 加进 `plugins`，并拒绝任何声称能做同一件事的元数据键——因为在 17.7.0 上并不存在这样的键。然后审阅 diff：一个 import 和一个数组项。如果一个 Agent 在*操作*你的应用，把它的 key 铸造在一个只是这个 Agent、别无其他的身份上，并在第一天就跑一遍上面的账本查询——在有人来问你之前。
+
+```bash
+npm create objectstack@latest my-app && cd my-app
+pnpm add @objectstack/plugin-audit
+# 把 new AuditPlugin({ readAudit: { objects: ['…'] } }) 加进 plugins，然后
+npx os dev --compile
+```
+
+打开一条记录，等两秒，按 `action: read` 查询 `sys_audit_log`。一行，没有值。
+
+想把同一个循环托管起来、在浏览器里用、什么都不用安装？那就是 ObjectOS——建立在 ObjectStack 之上的商业运行环境。
