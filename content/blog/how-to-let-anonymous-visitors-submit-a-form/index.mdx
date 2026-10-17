@@ -1,0 +1,211 @@
+---
+title: "How Do You Let Anonymous Visitors Submit a Form Into a Governed Business App? One Public Door, Five Fields Wide"
+description: "Since v17 anonymous data access is always denied. The one open door is a public form view: the runtime derives a grant from the form itself — create one row, read back that row, five fields, nothing else. Measured on 17.7.0."
+author: ObjectStack Team
+date: 2026-10-22
+status: published
+topic: app-building
+audience: business
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Public forms
+  - Web-to-lead
+  - Anonymous access
+---
+
+**The short version.** Since v17, an unauthenticated request for object data in an ObjectStack app is refused with `401 UNAUTHENTICATED` — every object, every endpoint, no opt-out. The one door a governed app leaves open to the public is a **public form view**: declare a form, mark its `sharing` block `allowAnonymous: true`, and the runtime derives the visitor's entire authorization from that declaration — create one record on that one object, read back the row it just made, nothing else. The form's field list is the security boundary. The CRM example's web-to-lead form lists five fields, so five fields can arrive; the other eight business fields and every system column cannot, whatever the visitor sends. I will call this a **form-shaped grant**: authorization computed from the form at request time, which is why it cannot be configured wider than the form. Everything below was measured on the published `@objectstack/cli` 17.7.0, the version `npm create objectstack@latest` installs today — including the one question the documentation and the shipped example disagree on, whether a `guest_portal` profile is needed. It is not.
+
+## The problem, in the doc's own words
+
+The ObjectStack guide on public data collection opens with the scenario as a user would state it:
+
+> I want anonymous visitors to submit a form — a "Contact us" / "Request a demo" / intake form — that creates a record. But I must **not** give them access to the base, and they must only be able to set the fields on the form.
+
+Every business app has one of these: a lead form on the website, a support intake, a demo request, a warranty claim. The usual answers each cost something. A "guest" role with write access to the table is a standing grant that nobody re-reads, and it drifts. A hand-written endpoint bypasses the permission model that governs everything else. A third-party form tool with a webhook means two systems now hold the schema and one of them is not the one your reviewers look at.
+
+Since v17 the first answer is not even available. The permissions documentation records why in passing: "since v17 anonymous access to object data is always denied anyway — the `requireAuth: false` opt-out was retired". The [self-hosting walkthrough](/en/blog/how-to-self-host-objectstack/) turns that into a verification step — `curl` an object endpoint with no credentials and insist on the `401` with a machine-readable `code` — and treats a `200` there as an incident. So the honest form of the question is: if the data plane is closed to anonymous callers by construction, how does a public form get through at all?
+
+## A public form is a declaration, not a permission
+
+This is the whole of the CRM example's web-to-lead form, as it ships at the 17.7.0 tag:
+
+```ts
+formViews: {
+  web_to_lead: {
+    type: 'simple',
+    data: { provider: 'object', object: 'crm_lead' },
+    sections: [
+      {
+        name: 'contact_us',
+        label: 'Contact us',
+        columns: 1,
+        fields: [
+          { field: 'name', required: true },
+          { field: 'company' },
+          { field: 'email', required: true },
+          { field: 'phone' },
+          { field: 'title' },
+        ],
+      },
+    ],
+    sharing: {
+      enabled: true,
+      allowAnonymous: true,
+      publicLink: '/forms/contact-us',
+    },
+  },
+},
+```
+
+Nothing in it mentions a permission. The `sharing` block is what opens the door: with `enabled`, `allowAnonymous` and a `publicLink` all set, the runtime registers two anonymous endpoints — `GET /api/v1/forms/contact-us`, which returns the resolved form and the whitelisted schema, and `POST /api/v1/forms/contact-us/submit`, which inserts one `crm_lead`. The doc's one-line rule for what the visitor may write is "Only the fields listed in `sections[].fields` are accepted on submit; everything else is stripped server-side." And the reason it gives for building it this way is the sentence this post exists to test: "Authorization is **derived from the declaration**, not configured separately — so the grant can't drift wider than the form."
+
+![Two nets: the route keeps only the five declared fields and drops server-managed names; the data layer admits insert and read-back on crm_lead only and strips the same names again. Reads answer 401; a withdrawn form answers 404.](./two-nets-en.svg)
+
+Mechanically there are two nets, and they are worth naming because a reviewer can check each one.
+
+**The first net is the route.** The submit handler builds its allow-list from `sections[].fields` of the matched form and copies only those keys out of the request body. Before it does, it drops by name every key in `PUBLIC_FORM_SERVER_MANAGED_FIELDS`, a set the spec package exports: `id`, `owner_id`, `owning_business_unit_id`, `organization_id`, `tenant_id`, `created_at`, `created_by`, `updated_at`, `updated_by`, `is_deleted`, `deleted_at` and `__search` — twelve names that are "**never** accepted from a public submission — not even when a section declares them". A form with no fields at all is refused with `400` rather than accepting whatever arrives.
+
+**The second net is the data layer.** The route attaches a request-scoped `publicFormGrant: { object: 'crm_lead' }` to the write, and the security plugin honours exactly that: `insert`, plus `find`, `findOne` and `count` for the read-back, on that object only. Before admitting the insert it strips the same twelve names a second time, so that even if a form declared `owner_id` in a section, or the route filter and the data layer were ever edited apart, a visitor could not forge ownership or tenant placement. The grant is the form's shape, read at request time. There is no row in a permissions table that says "anonymous may write to leads", because there is nothing to configure.
+
+## The transcript, on 17.7.0
+
+I took `examples/app-crm` from the `@objectstack/cli@17.7.0` tag, pinned its dependencies to the published 17.7.0 packages, and started it with `objectstack dev`. The dev server seeds an admin account on an empty database; the five seeded leads belong to it. Every response below is real and trimmed only for length.
+
+**1. The door describes itself — five fields wide.** With no credentials:
+
+```bash
+curl -s http://localhost:49160/api/v1/forms/contact-us
+```
+
+```json
+{ "slug": "contact-us", "object": "crm_lead",
+  "form": { "sections": [ { "name": "contact_us", "fields": [
+      { "field": "name", "required": true }, { "field": "company" },
+      { "field": "email", "required": true }, { "field": "phone" }, { "field": "title" } ] } ],
+    "sharing": { "enabled": true, "publicLink": "/forms/contact-us", "allowAnonymous": true } },
+  "objectSchema": { "name": "crm_lead", "fields": { "name": {}, "email": {}, "phone": {}, "company": {}, "title": {} } } }
+```
+
+The `objectSchema` carries exactly the five whitelisted fields. `crm_lead` declares thirteen business fields in its object definition; the public schema shows five and says nothing about `status`, `lead_score`, `assigned_to`, `account`, `notes` or the rest. The visitor cannot even learn what to try.
+
+**2. A clean submission creates one row.**
+
+```bash
+curl -s -X POST http://localhost:49160/api/v1/forms/contact-us/submit \
+  -H 'content-type: application/json' \
+  -d '{"name":"Ada Lovelace","email":"ada@example.com"}'
+```
+
+```json
+HTTP 201
+{ "object": "crm_lead", "id": "lY0qNhApoHwyYMtk",
+  "record": { "id": "lY0qNhApoHwyYMtk", "name": "Ada Lovelace", "email": "ada@example.com",
+    "status": "new", "source": "web", "lead_score": 0, "owner_id": null,
+    "organization_id": "org_mvbpxfocznjyqv4e", "created_by": null } }
+```
+
+`status: "new"` was not sent; it is the object's write-path default, which the lead object declares precisely "so minimal creates (e.g. the public Web-to-Lead form, which doesn't expose status) satisfy `required`". `source: "web"` and `lead_score: 0` are defaults too.
+
+**3. A hostile submission creates the same row.** Six keys sent; two are on the form:
+
+```bash
+curl -s -X POST http://localhost:49160/api/v1/forms/contact-us/submit \
+  -H 'content-type: application/json' \
+  -d '{"name":"Mallory","email":"mallory@example.com",
+       "status":"converted","lead_score":100,
+       "owner_id":"attacker","organization_id":"org_other"}'
+```
+
+```json
+HTTP 201
+{ "record": { "id": "OJINuRoRVtZC-l95", "name": "Mallory", "email": "mallory@example.com",
+    "status": "new", "lead_score": 0, "owner_id": null,
+    "organization_id": "org_mvbpxfocznjyqv4e" } }
+```
+
+Read back as the admin, the stored row is the same: the two whitelisted fields arrived, the two business fields that are not on the form were dropped, and the two system anchors were dropped and then stamped by the server — `organization_id` is the deployment's own organization, not `org_other`, and `owner_id` is `null`. The `201` does not say which keys were refused; the route drops them without comment.
+
+| Key sent | On the form? | Stored as | Why |
+|:--|:--|:--|:--|
+| `name`, `email` | yes | as sent | whitelisted |
+| `status: "converted"` | no | `"new"` | not in `sections[].fields`; object default applies |
+| `lead_score: 100` | no | `0` | not in `sections[].fields`; object default applies |
+| `owner_id: "attacker"` | no | `null` | server-managed name, denied in both nets |
+| `organization_id: "org_other"` | no | the server's own | server-managed name; stamped by the runtime |
+
+**4. The door does not open the other way.** The same anonymous client, now reading:
+
+```bash
+curl -s -w '\n%{http_code}\n' http://localhost:49160/api/v1/data/crm_lead
+curl -s -w '\n%{http_code}\n' http://localhost:49160/api/v1/data/crm_lead/OJINuRoRVtZC-l95
+```
+
+```json
+{"error":"UNAUTHENTICATED","code":"UNAUTHENTICATED","message":"Authentication is required to access this endpoint."}
+401
+```
+
+Both answer `401` — the list, and the single row the visitor created a second earlier. The `201` body is the only time the submitter ever sees that record. "The public path only ever **inserts**; it never lists."
+
+**5. Withdrawing the form closes both endpoints.** Keep the `publicLink`, set `enabled: false`, rebuild, restart:
+
+```json
+GET  /api/v1/forms/contact-us         → 404 {"code":"FORM_NOT_FOUND","error":"No public form configured at /forms/contact-us"}
+POST /api/v1/forms/contact-us/submit  → 404 {"code":"FORM_NOT_FOUND","error":"No public form configured at /forms/contact-us"}
+```
+
+The lead count read as the admin stayed at 15 before and after. Four status codes tell the whole story of the door: `201`, `201`, `401`, `404`.
+
+## Which story is load-bearing: the guest profile or the declaration?
+
+Here the documentation and the shipped example disagree, and I did not want to pick a side by reading. The guide says: "Declare a public form view; the submit route derives a narrow authorization from that declaration. No `guest` profile, no broad grant". The CRM example ships a `GuestPortalProfile` — a permission set named `guest_portal` with `allowCreate: true` on `crm_lead` and every other bit false — and the comment above the form says that "`sharing.allowAnonymous` opens the public endpoint; the `guest_portal` profile (INSERT-only on crm_lead) authorizes the write." The runtime's own source at 17.7.0 carries both stories a few hundred lines apart: the route's docstring says security "is delegated to the `guest_portal` permission set carried on the execution context" and warns that without one the middleware "falls open"; the handler's code, below it, says public forms "work under secure-by-default (anonymous-deny) WITHOUT a deployment-configured `guest_portal`" and keeps the profile name on the context only "for back-compat with object hooks".
+
+So I removed `GuestPortalProfile` from the stack's `permissions` and rebuilt. The first thing that happened was that the build refused:
+
+```text
+✗ Access matrix drift (1 change) — capability changes must be reviewed
+• 'guest_portal' loses ALL access to 'crm_lead' (entry removed)
+  If intended, re-run with --update-access-matrix and commit the snapshot — its diff IS the review artifact.
+```
+
+That gate is its own topic; here it is a reassuring aside — a permission set disappearing is treated as a reviewable change even when the set turns out to do nothing. I accepted the drift, confirmed the compiled artifact listed one permission set instead of two, and ran the four probes again.
+
+| Probe | With `guest_portal` | Without `guest_portal` |
+|:--|:--|:--|
+| `POST …/submit` with `name`, `email` | `201`, row created | `201`, row created |
+| `POST …/submit` smuggling `status`, `owner_id`, `organization_id` | `201`; `status: "new"`, `owner_id: null`, server's `organization_id` | identical |
+| anonymous `GET /api/v1/data/crm_lead` | `401 UNAUTHENTICATED` | `401 UNAUTHENTICATED` |
+| anonymous `GET` of the created row | `401 UNAUTHENTICATED` | `401 UNAUTHENTICATED` |
+
+Identical, line for line. On 17.7.0 the declaration is load-bearing and the profile is inert for this path. What that means in practice: do not add a guest profile to make a public form work. It adds a standing grant to your access matrix that the public door never consults, and it tells the next reviewer — human or agent — a story about where the boundary is that the runtime does not share. The example's comment is wrong for 17.7.0, and I have reported it as such; until it changes, read the guide, not the comment.
+
+One more place the example and the guide part ways: the guide's step three is "Set `sharingModel: 'private'` on the object so submissions are staff-scoped after creation", and the CRM's lead object is deliberately `public_read_write`, with a comment explaining that the demo is org-shared on purpose. That does not weaken the door — the organization-wide default governs what *signed-in* users see of each other's rows, and the anonymous caller is refused before any of that is consulted — but it is advice worth following on your own intake object.
+
+## What this door does not do
+
+- **No rate limiting, no captcha, no spam control.** None is documented for the public form path, and I found none: the probes in this article created ten leads with no credentials, and nothing in the runtime counted or slowed them. Put the usual edge protection in front of `/api/v1/forms/*`; the runtime guards what gets written, not how often.
+- **The form's `required` is not enforced on the public submit.** The web-to-lead form marks `email` required; a `POST` without it answered `201` with `email: null`. The object's `required` is enforced — a `POST` without `name` answered `400 VALIDATION_FAILED` with `"Lead Name is required"`. If a field must be present, require it on the object or check it in a hook; the form flag is a rendering hint on this path.
+- **The `201` echoes the whole row.** The read-back the grant allows is the row the visitor created, including server-stamped values and defaults — `organization_id` among them. Nothing sensitive was in mine. If your intake object carries internal fields with meaningful defaults, assume the submitter will see them once. The same goes for whatever a `beforeInsert` or `afterInsert` hook on the target object stamps, including values it derives from existing records. On 17.7.0, keep hooks that look up existing records — de-duplication, round-robin assignment — out of the insert path of a public-intake object, and do that routing after intake, in a flow or a scheduled job.
+- **The owner is nobody.** `owner_id` stays `null` on a public submission; the security plugin leaves it "for object hooks / the first-admin bootstrap to assign". If your pipeline assigns leads, do it in a hook or a flow — do not expect the row to belong to a person.
+- **A withdrawal takes a rebuild — and `os dev` will tell you if you forgot.** My first attempt at step five changed nothing, because `objectstack dev --no-watch` served the previous `dist/objectstack.json` and said so in its fifth log line: "dist/objectstack.json is OLDER than your sources — this boot serves the STALE build." The fix it printed worked. I mention it because an agent-driven loop that only reads status codes would have concluded the switch does not work.
+- **Withdrawal across metadata layers has edges this post did not walk.** An organization's saved copy of a view, and forms shipped by packages, follow their own rules in the guide. The single switch tested here is the one most apps need.
+
+## A reviewer's five questions
+
+Whether the form was written by a person or by an agent, the review is the same, and it is short because the grant is the form.
+
+1. **Which forms are public?** Every form view with `sharing.enabled`, `sharing.allowAnonymous` and a `publicLink` all set is an anonymous endpoint. The compiled artifact lists them; there is nowhere else to look.
+2. **What is in `sections[].fields`?** That list, minus the twelve server-managed names, is the public write surface. Read it as you would read a firewall rule.
+3. **Does the object fill in what the form leaves out?** Every required field the form does not collect needs an object-level default — `status` in the example — or the submission fails. And every field that must be present needs its `required` on the object, not on the form.
+4. **Is there a standing anonymous grant anywhere?** A permission set bound to a `guest` or `everyone` position, or a `guest_portal` set added "to make the form work", is not needed and widens nothing the door uses. Treat its presence as a question.
+5. **What is in front of the door?** Rate limits and bot protection are the deployment's job.
+
+This is the same place-of-enforcement argument as [where agent permissions are enforced](/en/blog/objectos-agent-permission-boundaries/), applied to a caller with no identity at all: the check runs in the route and the data layer, not in the UI that happens to hide the fields. And it is the answer to the review problem [the Lovable post](/en/blog/is-lovable-safe-for-production/) describes — the accountable owner can read the five-line field list and sign off on it, which is not true of a generated policy. The glossary entry on the [permission model](/en/glossary/permission-model/) has the general shape; this door is the one deliberate exception to "deny by default", and it is shaped like the form.
+
+## Point your agent at it
+
+If an agent writes your app, the thing to hand it is not this article but the rule: a public form is a `formViews` entry with a `sharing` block, the field list is the boundary, the object owns defaults and requiredness, and no permission set is involved. The [guide to configuring a coding agent for ObjectStack](/en/blog/how-to-point-your-agent-at-objectstack/) covers how that rule reaches the agent — the rule file, the MCP endpoint a running app exposes, and the spec. `npm create objectstack@latest` installs 17.7.0, the version this transcript ran on.
+
+Want the same loop hosted, in the browser, nothing to install? That's ObjectOS, the commercial runtime environment built on ObjectStack.
