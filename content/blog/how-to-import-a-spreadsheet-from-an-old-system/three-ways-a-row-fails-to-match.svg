@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 640" role="img" aria-label="写入模式与匹配字段找到多少条已存记录的网格。零条匹配时，insert 和 upsert 创建，update 以 NO_MATCH 跳过；一条匹配时，update 和 upsert 更新它，insert 再创建一条；两条以上匹配时，update 和 upsert 以 AMBIGUOUS_MATCH 失败，insert 再创建一条；匹配键为空时 upsert 创建、update 跳过，设 skipBlankMatchKey 时两种模式都跳过。标出了在 17.7.0 上实测的格子">
+  <defs>
+    <style>
+      text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC",sans-serif;fill:#173a36}
+      .h{font-size:26px;font-weight:780}
+      .note{font-size:14px;fill:#51645d}
+      .cap{font-size:12px;font-weight:780;letter-spacing:.07em;fill:#2a7468}
+      .rowl{font-size:16px;font-weight:760}
+      .rows{font-size:12px;fill:#55675f}
+      .verb{font-size:17px;font-weight:780}
+      .code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;font-weight:600;fill:#51645d}
+      .small{font-size:13px;fill:#55675f}
+      .dot{font-size:12px;font-weight:760;fill:#2a7468}
+    </style>
+  </defs>
+  <rect width="1200" height="640" fill="#fbfdfc"/>
+
+  <text x="60" y="52" class="h">一行数据匹配不上的三种结局 —— 由 writeMode 和匹配到的记录数决定</text>
+  <text x="60" y="80" class="note">upsertKey: ['email'] 定义了什么叫「同一行」。网格列出这次查找找到 0 条、1 条或多于 1 条已存记录时会发生什么。</text>
+
+  <!-- column headers -->
+  <text x="330" y="126" class="cap">writeMode: 'insert'</text>
+  <text x="330" y="144" class="small">从不查找匹配</text>
+  <text x="610" y="126" class="cap">writeMode: 'update'</text>
+  <text x="610" y="144" class="small">从不凭空创建记录</text>
+  <text x="890" y="126" class="cap">writeMode: 'upsert'</text>
+  <text x="890" y="144" class="small">本文映射声明的 mode</text>
+
+  <!-- row 0 matches -->
+  <g transform="translate(60 160)">
+    <rect width="250" height="96" rx="14" fill="#fdf4e8" stroke="#e6d3b6"/>
+    <text x="20" y="40" class="rowl">匹配到 0 条记录</text>
+    <text x="20" y="62" class="rows">对你来说是新的</text>
+  </g>
+  <g transform="translate(320 160)"><rect width="260" height="96" rx="14" fill="#f4faf7" stroke="#c9d8d1"/><text x="20" y="42" class="verb" style="fill:#2a7468">created</text><text x="20" y="66" class="code">插入一条记录</text></g>
+  <g transform="translate(600 160)"><rect width="260" height="96" rx="14" fill="#ffffff" stroke="#c9d8d1"/><text x="20" y="42" class="verb" style="fill:#8a6a3a">skipped</text><text x="20" y="66" class="code">code: NO_MATCH</text><text x="240" y="26" class="dot" text-anchor="end">● 实测</text></g>
+  <g transform="translate(880 160)"><rect width="260" height="96" rx="14" fill="#f4faf7" stroke="#c9d8d1"/><text x="20" y="42" class="verb" style="fill:#2a7468">created</text><text x="20" y="66" class="code">created 3 · 之后表中 3 行</text><text x="240" y="26" class="dot" text-anchor="end">● 实测</text></g>
+
+  <!-- row 1 match -->
+  <g transform="translate(60 268)">
+    <rect width="250" height="96" rx="14" fill="#fdf4e8" stroke="#e6d3b6"/>
+    <text x="20" y="40" class="rowl">匹配到 1 条记录</text>
+    <text x="20" y="62" class="rows">同一行，刷新一遍</text>
+  </g>
+  <g transform="translate(320 268)"><rect width="260" height="96" rx="14" fill="#fff5f3" stroke="#e3b8b2"/><text x="20" y="42" class="verb" style="fill:#b4443a">created</text><text x="20" y="66" class="code">第二条记录 —— 重复了</text><text x="240" y="26" class="dot" text-anchor="end">● 实测</text></g>
+  <g transform="translate(600 268)"><rect width="260" height="96" rx="14" fill="#f4faf7" stroke="#c9d8d1"/><text x="20" y="42" class="verb" style="fill:#2a7468">updated</text><text x="20" y="66" class="code">送 2 行，更新 1 行</text><text x="240" y="26" class="dot" text-anchor="end">● 实测</text></g>
+  <g transform="translate(880 268)"><rect width="260" height="96" rx="14" fill="#f4faf7" stroke="#c9d8d1"/><text x="20" y="42" class="verb" style="fill:#2a7468">updated</text><text x="20" y="66" class="code">同一文件再来一次：updated 3</text><text x="240" y="26" class="dot" text-anchor="end">● 实测</text></g>
+
+  <!-- row 2+ matches -->
+  <g transform="translate(60 376)">
+    <rect width="250" height="96" rx="14" fill="#fdf4e8" stroke="#e6d3b6"/>
+    <text x="20" y="40" class="rowl">匹配到 2 条或更多</text>
+    <text x="20" y="62" class="rows">你的表自己就不一致</text>
+  </g>
+  <g transform="translate(320 376)"><rect width="260" height="96" rx="14" fill="#fff5f3" stroke="#e3b8b2"/><text x="20" y="42" class="verb" style="fill:#b4443a">created</text><text x="20" y="66" class="code">第三条记录</text></g>
+  <g transform="translate(600 376)"><rect width="260" height="96" rx="14" fill="#fff5f3" stroke="#e3b8b2"/><text x="20" y="42" class="verb" style="fill:#b4443a">failed</text><text x="20" y="66" class="code">code: AMBIGUOUS_MATCH</text></g>
+  <g transform="translate(880 376)"><rect width="260" height="96" rx="14" fill="#fff5f3" stroke="#e3b8b2"/><text x="20" y="42" class="verb" style="fill:#b4443a">failed</text><text x="20" y="66" class="code">AMBIGUOUS_MATCH · 不写入</text><text x="240" y="26" class="dot" text-anchor="end">● 实测</text></g>
+
+  <!-- row blank key -->
+  <g transform="translate(60 484)">
+    <rect width="250" height="96" rx="14" fill="#fdf4e8" stroke="#e6d3b6"/>
+    <text x="20" y="40" class="rowl">匹配键为空</text>
+    <text x="20" y="62" class="rows">E-mail 单元格是空的</text>
+  </g>
+  <g transform="translate(320 484)"><rect width="260" height="96" rx="14" fill="#f4faf7" stroke="#c9d8d1"/><text x="20" y="42" class="verb" style="fill:#2a7468">created</text><text x="20" y="66" class="code">根本不读匹配键</text></g>
+  <g transform="translate(600 484)"><rect width="260" height="96" rx="14" fill="#ffffff" stroke="#c9d8d1"/><text x="20" y="42" class="verb" style="fill:#8a6a3a">skipped</text><text x="20" y="66" class="code">code: BLANK_MATCH_KEY</text></g>
+  <g transform="translate(880 484)"><rect width="260" height="96" rx="14" fill="#f4faf7" stroke="#c9d8d1"/><text x="20" y="42" class="verb" style="fill:#2a7468">created</text><text x="20" y="66" class="code">skipBlankMatchKey → skipped</text><text x="240" y="26" class="dot" text-anchor="end">● 实测</text></g>
+
+  <text x="60" y="616" class="small">● 标出的格子是在 @objectstack/cli 17.7.0 上对同一张 crm_lead 表实测得到的；其余格子来自文档记载的逐行结果。一行失败不会中止整次导入。</text>
+</svg>

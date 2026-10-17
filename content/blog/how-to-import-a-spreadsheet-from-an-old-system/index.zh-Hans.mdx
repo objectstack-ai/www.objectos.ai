@@ -1,0 +1,203 @@
+---
+title: 怎样把旧系统的电子表格导入 AI 生成的应用？导入映射、试运行，以及一行数据匹配不上的三种结局
+description: 在 ObjectStack 17.7.0 上实测：一份命名的导入映射把陌生的表头和代码投影到一个对象的字段上，试运行返回完整的逐行报告而什么都不写入，匹配不上的一行要么创建、要么跳过、要么失败。
+author: ObjectStack Team
+date: 2026-10-25
+status: published
+topic: integration-data
+audience: business
+solutions:
+  - crm
+industries: []
+cover: ./cover.svg
+tags:
+  - 数据导入
+  - 导入映射
+  - 试运行
+---
+
+**先给结论。** 旧系统导出的电子表格，表头不是你的字段名，代码也不是你的代码。解决办法是一份**导入映射**：从文件的列到一个对象的字段之间，一份有名字、有版本的投影——`map` 翻译对方系统的代码，`upsertKey` 决定什么叫「同一行」。映射是严格的，它没有命名的列永远到不了写入路径。`dryRun: true` 返回完整的逐行报告，什么都不写入。在已发布的 `@objectstack/cli` 17.7.0 上实测：一份三行的 CSV，试运行答 `created: 3` 而表里仍是 0 行；真实导入后表里 3 行；同一文件再送一次，答 `updated: 3`。**试运行就是评审**：一个前后对照的计数，在任何一行落地之前由你签掉。
+
+下面的一切都是跑出来的，不是描述出来的。应用是 `npm create objectstack@latest` 在 17.7.0 上生成的新脚手架，装着 ObjectStack 仓库自带 CRM 示例里的 `Lead` 对象；每个数字都引自服务器自己的报告。
+
+## 每周一都会到的那份文件
+
+文件在这里。它只有三行，是为了整个文件能放进这一页；三千行时机制一模一样。
+
+```text
+Full Name,E-mail,Company,Channel,Legacy ID
+Ada Lovelace,ada@example.com,Analytical Engines,Webform,L-1001
+Alan Turing,alan@example.com,NPL,Partner Referral,L-1002
+Grace Hopper,grace@example.com,Eckert-Mauchly,Webform,L-1003
+```
+
+这是它要落进去的对象。CRM 示例的 `crm_lead` 声明了 `name`、`email`、`company`，以及一个 `source` 单选字段，存储值是 `web`、`referral`、`event`、`social`、`cold_outreach` 和 `partner`。
+
+这份文件有三处不对，而这三处正是每一份来自别的系统的导出都会犯的错：
+
+1. **表头是它们的。** `Full Name` 是我们的 `name`；`E-mail` 是我们的 `email`。
+2. **代码是它们的。** 它们的 `Webform` 是我们的 `web`；它们的 `Partner Referral` 是我们的 `partner`。这两种拼写在我们这边都不存在。
+3. **有一列绝不能落地。** `Legacy ID` 是旧系统的主键。这里没有对应字段，也不该因为疏忽凭空多出一个。
+
+导入向导里的一次性重命名能解决第一个问题，别的都解决不了。另外两个需要的是写下一次、每周都照着执行的东西。
+
+## 导入映射是一次投影，不是一次重命名
+
+ObjectStack 文档用一句话定义了这个工件：「**导入映射**是从源文件的列到一个对象的字段之间，一份有名字、可复用的投影。」它是一等公民的元数据类型，所以既可以随包发布，也可以在运行时保存，而 `POST /api/v1/data/:object/import` 按名字应用它。下面测量用的就是这一份，和对象并排声明在应用源码里：
+
+```ts
+import { defineMapping } from '@objectstack/spec/data';
+
+export const LeadFeedMapping = defineMapping({
+  name: 'crm_lead_feed',
+  label: 'Lead feed (legacy CRM export)',
+  sourceFormat: 'csv',
+  targetObject: 'crm_lead',
+  fieldMapping: [
+    { source: 'Full Name', target: 'name' },
+    { source: 'E-mail', target: 'email' },
+    { source: 'Company', target: 'company' },
+    {
+      source: 'Channel',
+      target: 'source',
+      transform: 'map',
+      params: { valueMap: { Webform: 'web', 'Partner Referral': 'partner' } },
+    },
+  ],
+  mode: 'upsert',
+  upsertKey: ['email'],
+});
+```
+
+它用 `mappings: [LeadFeedMapping]` 注册到 stack 上，`defineStack()` 在构建时就校验它，而不是等到第一次使用：`targetObject` 指向 stack 没有定义的对象会让构建失败，`javascript` 转换也会（下文再说）。因为 `defineMapping()` 在导入时就解析配置，一个拼错的键会在你写下它的地方被拒绝，错误信息里直接给出规范拼写。这就是映射之所以是[类型化元数据](/zh-Hans/glossary/typed-metadata/)而不是配置文件的原因：评审者读完二十行，就知道这份投影在任何一行被读取之前是结构正确的。
+
+| 键 | 它决定什么 |
+| :--- | :--- |
+| `fieldMapping[]` | 每个目标字段一个条目：哪一列喂给它，经过哪种转换 |
+| `transform: 'map'` + `valueMap` | 把源系统的代码翻译成你的。表里没有条目的值原样通过 |
+| `mode` | 请求省略 `writeMode` 时由它补上：`insert`、`update` 或 `upsert` |
+| `upsertKey` | 请求省略 `matchFields` 时由它补上：决定一行是否与某条已存记录是「同一行」的那些字段 |
+
+![一份五列的旧系统 CSV 经过 crm_lead_feed 映射：Full Name、E-mail、Company 原样复制到 name、email、company；Channel 经过 map 转换，Webform 变成 web，Partner Referral 变成 partner；Legacy ID 没有映射条目，被丢弃。下方：第二份只多出 Legacy ID 一列的文件走内联重命名，三行落地零行，因为这一列到达写入路径后被当作未知字段拒绝；走映射则三行全部落地](./mapping-is-a-projection.svg)
+
+定义里真正重要的词是*投影*。导入端点接受两种映射机制，而两者恰好在上面的第三个问题上分道扬镳。请求里的内联 `mapping` 是一张平铺的重命名表，它没有命名的列「带着自己的表头直接进入写入路径」。命名映射正相反：没有映射的列被「**丢弃**。工件是严格投影：只有被映射的目标才能活下来。」
+
+这个差别是可以测量的，所以测了，用的是第二份三行文件，特意做成让多余的那一列成为两条路线唯一可能分歧的地方：它的 `Channel` 单元格填的是我们自己的选项标签（`Website`、`Partner`），不需要任何映射就能解析，并且带着 `Legacy ID` 这一列。它先用内联重命名改写四个已知列送出，试运行和真实导入各一次，再用 `mappingName: "crm_lead_feed"` 试运行一次：
+
+| 路线 | 落地的行数 | 报告对每一行说了什么 |
+| :--- | :--- | :--- |
+| 内联 `mapping`，试运行 | 3 行中的 0 行 | `failed`，`code: "INVALID_FIELD"`，`field: "Legacy ID"`，"Unknown field 'Legacy ID' on object 'crm_lead'" |
+| 内联 `mapping`，真实导入 | 3 行中的 0 行 | 同样的三条判定；什么都没有写入 |
+| `mappingName`，试运行 | 3 行中的 3 行 | `created` |
+
+内联路线没有坏。它做了重命名该做的事：让 `Legacy ID` 带着自己的表头通过，然后写入路径拒绝了一个对象没有声明的字段。映射则根本没让这一列靠近写入路径。第一份文件带着 `Webform` 和 `Partner Referral` 这些代码，在内联路线上早一步就失败了：每一行都因 `source` 上的 `invalid_option` 被拒绝，"Lead Source: "Webform" is not a known option"，因为没有任何东西翻译这些代码。对于一份每周从你无法控制的系统里到来的文件，这两个保证就是写那二十行的理由。
+
+映射也可以在运行时保存，而不是随包发布：用同样的形状、换一个名字 `PUT /api/v1/meta/mapping/crm_lead_feed_saved`，答复是 `Saved mapping 'crm_lead_feed_saved' (env-wide, state=active)`，按这个名字做的试运行报告 `created 3`。不管哪种来源，导入请求都按名字解析映射；运行时先读保存的映射，再回退到包里那份。包里那个名字本身是锁住的：同样的 `PUT` 发到 `crm_lead_feed`，被 `403 NOT_OVERRIDABLE` 拒绝。
+
+## 试运行就是评审
+
+让映射物有所值的那个请求很短，因为写入模式和匹配字段都由工件提供：
+
+```json
+POST /api/v1/data/crm_lead/import
+{
+  "format": "csv",
+  "csv": "Full Name,E-mail,Company,Channel,Legacy ID\nAda Lovelace,...",
+  "mappingName": "crm_lead_feed",
+  "dryRun": true
+}
+```
+
+试运行返回了整份报告，汇总计数加上每一行一条判定：
+
+```json
+{ "object": "crm_lead", "dryRun": true, "writeMode": "upsert",
+  "total": 3, "ok": 3, "errors": 0, "created": 3, "updated": 0, "skipped": 0,
+  "results": [
+    { "row": 1, "ok": true, "action": "created" },
+    { "row": 2, "ok": true, "action": "created" },
+    { "row": 3, "ok": true, "action": "created" } ] }
+```
+
+然后读表：`"total": 0`。什么都没有存。同一个请求体去掉 `dryRun`，答 `"created": 3`，每一行都带上 `id`，表里读到 `"total": 3`，`source` 里是 `web`、`partner`、`web`——翻译后的代码，而不是文件里的。同一文件第三次送出，答 `"created": 0, "updated": 3`，表里仍是 3。这就是整个前后对照，三个数字：
+
+| 步骤 | 报告 | 之后表中的行数 |
+| :--- | :--- | :--- |
+| 试运行 | `total 3 · created 3 · updated 0` | **0** |
+| 真实导入 | `created 3` | **3** |
+| 同一文件再来一次 | `created 0 · updated 3` | **3** |
+
+为什么叫它评审而不是预览？因为它正是评审者真正能签字的那份东西。文档说得很准确：`"dryRun": true` 返回「同一份报告，但什么都不持久化；判定来自引擎自己的写入路径校验」。它不是对写入会做什么的猜测；它对每一行向写入路径要来判定，然后在持久化之前停住。所以业务负责人在周一导入跑起来之前批准的，是两个很小的东西：映射（二十行类型化元数据，放在版本控制里，能当 diff 读）和试运行报告（多少行会创建、多少行会更新、哪些行会失败、失败在哪一列）。签字的时候什么都还没发生，而第二次运行就是第一次说到做到的证明。
+
+## 一行数据匹配不上的三种结局
+
+`upsertKey: ['email']` 说明了什么叫「同一行」。有意思的是那次查找找到的不是恰好一条记录的情况。文档对此说得很直白：「一行匹配不上」不是一种行为，而是三种，由 `writeMode` 和匹配到多少条记录决定。
+
+![写入模式与匹配字段找到多少条已存记录的网格。零条匹配时，insert 和 upsert 创建，update 以 NO_MATCH 跳过；一条匹配时，update 和 upsert 更新它，insert 再创建一条；两条以上匹配时，update 和 upsert 以 AMBIGUOUS_MATCH 失败，insert 再创建一条；匹配键为空时 upsert 创建、update 跳过，设 skipBlankMatchKey 时两种模式都跳过。标出了在 17.7.0 上实测的格子](./three-ways-a-row-fails-to-match.svg)
+
+三种结局都是对同一张表制造出来的，而且每一种都是不同性质的回答：
+
+| 匹配到的记录数 | `writeMode: 'upsert'` | `writeMode: 'update'` | 对这份文件意味着什么 |
+| :--- | :--- | :--- | :--- |
+| **0** | `created` | `skipped`，`code: "NO_MATCH"` | 对你来说是新的。upsert 接纳它；update 拒绝凭空造一条记录 |
+| **1** | `updated` | `updated` | 同一行，刷新一遍 |
+| **2 条或更多** | `failed`，`code: "AMBIGUOUS_MATCH"` | `failed`，`code: "AMBIGUOUS_MATCH"` | 你的表自己就不一致；这一行什么都不写 |
+
+实测过程：一份两行的文件用 `writeMode: "update"` 送出，答 `updated 1, skipped 1`，那个陌生人的行读作 `"action": "skipped", "code": "NO_MATCH"`。然后把一行用 `writeMode: "insert"` 装了两次——insert 从不查找匹配——于是表里有了两条同一个 email 的记录；同一行再以 upsert 送出，答 `"action": "failed", "code": "AMBIGUOUS_MATCH"`，信息是 "matchFields matched more than one crm_lead record"。重复是这张表自身的事实，导入把它报出来，而不是替你挑一条。
+
+还有第四种行值得知道：匹配字段为空的那一行。`E-mail` 单元格为空的一行被 upsert **创建**了，因为 upsert 默认会创建这样的行；请求上加 `"skipBlankMatchKey": true`，同一行回来是 `"action": "skipped", "code": "BLANK_MATCH_KEY"`。两者选哪个，取决于一个没有 email 的线索到底是线索还是笔误——而这个决定由请求携带，不由映射携带。
+
+## 映射之后，单元格仍然得合法
+
+映射决定哪个值落到哪个字段。把那个值变成存储接受的东西是另一个步骤，在映射之后按目标对象自己的字段元数据执行，两个步骤的失败方式不一样。一份四行的文件在一次请求里把它们都试了一遍：
+
+| 单元格 | 发生了什么 | 这一行的判定 |
+| :--- | :--- | :--- |
+| `Channel` = `Trade Show`，`valueMap` 不认识的代码 | `map` 按文档所说原样放行；接着单选字段的强制转换找不到叫 `Trade Show` 的选项 | `failed`，`field: "source"`，`code: "invalid_option"`，"Lead Source: "Trade Show" is not a known option" |
+| `Channel` = `Event`，不在 `valueMap` 里，但是某个现有选项的标签 | 原样放行；按标签解析成存储值 `event`，没有用到任何映射条目 | `created` |
+| `E-mail` = `not-an-email` | email 字段自己的强制转换拒绝了它 | `failed`，`field: "email"`，`code: "invalid_email"` |
+| `E-mail` 为空 | 如上，被 upsert 接纳 | `created` |
+
+四行里两行落地、两行没有，报告读作 `"ok": 2, "errors": 2`。一行失败不会中止整次导入；它得到自己的一条记录，点名出问题的列——这正是下周一之前有人要在表格里改掉的那一行。
+
+第二种情况值得多说一句，因为它划定了 `map` 的用途。单选的**标签**本来就能在没有任何映射的情况下解析成存储值，应用自己的语言和它的翻译都行。所以 `valueMap` 不是用来教导入认识你的选项标签的；它是给对方系统的**代码**用的——那些既不是你的值、也不是你的标签的拼写。`Webform` 需要映射。`Event` 从来不需要。
+
+## 在读任何一行之前就被拒绝
+
+有些请求会被整体拒绝，没有逐行报告，因为逐行回答只会掩盖请求本身的错误。其中三种实测过；其余来自文档的表。
+
+| 状态 | `code` | 原因 |
+| :--- | :--- | :--- |
+| 404 | `MAPPING_NOT_FOUND` | 那个名字下没有注册映射。实测："No mapping artifact named "crm_lead_feed_nope" is registered" |
+| 400 | `CONFLICTING_MAPPING` | 一个请求里同时有 `mappingName` 和内联 `mapping`。实测："Provide either mappingName or an inline mapping, not both" |
+| 400 | `MAPPING_TARGET_MISMATCH` | 工件的 `targetObject` 不是 URL 里的对象 |
+| 400 | `UNSUPPORTED_TRANSFORM` | 某个条目声明了 `javascript`，或者流水线没有实现的转换 |
+| 413 | `PAYLOAD_TOO_LARGE` | 同步路线上超过 5,000 行 |
+
+上限是精确的。一份 5,001 行的文件被拒绝，信息是 "Import limit is 5000 rows per request (got 5001). Use an async import job for larger files."。一份 5,000 行的文件以试运行送出，在一次响应里返回 `"total": 5000, "ok": 5000, "created": 5000`。超过这个数，`POST /api/v1/data/:object/import/jobs` 解析完全相同的请求体，最多接受 50,000 行，返回一个可轮询的任务 id；那条路线本文没有跑。
+
+## 这解决不了什么
+
+**映射里的自定义代码。** `TransformType` 声明了七个值：`none`、`constant`、`map`、`split`、`join`、`lookup` 和 `javascript`。前五个逐行执行，`lookup` 是有意为之的直通、交给导入自己的引用解析，`javascript` 则被拒绝，因为「没有服务端沙箱，而悄悄跳过一个声明了的转换会损坏数据」。这个拒绝的两半在 17.7.0 上都测过。把包内映射的一个条目改成 `transform: 'javascript'`，`objectstack build` 失败，信息是 "Mapping 'crm_lead_feed' uses transform 'javascript', which the import path does not execute (no server-side sandbox). Use none/constant/map/split/join/lookup, or model the logic as a flow."。把同样的东西通过 `PUT /api/v1/meta/mapping/...` 在运行时保存，保存被接受，而第一次按名字引用它的导入被拒绝，`400 UNSUPPORTED_TRANSFORM`。超出这五种转换的逻辑，文档的答案是在提交之前先转换数据，或者在目标对象上建模成一个 flow。对评审者来说这也是正确的边界：能一口气读完的映射，才是能批准的映射。
+
+**当规则读取文件里没有的字段时，对更新的试运行。** 有一个实测结果与本文的主旨相悖，所以它属于本文。在三行都已存在之后，对同一文件做试运行——此时每一行都会解析成 `updated`——三行全部失败，`code: "rule_violation"`，落在 Lead 对象的 `lead_score_range` 校验规则上：规则的谓词读取 `record.lead_score`，文件里没有这一列，预览只拿进来的单元格去评估了规则。片刻之后同一请求体的真实导入答 `updated: 3`，用同样四个字段直接更新一条记录也成功了。所以在 17.7.0 上，对一行导入将要**更新**的记录，当预览报出 `rule_violation`、而规则读取的是你的文件里没有的字段时，这是对规则的一个问题，而不是对这一行的判定。对将要**创建**的行，这里的每一次运行里预览与写入都一致。
+
+**决定旧的那一列是什么意思。** 映射记录了「`Partner Referral` 就是 `partner`」这个决定，但它不做这个决定。仍然需要一个同时了解两个系统的人来说，一个 `Trade Show` 线索属于六个来源值里的哪一个，以及一个没有 email 的线索算不算线索。
+
+**导入向导、自动化和异步路线。** 把用户刚选好的列保存成映射的那个向导是一个产品界面，本文不覆盖；这里的一切都停留在 agent 或脚本会使用的 REST 路线上。请求接受一个 `runAutomations` 键；这些行在进入的路上触发了什么，是另一篇文章的题目。50,000 行的任务路线只是被点了名，没有跑。
+
+## 它在一次迁移里的位置
+
+这是装载这一步，而且刻意很小。如果问题是旧系统到底要不要搬，[从遗留内部系统分阶段迁出的路径](/en/blog/how-to-move-an-internal-system-to-metadata/)是策略：只读连接，用历史数据校验你声明的规则，然后逐对象开放写入。如果旧系统要留着，你想在什么都不搬的前提下把 AI 放到它的数据上，[连接你已经在跑的数据库](/zh-Hans/blog/extend-existing-systems-with-ai/)是机制，[制造业版本](/zh-Hans/blog/manufacturing-legacy-systems-ai/)则说明当系统是 ERP 时从哪里下手。导入映射针对的是两者之间的情形：系统要下线了，或者它从来没有 API，你手里有的只是一份文件。
+
+## 托管，或者在你自己的基础设施上
+
+上面的一切都跑在脚手架装好的开源运行时上。想把同一个循环托管起来、在浏览器里用、什么都不用安装？那就是 ObjectOS——建立在 ObjectStack 之上的商业运行环境。ObjectOS 既可托管在浏览器中、无需安装（ObjectOS Cloud），也可自管部署在你自己的基础设施上（ObjectOS Enterprise）；无论哪个版本，你都可以导出本体，拿到开源的 ObjectStack 运行时上运行。映射是这份本体的一部分：它随包一起走。
+
+## 从 agent 路径开始
+
+```bash
+npm create objectstack@latest crm && cd crm
+```
+
+然后把文件和导入映射的文档页（`objectstack.ai/docs/data-modeling/import-mappings`）交给你的编码 agent，提三个要求：这些行属于哪个对象，一份 `defineMapping`、其 `valueMap` 翻译文件用到的每一个代码，以及对真实文件做一次试运行。拿回来的就是评审材料：一份一口气能读完的映射，和一份报告，说明多少行会创建、多少行会更新、哪些单元格需要有人去改。签了它，再跑导入。下周一再跑一次，在你预期的地方读到 `updated`。
