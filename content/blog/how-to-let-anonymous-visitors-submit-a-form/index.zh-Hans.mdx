@@ -1,0 +1,211 @@
+---
+title: 怎样让匿名访客把表单提交进一个受治理的业务应用？一道公开的门，五个字段宽
+description: v17 起匿名访问对象数据一律拒绝。唯一开着的门是公开表单视图：运行时从表单自身推导授权——创建一行、读回这一行、五个字段，仅此而已。在 17.7.0 上实测。
+author: ObjectStack Team
+date: 2026-10-26
+status: published
+topic: app-building
+audience: business
+solutions: []
+industries: []
+cover: ./cover.svg
+tags:
+  - 公开表单
+  - Web-to-Lead
+  - 匿名访问
+---
+
+**先给结论**：从 v17 起，ObjectStack 应用里任何未经认证的对象数据请求都会被 `401 UNAUTHENTICATED` 拒绝——每个对象、每个端点，没有例外开关。一个受治理的应用向公众留下的唯一一道门，是**公开表单视图**：声明一个表单，把它的 `sharing` 块标为 `allowAnonymous: true`，运行时就从这份声明推导出访客的全部授权——在那一个对象上创建一条记录，读回它刚创建的那一行，别的什么都不能做。表单的字段列表就是安全边界。CRM 示例的 web-to-lead 表单列了五个字段，于是五个字段能进来；其余八个业务字段和每一个系统列都进不来，不管访客发了什么。我把它称为**表单形状的授权**（form-shaped grant）：授权在请求时从表单算出来，所以它不可能被配置得比表单更宽。下文的每一项都在已发布的 `@objectstack/cli` 17.7.0 上实测，也就是今天 `npm create objectstack@latest` 装上的版本——包括文档和自带示例唯一一处说法不一致的问题：到底需不需要一个 `guest_portal` 配置文件。答案是不需要。
+
+## 问题，用文档自己的话说
+
+ObjectStack 关于公开数据收集的指南，开头就用用户的口吻写下了场景：
+
+> 我想让匿名访客提交一个表单——「联系我们」「申请演示」或者录入表单——它会创建一条记录。但我绝对**不能**把底层数据开放给他们，而且他们只能设置表单上的那些字段。
+
+每个业务应用都有这么一张表：网站上的线索表单、支持工单录入、演示申请、保修申请。常见的几种做法各有代价。给一个「guest」角色加上对这张表的写权限，是一份没人会再读的常设授权，它会漂移。手写一个端点，绕开了治理其他一切的权限模型。用第三方表单工具加 webhook，意味着现在有两套系统各持一份 schema，而审阅者看的不是其中那一份。
+
+从 v17 起，第一种做法根本不存在了。权限文档顺带记录了原因：「since v17 anonymous access to object data is always denied anyway — the `requireAuth: false` opt-out was retired」（自 v17 起匿名访问对象数据本来就一律拒绝——`requireAuth: false` 这个退出开关已经退役）。[自托管实操](/en/blog/how-to-self-host-objectstack/)把它变成了一个验证步骤——不带凭据 `curl` 一个对象端点，坚持要看到带机器可读 `code` 的 `401`——并把那里出现 `200` 当作事故处理。所以这个问题诚实的问法是：既然数据平面从结构上就对匿名调用者关闭，公开表单到底是怎么进来的？
+
+## 公开表单是一份声明，不是一条权限
+
+下面是 CRM 示例 web-to-lead 表单的全部内容，照 17.7.0 标签里发布的原样：
+
+```ts
+formViews: {
+  web_to_lead: {
+    type: 'simple',
+    data: { provider: 'object', object: 'crm_lead' },
+    sections: [
+      {
+        name: 'contact_us',
+        label: 'Contact us',
+        columns: 1,
+        fields: [
+          { field: 'name', required: true },
+          { field: 'company' },
+          { field: 'email', required: true },
+          { field: 'phone' },
+          { field: 'title' },
+        ],
+      },
+    ],
+    sharing: {
+      enabled: true,
+      allowAnonymous: true,
+      publicLink: '/forms/contact-us',
+    },
+  },
+},
+```
+
+里面没有一个字提到权限。开门的是 `sharing` 块：`enabled`、`allowAnonymous` 和 `publicLink` 三者齐备时，运行时注册两个匿名端点——`GET /api/v1/forms/contact-us` 返回解析后的表单和白名单 schema，`POST /api/v1/forms/contact-us/submit` 插入一条 `crm_lead`。文档用一句话规定访客能写什么：「Only the fields listed in `sections[].fields` are accepted on submit; everything else is stripped server-side」（提交时只接受 `sections[].fields` 里列出的字段；其余一切在服务端剥除）。而它给出的这样设计的理由，正是本文要验证的那句话：「Authorization is **derived from the declaration**, not configured separately — so the grant can't drift wider than the form」（授权是从声明推导出来的，不是单独配置的——所以授权不可能漂移得比表单更宽）。
+
+![两道网：路由只保留五个声明字段并丢弃服务端管理的名字；数据层只允许在 crm_lead 上插入并读回，再次剥除同样的名字。读取答 401；撤回的表单答 404。](./two-nets.svg)
+
+从机制上说有两道网，值得分别起名，因为审阅者可以逐一核对。
+
+**第一道网是路由。** 提交处理器用匹配到的表单的 `sections[].fields` 构建允许列表，只把这些键从请求体里拷出来。在此之前，它按名字丢掉 `PUBLIC_FORM_SERVER_MANAGED_FIELDS` 里的每一个键——这是 spec 包导出的一个集合：`id`、`owner_id`、`owning_business_unit_id`、`organization_id`、`tenant_id`、`created_at`、`created_by`、`updated_at`、`updated_by`、`is_deleted`、`deleted_at` 和 `__search`——十二个名字，文档说它们「**never** accepted from a public submission — not even when a section declares them」（永远不从公开提交接受——即使某个分区声明了它们也不接受）。一个一个字段都没有的表单会以 `400` 拒绝，而不是来什么收什么。
+
+**第二道网是数据层。** 路由给这次写入附上一个随请求而生的 `publicFormGrant: { object: 'crm_lead' }`，安全插件只认这个：`insert`，加上读回所需的 `find`、`findOne` 和 `count`，而且仅限这一个对象。在放行插入之前，它把同样的十二个名字再剥一次，所以即使某个表单在分区里声明了 `owner_id`，或者路由过滤器和数据层将来被改得不一致，访客也伪造不了归属和租户位置。这份授权就是表单的形状，在请求时读出来。权限表里没有一行写着「匿名可以写线索」，因为根本没有什么可配置的。
+
+## 17.7.0 上的实测记录
+
+我从 `@objectstack/cli@17.7.0` 标签取出 `examples/app-crm`，把依赖钉到已发布的 17.7.0 包，用 `objectstack dev` 启动。开发服务器在空数据库上会播种一个管理员账号；预置的五条线索归它所有。下面每个响应都是真实的，只为篇幅做了裁剪。
+
+**1. 这道门会自我描述——五个字段宽。** 不带任何凭据：
+
+```bash
+curl -s http://localhost:49160/api/v1/forms/contact-us
+```
+
+```json
+{ "slug": "contact-us", "object": "crm_lead",
+  "form": { "sections": [ { "name": "contact_us", "fields": [
+      { "field": "name", "required": true }, { "field": "company" },
+      { "field": "email", "required": true }, { "field": "phone" }, { "field": "title" } ] } ],
+    "sharing": { "enabled": true, "publicLink": "/forms/contact-us", "allowAnonymous": true } },
+  "objectSchema": { "name": "crm_lead", "fields": { "name": {}, "email": {}, "phone": {}, "company": {}, "title": {} } } }
+```
+
+`objectSchema` 恰好只带五个白名单字段。`crm_lead` 的对象定义声明了十三个业务字段；公开 schema 只显示五个，对 `status`、`lead_score`、`assigned_to`、`account`、`notes` 和其余字段只字不提。访客连该试什么都无从得知。
+
+**2. 一次干净的提交创建一行。**
+
+```bash
+curl -s -X POST http://localhost:49160/api/v1/forms/contact-us/submit \
+  -H 'content-type: application/json' \
+  -d '{"name":"Ada Lovelace","email":"ada@example.com"}'
+```
+
+```json
+HTTP 201
+{ "object": "crm_lead", "id": "lY0qNhApoHwyYMtk",
+  "record": { "id": "lY0qNhApoHwyYMtk", "name": "Ada Lovelace", "email": "ada@example.com",
+    "status": "new", "source": "web", "lead_score": 0, "owner_id": null,
+    "organization_id": "org_mvbpxfocznjyqv4e", "created_by": null } }
+```
+
+`status: "new"` 并没有被发送；它是对象的写路径默认值，线索对象声明它的理由写得很明确：「so minimal creates (e.g. the public Web-to-Lead form, which doesn't expose status) satisfy `required`」（让最小化创建——比如不暴露 status 的公开 Web-to-Lead 表单——也能满足 `required`）。`source: "web"` 和 `lead_score: 0` 同样是默认值。
+
+**3. 一次恶意的提交创建的是同样的一行。** 发了六个键，两个在表单上：
+
+```bash
+curl -s -X POST http://localhost:49160/api/v1/forms/contact-us/submit \
+  -H 'content-type: application/json' \
+  -d '{"name":"Mallory","email":"mallory@example.com",
+       "status":"converted","lead_score":100,
+       "owner_id":"attacker","organization_id":"org_other"}'
+```
+
+```json
+HTTP 201
+{ "record": { "id": "OJINuRoRVtZC-l95", "name": "Mallory", "email": "mallory@example.com",
+    "status": "new", "lead_score": 0, "owner_id": null,
+    "organization_id": "org_mvbpxfocznjyqv4e" } }
+```
+
+以管理员身份读回，存储的行一模一样：两个白名单字段到了，两个不在表单上的业务字段被丢弃，两个系统锚点先被丢弃、再由服务端盖章——`organization_id` 是这个部署自己的组织，不是 `org_other`；`owner_id` 是 `null`。`201` 不会说明哪些键被拒绝；路由一声不响地把它们丢掉。
+
+| 发送的键 | 在表单上？ | 存储为 | 原因 |
+|:--|:--|:--|:--|
+| `name`、`email` | 是 | 照发送的值 | 在白名单内 |
+| `status: "converted"` | 否 | `"new"` | 不在 `sections[].fields` 里；对象默认值生效 |
+| `lead_score: 100` | 否 | `0` | 不在 `sections[].fields` 里；对象默认值生效 |
+| `owner_id: "attacker"` | 否 | `null` | 服务端管理的名字，两道网都拒绝 |
+| `organization_id: "org_other"` | 否 | 服务端自己的值 | 服务端管理的名字；由运行时盖章 |
+
+**4. 这道门不向另一边打开。** 同一个匿名客户端，这次来读：
+
+```bash
+curl -s -w '\n%{http_code}\n' http://localhost:49160/api/v1/data/crm_lead
+curl -s -w '\n%{http_code}\n' http://localhost:49160/api/v1/data/crm_lead/OJINuRoRVtZC-l95
+```
+
+```json
+{"error":"UNAUTHENTICATED","code":"UNAUTHENTICATED","message":"Authentication is required to access this endpoint."}
+401
+```
+
+两个都答 `401`——列表，以及访客一秒钟前刚创建的那一行。`201` 的响应体是提交者唯一一次看到这条记录的机会。「The public path only ever **inserts**; it never lists」（公开路径只会插入，从不列出）。
+
+**5. 撤回表单会同时关闭两个端点。** 保留 `publicLink`，把 `enabled` 设为 `false`，重新构建，重启：
+
+```json
+GET  /api/v1/forms/contact-us         → 404 {"code":"FORM_NOT_FOUND","error":"No public form configured at /forms/contact-us"}
+POST /api/v1/forms/contact-us/submit  → 404 {"code":"FORM_NOT_FOUND","error":"No public form configured at /forms/contact-us"}
+```
+
+以管理员身份读到的线索总数前后都是 15。四个状态码讲完了这道门的全部故事：`201`、`201`、`401`、`404`。
+
+## 哪个说法在承重：guest 配置文件，还是声明？
+
+在这里文档和自带示例说法不一，而我不想靠读代码来选边。指南说：「Declare a public form view; the submit route derives a narrow authorization from that declaration. No `guest` profile, no broad grant」（声明一个公开表单视图；提交路由从这份声明推导一份窄授权。不需要 `guest` 配置文件，不需要宽泛授权）。CRM 示例却附带了一个 `GuestPortalProfile`——一个名为 `guest_portal` 的权限集，在 `crm_lead` 上 `allowCreate: true`，其余位全为 false——表单上方的注释说「`sharing.allowAnonymous` 打开公开端点；`guest_portal` 配置文件（对 crm_lead 仅 INSERT）授权这次写入」。运行时自己在 17.7.0 的源码里，相隔几百行同时持有两种说法：路由的文档注释说安全「委托给执行上下文上携带的 `guest_portal` 权限集」，并警告没有它中间件会「fall open」（失守放行）；而紧接其后的处理器代码说公开表单「work under secure-by-default (anonymous-deny) WITHOUT a deployment-configured `guest_portal`」（在默认安全、拒绝匿名的姿态下，无需部署配置 `guest_portal` 也能工作），把这个配置文件名留在上下文里只是「for back-compat with object hooks」（为了与对象钩子向后兼容）。
+
+于是我把 `GuestPortalProfile` 从 stack 的 `permissions` 里删掉，重新构建。第一件发生的事是构建拒绝了：
+
+```text
+✗ Access matrix drift (1 change) — capability changes must be reviewed
+• 'guest_portal' loses ALL access to 'crm_lead' (entry removed)
+  If intended, re-run with --update-access-matrix and commit the snapshot — its diff IS the review artifact.
+```
+
+这道门禁是另一个话题；在这里它是一句令人安心的旁白——一个权限集的消失被当作需要审阅的变更，哪怕这个集合最后被证明什么都不干。我接受了这次漂移，确认编译出的工件里只剩一个权限集而不是两个，然后把四个探测重新跑了一遍。
+
+| 探测 | 有 `guest_portal` | 没有 `guest_portal` |
+|:--|:--|:--|
+| 带 `name`、`email` 的 `POST …/submit` | `201`，创建一行 | `201`，创建一行 |
+| 夹带 `status`、`owner_id`、`organization_id` 的 `POST …/submit` | `201`；`status: "new"`、`owner_id: null`、服务端的 `organization_id` | 完全相同 |
+| 匿名 `GET /api/v1/data/crm_lead` | `401 UNAUTHENTICATED` | `401 UNAUTHENTICATED` |
+| 匿名 `GET` 刚创建的那一行 | `401 UNAUTHENTICATED` | `401 UNAUTHENTICATED` |
+
+逐行一致。在 17.7.0 上，承重的是声明，这个配置文件在这条路径上是惰性的。实际意义是：不要为了让公开表单工作而添加 guest 配置文件。它给你的访问矩阵加了一份公开之门从不查询的常设授权，还向下一位审阅者——不管是人还是 Agent——讲了一个运行时并不认同的「边界在哪里」的故事。示例里的那条注释对 17.7.0 来说是错的，我已经如实上报；在它改掉之前，读指南，别读注释。
+
+示例和指南还有一处分道扬镳：指南的第三步是「Set `sharingModel: 'private'` on the object so submissions are staff-scoped after creation」（把对象的 `sharingModel` 设为 `'private'`，让提交在创建后只对内部人员可见），而 CRM 的线索对象刻意用了 `public_read_write`，注释解释说这个演示有意按组织共享。这不会削弱这道门——组织级默认值管的是**已登录**用户彼此能看到多少行，匿名调用者在那之前就已经被拒绝——但对你自己的录入对象，这条建议值得照做。
+
+## 这道门做不到的事
+
+- **没有限流、没有验证码、没有反垃圾。** 公开表单路径没有任何相关文档，我也没有找到任何实现：本文的探测在没有任何凭据的情况下创建了十条线索，运行时既没有计数也没有减速。把常规的边缘防护放在 `/api/v1/forms/*` 前面；运行时守的是写进去什么，不是写得多频繁。
+- **表单上的 `required` 在公开提交时不被强制。** web-to-lead 表单把 `email` 标为必填；不带它的 `POST` 答 `201`，`email: null`。对象上的 `required` 会被强制——不带 `name` 的 `POST` 答 `400 VALIDATION_FAILED`，附「Lead Name is required」。如果一个字段必须存在，就在对象上要求它，或者在钩子里检查；在这条路径上，表单的标记只是渲染提示。
+- **`201` 回显整行。** 授权允许的读回就是访客创建的那一行，包括服务端盖章的值和默认值——`organization_id` 也在其中。我的这次没有任何敏感内容。如果你的录入对象带有默认值有实际含义的内部字段，就假定提交者会看到它们一次。
+- **所有者是「无人」。** 公开提交的 `owner_id` 保持 `null`；安全插件把它留给「object hooks / the first-admin bootstrap to assign」（对象钩子或首位管理员引导流程来分配）。如果你的流程要分派线索，在钩子或流程里做——别指望这一行天然属于某个人。
+- **撤回需要重新构建——忘了的话 `os dev` 会提醒你。** 我第五步的第一次尝试什么都没变，因为 `objectstack dev --no-watch` 提供的是上一次的 `dist/objectstack.json`，并在日志第五行明说了：「dist/objectstack.json is OLDER than your sources — this boot serves the STALE build」（dist/objectstack.json 比你的源码旧——本次启动提供的是过期构建）。它打印的修法有效。我提这件事，是因为一个只读状态码的 Agent 驱动循环会得出「这个开关不起作用」的结论。
+- **跨元数据层的撤回有本文没走到的边缘。** 组织保存的视图副本、包随附的表单，在指南中各有规则。这里测的单个开关，是大多数应用需要的那一个。
+
+## 审阅者的五个问题
+
+不管表单是人写的还是 Agent 写的，审阅是一样的，而且很短，因为授权就是表单。
+
+1. **哪些表单是公开的？** 每一个 `sharing.enabled`、`sharing.allowAnonymous` 和 `publicLink` 三者齐备的表单视图都是一个匿名端点。编译出的工件列出了它们；没有别的地方可查。
+2. **`sections[].fields` 里有什么？** 这份列表减去十二个服务端管理的名字，就是公开写入面。像读防火墙规则那样读它。
+3. **对象会补上表单没收的东西吗？** 表单不收集的每一个必填字段都需要对象级默认值——示例里的 `status`——否则提交失败。而每一个必须存在的字段，`required` 要写在对象上，不是表单上。
+4. **哪里有常设的匿名授权吗？** 绑定到 `guest` 或 `everyone` 岗位的权限集，或者「为了让表单工作」而添加的 `guest_portal` 集合，既不需要，也不会拓宽这道门用到的任何东西。把它的存在当成一个问题。
+5. **门前有什么？** 限流和机器人防护是部署的工作。
+
+这和[Agent 权限在哪里被强制](/zh-Hans/blog/objectos-agent-permission-boundaries/)是同一个「在何处执行」的论证，只是套在一个完全没有身份的调用者身上：检查在路由和数据层里跑，而不是在恰好把字段藏起来的 UI 里。它也是[那篇 Lovable 文章](/zh-Hans/blog/is-lovable-safe-for-production/)描述的审阅难题的答案——负责任的所有者能读懂五行字段列表并签字，这对一份生成出来的策略可做不到。术语表里的[权限模型](/zh-Hans/glossary/permission-model/)条目有总体的形状；这道门是「默认拒绝」唯一一个有意为之的例外，而它的形状就是表单。
+
+## 把你的 Agent 指向它
+
+如果你的应用由 Agent 来写，该交给它的不是这篇文章，而是这条规则：公开表单是一个带 `sharing` 块的 `formViews` 条目，字段列表就是边界，默认值和必填由对象负责，不涉及任何权限集。[为 ObjectStack 配置编码 Agent 的指南](/en/blog/how-to-point-your-agent-at-objectstack/)讲了这条规则如何到达 Agent——规则文件、运行中的应用暴露的 MCP 端点，以及 spec。`npm create objectstack@latest` 装的是 17.7.0，正是这份记录运行的版本。
+
+想把同一个循环托管起来、在浏览器里用、什么都不用安装？那就是 ObjectOS——建立在 ObjectStack 之上的商业运行环境。

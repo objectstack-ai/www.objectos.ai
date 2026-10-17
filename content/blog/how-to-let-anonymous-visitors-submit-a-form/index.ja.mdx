@@ -1,0 +1,211 @@
+---
+title: "匿名の訪問者にフォームを送信させて、統制された業務アプリに取り込むには？公開の扉はひとつ、幅はフィールド五つ"
+description: "v17 以降、匿名のデータアクセスは常に拒否される。唯一開いている扉は公開フォームビューだ。ランタイムはフォームそのものから権限を導出する——一行を作り、その一行を読み返す、フィールドは五つ、それ以外は何もない。17.7.0 で実測。"
+author: ObjectStack Team
+date: 2026-10-26
+status: published
+topic: app-building
+audience: business
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - 公開フォーム
+  - Web-to-Lead
+  - 匿名アクセス
+---
+
+**要点**：v17 以降、ObjectStack アプリでは認証されていないオブジェクトデータへのリクエストは `401 UNAUTHENTICATED` で拒否される——どのオブジェクトでも、どのエンドポイントでも、例外のスイッチはない。統制されたアプリが公衆に向けて開けておく唯一の扉が**公開フォームビュー**だ。フォームを宣言し、その `sharing` ブロックに `allowAnonymous: true` を付ければ、ランタイムはその宣言から訪問者の権限をまるごと導出する——そのひとつのオブジェクトにレコードを一件作り、いま作った行を読み返す。それ以外は何もできない。フォームのフィールド一覧が、そのままセキュリティ境界になる。CRM サンプルの web-to-lead フォームは五つのフィールドを列挙しているので、届くのは五つ。残り八つの業務フィールドとすべてのシステム列は、訪問者が何を送ろうと届かない。これを私は**フォームの形をした権限**（form-shaped grant）と呼ぶ。権限はリクエスト時にフォームから計算されるから、フォームより広く設定しようがない。以下はすべて、公開されている `@objectstack/cli` 17.7.0——今日 `npm create objectstack@latest` がインストールするバージョン——で実測した。ドキュメントと同梱サンプルが唯一食い違っている点、`guest_portal` プロファイルは必要なのか、も含めて。答えは「不要」だ。
+
+## 問題を、ドキュメント自身の言葉で
+
+ObjectStack の公開データ収集ガイドは、利用者の言い回しでシナリオを書き出している：
+
+> 匿名の訪問者に「お問い合わせ」「デモ申込」「受付」といったフォームを送信させて、レコードを作らせたい。だが、土台のデータへのアクセスは**絶対に**与えてはならず、設定できるのはフォーム上のフィールドだけでなければならない。
+
+業務アプリにはどれにもこういうフォームがある。サイトのリード獲得フォーム、サポート受付、デモ申込、保証申請。よくある答えにはそれぞれ代償がある。「guest」ロールにテーブルへの書き込み権を与えるのは、誰も読み返さない常設の権限で、漂流する。エンドポイントを手書きすれば、他のすべてを統制している権限モデルを迂回する。外部のフォームツールと webhook を使えば、スキーマを持つシステムが二つになり、そのうちひとつはレビュアーが見ていない方だ。
+
+v17 以降、最初の答えはそもそも使えない。権限のドキュメントがその理由を一言で記録している：「since v17 anonymous access to object data is always denied anyway — the `requireAuth: false` opt-out was retired」（v17 以降、匿名のオブジェクトデータアクセスはどのみち常に拒否される——`requireAuth: false` によるオプトアウトは退役した）。[セルフホストの手順記事](/en/blog/how-to-self-host-objectstack/)はこれを検証ステップに変えている——資格情報なしでオブジェクトのエンドポイントに `curl` し、機械可読な `code` 付きの `401` を要求し、そこで `200` が返れば事故として扱う。だから問いを正直に言い直すとこうなる。データプレーンが構造的に匿名呼び出しに閉じているなら、公開フォームはどうやって通るのか？
+
+## 公開フォームは宣言であって、権限ではない
+
+これが CRM サンプルの web-to-lead フォームの全文で、17.7.0 タグで出荷されているままだ：
+
+```ts
+formViews: {
+  web_to_lead: {
+    type: 'simple',
+    data: { provider: 'object', object: 'crm_lead' },
+    sections: [
+      {
+        name: 'contact_us',
+        label: 'Contact us',
+        columns: 1,
+        fields: [
+          { field: 'name', required: true },
+          { field: 'company' },
+          { field: 'email', required: true },
+          { field: 'phone' },
+          { field: 'title' },
+        ],
+      },
+    ],
+    sharing: {
+      enabled: true,
+      allowAnonymous: true,
+      publicLink: '/forms/contact-us',
+    },
+  },
+},
+```
+
+権限については一言もない。扉を開けるのは `sharing` ブロックだ。`enabled`、`allowAnonymous`、`publicLink` の三つが揃うと、ランタイムは匿名エンドポイントを二つ登録する——解決済みのフォームとホワイトリスト化されたスキーマを返す `GET /api/v1/forms/contact-us` と、`crm_lead` を一件挿入する `POST /api/v1/forms/contact-us/submit` だ。訪問者が書けるものについてのドキュメントの一行ルールは「Only the fields listed in `sections[].fields` are accepted on submit; everything else is stripped server-side」（送信時に受け付けるのは `sections[].fields` に列挙されたフィールドだけで、それ以外はサーバー側で剥がされる）。そして、なぜこう作ったのかという理由こそ、この記事が検証するために存在する一文だ：「Authorization is **derived from the declaration**, not configured separately — so the grant can't drift wider than the form」（権限は宣言から導出されるのであって、別に設定するのではない——だから権限がフォームより広く漂流することはない）。
+
+![二つの網：ルートは宣言された五つのフィールドだけを残し、サーバー管理の名前を落とす。データ層は crm_lead への挿入と読み返しだけを許し、同じ名前をもう一度剥がす。読み取りは 401、撤回されたフォームは 404 を返す。](./two-nets-en.svg)
+
+仕組みとしては網が二つあり、それぞれに名前を付ける価値がある。レビュアーが一つずつ確認できるからだ。
+
+**一つ目の網はルート。** 送信ハンドラーは、一致したフォームの `sections[].fields` から許可リストを組み立て、リクエストボディからそのキーだけを写し取る。その前に、spec パッケージが公開する集合 `PUBLIC_FORM_SERVER_MANAGED_FIELDS` に含まれるキー——`id`、`owner_id`、`owning_business_unit_id`、`organization_id`、`tenant_id`、`created_at`、`created_by`、`updated_at`、`updated_by`、`is_deleted`、`deleted_at`、`__search` の十二の名前——を名前で落とす。ドキュメントいわく、これらは「**never** accepted from a public submission — not even when a section declares them」（公開送信からは決して受け付けない——セクションが宣言していても）。フィールドがひとつもないフォームは、届いたものを何でも受け付けるのではなく `400` で拒否される。
+
+**二つ目の網はデータ層。** ルートは書き込みに、リクエストスコープの `publicFormGrant: { object: 'crm_lead' }` を添える。セキュリティプラグインが認めるのは正確にそれだけ——`insert` と、読み返しのための `find`、`findOne`、`count`、しかもそのオブジェクトに限る。挿入を認める前に同じ十二の名前をもう一度剥がすので、フォームがセクションで `owner_id` を宣言していても、ルートのフィルターとデータ層がいつか別々に編集されても、訪問者は所有者やテナントの所属を偽造できない。権限はフォームの形で、リクエスト時に読み取られる。権限テーブルに「匿名はリードに書ける」という行はない。設定するものが何もないからだ。
+
+## 17.7.0 での記録
+
+`@objectstack/cli@17.7.0` タグから `examples/app-crm` を取り出し、依存関係を公開済みの 17.7.0 パッケージに固定して、`objectstack dev` で起動した。開発サーバーは空のデータベースに管理者アカウントをシードし、シードされた五件のリードはその管理者のものだ。以下のレスポンスはすべて実物で、長さのために切り詰めただけだ。
+
+**1. 扉は自分を説明する——幅はフィールド五つ。** 資格情報なしで：
+
+```bash
+curl -s http://localhost:49160/api/v1/forms/contact-us
+```
+
+```json
+{ "slug": "contact-us", "object": "crm_lead",
+  "form": { "sections": [ { "name": "contact_us", "fields": [
+      { "field": "name", "required": true }, { "field": "company" },
+      { "field": "email", "required": true }, { "field": "phone" }, { "field": "title" } ] } ],
+    "sharing": { "enabled": true, "publicLink": "/forms/contact-us", "allowAnonymous": true } },
+  "objectSchema": { "name": "crm_lead", "fields": { "name": {}, "email": {}, "phone": {}, "company": {}, "title": {} } } }
+```
+
+`objectSchema` にはホワイトリストの五フィールドがちょうど載っている。`crm_lead` のオブジェクト定義は十三の業務フィールドを宣言しているが、公開スキーマは五つだけを見せ、`status`、`lead_score`、`assigned_to`、`account`、`notes` などには触れない。訪問者は何を試せばいいかすら知りようがない。
+
+**2. まっとうな送信は一行を作る。**
+
+```bash
+curl -s -X POST http://localhost:49160/api/v1/forms/contact-us/submit \
+  -H 'content-type: application/json' \
+  -d '{"name":"Ada Lovelace","email":"ada@example.com"}'
+```
+
+```json
+HTTP 201
+{ "object": "crm_lead", "id": "lY0qNhApoHwyYMtk",
+  "record": { "id": "lY0qNhApoHwyYMtk", "name": "Ada Lovelace", "email": "ada@example.com",
+    "status": "new", "source": "web", "lead_score": 0, "owner_id": null,
+    "organization_id": "org_mvbpxfocznjyqv4e", "created_by": null } }
+```
+
+`status: "new"` は送っていない。オブジェクトの書き込み時デフォルトで、リードオブジェクトはその理由を明記して宣言している：「so minimal creates (e.g. the public Web-to-Lead form, which doesn't expose status) satisfy `required`」（status を露出しない公開 Web-to-Lead フォームのような最小の作成でも `required` を満たせるように）。`source: "web"` と `lead_score: 0` もデフォルトだ。
+
+**3. 悪意ある送信も、同じ一行を作る。** 六つのキーを送り、フォーム上にあるのは二つ：
+
+```bash
+curl -s -X POST http://localhost:49160/api/v1/forms/contact-us/submit \
+  -H 'content-type: application/json' \
+  -d '{"name":"Mallory","email":"mallory@example.com",
+       "status":"converted","lead_score":100,
+       "owner_id":"attacker","organization_id":"org_other"}'
+```
+
+```json
+HTTP 201
+{ "record": { "id": "OJINuRoRVtZC-l95", "name": "Mallory", "email": "mallory@example.com",
+    "status": "new", "lead_score": 0, "owner_id": null,
+    "organization_id": "org_mvbpxfocznjyqv4e" } }
+```
+
+管理者として読み返すと、保存された行は同じだ。ホワイトリストの二フィールドは届き、フォームにない二つの業務フィールドは落とされ、二つのシステムアンカーは落とされたうえでサーバーが刻印した——`organization_id` は `org_other` ではなくこのデプロイ自身の組織で、`owner_id` は `null`。`201` はどのキーが拒否されたかを告げない。ルートは黙って落とす。
+
+| 送ったキー | フォーム上に？ | 保存値 | 理由 |
+|:--|:--|:--|:--|
+| `name`、`email` | ある | 送ったまま | ホワイトリスト |
+| `status: "converted"` | ない | `"new"` | `sections[].fields` にない。オブジェクトのデフォルトが適用 |
+| `lead_score: 100` | ない | `0` | `sections[].fields` にない。オブジェクトのデフォルトが適用 |
+| `owner_id: "attacker"` | ない | `null` | サーバー管理の名前。両方の網で拒否 |
+| `organization_id: "org_other"` | ない | サーバー自身の値 | サーバー管理の名前。ランタイムが刻印 |
+
+**4. 扉は逆向きには開かない。** 同じ匿名クライアントが、今度は読む：
+
+```bash
+curl -s -w '\n%{http_code}\n' http://localhost:49160/api/v1/data/crm_lead
+curl -s -w '\n%{http_code}\n' http://localhost:49160/api/v1/data/crm_lead/OJINuRoRVtZC-l95
+```
+
+```json
+{"error":"UNAUTHENTICATED","code":"UNAUTHENTICATED","message":"Authentication is required to access this endpoint."}
+401
+```
+
+どちらも `401`——一覧も、訪問者が一秒前に作ったその一行も。`201` のボディが、送信者がそのレコードを目にする唯一の機会だ。「The public path only ever **inserts**; it never lists」（公開パスは挿入しかしない。一覧は決して返さない）。
+
+**5. フォームを撤回すると、両方のエンドポイントが閉じる。** `publicLink` は残し、`enabled: false` にして、再ビルドし、再起動する：
+
+```json
+GET  /api/v1/forms/contact-us         → 404 {"code":"FORM_NOT_FOUND","error":"No public form configured at /forms/contact-us"}
+POST /api/v1/forms/contact-us/submit  → 404 {"code":"FORM_NOT_FOUND","error":"No public form configured at /forms/contact-us"}
+```
+
+管理者として読んだリード件数は前後とも 15 のままだった。四つのステータスコードが扉の物語のすべてを語る：`201`、`201`、`401`、`404`。
+
+## どちらの話が荷重を支えているのか：guest プロファイルか、宣言か
+
+ここでドキュメントと同梱サンプルは食い違っていて、私は読んだだけで肩を持ちたくなかった。ガイドは言う：「Declare a public form view; the submit route derives a narrow authorization from that declaration. No `guest` profile, no broad grant」（公開フォームビューを宣言せよ。送信ルートはその宣言から狭い権限を導出する。`guest` プロファイルも、広い権限も不要）。CRM サンプルは `GuestPortalProfile` を同梱している——`crm_lead` に `allowCreate: true`、他のビットはすべて false の、`guest_portal` という名の権限セットだ——そしてフォームの上のコメントは「`sharing.allowAnonymous` が公開エンドポイントを開き、`guest_portal` プロファイル（crm_lead への INSERT のみ）が書き込みを認可する」と述べる。ランタイム自身の 17.7.0 のソースは、数百行を隔てて両方の話を抱えている。ルートの docstring はセキュリティが「実行コンテキストに載せた `guest_portal` 権限セットに委譲される」と言い、それがなければミドルウェアは「falls open」（開いたまま落ちる）と警告する。その下のハンドラーのコードは、公開フォームは「work under secure-by-default (anonymous-deny) WITHOUT a deployment-configured `guest_portal`」（デプロイ側で `guest_portal` を設定しなくても、セキュアバイデフォルト（匿名拒否）のもとで動く）と言い、プロファイル名をコンテキストに残すのは「for back-compat with object hooks」（オブジェクトフックとの後方互換のため）だけだとする。
+
+そこで `GuestPortalProfile` をスタックの `permissions` から外し、再ビルドした。最初に起きたのは、ビルドの拒否だった：
+
+```text
+✗ Access matrix drift (1 change) — capability changes must be reviewed
+• 'guest_portal' loses ALL access to 'crm_lead' (entry removed)
+  If intended, re-run with --update-access-matrix and commit the snapshot — its diff IS the review artifact.
+```
+
+このゲートはそれ自体がひとつの話題で、ここでは安心させてくれる余談だ——権限セットの消失は、そのセットが結局何もしていなかったとしても、レビューすべき変更として扱われる。私はドリフトを受け入れ、コンパイルされたアーティファクトの権限セットが二つではなく一つになったことを確認して、四つのプローブをもう一度走らせた。
+
+| プローブ | `guest_portal` あり | `guest_portal` なし |
+|:--|:--|:--|
+| `name`、`email` を送る `POST …/submit` | `201`、行が作られる | `201`、行が作られる |
+| `status`、`owner_id`、`organization_id` を紛れ込ませる `POST …/submit` | `201`。`status: "new"`、`owner_id: null`、サーバーの `organization_id` | 同一 |
+| 匿名の `GET /api/v1/data/crm_lead` | `401 UNAUTHENTICATED` | `401 UNAUTHENTICATED` |
+| 作った行への匿名 `GET` | `401 UNAUTHENTICATED` | `401 UNAUTHENTICATED` |
+
+一行ずつ同一だった。17.7.0 では宣言が荷重を支えていて、プロファイルはこのパスでは不活性だ。実務上の意味はこうだ。公開フォームを動かすために guest プロファイルを足してはいけない。それは公開の扉が決して参照しない常設の権限をアクセスマトリクスに加え、次のレビュアー——人であれエージェントであれ——に、ランタイムが共有していない「境界はここだ」という話を伝えてしまう。サンプルのコメントは 17.7.0 については誤りで、私はそのように報告した。直るまでは、コメントではなくガイドを読んでほしい。
+
+サンプルとガイドが袂を分かつ場所がもうひとつある。ガイドの第三ステップは「Set `sharingModel: 'private'` on the object so submissions are staff-scoped after creation」（オブジェクトに `sharingModel: 'private'` を設定し、送信後はスタッフの範囲に収める）だが、CRM のリードオブジェクトはあえて `public_read_write` で、デモが意図的に組織共有であることをコメントが説明している。これは扉を弱めない——組織全体のデフォルトが決めるのは**サインイン済み**ユーザーが互いの行をどこまで見るかで、匿名呼び出しはそれが参照される前に拒否される——が、自分の受付オブジェクトでは従う価値のある助言だ。
+
+## この扉がしないこと
+
+- **レート制限も、CAPTCHA も、スパム対策もない。** 公開フォームのパスについては何も文書化されておらず、私も何も見つけなかった。この記事のプローブは資格情報なしでリードを十件作り、ランタイムは数えもしなければ遅らせもしなかった。`/api/v1/forms/*` の手前にいつものエッジ防御を置くこと。ランタイムが守るのは何が書かれるかであって、どれだけの頻度で書かれるかではない。
+- **フォームの `required` は公開送信では強制されない。** web-to-lead フォームは `email` を必須にしているが、それなしの `POST` は `201` を返し、`email: null` だった。オブジェクトの `required` は強制される——`name` なしの `POST` は `400 VALIDATION_FAILED` と「Lead Name is required」を返した。あるフィールドが必ず存在しなければならないなら、オブジェクトで必須にするかフックで検査すること。このパスでは、フォームのフラグは描画のヒントだ。
+- **`201` は行をまるごとエコーする。** 権限が許す読み返しは訪問者が作った行で、サーバーが刻印した値とデフォルトも含む——`organization_id` もそのひとつ。私の場合に機微なものはなかった。受付オブジェクトに意味のあるデフォルトを持つ内部フィールドがあるなら、送信者がそれを一度は目にすると想定すること。
+- **所有者は誰でもない。** 公開送信では `owner_id` は `null` のままで、セキュリティプラグインはそれを「for object hooks / the first-admin bootstrap to assign」（オブジェクトフックまたは最初の管理者ブートストラップが割り当てるために）残している。パイプラインでリードを割り当てるなら、フックかフローでやること。行が誰かに属していることを期待してはいけない。
+- **撤回には再ビルドが要る——忘れれば `os dev` が教えてくれる。** ステップ 5 の最初の試みは何も変えなかった。`objectstack dev --no-watch` が前回の `dist/objectstack.json` を提供し、ログの五行目でそう言っていたからだ：「dist/objectstack.json is OLDER than your sources — this boot serves the STALE build」（dist/objectstack.json はソースより古い——この起動は古いビルドを提供する）。表示された修正方法は効いた。これに触れるのは、ステータスコードしか読まないエージェント駆動のループなら「このスイッチは効かない」と結論していただろうからだ。
+- **メタデータ層をまたぐ撤回には、この記事が歩かなかった縁がある。** 組織が保存したビューのコピーや、パッケージが出荷するフォームは、ガイドの中で独自のルールに従う。ここで試した単一のスイッチが、ほとんどのアプリに必要なものだ。
+
+## レビュアーの五つの問い
+
+フォームを書いたのが人でもエージェントでも、レビューは同じで、しかも短い。権限がフォームそのものだからだ。
+
+1. **どのフォームが公開か？** `sharing.enabled`、`sharing.allowAnonymous`、`publicLink` が揃ったフォームビューはすべて匿名エンドポイントだ。コンパイルされたアーティファクトがそれらを列挙している。他に見る場所はない。
+2. **`sections[].fields` に何があるか？** その一覧から十二のサーバー管理名を除いたものが、公開の書き込み面だ。ファイアウォールのルールを読むように読むこと。
+3. **フォームが省いたものをオブジェクトが埋めるか？** フォームが集めない必須フィールドにはオブジェクトレベルのデフォルト——サンプルの `status`——が要る。さもなければ送信は失敗する。そして必ず存在すべきフィールドは、フォームではなくオブジェクトに `required` を持たせること。
+4. **どこかに常設の匿名権限がないか？** `guest` や `everyone` のポジションに結びついた権限セットや、「フォームを動かすために」足した `guest_portal` セットは不要で、扉が使うものを何も広げない。その存在は問いとして扱うこと。
+5. **扉の手前には何があるか？** レート制限とボット対策はデプロイの仕事だ。
+
+これは[エージェントの権限はどこで強制されるか](/en/blog/objectos-agent-permission-boundaries/)と同じ「強制の場所」の論法を、アイデンティティをまったく持たない呼び出し手に当てはめたものだ。チェックはルートとデータ層で走るのであって、たまたまフィールドを隠している UI で走るのではない。そして[Lovable の記事](/ja/blog/is-lovable-safe-for-production/)が述べるレビュー問題への答えでもある——説明責任を負う所有者は五行のフィールド一覧を読んで承認できるが、生成されたポリシーではそうはいかない。用語集の[権限モデル](/en/glossary/permission-model/)の項に全体の形がある。この扉は「デフォルト拒否」に対する唯一の意図的な例外で、その形はフォームそのものだ。
+
+## エージェントを向ける
+
+アプリをエージェントが書くなら、渡すべきはこの記事ではなくルールだ。公開フォームは `sharing` ブロックを持つ `formViews` のエントリであり、フィールド一覧が境界であり、デフォルトと必須はオブジェクトが持ち、権限セットは関与しない。[ObjectStack 向けにコーディングエージェントを設定するガイド](/en/blog/how-to-point-your-agent-at-objectstack/)は、そのルールがエージェントにどう届くかを扱っている——ルールファイル、起動中のアプリが公開する MCP エンドポイント、そして spec だ。`npm create objectstack@latest` がインストールするのは 17.7.0、この記録を走らせたバージョンである。
+
+同じループをホスト型で、ブラウザだけで、何もインストールせずに使いたい？それが ObjectOS — ObjectStack の上に構築された商用ランタイム環境です。
