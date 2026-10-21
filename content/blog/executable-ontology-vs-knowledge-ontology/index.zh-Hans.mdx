@@ -1,0 +1,208 @@
+---
+title: 可执行本体 vs 知识本体：为什么「没有继承、没有公理、没有推理器」正是重点
+description: 知识本体是为了被推理而建的；可执行业务本体是为了被校验、被运行而建的。证据是一个键：abstract 承诺了继承、什么都没做，于是它被移除，而不是被保留。
+author: ObjectStack Team
+date: 2026-10-21
+status: published
+topic: app-building
+audience: developer
+solutions: []
+industries: []
+cover: ./cover.svg
+tags:
+  - 本体
+  - 可执行业务本体
+  - 知识图谱
+---
+
+知识本体是为了被推理而建的。可执行业务本体是为了被校验、被审阅、被运行而建的。ObjectStack 的 README 把这个区别写成三个「不」——「no inheritance, no axioms, no reasoner」（没有继承、没有公理、没有推理器）——而这三个「不」不是路线图上的空缺。它们正是让每一份定义可检查、每一个 diff 可审阅的原因：你能写下的每一个键，要么在运行时里有一个读者，要么就被移除。本文把这个论点完整讲一遍，证据是一个键。
+
+就是这个键。一个被标记为 abstract 的对象，就像知识本体里的一个类可以是抽象类那样：
+
+```ts
+export const Party = ObjectSchema.create({
+  name: 'crm_party',
+  label: 'Party',
+  abstract: true,
+  sharingModel: 'private',
+  fields: { name: Field.text({ label: 'Name', required: true }) },
+});
+```
+
+在 2026-07-17 发布的 `@objectstack/spec@15.1.1` 上，这份定义能解析，`abstract` 原样返回 `true`。在当前版本 `@objectstack/spec@17.7.0` 上，它被拒绝：
+
+```text
+Unrecognized key(s) on this object: `abstract`.
+  • `abstract` was removed from the spec (ADR-0049) — object inheritance/abstraction is not implemented, so an abstract object still got a table and was instantiable. Remove the key.
+```
+
+这中间什么都没有建。继承没有到来。变化只有一件：一个运行时从未读过的键被从规范中拿掉了，并附上一条说明原因的消息。下文全部是在论证：为什么对一种本体来说这是正确的做法，而对另一种本体来说会是错误的做法。来源是 README、它链接的 [Business Ontology](https://github.com/objectstack-ai/objectstack/blob/8caa131e52717ef35fe71742d758f10b8f2b77ee/content/docs/concepts/ontology.mdx) 概念页、管辖这次移除的决策记录，以及已发布的包——测量而非描述。
+
+## 两种本体，两种职责
+
+「本体」这个词在同一场对话里指着两种不同的东西，[那篇定义文章](/zh-Hans/blog/what-does-the-ontology-is-the-software-mean/)把它列为可执行业务本体「不是」的三样东西中的第一样。README 关于这件事的那一段短到可以整段引用：
+
+<blockquote lang="en">
+
+Your app's definition — objects and fields, relations, actions, permissions, flows, and agent and tool definitions — is a **business ontology**: open, versioned, and yours, not code scattered across a framework. It is executable, not a knowledge-representation ontology: no inheritance, no axioms, no reasoner — validated rather than reasoned over — and it is not a semantic layer over your existing systems (federating an external datasource is read-only by default and early).
+
+— objectstack `README.md`, ["What we mean by ontology"](https://github.com/objectstack-ai/objectstack/blob/8caa131e52717ef35fe71742d758f10b8f2b77ee/README.md#L79-L89)
+
+</blockquote>
+
+（大意：你的应用定义——对象与字段、关系、动作、权限、流程、Agent 与工具定义——是一份**业务本体**：开放、有版本、归你所有，不是散落在框架里的代码。它是可执行的，不是知识表示意义上的本体：没有继承、没有公理、没有推理器——先校验，不推理——它也不是架在你现有系统之上的语义层。）
+
+两种本体依次来看，而且要认真对待第一种，因为它更古老，也更严谨。
+
+**知识本体是为推理而建的。** 在 W3C 的 [OWL 2](https://www.w3.org/TR/owl2-primer/) 及其底下的 RDF 技术栈里，你写的是类、属性和*公理*：这个类是那个类的子类；这两个类互斥；这个属性至多一个值；这条属性链蕴含另一个属性。然后由一个*推理器*读取整个模型，推导出随之成立的东西。类的层级是算出来的，不只是声明出来的。一个个体按照「关于它已知什么」被归类，而不是按照某人打上去的类名。公理之间的矛盾会被找出来。整件事运行在开放世界假设之下：一个缺席的事实是未知的，不是假的。当数据来自许多来源、词汇需要跨机构共享、要问的问题是「从我们知道的一切能推出什么」时，这正是对的设计。[与语义层、知识图谱的比较](/en/blog/ontology-vs-semantic-layer-vs-knowledge-graph/)给了这一传统应有的公道；本文只需要它的轮廓。
+
+**可执行业务本体是为了让软件能被生成、校验、审阅和运行而建的。** 概念页用一行写出整条流水线：
+
+```text
+objectstack.config.ts -> objectstack.json -> ObjectStack runtime -> database · REST / realtime API · UI · MCP server
+```
+
+再用一句写出管辖它的规则：「Nothing is reasoned over at runtime: what runs is what was validated.」（运行时不做任何推理：跑的就是被校验过的东西。）定义是一家企业的应用，以类型化元数据编写，由 Zod schema 和 `os validate` 检查，然后被执行。不存在第二份由推导事实构成的工件。世界按构造就是封闭的：定义说了什么，系统就做什么；定义没说的，系统就不做。
+
+| | 知识本体 | 可执行业务本体 |
+| :--- | :--- | :--- |
+| **为什么而建** | 对一个被描述的领域做推理 | 生成、校验、审阅并运行一个应用 |
+| **定义的单元** | 类、属性、个体、公理 | 对象与字段、关系、动作、权限、流程、Agent 与工具定义 |
+| **谁来读定义** | 推理器，从整个模型推导出结论 | 每个键一个具名的运行时读者——数据库驱动、API、权限评估器、控制台、MCP 服务器 |
+| **运行时存在、却没人写过的东西** | 推导出的事实：算出来的层级、分类、后果 | 没有。「跑的就是被校验过的东西。」 |
+| **错误的定义如何失败** | 推理器报告一处不一致，或者推出一条没人预料到的结论 | 编写时就给出一个带位置的错误，在任何东西运行之前 |
+| **想知道系统做什么，去看哪里** | 模型*加上*它蕴含的一切 | diff |
+
+这两列不是排名。它们是对两个问题的两个回答，而第二个问题——审阅者能否看出这次改动做了什么、运行时能否拒绝一份跑不起来的定义——是一个应用必须回答的那个。
+
+![两条并排的流水线。知识本体把类、属性和公理交给推理器，产出在运行时推导出来的结论，它们不在 diff 里。可执行业务本体把类型化元数据交给校验（严格 TypeScript、Zod、os validate），然后执行成数据库、API、UI 和 MCP 服务器；运行时不做任何推理。下方是三个「不」：没有继承、没有公理、没有推理器。](./two-pipelines.svg)
+
+## 三个「不」，逐个来看
+
+每一个「不」都拿掉了一样知识本体理应拥有的东西。每一个「不」都在那里，是因为它对审阅者和门禁意味着什么代价。
+
+### 没有继承
+
+在类层级里，子类继承父类的约束，而推理器负责告诉你某个类最终背负的全部约束。对一份词汇表来说这是功能：把一般情况声明一次，让引擎去传播。对一份应用定义来说，这是由读者支付的代价。父类上改一行，每个子类的行为都变了，而它们一个都不出现在 diff 里；「这个对象到底强制执行了什么？」这个问题，从对象自己的文件里答不出来。
+
+ObjectStack 的对象不继承。概念页把对象之间唯一的几种链接列为「Lookups and master-detail links between objects」（对象之间的查找与主从链接）——记录之间的关系，声明在持有它的那个对象上。每个对象的表、字段、权限和安全姿态都写在那个对象上，所以文件就是完整的答案，diff 就是完整的改动。
+
+### 没有公理
+
+公理是推理器用来*推导*的约束：从「每张订单恰好有一个客户」和一张有两个客户的订单出发，它会得出两个客户是同一个个体，或者模型不一致。可执行本体也有约束——必填字段、选项列表、查找目标、CEL 谓词、每个对象必须声明的安全姿态——但它们用来*拒绝*，不用来推导。README 的第二道门就是这句话：`os validate`「rejects metadata that type-checks but would fail silently at runtime: dangling bindings, bad CEL predicates, missing security posture」（拒绝那些能通过类型检查、却会在运行时静默失败的元数据：悬空绑定、错误的 CEL 谓词、缺失的安全姿态）。一份违反约束的定义不会获得一个后果，它获得的是一个带位置的错误。
+
+### 没有推理器
+
+这是另外两个「不」所服务的那一个。推理引擎是第二个真相来源：它在运行时推导出的事实，从未写在任何审阅者读得到的地方。「Nothing is reasoned over at runtime: what runs is what was validated」是概念页的规则，它的实践形态就是那篇定义文章给出的那句：如果一条权限不在 diff 里，它就不在系统里。运行时从工件*推导*出各个表面——schema、API、UI、MCP 工具——并在每一次调用上*强制执行*这份定义。它不会得出任何定义没说过的结论。
+
+## 证据：一个承诺了继承、却什么都没做的键
+
+拒绝推理器说起来便宜，守起来昂贵，因为面对一个听起来像功能的键，最省事的做法就是把它留在 schema 里，等以后有什么东西来赋予它意义。`abstract` 就是那种做法的样子，也是相反做法的样子。
+
+### 之前：被声明、被解析、无人读取
+
+在 `@objectstack/spec@15.1.1` 里，对象 schema 声明了这个键，附带一句教科书式的抽象类定义：
+
+```ts
+abstract: z.boolean().optional().default(false).describe("Is abstract base object (cannot be instantiated)")
+```
+
+Studio 的对象表单把它列为一个布尔字段，帮助文本是「Abstract base (cannot be instantiated)」。而同一个包自带的活性台账——项目用来逐键记录「是否存在运行时读者」的那个文件——是这么说它的：
+
+```json
+"abstract": {
+  "status": "dead",
+  "evidence": "no runtime reader",
+  "authorWarn": true,
+  "authorHint": "No runtime reader — an abstract object still gets a table and is instantiable. Object inheritance/abstraction is not implemented."
+}
+```
+
+所以在 15.1.1 里，这个键能解析，表单提供它，解析输出带着 `abstract: true`，而——用台账的原话——抽象对象「still gets a table and is instantiable」（照样建表、照样可以实例化），就像那一行根本不存在一样。在知识本体里，抽象类是一条推理器会遵守的陈述。在这里，它是一条无人遵守的陈述：合法的语法，diff 里一行看着像那么回事的内容，没有读者。
+
+### 规则：已强制执行、实验性，或者不存在
+
+管辖这件事的决策记录是 [ADR-0049](https://github.com/objectstack-ai/objectstack/blob/8caa131e52717ef35fe71742d758f10b8f2b77ee/docs/adr/0049-no-unenforced-security-properties.md)。它是针对安全属性写的，起因是一次审计「found that **roughly half of all spec properties are dead**」（发现规范里大约一半的属性是死的），它把规则写成三种状态：
+
+<blockquote lang="en">
+
+1. **Enforced** — a runtime consumer reads it and changes a decision (`file:line`).
+2. **`experimental`** — explicitly marked and documented as *not yet enforced*, so authoring it is a known no-op (roadmapped, not a promise).
+3. **Absent** — removed from the spec.
+
+Shipping a security property in a fourth state — *parsed, unmarked, unenforced* — is prohibited. This is the **enforce-or-remove gate**.
+
+</blockquote>
+
+（大意：一个键恰好处于三种状态之一——**已强制执行**：有运行时消费者读取它并改变某个决定；**实验性**：显式标注并记录为尚未强制执行，写它是已知的空操作；**不存在**：从规范中移除。以第四种状态——被解析、未标注、未强制执行——发布，是被禁止的。这就是「要么强制执行，要么移除」门禁。）
+
+它给出的理由对任何键都成立，不只是安全键：「A security property that parses but does nothing is **worse than absent**: it produces a *false sense of compliance*.」（一个能解析却什么都不做的安全属性，**比不存在更糟**：它制造一种*虚假的合规感*。）而它在没有已承诺功能时的默认选择是移除：「Removal is preferred over marking when there is no committed roadmap for the property — a smaller spec surface is the stronger default pre-MVP.」（当这个属性没有已承诺的路线图时，移除优于标注——更小的规范面是 MVP 之前更稳的默认值。）`abstract` 不是安全键；ADR 自己的范围说明记录了，仓库「cites this ADR as the enforce-or-remove policy for spec-property retirement generally」（把这份 ADR 作为规范属性退役的通用「要么强制执行、要么移除」政策来引用），而退役它的工单 [#2377](https://github.com/objectstack-ai/objectstack/issues/2377) 说明了这种推广为什么是有意的：「Authoring them is a false affordance — especially dangerous for AI-authored metadata.」（编写它们是一种虚假的可供性——对 AI 编写的元数据尤其危险。）
+
+### 之后：一块告诉你该怎么做的墓碑
+
+这次移除随 16.0.0 发布。包的[变更日志](https://github.com/objectstack-ai/objectstack/blob/8caa131e52717ef35fe71742d758f10b8f2b77ee/packages/spec/CHANGELOG.md#L98572-L98573)用一句话记录了它：「object `tags`/`active`/`abstract`: `ObjectSchema.create()` now throws a located error naming the removal. None gated anything at runtime — remove them.」（`ObjectSchema.create()` 现在会抛出一个带位置的错误，点名这次移除。它们在运行时从未把关任何事——移除它们。）今天这个键是对象 schema 未知键指引里的一块墓碑，每个写下它的作者看到的消息，就是本文开头那一条，出自 [`object.zod.ts`](https://github.com/objectstack-ai/objectstack/blob/8caa131e52717ef35fe71742d758f10b8f2b77ee/packages/spec/src/data/object.zod.ts#L1538-L1541)：
+
+```ts
+abstract:
+  '`abstract` was removed from the spec (ADR-0049) — object ' +
+  'inheritance/abstraction is not implemented, so an abstract object still ' +
+  'got a table and was instantiable. Remove the key.',
+```
+
+[活性台账的 object 一行](https://github.com/objectstack-ai/objectstack/blob/8caa131e52717ef35fe71742d758f10b8f2b77ee/packages/spec/liveness/README.md#L958)保留着记录：「tags/active/abstract REMOVED (#2377) — tombstoned in UNKNOWN_KEY_GUIDANCE」。之前与之后是在已发布的包上实测的：把上面那个 `Party` 对象依次交给每个版本解析。
+
+| `@objectstack/spec` | `ObjectSchema.create()` | `ObjectSchema.safeParse()` |
+| :--- | :--- | :--- |
+| **15.1.1**（2026-07-17） | 接受；`abstract: true` 保留 | 接受；`abstract: true` 保留 |
+| **16.0.0**（2026-07-21） | 抛错，点名这次移除 | 接受；`abstract` 被静默丢弃 |
+| **17.7.0**（2026-10-06） | 抛错，点名这次移除 | 拒绝：`unrecognized_keys`，附带处方 |
+
+中间那一行值得多说一句。在 16.0.0 里，编写路径关上了，解析路径没有——`parse()` 仍然一声不响地丢掉这个键，这正是 schema 自己的注释追溯到 Zod 默认 `.strip()` 和 [#1535](https://github.com/objectstack-ai/objectstack/issues/1535) 的那种行为：当时一个对象级的 `workflows: [...]`「vanished with no error, no warning, and a green `tsc`」（消失得无声无息，没有错误、没有警告，`tsc` 还是绿的）。17.x 的消息在它的最后一句里自己说了这件事：「Until this shape was closed these were dropped silently on the PARSE path — `ObjectSchema.create()` has rejected them, but `defineStack({ objects })`, `/api/v1/meta/types/object` and the Studio form all go through `parse()`, which did not.」（在这个形状被关闭之前，它们在解析路径上被静默丢弃——`ObjectSchema.create()` 已经拒绝它们，但 `defineStack({ objects })`、`/api/v1/meta/types/object` 和 Studio 表单都走 `parse()`，而 `parse()` 没有拒绝。）关闭一个键不是一个决定，而是每个入口各一个决定；在一个入口完整、在另一个入口沉默的门禁，就是换了件外套的第四种状态。
+
+![一个键跨三个已发布版本的时间线。15.1.1 里这个键被声明、能解析、保留取值、没有运行时读者，抽象对象照样建表。ADR-0049 迫使在已强制执行、实验性、不存在之间做选择，没有已承诺的继承功能，答案就是不存在。16.0.0 里 create() 拒绝这个键，parse() 仍静默丢弃它。17.7.0 里两条路径都拒绝它，附带处方：Remove the key。](./abstract-before-after.svg)
+
+### 为什么这正是重点
+
+在台账写下「no runtime reader」的那一刻，诚实的做法有两种。要么建出对象继承，让 `abstract: true` 有读者、有意义；要么移除这个键。知识本体的习惯——在它所来自的传统里，这是习惯，不是错误——是保留声明，因为在那个传统里意义住在模型中，引擎会遵守它。可执行的习惯正相反：你能写下的键的集合*就是*运行时做的事的集合，一个没有读者的键不是等待中的功能，而是等待中的、审阅者的错误信念。
+
+姑且把这叫作**每个键都有读者**。它是「先校验，不推理」的具体形态。校验器只有在每个词都有消费者的词汇表上才可能完整；一旦某个词被解析却无人读取，「合法」就不再意味着「会照它说的去做」。移除 `abstract` 不是为了让本体更小而更小。它守住的是一个承诺：通过门禁的定义，就是运行时会强制执行的定义。
+
+## 审阅者得到什么，Agent 得到什么
+
+对审阅改动的人来说，回报是：diff 就是行为。没有需要打开的父类，没有需要计算的推导结论，没有哪个键的效果取决于某个可能存在也可能不存在的功能。如果 `sharingModel: 'private'` 在 diff 里，记录就是私有的；如果一条权限不在 diff 里，就没人拥有它。「这一行做什么？」由这一行的运行时读者来回答，而一行没有读者的内容根本进不了 diff。
+
+对写改动的 Agent 来说，回报是同一件事的另一面。README 对「AI 编写的元数据为什么行得通」的主张是：「an agent's errors become located, corrective text it can read and fix itself」（Agent 的错误变成了有定位的、可纠正的文本，它自己能读、能改）。一个虚假的可供性恰恰打败这一点：从示例里学会一种格式的 Agent，分不清一个被强制执行的键和一个只被解析的键，因为两者都能通过校验、都看着权威、都出现在样本中——这正是[「声明 vs 强制执行」](/zh-Hans/glossary/declared-vs-enforced/)词条描述的失败：合法、可信、却无效的声明。移除这个键，并留下一块以「Remove the key.」结尾的墓碑，把那种失败变成一个 Agent 自己就能完成的一行修复，连人都不必注意到曾经有过问题。
+
+## 为推理器辩护：这个本体不做什么
+
+这个论点的诚实版本必须说清可执行本体放弃了什么，因为它放弃的是实打实的东西。
+
+**它不推理。** 没有推导结论，没有按描述归类，没有跨整个模型的一致性检查。如果推导出来的事实正是你需要的产品——「这一万条记录里，按我们对它们的了解，哪些是高风险交易对手的实例？」——推理器能回答，校验器不能。
+
+**它不做开放世界推理。** 封闭世界是整个设计的要点，而对于天然不完整的数据，它是错误的假设：一套跨组织共享的词汇；一条即便你的系统从未见过使它为真的那个事实、却依然为真的记录。知识本体是为那种情形而建的，这个不是。
+
+**它不做 schema 层面的继承。** 没有基础对象。六个对象共有的一个字段，要在六个对象上声明，或者显式建模为指向某个共享对象的查找。这种重复是有意的——它正是让每个对象的文件成为完整答案的原因——但它仍然是重复，带着重复固有的维护成本。
+
+**它不替你判定两样东西是同一样东西。** 一个系统里的「客户」和另一个系统里的「账户」是不是同一个实体，是某个人必须做出的声明，不是运行时得出的推论；[那篇企业本体文章](/zh-Hans/blog/enterprise-ontology-race-open-vs-closed/)讲的正是为什么这种对齐在任何模型下都仍然是工作。
+
+还有一个限制属于这套纪律本身，而不属于格式：「校验过」只在校验器本身可信的程度上为真。ADR-0049 背后的审计是在这条规则存在*之前*发现规范里一半属性已死的；活性台账和读取它的门禁，才是此后让规则持续为真的东西，而那是一项常设的维护工作，不是一次到达的状态。`abstract` 的故事是这套纪律被践行的证据，不是它已经完成的证据。
+
+## 托管，或在你自己的基础设施上
+
+README 描述了这个循环——Agent 在你的仓库里写类型化元数据，门禁拒绝跑不起来的东西，运行时执行通过的东西——然后说：「想把同一个循环托管起来、在浏览器里用、什么都不用安装？那就是 ObjectOS——建立在 ObjectStack 之上的商业运行环境。」ObjectOS 既可托管在浏览器中、无需安装（ObjectOS Cloud），也可自管部署在你自己的基础设施上（ObjectOS Enterprise）；无论哪个版本，你都可以导出本体，拿到开源的 ObjectStack 运行时上运行。门禁在每个宿主上都一样，它守护的本体也一样。
+
+## 自己试一次这个拒绝
+
+README 的 Agent 路径几分钟就能产出本文讨论的那份工件，而那个拒绝正是值得亲眼看一次的部分。
+
+```bash
+npm create objectstack@latest my-app && cd my-app
+```
+
+在你的编码 Agent 里打开项目，描述一个业务对象——客户、工单、工作订单。然后要求本文开头的那一行：给它加上 `abstract: true`，理由是它将来要做其他对象的基础。无论哪道门先碰到它——编辑器里的类型门，还是构建时的 `ObjectSchema.create()`——都会用上面引用的那条消息拒绝它，而消息以修复方法结尾。让 Agent 采纳这个修复，然后预览结果：
+
+```bash
+npx os dev --ui   # → http://localhost:3000/_console/
+```
+
+你在 diff 里看到的会是一个没有基类、没有任何继承而来的东西、没有任何运行时不读的键的对象——也就是说，一份小到可以审阅、严到可以运行的定义。如果 Agent 需要引导，[如何让它对准 ObjectStack](/en/blog/how-to-point-your-agent-at-objectstack/)覆盖了规则文件、技能包和工具服务器。README 里的三个「不」不是这个格式缺少的东西，而是它强制执行的东西。
