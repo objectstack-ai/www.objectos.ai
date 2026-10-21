@@ -23,50 +23,54 @@ export interface Cluster {
 
 export const CLUSTERS: Cluster[] = [
   {
+    // The slug and URL keep the category name people search for — the home
+    // page and llms.txt link this page in every locale — but the copy defines
+    // the product by the ontology, not by the category.
     slug: 'ai-native-app-platform',
-    title: 'AI-Native App Platform',
-    shortTitle: 'AI-native app platform',
+    title: 'AI-Native App Platform: An Ontology You Run',
+    shortTitle: 'Executable business ontology',
     description:
-      'Learn what an AI-native app platform is, how it differs from low-code, and how ObjectOS connects business objects, permissions, workflows, APIs, and AI agents.',
+      'An AI-native app platform, defined the way ObjectStack defines it: one executable business ontology that AI writes, an open runtime runs, agents operate, and you own — how that differs from low-code and from AI code generation, and where ObjectOS fits.',
     eyebrow: 'Pillar guide',
     lead:
-      'An AI-native app platform is built around business objects, permissions, workflows, APIs, and agent tools from the start. It is not a page builder with a chat box; it is a governed runtime for AI-written business software.',
+      'People search for an AI-native app platform and mean a place where AI-written business software can land and stay governable. ObjectStack’s answer is not a page builder with a chat box. It is one executable business ontology — objects and fields, relations, actions, permissions, flows, and agent and tool definitions — and the open runtime that runs it; the screens are projections of that definition, not the product.',
     definition:
-      'An AI-native app platform turns requirements into structured application metadata: objects, fields, relationships, views, permissions, workflows, actions, APIs, and tools that agents can call. The platform gives AI a model of the business system instead of asking it to generate disconnected code.',
+      'An executable business ontology is the definition of a business that a runtime runs. AI writes it as typed metadata in your repository; the ObjectStack runtime derives the database, REST API, screens, and MCP tools from it and enforces permissions and audit on every call; agents operate it under the same permissions as people; and you own the files, Apache-2.0. ObjectOS runs the same loop hosted or self-managed, with in-app AI, approvals, and operations on top.',
     whyNow: [
-      'Enterprise AI needs access to real business records, not exported snapshots.',
-      'Generated apps need permissions, audit trails, and lifecycle control after the first version ships.',
-      'Business teams need systems that keep evolving as rules, integrations, and operating models change.',
+      'Anyone can make an AI generate an app now; the bottleneck moved to reviewing, governing, and trusting what the AI wrote.',
+      'Generated apps need permissions, audit trails, and lifecycle control after the first version ships — rules a runtime enforces, not rules a prompt remembers.',
+      'A business keeps changing its rules, integrations, and operating model; a definition an agent can hold whole stays changeable, a generated codebase does not.',
     ],
     capabilities: [
-      'Object modeling for customers, orders, cases, devices, contracts, approvals, and other business records.',
-      'Metadata-driven screens, workflows, APIs, and agent tools generated from the same business specification.',
-      'Permission-aware execution so users and AI agents operate inside the same governance boundary.',
-      'Federation of a database you already run — read-only by default, and early — so the platform can read what already runs instead of forcing a migration.',
+      'Executable: objects and fields, relations, actions, permissions, flows, and agent and tool definitions as typed metadata the runtime validates and runs — validated, not reasoned over.',
+      'AI-writable: a coding agent writes the definition; Strict TypeScript, Zod schemas, and os validate reject what would fail at runtime; a person reviews a small diff instead of generated glue.',
+      'Agent-operable: every object and exposed action doubles as a governed MCP tool, called under the signed-in user’s permissions, approvals, and audit.',
+      'You own it: the definition lives in your repository under Apache-2.0, and a database you already run federates in place — read-only by default, and early.',
     ],
     useCases: [
-      'Turn a repair, service, approval, or internal operations requirement into a running application.',
-      'Replace fragile low-code prototypes with governed applications that can survive complexity.',
+      'Turn a repair, service, approval, or internal operations requirement into a running application your agent writes and your team reviews.',
+      'Replace fragile low-code prototypes with an ontology the runtime governs and an agent can refactor whole.',
       'Expose business objects to AI agents without handing them direct database or administrator access.',
     ],
     faq: [
       {
         question: 'What is an AI-native app platform?',
         answer:
-          'An AI-native app platform is an application runtime designed so AI can help model, generate, operate, and evolve business software. It treats objects, permissions, workflows, APIs, and agent tools as first-class metadata.',
+          'In ObjectStack’s terms, an executable business ontology plus the runtime that runs it: the business is defined once — objects and fields, relations, actions, permissions, flows, and agent and tool definitions — AI writes that definition, the runtime derives and enforces everything else, agents operate it, and you own it. Views, dashboards, apps, and translations are projections of the ontology, not part of it.',
       },
       {
-        question: 'How is an AI-native app platform different from low-code?',
+        question: 'How is it different from low-code?',
         answer:
-          'Low-code usually accelerates forms, pages, and workflows. An AI-native app platform focuses on the operating layer underneath them: business objects, governance, integrations, generated APIs, agent tools, and long-term change.',
+          'Low-code platforms are the closest relatives: metadata generates tables, APIs, and UI there too. The difference is where the definition lives and who it is written for. Low-code keeps metadata as configuration in the vendor’s database, edited through its UI by a person; ObjectStack keeps it as typed, declarative TypeScript in your repository — versioned and reviewed as a diff, checked by os validate before it runs, and shaped for an AI to write.',
       },
       {
-        question: 'Does AI-native mean the AI writes all the code?',
+        question: 'Where does the code go?',
         answer:
-          'No. The important shift is that AI works with structured application metadata and a governed runtime. Code may still exist, but the business model, permissions, and tools remain explicit and inspectable.',
+          'Code does not disappear; it moves into the runtime. Hooks, action bodies, CEL expressions, and constrained JSX run inside the same permission and audit fence as everything derived from the ontology. What goes away is the generated codebase a definition would otherwise have to describe — and that no agent could hold whole.',
       },
     ],
     articleSlugs: [
+      'what-does-the-ontology-is-the-software-mean',
       'from-requirement-to-app',
       'low-code-vs-ai-native-app-platform',
       'extend-existing-systems-with-ai',
@@ -137,7 +141,7 @@ export const CLUSTERS: Cluster[] = [
     lead:
       'Self-hosted AI is not only about where the model runs. Once AI reads business data and calls tools, the application runtime that controls objects, permissions, approvals, and audit evidence becomes the critical control point.',
     definition:
-      'A self-hosted AI application platform lets enterprises run the governed business runtime in their own infrastructure. The model can be local or external, but data access, tools, workflow execution, and audit policy stay under enterprise control. Two things answer to that description here: the free, Apache-2.0 ObjectStack framework, and licensed self-managed ObjectOS — Business Self-Managed or ObjectOS Enterprise — which adds the in-product AI on top of it.',
+      'A self-hosted AI application platform lets enterprises run the governed business runtime in their own infrastructure. The model can be local or external, but data access, tools, workflow execution, and audit policy stay under enterprise control. Two things answer to that description here: the free, Apache-2.0 ObjectStack framework, and licensed self-managed ObjectOS — ObjectOS Enterprise, from its single-node entry option Business Self-Managed up — which adds the in-product AI on top of it.',
     whyNow: [
       'AI agents increasingly need access to sensitive customer, operational, and financial records.',
       'Regulated teams need evidence of who accessed what, which action ran, and which approval was required.',
@@ -173,7 +177,7 @@ export const CLUSTERS: Cluster[] = [
       {
         question: 'Is self-hosting free, and what does ObjectOS add?',
         answer:
-          'Free self-hosting is the open-source ObjectStack framework (Apache-2.0): the protocol, kernel, CLI, production runtime, Console UI, and MCP server, with no feature gate between development and production — bring your own AI over MCP. Self-managed ObjectOS is licensed: Business Self-Managed is a single-node delivery with the in-product AI Builder and Ask, AI governance, and bring-your-own-model; ObjectOS Enterprise is the full private deployment with clustering, air-gapped operation, SCIM, compliance attestations, and SLA support. On either edition you can export your ontology and run it on the open-source runtime. To start: npm create objectstack@latest, point your coding agent at the generated project and its AGENTS.md, then npx os dev --ui.',
+          'Free self-hosting is the open-source ObjectStack framework (Apache-2.0): the protocol, kernel, CLI, production runtime, Console UI, and MCP server, with no feature gate between development and production — bring your own AI over MCP. Self-managed ObjectOS is ObjectOS Enterprise, licensed: its single-node entry option, Business Self-Managed, brings the in-product AI Builder and Ask, AI governance, and bring-your-own-model to one node; beyond that, Enterprise adds clustering, air-gapped operation, SCIM, compliance attestations, and SLA support. On either edition you can export your ontology and run it on the open-source runtime. To start: npm create objectstack@latest, point your coding agent at the generated project and its AGENTS.md, then npx os dev --ui.',
       },
     ],
     articleSlugs: [

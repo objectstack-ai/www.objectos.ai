@@ -136,12 +136,12 @@ export const Order = ObjectSchema.create({
       {
         question: 'Which capabilities are in the open-source ObjectStack?',
         answer:
-          'The runtime capabilities on this page — data, UI, automation, approvals, permissions, analytics — are part of open-source ObjectStack, Apache-2.0: the protocol, kernel, CLI, production runtime, Console UI, and MCP server, with no feature gate between development and production. You bring your own AI: a coding agent writes metadata as source files and any MCP client can query your objects. The in-app AI Builder and Ask are what ObjectOS adds — on Cloud, Business Self-Managed, and Enterprise.',
+          'The runtime capabilities on this page — data, UI, automation, approvals, permissions, analytics — are part of open-source ObjectStack, Apache-2.0: the protocol, kernel, CLI, production runtime, Console UI, and MCP server, with no feature gate between development and production. You bring your own AI: a coding agent writes metadata as source files and any MCP client can query your objects. The in-app AI Builder and Ask are what ObjectOS adds — on Cloud and on Enterprise, from its single-node Business Self-Managed entry up.',
       },
       {
         question: 'Can it run in our own infrastructure?',
         answer:
-          'Yes, three ways. The open-source ObjectStack runtime self-hosts free, with bring-your-own AI over MCP. ObjectOS Business Self-Managed is a licensed single-node deployment that puts the in-app AI on your own infrastructure, bring your own model or key. ObjectOS Enterprise is the full private deployment — a VPC, local servers, or an air-gapped network — with clustering, local models, internal identity, your own secret management, and enterprise support.',
+          'Yes, three ways. The open-source ObjectStack runtime self-hosts free, with bring-your-own AI over MCP. Self-managed ObjectOS is ObjectOS Enterprise. Its single-node entry option, Business Self-Managed, is a licensed deployment that puts the in-app AI on your own infrastructure, bring your own model or key. Beyond a single node, Enterprise runs in a VPC, on local servers, or in an air-gapped network, with clustering, local models, internal identity, your own secret management, and enterprise support.',
       },
     ],
   } satisfies MarketingPage;
