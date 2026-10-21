@@ -99,6 +99,8 @@ interface Strings {
     platform: string;
     aiBuildAsk: string;
     whyObjectOs: string;
+    /** The positioning pillar, /[lang]/ontology/ — first entry under Product → Evaluate. */
+    ontology: string;
     dataModeling: string;
     appInterfaces: string;
     analytics: string;
@@ -171,6 +173,7 @@ const en: Strings = {
     platform: 'Platform overview',
     aiBuildAsk: 'AI Build & Ask',
     whyObjectOs: 'Why ObjectOS',
+    ontology: 'Ontology',
     dataModeling: 'Data modeling',
     appInterfaces: 'App interfaces',
     analytics: 'Analytics & reporting',
@@ -231,6 +234,7 @@ const zhHans: Strings = {
     platform: '平台总览',
     aiBuildAsk: 'AI Build & Ask',
     whyObjectOs: '为什么选 ObjectOS',
+    ontology: '本体',
     dataModeling: '数据建模',
     appInterfaces: '应用界面',
     analytics: '报表与分析',
@@ -291,6 +295,7 @@ const ja: Strings = {
     platform: 'プラットフォーム概要',
     aiBuildAsk: 'AI Build & Ask',
     whyObjectOs: 'ObjectOS を選ぶ理由',
+    ontology: 'オントロジー',
     dataModeling: 'データモデリング',
     appInterfaces: 'アプリ画面',
     analytics: 'レポートと分析',
@@ -351,6 +356,7 @@ const de: Strings = {
     platform: 'Plattform-Überblick',
     aiBuildAsk: 'AI Build & Ask',
     whyObjectOs: 'Warum ObjectOS',
+    ontology: 'Ontologie',
     dataModeling: 'Datenmodellierung',
     appInterfaces: 'App-Oberflächen',
     analytics: 'Analysen & Berichte',
@@ -411,6 +417,7 @@ const es: Strings = {
     platform: 'Resumen de plataforma',
     aiBuildAsk: 'AI Build & Ask',
     whyObjectOs: 'Por qué ObjectOS',
+    ontology: 'Ontología',
     dataModeling: 'Modelado de datos',
     appInterfaces: 'Interfaces de la app',
     analytics: 'Analítica e informes',
@@ -471,6 +478,7 @@ const fr: Strings = {
     platform: 'Aperçu de la plateforme',
     aiBuildAsk: 'AI Build & Ask',
     whyObjectOs: 'Pourquoi ObjectOS',
+    ontology: 'Ontologie',
     dataModeling: 'Modélisation des données',
     appInterfaces: 'Interfaces applicatives',
     analytics: 'Analytique et rapports',
@@ -531,6 +539,7 @@ const ko: Strings = {
     platform: '플랫폼 개요',
     aiBuildAsk: 'AI Build & Ask',
     whyObjectOs: 'ObjectOS를 선택하는 이유',
+    ontology: '온톨로지',
     dataModeling: '데이터 모델링',
     appInterfaces: '앱 화면',
     analytics: '분석과 리포트',
@@ -592,6 +601,7 @@ const toHant = (s: Strings): Strings => ({
     platform: s2t(s.siteNav.platform),
     aiBuildAsk: s2t(s.siteNav.aiBuildAsk),
     whyObjectOs: s2t(s.siteNav.whyObjectOs),
+    ontology: s2t(s.siteNav.ontology),
     dataModeling: s2t(s.siteNav.dataModeling),
     appInterfaces: s2t(s.siteNav.appInterfaces),
     analytics: s2t(s.siteNav.analytics),

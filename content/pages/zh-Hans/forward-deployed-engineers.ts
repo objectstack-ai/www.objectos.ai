@@ -12,7 +12,7 @@ const page = {
     eyebrow: '面向前沿部署工程师',
     heroTitle: '像最强的 FDE 团队那样交付，并交出他们从不交出的东西：本体。',
     lead:
-      `前沿部署模式已经胜出：嵌入客户现场、建模业务、快速交付能用的软件。它的弱点在交接——本体被锁在客户要永远租用的平台里。ObjectStack 把本体变成客户仓库里的类型化开放文件，并由其运行时受治理地执行。ObjectOS 是${p.descriptor}：面向需要产品内 AI Builder 与 Ask、托管（Cloud）或自管（Business Self-Managed、Enterprise）交付与支持的客户。`,
+      `前沿部署模式已经胜出：嵌入客户现场、建模业务、快速交付能用的软件。它的弱点在交接——本体被锁在客户要永远租用的平台里。ObjectStack 把本体变成客户仓库里的类型化开放文件，并由其运行时受治理地执行。ObjectOS 是${p.descriptor}：面向需要产品内 AI Builder 与 Ask、托管（Cloud）或自管（Enterprise，含单节点入门选项 Business Self-Managed）交付与支持的客户。`,
     primary: { label: '从 ObjectStack 开始', href: 'https://github.com/objectstack-ai/objectstack' },
     secondary: { label: '阅读 FDE 专文', href: '/en/blog/forward-deployed-engineer-tools/' },
     metrics: [
@@ -115,7 +115,7 @@ const page = {
       {
         question: '服务客户必须用 ObjectOS 吗?',
         answer:
-          `不必须。ObjectStack 采用 Apache-2.0——协议、内核、CLI、生产运行时、Console UI 与 MCP 服务器——开发与生产之间没有功能门槛，客户可以零 license 成本自托管。ObjectOS 是${p.descriptor}：客户买它是为了产品内 AI Builder 与 Ask、从商业版起的 AI 治理、托管 Cloud 或自管交付（Business Self-Managed 单节点；Enterprise 提供集群、离线隔离与 SCIM），以及官方支持。`,
+          `不必须。ObjectStack 采用 Apache-2.0——协议、内核、CLI、生产运行时、Console UI 与 MCP 服务器——开发与生产之间没有功能门槛，客户可以零 license 成本自托管。ObjectOS 是${p.descriptor}：客户买它是为了产品内 AI Builder 与 Ask、从商业版起的 AI 治理、托管 Cloud 或自管的 Enterprise 交付（单节点入门选项 Business Self-Managed；单节点以上提供集群、离线隔离与 SCIM），以及官方支持。`,
       },
     ],
   } satisfies MarketingPage;
