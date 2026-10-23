@@ -8,6 +8,10 @@ import { positioning } from './positioning';
 // eyebrow is T4's noun phrase for ObjectOS, sentence-cased (the CSS uppercases
 // it anyway).
 const sentenceCase = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
+// The media note under the hero image is titled with T2's first sentence —
+// "One executable business ontology" in each locale — read from positioning
+// rather than spelled here, so it cannot drift from the canonical line.
+const t2Lead = (t2: string): string => t2.split(/(?<=[.。])\s*/)[0].replace(/[.。]$/, '');
 
 interface HomeCopy {
   title: string;
@@ -28,6 +32,22 @@ interface HomeCopy {
   videoCaption: string;
   videoPlayLabel: string;
   videoMoreLink: string;
+  /**
+   * The words drawn on the video poster besides the title (see
+   * `VideoEmbed.astro`): an eyebrow and a sub-line. Both quote the objectstack
+   * README rather than the canonical lines in `./positioning`: the eyebrow is
+   * its licence sentence ("the open stack — protocol … and the production
+   * runtime, Apache-2.0"), the sub-line's tail is its size line ("Apps small
+   * enough for AI to hold whole."), in the wording each locale's `aiCopy`
+   * already gives that line. The sub-line used to end "one context window":
+   * that was the title of the proof chip that carried the 150k-token figure,
+   * both retired by ruling Q5 on #209, and the README no longer says it; so
+   * no token figure and no context-window framing here. The eyebrow's parts
+   * are separated by " · ", which is where `VideoEmbed` lets it wrap. The
+   * nouns use each locale's vocabulary from `aiCopy` and `./positioning`.
+   */
+  videoPosterEyebrow: string;
+  videoPosterNote: string;
   proof: [string, string][];
   imageAlt: string;
   imageNoteTitle: string;
@@ -35,6 +55,8 @@ interface HomeCopy {
   positioningKicker: string;
   positioningTitle: [string, string];
   positioningCopy: string;
+  /** The text link under the positioning copy, to the /[lang]/ontology/ pillar. */
+  positioningLink: string;
   capabilitiesKicker: string;
   capabilitiesTitle: [string, string];
   capabilitiesLink: string;
@@ -87,6 +109,8 @@ const zhHans: HomeCopy = {
   videoCaption: 'ObjectStack 90 秒总览',
   videoPlayLabel: '播放视频：ObjectStack 90 秒总览',
   videoMoreLink: '在 YouTube 上观看更多视频',
+  videoPosterEyebrow: '开放协议与运行时 · APACHE-2.0',
+  videoPosterNote: '数据模型 · 界面 · 流程 · 权限——小到 AI 能一次读全。',
   proof: [
     [positioning['zh-Hans'].t3[0], '运行时运行它'],
     [positioning['zh-Hans'].t3[1], 'AI 编写它'],
@@ -94,10 +118,11 @@ const zhHans: HomeCopy = {
     [positioning['zh-Hans'].t3[3], '导出本体，拿到开源 ObjectStack 上运行'],
   ],
   imageAlt: 'ObjectOS 连接业务数据、应用和 AI Agent 的产品示意图',
-  imageNoteTitle: '统一业务对象层',
+  imageNoteTitle: t2Lead(positioning['zh-Hans'].t2),
   imageNote: '正在连接应用、数据与 Agent',
   positioningKicker: positioning['zh-Hans'].t1,
   positioningTitle: ['保留已经有效的系统，', '补上 Agent 可治理运行时。'],
+  positioningLink: '什么是可执行的业务本体',
   positioningCopy: '企业 AI 不需要又一次重建，也不需要更多不可审的生成代码。它需要一份 Agent 能写、人能审、运行时能治理的定义，把旧系统、新应用和 AI Agent 接在一起。你的对象与字段、关系、动作、权限、流程，以及 Agent 与工具定义，就是这份定义——你的业务本体：开放、带版本、归你所有，而不是锁在别人平台里的资产。',
   capabilitiesKicker: '平台能力',
   capabilitiesTitle: ['从业务结构出发，', '而不是从空白代码开始'],
@@ -105,7 +130,7 @@ const zhHans: HomeCopy = {
   capabilities: [
     { title: '给 Agent 一个业务模型', copy: '把客户、订单、设备、工单和审批建模成对象，让 Agent 能准确读取、关联和操作。' },
     { title: '接入已在运行的系统——先只读', copy: '把已经在跑的数据库作为外部数据源联邦接入，再把它的表建模成对象。联邦默认只读、尚在早期：记录系统继续写入数据，写权限按对象有意开启。' },
-    { title: '生成元数据，而不是整套代码', copy: '对典型 CRUD 和流程型软件，Agent 编写紧凑的 ObjectStack 定义，开源 ObjectStack 运行时派生表、API、界面和工具，并强制执行权限与审计；ObjectOS 负责团队的生产部署与运营。要生成的代码更少，要审的代码也更少。' },
+    { title: '编写本体，而不是整套代码', copy: '对典型 CRUD 和流程型软件，Agent 把业务本体——对象与字段、关系、动作、权限、流程——写成一份紧凑的 ObjectStack 定义，开源 ObjectStack 运行时从中派生表、API、界面和工具，并强制执行权限与审计；ObjectOS 负责团队的生产部署与运营。要生成的代码更少，要审的代码也更少。' },
     { title: '在运行时执行治理', copy: '复用企业身份、权限、审批队列和审计日志，让每一次 Agent 操作都有明确边界。' },
   ],
   aiKicker: 'AI 构建与 Agent 运行',
@@ -146,7 +171,7 @@ const zhHans: HomeCopy = {
   ],
   securityLink: '了解安全与治理',
   insightsKicker: '最新洞察',
-  insightsTitle: '关于 AI-native 软件的实践思考',
+  insightsTitle: '关于 AI 编写的软件的实践思考',
   insightsLink: '浏览全部文章',
   closingKicker: '下一步',
   closingTitle: '从你最熟悉的一套业务数据开始。',
@@ -173,6 +198,8 @@ const en: HomeCopy = {
   videoCaption: 'ObjectStack in 90 Seconds',
   videoPlayLabel: 'Play the video: ObjectStack in 90 Seconds',
   videoMoreLink: 'More videos on YouTube',
+  videoPosterEyebrow: 'OPEN PROTOCOL & RUNTIME · APACHE-2.0',
+  videoPosterNote: 'Data model · UI · workflows · permissions — small enough for AI to hold whole.',
   proof: [
     [positioning.en.t3[0], 'The runtime runs it'],
     [positioning.en.t3[1], 'AI writes it'],
@@ -180,10 +207,11 @@ const en: HomeCopy = {
     [positioning.en.t3[3], 'Export your ontology, run it on open-source ObjectStack'],
   ],
   imageAlt: 'ObjectOS connecting business data, applications, and AI agents',
-  imageNoteTitle: 'Unified business object layer',
+  imageNoteTitle: t2Lead(positioning.en.t2),
   imageNote: 'Connecting applications, data, and agents',
   positioningKicker: positioning.en.t1,
   positioningTitle: ['Keep the systems that work.', 'Add a governed runtime for agents.'],
+  positioningLink: 'What an executable business ontology is',
   positioningCopy: 'Enterprise AI does not need another rebuild project or another pile of generated code. It needs one definition agents can write, humans can review, and a runtime can govern across legacy systems, new applications, and AI agents. Your objects and fields, relations, actions, permissions, flows, and agent and tool definitions are that definition — your business ontology: open, versioned, and yours, not an asset locked inside someone else’s platform.',
   capabilitiesKicker: 'Platform capabilities',
   capabilitiesTitle: ['Start with the business model,', 'not a blank codebase'],
@@ -191,7 +219,7 @@ const en: HomeCopy = {
   capabilities: [
     { title: 'Give agents a business model', copy: 'Model customers, orders, equipment, cases, and approvals as objects agents can read, relate, and act on.' },
     { title: 'Extend what already runs — read-only first', copy: 'Federate a database you already run as an external datasource and model its tables as objects. Federation is read-only by default and early: the system of record keeps writing the rows, and writes are enabled deliberately, per object.' },
-    { title: 'Generate metadata, not app code', copy: 'For typical CRUD and workflow software, agents write the compact ObjectStack definition; the open ObjectStack runtime derives tables, APIs, UI, and tools, then enforces permissions and audit, while ObjectOS handles production deployment and team operations. Less code to generate, less code to review.' },
+    { title: 'Write the ontology, not app code', copy: 'For typical CRUD and workflow software, agents write the business ontology — objects and fields, relations, actions, permissions, flows — as one compact ObjectStack definition; the open ObjectStack runtime derives tables, APIs, UI, and tools from it, then enforces permissions and audit, while ObjectOS handles production deployment and team operations. Less code to generate, less code to review.' },
     { title: 'Enforce governance at runtime', copy: 'Reuse enterprise identity, permissions, approval queues, and audit logs so every agent action has a defined boundary.' },
   ],
   aiKicker: 'AI build and agent operations',
@@ -232,7 +260,7 @@ const en: HomeCopy = {
   ],
   securityLink: 'Explore security and governance',
   insightsKicker: 'Latest insights',
-  insightsTitle: 'Practical thinking on AI-native software',
+  insightsTitle: 'Practical thinking on AI-written software',
   insightsLink: 'Browse all articles',
   closingKicker: 'Next step',
   closingTitle: 'Start with the business data you know best.',
@@ -260,6 +288,8 @@ const ja: HomeCopy = {
   videoCaption: 'ObjectStack を 90 秒で',
   videoPlayLabel: '動画を再生：ObjectStack を 90 秒で',
   videoMoreLink: 'YouTube でほかの動画を見る',
+  videoPosterEyebrow: 'オープンプロトコル & ランタイム · APACHE-2.0',
+  videoPosterNote: 'データモデル · UI · ワークフロー · 権限 — AI が一度に把握できる小ささに収まる。',
   proof: [
     [positioning.ja.t3[0], 'ランタイムが動かす'],
     [positioning.ja.t3[1], 'AI が書く'],
@@ -267,10 +297,11 @@ const ja: HomeCopy = {
     [positioning.ja.t3[3], 'オントロジーをエクスポートし、オープンソースの ObjectStack で実行'],
   ],
   imageAlt: '業務データ、アプリ、AI エージェントを接続する ObjectOS',
-  imageNoteTitle: '統一業務オブジェクト層',
+  imageNoteTitle: t2Lead(positioning.ja.t2),
   imageNote: 'アプリ、データ、エージェントを接続中',
   positioningKicker: positioning.ja.t1,
   positioningTitle: ['今あるシステムを活かし、', 'エージェント用の統制ランタイムを加える。'],
+  positioningLink: '実行可能なビジネスオントロジーとは',
   positioningCopy: 'エンタープライズ AI に必要なのは、また一つの再構築プロジェクトでも、レビュー不能な生成コードの山でもありません。エージェントが書き、人がレビューでき、ランタイムが統制する、ひとつの定義です。オブジェクトとフィールド、リレーション、アクション、権限、フロー、そしてエージェントとツールの定義がその定義 — あなたのビジネスオントロジーです。オープンで、バージョン管理され、あなたのもの。誰かのプラットフォームに閉じ込められた資産ではありません。',
   capabilitiesKicker: 'プラットフォーム機能',
   capabilitiesTitle: ['白紙のコードではなく、', '業務構造から始める'],
@@ -278,7 +309,7 @@ const ja: HomeCopy = {
   capabilities: [
     { title: 'エージェントに業務モデルを渡す', copy: '顧客、注文、設備、ケース、承認を、エージェントが読み、関連付け、操作できるオブジェクトとしてモデル化します。' },
     { title: '今あるシステムを活かす — まずは読み取り専用で', copy: 'すでに稼働中のデータベースを外部データソースとしてフェデレートし、そのテーブルをオブジェクトとしてモデル化します。フェデレーションは既定で読み取り専用で、まだ初期段階です。記録システムが行を書き続け、書き込みはオブジェクト単位で意図的に有効化します。' },
-    { title: 'コードではなくメタデータを生成', copy: '典型的な CRUD/ワークフロー型ソフトウェアでは、エージェントはコンパクトな ObjectStack 定義を書きます。オープンな ObjectStack ランタイムがテーブル、API、UI、ツールを派生し、権限と監査を強制します。ObjectOS が本番デプロイとチーム運用を担います。生成するコードもレビューするコードも少なくなります。' },
+    { title: 'コードではなくオントロジーを書く', copy: '典型的な CRUD/ワークフロー型ソフトウェアでは、エージェントはコンパクトな ObjectStack 定義を書きます。オープンな ObjectStack ランタイムがテーブル、API、UI、ツールを派生し、権限と監査を強制します。ObjectOS が本番デプロイとチーム運用を担います。生成するコードもレビューするコードも少なくなります。' },
     { title: 'ランタイムでガバナンスを実行', copy: '企業 ID、権限、承認キュー、監査ログを再利用し、すべてのエージェント操作に明確な境界を設けます。' },
   ],
   aiKicker: 'AI 構築とエージェント運用',
@@ -319,7 +350,7 @@ const ja: HomeCopy = {
   ],
   securityLink: 'セキュリティとガバナンスを見る',
   insightsKicker: '最新インサイト',
-  insightsTitle: 'AI-native ソフトウェアの実践知',
+  insightsTitle: 'AI が書くソフトウェアの実践知',
   insightsLink: 'すべての記事',
   closingKicker: '次のステップ',
   closingTitle: '最もよく知る業務データから始めましょう。',
@@ -347,6 +378,8 @@ const de: HomeCopy = {
   videoCaption: 'ObjectStack in 90 Sekunden',
   videoPlayLabel: 'Video abspielen: ObjectStack in 90 Sekunden',
   videoMoreLink: 'Mehr Videos auf YouTube',
+  videoPosterEyebrow: 'OFFENES PROTOKOLL & RUNTIME · APACHE-2.0',
+  videoPosterNote: 'Datenmodell · UI · Workflows · Berechtigungen — klein genug, dass AI das Ganze erfasst.',
   proof: [
     [positioning.de.t3[0], 'Die Runtime führt sie aus'],
     [positioning.de.t3[1], 'AI schreibt sie'],
@@ -354,10 +387,11 @@ const de: HomeCopy = {
     [positioning.de.t3[3], 'Ontologie exportieren, auf quelloffenem ObjectStack ausführen'],
   ],
   imageAlt: 'ObjectOS verbindet Geschäftsdaten, Anwendungen und AI Agents',
-  imageNoteTitle: 'Einheitliche Geschäftsobjektschicht',
+  imageNoteTitle: t2Lead(positioning.de.t2),
   imageNote: 'Verbindet Anwendungen, Daten und Agents',
   positioningKicker: positioning.de.t1,
   positioningTitle: ['Bewährte Systeme behalten.', 'Eine kontrollierte Runtime für Agents ergänzen.'],
+  positioningLink: 'Was eine ausführbare Geschäftsontologie ist',
   positioningCopy: 'Enterprise AI braucht kein weiteres Neuaufbauprojekt und keinen weiteren Stapel generierten Codes. Sie braucht eine Definition, die Agents schreiben, Menschen prüfen und eine Runtime über Legacy-Systeme, neue Anwendungen und AI Agents hinweg kontrolliert. Ihre Objekte und Felder, Beziehungen, Aktionen, Berechtigungen, Flows sowie Agent- und Tool-Definitionen sind diese Definition — Ihre Geschäftsontologie: offen, versioniert und in Ihrem Besitz, kein Asset in der Plattform eines anderen.',
   capabilitiesKicker: 'Plattformfunktionen',
   capabilitiesTitle: ['Mit der Geschäftsstruktur beginnen,', 'nicht mit einer leeren Codebasis'],
@@ -365,7 +399,7 @@ const de: HomeCopy = {
   capabilities: [
     { title: 'Agents ein Geschäftsmodell geben', copy: 'Modellieren Sie Kunden, Aufträge, Anlagen, Fälle und Freigaben als Objekte, die Agents lesen, verknüpfen und bearbeiten können.' },
     { title: 'Bestehendes erweitern — zuerst nur lesend', copy: 'Föderieren Sie eine Datenbank, die Sie bereits betreiben, als externe Datasource und modellieren Sie ihre Tabellen als Objekte. Föderation ist standardmäßig nur lesend und noch früh: Das Ursprungssystem schreibt die Zeilen weiter, Schreibzugriff wird bewusst pro Objekt freigegeben.' },
-    { title: 'Metadaten statt App-Code generieren', copy: 'Für typische CRUD- und Workflow-Software schreiben Agents die kompakte ObjectStack-Definition. Die offene ObjectStack Runtime leitet Tabellen, APIs, UI und Tools ab und setzt Rechte sowie Audit durch; ObjectOS übernimmt Produktionsbereitstellung und Team-Betrieb. Weniger Code zu generieren, weniger Code zu prüfen.' },
+    { title: 'Die Ontologie schreiben, nicht App-Code', copy: 'Für typische CRUD- und Workflow-Software schreiben Agents die kompakte ObjectStack-Definition. Die offene ObjectStack Runtime leitet Tabellen, APIs, UI und Tools ab und setzt Rechte sowie Audit durch; ObjectOS übernimmt Produktionsbereitstellung und Team-Betrieb. Weniger Code zu generieren, weniger Code zu prüfen.' },
     { title: 'Governance zur Laufzeit erzwingen', copy: 'Nutzen Sie Unternehmensidentität, Berechtigungen, Freigabeschlangen und Audit-Logs, damit jede Agent-Aktion klare Grenzen hat.' },
   ],
   aiKicker: 'AI-Build und Agent-Betrieb',
@@ -406,7 +440,7 @@ const de: HomeCopy = {
   ],
   securityLink: 'Sicherheit und Governance ansehen',
   insightsKicker: 'Aktuelle Einblicke',
-  insightsTitle: 'Praxiswissen zu AI-nativer Software',
+  insightsTitle: 'Praxiswissen zu AI-geschriebener Software',
   insightsLink: 'Alle Artikel',
   closingKicker: 'Nächster Schritt',
   closingTitle: 'Beginnen Sie mit den Geschäftsdaten, die Sie am besten kennen.',
@@ -434,6 +468,8 @@ const es: HomeCopy = {
   videoCaption: 'ObjectStack en 90 segundos',
   videoPlayLabel: 'Reproducir el vídeo: ObjectStack en 90 segundos',
   videoMoreLink: 'Más vídeos en YouTube',
+  videoPosterEyebrow: 'PROTOCOLO Y RUNTIME ABIERTOS · APACHE-2.0',
+  videoPosterNote: 'Modelo de datos · UI · workflows · permisos — tan pequeño que la AI lo abarca entero.',
   proof: [
     [positioning.es.t3[0], 'El runtime la ejecuta'],
     [positioning.es.t3[1], 'La AI la escribe'],
@@ -441,10 +477,11 @@ const es: HomeCopy = {
     [positioning.es.t3[3], 'Exporta tu ontología y ejecútala en ObjectStack open source'],
   ],
   imageAlt: 'ObjectOS conectando datos, aplicaciones y agentes de AI',
-  imageNoteTitle: 'Capa unificada de objetos de negocio',
+  imageNoteTitle: t2Lead(positioning.es.t2),
   imageNote: 'Conectando aplicaciones, datos y agentes',
   positioningKicker: positioning.es.t1,
   positioningTitle: ['Conserva los sistemas que funcionan.', 'Añade un runtime gobernado para agentes.'],
+  positioningLink: 'Qué es una ontología de negocio ejecutable',
   positioningCopy: 'La AI empresarial no necesita otro proyecto de reconstrucción ni otra pila de código generado. Necesita una definición que los agentes puedan escribir, las personas revisar y un runtime gobernar entre sistemas heredados, nuevas aplicaciones y agentes de AI. Tus objetos y campos, relaciones, acciones, permisos, flujos y definiciones de agentes y herramientas son esa definición — tu ontología de negocio: abierta, versionada y tuya, no un activo encerrado en la plataforma de otro.',
   capabilitiesKicker: 'Capacidades de la plataforma',
   capabilitiesTitle: ['Empieza por la estructura del negocio,', 'no por código en blanco'],
@@ -452,7 +489,7 @@ const es: HomeCopy = {
   capabilities: [
     { title: 'Da a los agentes un modelo de negocio', copy: 'Modela clientes, pedidos, equipos, casos y aprobaciones como objetos que los agentes pueden leer, relacionar y modificar.' },
     { title: 'Extiende lo que ya funciona — primero en solo lectura', copy: 'Federa una base de datos que ya usas como datasource externa y modela sus tablas como objetos. La federación es de solo lectura por defecto y aún temprana: el sistema de registro sigue escribiendo las filas y las escrituras se habilitan deliberadamente, objeto por objeto.' },
-    { title: 'Genera metadatos, no código de app', copy: 'Para software CRUD y de workflow típico, los agentes escriben la definición compacta de ObjectStack. El runtime abierto de ObjectStack deriva tablas, API, UI y herramientas, y aplica permisos y auditoría; ObjectOS se encarga del despliegue en producción y la operación del equipo. Menos código que generar, menos código que revisar.' },
+    { title: 'Escribe la ontología, no código de app', copy: 'Para software CRUD y de workflow típico, los agentes escriben la definición compacta de ObjectStack. El runtime abierto de ObjectStack deriva tablas, API, UI y herramientas, y aplica permisos y auditoría; ObjectOS se encarga del despliegue en producción y la operación del equipo. Menos código que generar, menos código que revisar.' },
     { title: 'Aplica gobierno en runtime', copy: 'Reutiliza identidad empresarial, permisos, colas de aprobación y auditoría para que cada acción de agente tenga límites definidos.' },
   ],
   aiKicker: 'Construcción AI y operación con agentes',
@@ -493,7 +530,7 @@ const es: HomeCopy = {
   ],
   securityLink: 'Ver seguridad y gobierno',
   insightsKicker: 'Últimos análisis',
-  insightsTitle: 'Ideas prácticas sobre software AI-native',
+  insightsTitle: 'Ideas prácticas sobre software escrito por AI',
   insightsLink: 'Ver todos los artículos',
   closingKicker: 'Siguiente paso',
   closingTitle: 'Empieza con los datos de negocio que mejor conoces.',
@@ -521,6 +558,8 @@ const fr: HomeCopy = {
   videoCaption: 'ObjectStack en 90 secondes',
   videoPlayLabel: 'Lire la vidéo : ObjectStack en 90 secondes',
   videoMoreLink: 'Plus de vidéos sur YouTube',
+  videoPosterEyebrow: 'PROTOCOLE ET RUNTIME OUVERTS · APACHE-2.0',
+  videoPosterNote: 'Modèle de données · UI · workflows · permissions — si petit que l’AI le tient entier.',
   proof: [
     [positioning.fr.t3[0], 'Le runtime l’exécute'],
     [positioning.fr.t3[1], 'L’AI l’écrit'],
@@ -528,10 +567,11 @@ const fr: HomeCopy = {
     [positioning.fr.t3[3], 'Exportez votre ontologie, exécutez-la sur ObjectStack open source'],
   ],
   imageAlt: 'ObjectOS connectant données métier, applications et agents AI',
-  imageNoteTitle: 'Couche unifiée d’objets métier',
+  imageNoteTitle: t2Lead(positioning.fr.t2),
   imageNote: 'Connexion des applications, données et agents',
   positioningKicker: positioning.fr.t1,
   positioningTitle: ['Conservez les systèmes efficaces.', 'Ajoutez un runtime gouverné pour agents.'],
+  positioningLink: 'Ce qu’est une ontologie métier exécutable',
   positioningCopy: 'L’AI en entreprise n’a pas besoin d’un nouveau chantier de reconstruction ni d’une nouvelle pile de code généré. Elle a besoin d’une définition que les agents peuvent écrire, que les humains peuvent relire, et qu’un runtime gouverne à travers systèmes existants, nouvelles applications et agents AI. Vos objets et champs, relations, actions, permissions, flux, et définitions d’agents et d’outils sont cette définition — votre ontologie métier : ouverte, versionnée et à vous, pas un actif enfermé dans la plateforme d’un autre.',
   capabilitiesKicker: 'Capacités de la plateforme',
   capabilitiesTitle: ['Partez de la structure métier,', 'pas d’une base de code vide'],
@@ -539,7 +579,7 @@ const fr: HomeCopy = {
   capabilities: [
     { title: 'Donnez aux agents un modèle métier', copy: 'Modélisez clients, commandes, équipements, dossiers et validations comme des objets que les agents peuvent lire, relier et modifier.' },
     { title: 'Étendez l’existant — en lecture seule d’abord', copy: 'Fédérez une base que vous exploitez déjà comme datasource externe et modélisez ses tables en objets. La fédération est en lecture seule par défaut, et encore récente : le système de référence continue d’écrire les lignes, et l’écriture s’active délibérément, objet par objet.' },
-    { title: 'Générez des métadonnées, pas du code applicatif', copy: 'Pour les logiciels CRUD et workflow typiques, les agents écrivent la définition ObjectStack compacte. Le runtime ouvert ObjectStack en dérive tables, API, UI et outils, puis applique permissions et audit ; ObjectOS prend en charge le déploiement en production et les opérations d’équipe. Moins de code à générer, moins de code à relire.' },
+    { title: 'Écrivez l’ontologie, pas du code applicatif', copy: 'Pour les logiciels CRUD et workflow typiques, les agents écrivent la définition ObjectStack compacte. Le runtime ouvert ObjectStack en dérive tables, API, UI et outils, puis applique permissions et audit ; ObjectOS prend en charge le déploiement en production et les opérations d’équipe. Moins de code à générer, moins de code à relire.' },
     { title: 'Appliquez la gouvernance au runtime', copy: 'Réutilisez identité d’entreprise, permissions, files de validation et journaux d’audit afin que chaque action d’agent ait des limites définies.' },
   ],
   aiKicker: 'Construction AI et opérations d’agents',
@@ -580,7 +620,7 @@ const fr: HomeCopy = {
   ],
   securityLink: 'Voir sécurité et gouvernance',
   insightsKicker: 'Dernières analyses',
-  insightsTitle: 'Réflexions pratiques sur les logiciels AI-native',
+  insightsTitle: 'Réflexions pratiques sur les logiciels écrits par l’AI',
   insightsLink: 'Voir tous les articles',
   closingKicker: 'Étape suivante',
   closingTitle: 'Commencez par les données métier que vous connaissez le mieux.',
@@ -608,6 +648,8 @@ const ko: HomeCopy = {
   videoCaption: 'ObjectStack 90초 살펴보기',
   videoPlayLabel: '동영상 재생: ObjectStack 90초 살펴보기',
   videoMoreLink: 'YouTube에서 더 많은 영상 보기',
+  videoPosterEyebrow: '오픈 프로토콜 & 런타임 · APACHE-2.0',
+  videoPosterNote: '데이터 모델 · UI · 워크플로 · 권한 — AI가 한 번에 담을 만큼 작습니다.',
   proof: [
     [positioning.ko.t3[0], '런타임이 실행합니다'],
     [positioning.ko.t3[1], 'AI가 작성합니다'],
@@ -615,10 +657,11 @@ const ko: HomeCopy = {
     [positioning.ko.t3[3], '온톨로지를 내보내 오픈소스 ObjectStack에서 실행'],
   ],
   imageAlt: '비즈니스 데이터, 애플리케이션과 AI 에이전트를 연결하는 ObjectOS',
-  imageNoteTitle: '통합 비즈니스 객체 계층',
+  imageNoteTitle: t2Lead(positioning.ko.t2),
   imageNote: '애플리케이션, 데이터와 에이전트 연결 중',
   positioningKicker: positioning.ko.t1,
   positioningTitle: ['이미 잘 작동하는 시스템은 유지하고,', '에이전트를 위한 거버넌스 런타임을 더하세요.'],
+  positioningLink: '실행 가능한 비즈니스 온톨로지란',
   positioningCopy: '엔터프라이즈 AI에 필요한 것은 또 하나의 재구축 프로젝트도, 검토하기 어려운 생성 코드 더미도 아닙니다. 에이전트가 작성하고 사람이 검토하며 런타임이 기존 시스템, 새 애플리케이션, AI 에이전트 전반에서 거버넌스를 유지하는 하나의 정의입니다. 객체와 필드, 관계, 작업, 권한, 플로, 그리고 에이전트와 도구 정의가 그 정의 — 당신의 비즈니스 온톨로지입니다. 열려 있고, 버전 관리되며, 당신의 것이지, 남의 플랫폼에 갇힌 자산이 아닙니다.',
   capabilitiesKicker: '플랫폼 기능',
   capabilitiesTitle: ['빈 코드가 아니라,', '업무 구조에서 시작합니다'],
@@ -626,7 +669,7 @@ const ko: HomeCopy = {
   capabilities: [
     { title: '에이전트에 비즈니스 모델 제공', copy: '고객, 주문, 장비, 케이스, 승인을 에이전트가 읽고 연결하고 작업할 수 있는 객체로 모델링합니다.' },
     { title: '이미 운영 중인 시스템 확장 — 우선 읽기 전용으로', copy: '이미 운영 중인 데이터베이스를 외부 데이터소스로 연합하고 그 테이블을 객체로 모델링합니다. 연합은 기본적으로 읽기 전용이며 아직 초기 단계입니다. 기록 시스템이 계속 행을 쓰고, 쓰기는 객체 단위로 의도적으로 활성화합니다.' },
-    { title: '앱 코드가 아니라 메타데이터 생성', copy: '일반적인 CRUD 및 워크플로 소프트웨어에서 에이전트는 압축된 ObjectStack 정의를 작성합니다. 오픈 ObjectStack 런타임이 테이블, API, UI, 도구를 파생하고 권한과 감사를 강제하며, ObjectOS가 프로덕션 배포와 팀 운영을 담당합니다. 생성할 코드도, 검토할 코드도 줄어듭니다.' },
+    { title: '앱 코드가 아니라 온톨로지 작성', copy: '일반적인 CRUD 및 워크플로 소프트웨어에서 에이전트는 압축된 ObjectStack 정의를 작성합니다. 오픈 ObjectStack 런타임이 테이블, API, UI, 도구를 파생하고 권한과 감사를 강제하며, ObjectOS가 프로덕션 배포와 팀 운영을 담당합니다. 생성할 코드도, 검토할 코드도 줄어듭니다.' },
     { title: '런타임에서 거버넌스 강제', copy: '기업 ID, 권한, 승인 대기열, 감사 로그를 재사용해 모든 에이전트 작업에 정의된 경계를 둡니다.' },
   ],
   aiKicker: 'AI 빌드와 에이전트 운영',
@@ -667,7 +710,7 @@ const ko: HomeCopy = {
   ],
   securityLink: '보안 및 거버넌스 보기',
   insightsKicker: '최신 인사이트',
-  insightsTitle: 'AI-native 소프트웨어에 대한 실무적 관점',
+  insightsTitle: 'AI가 작성한 소프트웨어에 대한 실무적 관점',
   insightsLink: '모든 글 보기',
   closingKicker: '다음 단계',
   closingTitle: '가장 잘 아는 비즈니스 데이터에서 시작하세요.',

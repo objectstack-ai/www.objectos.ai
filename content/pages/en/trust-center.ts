@@ -38,7 +38,7 @@ const page = {
         eyebrow: 'Boundaries',
         title: 'Keep sensitive business data inside controlled infrastructure',
         copy:
-          'On ObjectOS Enterprise, the runtime, your business data, user identities, audit log, files, and secrets all live in your own infrastructure; unless you configure external providers, they stay inside that boundary. Business Self-Managed runs its single-node license on your infrastructure too. ObjectOS Cloud is operated by us.',
+          'On ObjectOS Enterprise — from its single-node entry option, Business Self-Managed, up — the runtime, your business data, user identities, audit log, files, and secrets all live in your own infrastructure; unless you configure external providers, they stay inside that boundary. ObjectOS Cloud is operated by us.',
         items: [
           {
             title: 'Data residency',
@@ -46,7 +46,7 @@ const page = {
           },
           {
             title: 'License check',
-            body: 'ObjectOS Self-Managed validates its license online (Enterprise air-gapped licenses are offline-validated). The open-source ObjectStack runtime has no telemetry, no license check, and no update ping.',
+            body: 'Self-managed ObjectOS Enterprise validates its license online (air-gapped Enterprise licenses are offline-validated). The open-source ObjectStack runtime has no telemetry, no license check, and no update ping.',
           },
           {
             title: 'Model choice',
