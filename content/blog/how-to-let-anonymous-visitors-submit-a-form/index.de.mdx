@@ -1,0 +1,211 @@
+---
+title: "Wie lässt man anonyme Besucher ein Formular in eine governte Business-App senden? Eine öffentliche Tür, fünf Felder breit"
+description: "Seit v17 wird anonymer Datenzugriff verweigert. Die einzige offene Tür ist eine öffentliche Formularansicht: das Recht kommt aus dem Formular — eine Zeile anlegen, sie zurücklesen, fünf Felder, sonst nichts. Gemessen auf 17.7.0."
+author: ObjectStack Team
+date: 2026-10-22
+status: published
+topic: app-building
+audience: business
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Öffentliche Formulare
+  - Web-to-Lead
+  - Anonymer Zugriff
+---
+
+**Kurzfassung.** Seit v17 wird eine nicht authentifizierte Anfrage nach Objektdaten in einer ObjectStack-App mit `401 UNAUTHENTICATED` abgewiesen — jedes Objekt, jeder Endpunkt, kein Opt-out. Die einzige Tür, die eine governte App der Öffentlichkeit offen lässt, ist eine **öffentliche Formularansicht**: Man deklariert ein Formular, setzt in seinem `sharing`-Block `allowAnonymous: true`, und die Runtime leitet die gesamte Berechtigung des Besuchers aus dieser Deklaration ab — einen Datensatz auf diesem einen Objekt anlegen, die gerade erzeugte Zeile zurücklesen, sonst nichts. Die Feldliste des Formulars ist die Sicherheitsgrenze. Das Web-to-Lead-Formular des CRM-Beispiels listet fünf Felder, also können fünf Felder ankommen; die übrigen acht Geschäftsfelder und jede Systemspalte können es nicht, was auch immer der Besucher schickt. Ich nenne das eine **formförmige Berechtigung** (form-shaped grant): eine Autorisierung, die zur Anfragezeit aus dem Formular berechnet wird — und deshalb nicht breiter konfiguriert werden kann als das Formular. Alles Folgende wurde auf der veröffentlichten `@objectstack/cli` 17.7.0 gemessen, der Version, die `npm create objectstack@latest` heute installiert — einschließlich der einen Frage, in der sich Dokumentation und mitgeliefertes Beispiel widersprechen: ob ein `guest_portal`-Profil nötig ist. Es ist es nicht.
+
+## Das Problem, in den Worten der Doku
+
+Der ObjectStack-Leitfaden zur öffentlichen Datenerfassung beginnt mit dem Szenario, so wie ein Anwender es formulieren würde:
+
+> Ich möchte, dass anonyme Besucher ein Formular — „Kontakt“, „Demo anfragen“, ein Aufnahmeformular — absenden, das einen Datensatz anlegt. Aber ich darf ihnen **keinen** Zugriff auf die Datenbasis geben, und sie dürfen nur die Felder auf dem Formular setzen können.
+
+Jede Business-App hat so ein Formular: das Lead-Formular auf der Website, die Support-Aufnahme, die Demo-Anfrage, den Garantieantrag. Die üblichen Antworten kosten jede etwas. Eine „Gast“-Rolle mit Schreibrecht auf die Tabelle ist eine stehende Berechtigung, die niemand mehr liest, und sie driftet. Ein handgeschriebener Endpunkt umgeht das Berechtigungsmodell, das alles andere regelt. Ein externes Formular-Tool mit Webhook bedeutet, dass nun zwei Systeme das Schema halten — und eines davon ist nicht das, das die Reviewer anschauen.
+
+Seit v17 steht die erste Antwort nicht einmal mehr zur Verfügung. Die Berechtigungs-Dokumentation hält den Grund nebenbei fest: „since v17 anonymous access to object data is always denied anyway — the `requireAuth: false` opt-out was retired“ (seit v17 wird anonymer Zugriff auf Objektdaten ohnehin immer verweigert — das Opt-out `requireAuth: false` wurde ausgemustert). Die [Anleitung zum Self-Hosting](/en/blog/how-to-self-host-objectstack/) macht daraus einen Prüfschritt — einen Objekt-Endpunkt ohne Anmeldedaten per `curl` aufrufen und auf der `401` mit maschinenlesbarem `code` bestehen — und behandelt eine `200` dort als Vorfall. Die ehrliche Form der Frage lautet also: Wenn die Datenebene für anonyme Aufrufer konstruktionsbedingt geschlossen ist, wie kommt ein öffentliches Formular überhaupt hindurch?
+
+## Ein öffentliches Formular ist eine Deklaration, keine Berechtigung
+
+Das ist das vollständige Web-to-Lead-Formular des CRM-Beispiels, wie es im Tag 17.7.0 ausgeliefert wird:
+
+```ts
+formViews: {
+  web_to_lead: {
+    type: 'simple',
+    data: { provider: 'object', object: 'crm_lead' },
+    sections: [
+      {
+        name: 'contact_us',
+        label: 'Contact us',
+        columns: 1,
+        fields: [
+          { field: 'name', required: true },
+          { field: 'company' },
+          { field: 'email', required: true },
+          { field: 'phone' },
+          { field: 'title' },
+        ],
+      },
+    ],
+    sharing: {
+      enabled: true,
+      allowAnonymous: true,
+      publicLink: '/forms/contact-us',
+    },
+  },
+},
+```
+
+Nichts darin erwähnt eine Berechtigung. Der `sharing`-Block öffnet die Tür: Sind `enabled`, `allowAnonymous` und ein `publicLink` gesetzt, registriert die Runtime zwei anonyme Endpunkte — `GET /api/v1/forms/contact-us`, der das aufgelöste Formular und das gefilterte Schema zurückgibt, und `POST /api/v1/forms/contact-us/submit`, der ein `crm_lead` einfügt. Die Einzeilen-Regel der Doku dafür, was der Besucher schreiben darf, lautet: „Only the fields listed in `sections[].fields` are accepted on submit; everything else is stripped server-side“ (beim Absenden werden nur die in `sections[].fields` gelisteten Felder akzeptiert; alles andere wird serverseitig entfernt). Und die Begründung, warum es so gebaut ist, ist der Satz, zu dessen Prüfung dieser Beitrag existiert: „Authorization is **derived from the declaration**, not configured separately — so the grant can't drift wider than the form“ (Die Autorisierung wird aus der Deklaration abgeleitet, nicht separat konfiguriert — deshalb kann die Berechtigung nicht breiter driften als das Formular).
+
+![Zwei Netze: Die Route behält nur die fünf deklarierten Felder und verwirft serververwaltete Namen; die Datenschicht lässt nur Einfügen und Zurücklesen auf crm_lead zu und entfernt dieselben Namen erneut. Lesezugriffe antworten mit 401; ein zurückgezogenes Formular mit 404.](./two-nets-en.svg)
+
+Mechanisch gibt es zwei Netze, und sie verdienen Namen, weil ein Reviewer jedes einzeln prüfen kann.
+
+**Das erste Netz ist die Route.** Der Submit-Handler baut seine Positivliste aus `sections[].fields` des getroffenen Formulars und kopiert nur diese Schlüssel aus dem Request-Body. Davor verwirft er namentlich jeden Schlüssel aus `PUBLIC_FORM_SERVER_MANAGED_FIELDS`, einer Menge, die das Spec-Paket exportiert: `id`, `owner_id`, `owning_business_unit_id`, `organization_id`, `tenant_id`, `created_at`, `created_by`, `updated_at`, `updated_by`, `is_deleted`, `deleted_at` und `__search` — zwölf Namen, die „**never** accepted from a public submission — not even when a section declares them“ (niemals aus einer öffentlichen Einsendung akzeptiert werden — auch dann nicht, wenn eine Sektion sie deklariert). Ein Formular ganz ohne Felder wird mit `400` abgewiesen, statt alles anzunehmen, was ankommt.
+
+**Das zweite Netz ist die Datenschicht.** Die Route hängt dem Schreibvorgang ein anfragegebundenes `publicFormGrant: { object: 'crm_lead' }` an, und das Security-Plugin honoriert genau das: `insert`, dazu `find`, `findOne` und `count` für das Zurücklesen, und nur auf diesem Objekt. Bevor es das Einfügen zulässt, entfernt es dieselben zwölf Namen ein zweites Mal — selbst wenn ein Formular `owner_id` in einer Sektion deklarierte oder Routenfilter und Datenschicht irgendwann auseinander editiert würden, könnte ein Besucher weder Eigentum noch Mandantenzuordnung fälschen. Die Berechtigung ist die Form des Formulars, zur Anfragezeit gelesen. Es gibt keine Zeile in einer Berechtigungstabelle, die sagt „anonym darf Leads schreiben“, weil es nichts zu konfigurieren gibt.
+
+## Das Protokoll, auf 17.7.0
+
+Ich habe `examples/app-crm` aus dem Tag `@objectstack/cli@17.7.0` genommen, seine Abhängigkeiten auf die veröffentlichten 17.7.0-Pakete festgenagelt und es mit `objectstack dev` gestartet. Der Dev-Server legt auf einer leeren Datenbank ein Admin-Konto an; die fünf vorbefüllten Leads gehören ihm. Jede Antwort unten ist echt und nur der Länge wegen gekürzt.
+
+**1. Die Tür beschreibt sich selbst — fünf Felder breit.** Ohne Anmeldedaten:
+
+```bash
+curl -s http://localhost:49160/api/v1/forms/contact-us
+```
+
+```json
+{ "slug": "contact-us", "object": "crm_lead",
+  "form": { "sections": [ { "name": "contact_us", "fields": [
+      { "field": "name", "required": true }, { "field": "company" },
+      { "field": "email", "required": true }, { "field": "phone" }, { "field": "title" } ] } ],
+    "sharing": { "enabled": true, "publicLink": "/forms/contact-us", "allowAnonymous": true } },
+  "objectSchema": { "name": "crm_lead", "fields": { "name": {}, "email": {}, "phone": {}, "company": {}, "title": {} } } }
+```
+
+Das `objectSchema` enthält genau die fünf freigegebenen Felder. `crm_lead` deklariert in seiner Objektdefinition dreizehn Geschäftsfelder; das öffentliche Schema zeigt fünf und sagt nichts über `status`, `lead_score`, `assigned_to`, `account`, `notes` oder den Rest. Der Besucher kann nicht einmal erfahren, was er versuchen könnte.
+
+**2. Eine saubere Einsendung legt eine Zeile an.**
+
+```bash
+curl -s -X POST http://localhost:49160/api/v1/forms/contact-us/submit \
+  -H 'content-type: application/json' \
+  -d '{"name":"Ada Lovelace","email":"ada@example.com"}'
+```
+
+```json
+HTTP 201
+{ "object": "crm_lead", "id": "lY0qNhApoHwyYMtk",
+  "record": { "id": "lY0qNhApoHwyYMtk", "name": "Ada Lovelace", "email": "ada@example.com",
+    "status": "new", "source": "web", "lead_score": 0, "owner_id": null,
+    "organization_id": "org_mvbpxfocznjyqv4e", "created_by": null } }
+```
+
+`status: "new"` wurde nicht gesendet; es ist der Schreibpfad-Standardwert des Objekts, den das Lead-Objekt ausdrücklich deklariert, „so minimal creates (e.g. the public Web-to-Lead form, which doesn't expose status) satisfy `required`“ (damit minimale Anlagen — etwa das öffentliche Web-to-Lead-Formular, das status nicht zeigt — `required` erfüllen). `source: "web"` und `lead_score: 0` sind ebenfalls Standardwerte.
+
+**3. Eine feindselige Einsendung legt dieselbe Zeile an.** Sechs Schlüssel gesendet; zwei stehen auf dem Formular:
+
+```bash
+curl -s -X POST http://localhost:49160/api/v1/forms/contact-us/submit \
+  -H 'content-type: application/json' \
+  -d '{"name":"Mallory","email":"mallory@example.com",
+       "status":"converted","lead_score":100,
+       "owner_id":"attacker","organization_id":"org_other"}'
+```
+
+```json
+HTTP 201
+{ "record": { "id": "OJINuRoRVtZC-l95", "name": "Mallory", "email": "mallory@example.com",
+    "status": "new", "lead_score": 0, "owner_id": null,
+    "organization_id": "org_mvbpxfocznjyqv4e" } }
+```
+
+Als Admin zurückgelesen ist die gespeicherte Zeile dieselbe: Die zwei freigegebenen Felder kamen an, die zwei Geschäftsfelder, die nicht auf dem Formular stehen, wurden verworfen, und die zwei Systemanker wurden verworfen und dann vom Server gestempelt — `organization_id` ist die eigene Organisation der Installation, nicht `org_other`, und `owner_id` ist `null`. Die `201` sagt nicht, welche Schlüssel abgewiesen wurden; die Route verwirft sie kommentarlos.
+
+| Gesendeter Schlüssel | Auf dem Formular? | Gespeichert als | Warum |
+|:--|:--|:--|:--|
+| `name`, `email` | ja | wie gesendet | freigegeben |
+| `status: "converted"` | nein | `"new"` | nicht in `sections[].fields`; Objekt-Standardwert greift |
+| `lead_score: 100` | nein | `0` | nicht in `sections[].fields`; Objekt-Standardwert greift |
+| `owner_id: "attacker"` | nein | `null` | serververwalteter Name, in beiden Netzen abgewiesen |
+| `organization_id: "org_other"` | nein | der eigene Wert des Servers | serververwalteter Name; von der Runtime gestempelt |
+
+**4. Die Tür öffnet sich nicht in die andere Richtung.** Derselbe anonyme Client, jetzt lesend:
+
+```bash
+curl -s -w '\n%{http_code}\n' http://localhost:49160/api/v1/data/crm_lead
+curl -s -w '\n%{http_code}\n' http://localhost:49160/api/v1/data/crm_lead/OJINuRoRVtZC-l95
+```
+
+```json
+{"error":"UNAUTHENTICATED","code":"UNAUTHENTICATED","message":"Authentication is required to access this endpoint."}
+401
+```
+
+Beide antworten `401` — die Liste und die einzelne Zeile, die der Besucher eine Sekunde zuvor angelegt hat. Der `201`-Body ist das einzige Mal, dass der Absender diesen Datensatz je sieht. „The public path only ever **inserts**; it never lists“ (Der öffentliche Pfad fügt nur ein; er listet nie).
+
+**5. Das Formular zurückziehen schließt beide Endpunkte.** `publicLink` behalten, `enabled: false` setzen, neu bauen, neu starten:
+
+```json
+GET  /api/v1/forms/contact-us         → 404 {"code":"FORM_NOT_FOUND","error":"No public form configured at /forms/contact-us"}
+POST /api/v1/forms/contact-us/submit  → 404 {"code":"FORM_NOT_FOUND","error":"No public form configured at /forms/contact-us"}
+```
+
+Die als Admin gelesene Lead-Zahl blieb vorher wie nachher bei 15. Vier Statuscodes erzählen die ganze Geschichte der Tür: `201`, `201`, `401`, `404`.
+
+## Welche Geschichte trägt: das Gastprofil oder die Deklaration?
+
+Hier widersprechen sich Dokumentation und mitgeliefertes Beispiel, und ich wollte nicht durch Lesen Partei ergreifen. Der Leitfaden sagt: „Declare a public form view; the submit route derives a narrow authorization from that declaration. No `guest` profile, no broad grant“ (Deklariere eine öffentliche Formularansicht; die Submit-Route leitet aus dieser Deklaration eine enge Autorisierung ab. Kein `guest`-Profil, keine breite Berechtigung). Das CRM-Beispiel liefert ein `GuestPortalProfile` mit — einen Berechtigungssatz namens `guest_portal` mit `allowCreate: true` auf `crm_lead` und allen anderen Bits auf false — und der Kommentar über dem Formular sagt, dass „`sharing.allowAnonymous` den öffentlichen Endpunkt öffnet; das `guest_portal`-Profil (nur INSERT auf crm_lead) autorisiert den Schreibvorgang“. Der Quellcode der Runtime selbst trägt in 17.7.0 beide Geschichten wenige hundert Zeilen auseinander: Der Docstring der Route sagt, Sicherheit sei „an den `guest_portal`-Berechtigungssatz auf dem Ausführungskontext delegiert“, und warnt, ohne einen solchen „falle die Middleware offen“; der Handler-Code darunter sagt, öffentliche Formulare „work under secure-by-default (anonymous-deny) WITHOUT a deployment-configured `guest_portal`“ (funktionieren unter secure-by-default (anonymous-deny) OHNE ein in der Installation konfiguriertes `guest_portal`) und behält den Profilnamen im Kontext nur „for back-compat with object hooks“ (zur Rückwärtskompatibilität mit Objekt-Hooks).
+
+Also habe ich `GuestPortalProfile` aus den `permissions` des Stacks entfernt und neu gebaut. Das Erste, was geschah: Der Build verweigerte sich:
+
+```text
+✗ Access matrix drift (1 change) — capability changes must be reviewed
+• 'guest_portal' loses ALL access to 'crm_lead' (entry removed)
+  If intended, re-run with --update-access-matrix and commit the snapshot — its diff IS the review artifact.
+```
+
+Dieses Gate ist ein eigenes Thema; hier ist es ein beruhigender Nebensatz — ein verschwindender Berechtigungssatz gilt als reviewpflichtige Änderung, selbst wenn sich herausstellt, dass der Satz nichts tut. Ich habe die Drift akzeptiert, geprüft, dass das kompilierte Artefakt einen statt zwei Berechtigungssätze listet, und die vier Sonden erneut laufen lassen.
+
+| Sonde | Mit `guest_portal` | Ohne `guest_portal` |
+|:--|:--|:--|
+| `POST …/submit` mit `name`, `email` | `201`, Zeile angelegt | `201`, Zeile angelegt |
+| `POST …/submit` mit eingeschmuggeltem `status`, `owner_id`, `organization_id` | `201`; `status: "new"`, `owner_id: null`, `organization_id` des Servers | identisch |
+| anonymes `GET /api/v1/data/crm_lead` | `401 UNAUTHENTICATED` | `401 UNAUTHENTICATED` |
+| anonymes `GET` der angelegten Zeile | `401 UNAUTHENTICATED` | `401 UNAUTHENTICATED` |
+
+Identisch, Zeile für Zeile. Auf 17.7.0 trägt die Deklaration, und das Profil ist auf diesem Pfad wirkungslos. Praktisch heißt das: Füge kein Gastprofil hinzu, damit ein öffentliches Formular funktioniert. Es setzt eine stehende Berechtigung in deine Zugriffsmatrix, die die öffentliche Tür nie konsultiert, und es erzählt dem nächsten Reviewer — Mensch oder Agent — eine Geschichte darüber, wo die Grenze liegt, die die Runtime nicht teilt. Der Kommentar des Beispiels ist für 17.7.0 falsch, und ich habe ihn als solchen gemeldet; bis er sich ändert, lies den Leitfaden, nicht den Kommentar.
+
+An einer weiteren Stelle gehen Beispiel und Leitfaden auseinander: Der dritte Schritt des Leitfadens lautet „Set `sharingModel: 'private'` on the object so submissions are staff-scoped after creation“ (Setze `sharingModel: 'private'` auf dem Objekt, damit Einsendungen nach der Anlage auf Mitarbeiter beschränkt sind), und das Lead-Objekt des CRM ist absichtlich `public_read_write`, mit einem Kommentar, der erklärt, dass die Demo bewusst organisationsweit geteilt ist. Das schwächt die Tür nicht — der organisationsweite Standard regelt, was *angemeldete* Nutzer voneinander sehen, und der anonyme Aufrufer wird abgewiesen, bevor irgendetwas davon konsultiert wird — aber für das eigene Aufnahmeobjekt ist der Rat befolgenswert.
+
+## Was diese Tür nicht tut
+
+- **Keine Ratenbegrenzung, kein Captcha, keine Spam-Abwehr.** Für den öffentlichen Formularpfad ist nichts davon dokumentiert, und ich habe nichts gefunden: Die Sonden dieses Beitrags haben ohne Anmeldedaten zehn Leads angelegt, und nichts in der Runtime hat sie gezählt oder gebremst. Setze den üblichen Edge-Schutz vor `/api/v1/forms/*`; die Runtime bewacht, was geschrieben wird, nicht wie oft.
+- **Das `required` des Formulars wird beim öffentlichen Absenden nicht erzwungen.** Das Web-to-Lead-Formular markiert `email` als Pflichtfeld; ein `POST` ohne es antwortete `201` mit `email: null`. Das `required` des Objekts wird erzwungen — ein `POST` ohne `name` antwortete `400 VALIDATION_FAILED` mit „Lead Name is required“. Wenn ein Feld vorhanden sein muss, verlange es auf dem Objekt oder prüfe es in einem Hook; das Formular-Flag ist auf diesem Pfad ein Darstellungshinweis.
+- **Die `201` gibt die ganze Zeile zurück.** Das Zurücklesen, das die Berechtigung erlaubt, ist die vom Besucher angelegte Zeile, einschließlich servergestempelter Werte und Standardwerte — `organization_id` darunter. In meinem Fall war nichts Sensibles dabei. Trägt dein Aufnahmeobjekt interne Felder mit aussagekräftigen Standardwerten, geh davon aus, dass der Absender sie einmal sieht. Dasselbe gilt für alles, was ein `beforeInsert`- oder `afterInsert`-Hook auf dem Zielobjekt stempelt, einschließlich Werten, die er aus vorhandenen Datensätzen ableitet. Halte auf 17.7.0 Hooks, die vorhandene Datensätze nachschlagen — Deduplizierung, Round-Robin-Zuweisung —, aus dem Einfügepfad eines öffentlichen Aufnahmeobjekts heraus und erledige dieses Routing nach der Aufnahme, in einem Flow oder einem geplanten Job.
+- **Der Eigentümer ist niemand.** `owner_id` bleibt bei einer öffentlichen Einsendung `null`; das Security-Plugin überlässt es „for object hooks / the first-admin bootstrap to assign“ (Objekt-Hooks oder dem Bootstrap des ersten Admins zur Zuweisung). Wenn deine Pipeline Leads zuweist, tu es in einem Hook oder Flow — erwarte nicht, dass die Zeile einer Person gehört.
+- **Ein Rückzug braucht einen Rebuild — und `os dev` sagt dir, wenn du ihn vergessen hast.** Mein erster Versuch bei Schritt fünf änderte nichts, weil `objectstack dev --no-watch` das vorherige `dist/objectstack.json` auslieferte und das in seiner fünften Logzeile auch sagte: „dist/objectstack.json is OLDER than your sources — this boot serves the STALE build“ (dist/objectstack.json ist ÄLTER als deine Quellen — dieser Start liefert den VERALTETEN Build aus). Die ausgegebene Abhilfe funktionierte. Ich erwähne es, weil eine agentengetriebene Schleife, die nur Statuscodes liest, geschlossen hätte, der Schalter funktioniere nicht.
+- **Rückzug über Metadatenebenen hinweg hat Kanten, die dieser Beitrag nicht abgeschritten ist.** Die gespeicherte Kopie einer Ansicht in einer Organisation und von Paketen ausgelieferte Formulare folgen im Leitfaden eigenen Regeln. Der hier getestete einzelne Schalter ist der, den die meisten Apps brauchen.
+
+## Fünf Fragen eines Reviewers
+
+Ob das Formular von einem Menschen oder einem Agenten geschrieben wurde, das Review ist dasselbe — und kurz, weil die Berechtigung das Formular ist.
+
+1. **Welche Formulare sind öffentlich?** Jede Formularansicht, bei der `sharing.enabled`, `sharing.allowAnonymous` und ein `publicLink` gesetzt sind, ist ein anonymer Endpunkt. Das kompilierte Artefakt listet sie; woanders muss man nicht suchen.
+2. **Was steht in `sections[].fields`?** Diese Liste, abzüglich der zwölf serververwalteten Namen, ist die öffentliche Schreibfläche. Lies sie wie eine Firewall-Regel.
+3. **Füllt das Objekt aus, was das Formular auslässt?** Jedes Pflichtfeld, das das Formular nicht erhebt, braucht einen Standardwert auf Objektebene — `status` im Beispiel — sonst schlägt die Einsendung fehl. Und jedes Feld, das vorhanden sein muss, braucht sein `required` auf dem Objekt, nicht auf dem Formular.
+4. **Gibt es irgendwo eine stehende anonyme Berechtigung?** Ein Berechtigungssatz, der an eine `guest`- oder `everyone`-Position gebunden ist, oder ein `guest_portal`-Satz, der „damit das Formular funktioniert“ hinzugefügt wurde, ist nicht nötig und weitet nichts aus, was die Tür benutzt. Behandle seine Anwesenheit als Frage.
+5. **Was steht vor der Tür?** Ratenbegrenzung und Bot-Schutz sind Aufgabe des Deployments.
+
+Das ist dasselbe Argument über den Ort der Durchsetzung wie in [Wo Agenten-Berechtigungen durchgesetzt werden](/en/blog/objectos-agent-permission-boundaries/), angewandt auf einen Aufrufer ganz ohne Identität: Die Prüfung läuft in der Route und der Datenschicht, nicht in der UI, die die Felder zufällig verbirgt. Und es ist die Antwort auf das Review-Problem, das [der Lovable-Beitrag](/de/blog/is-lovable-safe-for-production/) beschreibt — der verantwortliche Eigentümer kann die fünfzeilige Feldliste lesen und freigeben, was für eine generierte Policy nicht gilt. Der Glossar-Eintrag zum [Berechtigungsmodell](/en/glossary/permission-model/) beschreibt die allgemeine Form; diese Tür ist die eine bewusste Ausnahme von „deny by default“, und sie hat die Form des Formulars.
+
+## Richte deinen Agenten darauf aus
+
+Wenn ein Agent deine App schreibt, gib ihm nicht diesen Artikel, sondern die Regel: Ein öffentliches Formular ist ein `formViews`-Eintrag mit einem `sharing`-Block, die Feldliste ist die Grenze, das Objekt besitzt Standardwerte und Pflichtfelder, und kein Berechtigungssatz ist beteiligt. Der [Leitfaden zur Konfiguration eines Coding-Agenten für ObjectStack](/en/blog/how-to-point-your-agent-at-objectstack/) beschreibt, wie diese Regel zum Agenten gelangt — die Regeldatei, der MCP-Endpunkt, den eine laufende App bereitstellt, und die Spec. `npm create objectstack@latest` installiert 17.7.0, die Version, auf der dieses Protokoll lief.
+
+Dieselbe Schleife gehostet, im Browser, ohne Installation? Das ist ObjectOS, die kommerzielle Laufzeitumgebung auf Basis von ObjectStack.
