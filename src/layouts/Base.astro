@@ -315,6 +315,29 @@ const jsonLdHtml = (value: Record<string, unknown>) =>
         -webkit-font-smoothing: antialiased;
         text-rendering: optimizeLegibility;
       }
+      /* Korean running text breaks only at the spaces between words, never
+         between the syllables of one word. Korean puts a space between words,
+         so keep-all alone is the fix; zh and ja have no spaces and keep the
+         default CJK breaking. The rule is set once, on the ko page root, and
+         is inherited from there, so a component rule on a subtree (a heading,
+         a table cell, inline code) still wins. `overflow-wrap: anywhere` is
+         the last resort for a token wider than its line (a URL, an
+         identifier, a long compound), so keep-all never overflows.
+         Inline code inherits keep-all too, so a particle stays on the line
+         of the code it follows (`context`로); its own overflow-wrap rule
+         still lets a long identifier wrap. Two things are reset to the
+         values they had before this rule: an element in another language on
+         a ko page (the English fallback <main>, an English-only part of a
+         page), and pre, which keeps its own wrapping. :where() keeps both
+         rules at zero specificity, so any component rule beats them. */
+      :where(:root:lang(ko)) {
+        word-break: keep-all;
+        overflow-wrap: anywhere;
+      }
+      :where(:root:lang(ko) :is([lang]:not(:lang(ko)), pre:lang(ko))) {
+        word-break: normal;
+        overflow-wrap: normal;
+      }
       :root[data-theme='dark'] body {
         background:
           linear-gradient(135deg, rgba(20, 30, 24, 0.76), rgba(25, 39, 35, 0.5) 46%, rgba(32, 40, 73, 0.22)),
