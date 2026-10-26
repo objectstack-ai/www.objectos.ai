@@ -15,9 +15,9 @@ const page = {
     primary: { label: '把你的 Agent 指向 ObjectStack', href: '/en/agent-developer/' },
     secondary: { label: '查看信任模型', href: '/en/trust-center/' },
     metrics: [
-      { value: '<150k tokens', label: '完整 CRM 全应用（含 UI），一个上下文窗口即可容纳' },
-      { value: '<100k tokens', label: '对象、流程、权限与其他业务逻辑' },
-      { value: '约 50k tokens', label: '完整 CRM 的 UI 元数据' },
+      { value: '4 道闸门', label: '类型化、校验、审阅、治理——横在 Agent 与你的用户之间' },
+      { value: '1 份定义', label: '数据库、REST API、客户端 SDK、UI 与 MCP 工具全部由它派生' },
+      { value: '整体装下', label: '应用小到 AI 能整体装下——README 自带的示例 CRM 可端到端读完' },
     ],
     artifact: {
       eyebrow: '审阅面',
@@ -91,13 +91,13 @@ export const Case = ObjectSchema.create({
       {
         id: 'connect',
         eyebrow: '现有系统',
-        title: '加一层对象模型，而不是替换记录系统',
+        title: '在记录系统旁边加一层对象模型——默认只读',
         copy:
-          '企业软件的大部分价值已经锁在数据库、ERP、CRM、工单、文件和自研系统里。ObjectStack 给 Agent 一个覆盖这些资产的显式对象模型；ObjectOS 则给团队一个运营这些应用的生产平台。',
+          `企业软件的大部分价值已经锁在数据库、ERP、CRM、工单、文件和自研系统里。ObjectStack 可以把你已经在跑的数据库作为外部数据源联邦接入，给 Agent 一个覆盖它的显式对象模型——默认只读、尚在早期；记录系统继续写入数据。ObjectOS 是${p.descriptor}，团队在其中运行并运营建立在这个模型上的应用。`,
         items: [
           {
-            title: '连接数据库与 API',
-            body: '把现有记录映射成业务对象、关系、计算字段和动作，不必推倒重来做迁移。',
+            title: '连接你已经在跑的数据库',
+            body: '把它作为数据源接入——起步用 readOnly 数据源或只读数据库用户——把你关心的表建模成对象、关系、计算字段和动作；写权限在你信任模型之后按对象有意开启。',
           },
           {
             title: '权限保持显式',

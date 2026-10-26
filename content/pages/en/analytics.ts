@@ -3,14 +3,14 @@ import type { MarketingPage } from '../../../src/content-pages/types';
 const page = {
     slug: 'analytics',
     navLabel: 'Analytics & reporting',
-    title: 'ObjectOS Analytics: Dashboards and Reports over Governed Objects',
+    title: 'Analytics and Reporting: Dashboards and Reports over Governed Objects',
     description:
       'Aggregations, time series, funnels, and dashboards over the same governed objects the app runs on — with a widget-based dashboard designer and a band-based report designer, permission-aware by construction.',
     eyebrow: 'Analytics & reporting',
     heroTitle: 'Answers from the system of record — not a second data stack.',
     lead:
-      'Finance wants MRR by plan, month over month. Ops wants an SLA dashboard. The usual answer is exporting into a BI tool where permissions, definitions, and freshness quietly drift. ObjectOS runs the same questions over the governed objects themselves — defined once as a dataset, rendered in dashboards, and assembled in a designer.',
-    primary: { label: 'Compare editions and pricing', href: '/en/pricing/' },
+      'Finance wants MRR by plan, month over month. Ops wants an SLA dashboard. The usual answer is exporting into a BI tool where permissions, definitions, and freshness quietly drift. The ObjectStack runtime runs the same questions over the governed objects themselves — defined once as a dataset, rendered in dashboards, and assembled in a designer — and on ObjectOS the “ask your data” assistant answers them in chat, inside the same permissions.',
+    primary: { label: 'Read the dashboards docs', href: 'https://docs.objectos.ai/docs/build/interface/dashboards' },
     secondary: { label: 'See data modeling', href: '/en/data-modeling/' },
     metrics: [
       { value: '3', label: 'Query strategies: native SQL, ObjectQL, in-memory' },
@@ -149,9 +149,9 @@ export const MrrByPlan = defineReport({
           'For operational reporting on business objects, you will not need a separate stack: dashboards, funnels, and time series run in the platform. For cross-system warehousing, ObjectOS coexists — federation and APIs make governed objects easy to consume.',
       },
       {
-        question: 'Are the dashboard and report designers in the open-source ObjectStack?',
+        question: 'What is open source here, and what does ObjectOS add?',
         answer:
-          'Yes. The widget-based dashboard designer, the band-based report designer, drilldown, aggregations, time series, funnels, and semantic datasets are all part of the open-source ObjectStack runtime, with the same permission enforcement as the rest of the platform.',
+          'Aggregations, time series, funnels, semantic datasets, drilldown, and the dashboard and report designers are part of the open-source ObjectStack runtime, Apache-2.0, with the same permission enforcement as the rest of the platform. ObjectOS adds the “ask your data” assistant: a question asked in chat is answered from the same datasets, inside the asking user’s permissions, with the query audited and guardrailed from Business. On the open runtime you ask the same questions through any MCP client with your own model.',
       },
     ],
   } satisfies MarketingPage;

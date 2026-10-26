@@ -30,7 +30,7 @@ interface GlossaryUi {
 const EN_UI: GlossaryUi = {
   eyebrow: 'Glossary',
   indexTitle: 'ObjectStack Glossary',
-  indexHeading: 'The vocabulary of AI-written enterprise software.',
+  indexHeading: 'The vocabulary of an executable business ontology.',
   indexLead:
     'Definitions for the terms this site uses, written to be quoted. Each entry opens with one self-contained sentence, then explains what the term means in practice and links to the articles and pages that use it.',
   termCount: (n) => `${n} ${n === 1 ? 'term' : 'terms'}`,
@@ -50,7 +50,7 @@ const EN_UI: GlossaryUi = {
 const ZH_HANS_UI: GlossaryUi = {
   eyebrow: '术语表',
   indexTitle: 'ObjectStack 术语表',
-  indexHeading: 'AI 编写的企业软件，用的是这套词汇。',
+  indexHeading: '一份可执行的业务本体，用的是这套词汇。',
   indexLead:
     '本站使用的术语定义，写出来就是为了被引用。每条先给一句可独立成立的定义，再解释它在实践中意味着什么，并链接到用到它的文章与页面。',
   termCount: (n) => `${n} 条术语`,

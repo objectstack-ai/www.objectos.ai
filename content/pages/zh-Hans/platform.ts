@@ -11,12 +11,12 @@ const page = {
     eyebrow: '平台总览',
     heroTitle: '一个业务系统需要的一切，随时可投入生产。',
     lead: `你的 Agent 用一份类型化的 ObjectStack 本体描述业务。开放的 ObjectStack 运行时派生数据库、API、权限感知的界面、自动化流程、审批队列和仪表盘，并在每次调用中强制治理。${p.t4}`,
-    primary: { label: '对比版本与定价', href: '/en/pricing/' },
-    secondary: { label: '查看产品导览', href: '/en/product-tour/' },
+    primary: { label: '把你的 Agent 指向 ObjectStack', href: '/en/agent-developer/' },
+    secondary: { label: '对比版本与定价', href: '/en/pricing/' },
     metrics: [
-      { value: '25+', label: '每个已部署应用背后的运行时服务' },
+      { value: '12', label: '运行时词汇里的类型化原语，从对象与权限到 AI 工具与数据源' },
       { value: '6', label: '能力域，从数据建模到报表分析' },
-      { value: '<150k tokens', label: '完整 CRM 全应用（含 UI），一个上下文窗口可容纳' },
+      { value: '4 道闸门', label: '类型化、校验、审阅、治理——横在 Agent 与你的用户之间' },
     ],
     artifact: {
       eyebrow: 'Agent 编写的类型化元数据',
@@ -96,7 +96,7 @@ export const Order = ObjectSchema.create({
         eyebrow: '为 AI 而设计',
         title: '让 Agent 来写，让人来审',
         copy:
-          '上面每一项 ObjectStack 能力都以元数据定义——这正是「元数据驱动开发」在作者是 AI 时依然成立的原因：整体可装入上下文的定义、可读 diff 与运行时强制执行。ObjectOS 则为团队增加产品内 AI 与生产运营体验。',
+          `上面每一项 ObjectStack 能力都以元数据定义——这正是「元数据驱动开发」在作者是 AI 时依然成立的原因：整体可装入上下文的定义、可读 diff 与运行时强制执行。ObjectOS 是${p.descriptor}，在这套开放机制之上增加产品内 AI Builder 与 Ask，从商业版起提供 AI 治理，并提供托管或自管交付。`,
         items: [
           {
             title: 'AI Build & Ask',
@@ -112,7 +112,7 @@ export const Order = ObjectSchema.create({
           },
           {
             title: '设计器与控制台',
-            body: '16+ 个开源 ObjectStack 管理界面——对象设计器、流程画布、审批收件箱、权限矩阵、审计查看器——AI 起草的一切，人都能微调。',
+            body: '开源的 Console 渲染真实应用，Studio 以可视化方式编写同一份元数据——对象设计器、流程画布、审批收件箱、权限矩阵、审计查看器——AI 起草的一切，人都能微调。',
           },
           {
             title: '审阅闭环',
@@ -136,12 +136,12 @@ export const Order = ObjectSchema.create({
       {
         question: '开源 ObjectStack 包含哪些能力？',
         answer:
-          '本页的运行时能力——数据、界面、自动化、审批、权限、报表分析——都属于开源 ObjectStack 目标格式与运行时。AI 自带（BYO-AI）：编码 Agent 以源码文件编写元数据，任意 MCP 客户端可以查询你的对象。产品内 AI Build 与 Ask 是 ObjectOS 云端与企业版能力。',
+          '本页的运行时能力——数据、界面、自动化、审批、权限、报表分析——都属于开源 ObjectStack（Apache-2.0）：协议、内核、CLI、生产运行时、Console UI 与 MCP 服务器，开发与生产之间没有功能门槛。AI 自带（BYO-AI）：编码 Agent 以源码文件编写元数据，任意 MCP 客户端可以查询你的对象。产品内 AI Builder 与 Ask 是 ObjectOS 在此之上增加的——在 Cloud 与 Enterprise（含单节点入门选项 Business Self-Managed）上提供。',
       },
       {
         question: '能跑在我们自己的基础设施里吗？',
         answer:
-          '可以。开源 ObjectStack 运行时可自托管。ObjectOS 企业版也支持私有部署到 VPC、本地服务器或隔离网络，并提供本地模型、内部身份系统、自有密钥管理与企业支持。',
+          '可以，有三条路。开源 ObjectStack 运行时免费自托管，经 MCP 自带 AI。自管部署的 ObjectOS 即 ObjectOS 企业版：其单节点入门选项 Business Self-Managed 是带许可的部署，把产品内 AI 放到你自己的基础设施上，自带模型或密钥；单节点以上，企业版部署在 VPC、本地服务器或隔离网络中，提供集群、本地模型、内部身份系统、自有密钥管理与企业支持。',
       },
     ],
   } satisfies MarketingPage;

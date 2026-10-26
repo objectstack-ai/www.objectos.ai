@@ -11,12 +11,12 @@ const page = {
     eyebrow: 'Platform',
     heroTitle: 'Everything a business system needs. Ready for production.',
     lead: `Your agent describes the business as one typed ObjectStack ontology. The open ObjectStack runtime derives the database, APIs, permission-aware screens, automated processes, approval queues, and dashboards, enforcing governance on every call. ${p.t4}`,
-    primary: { label: 'Compare editions and pricing', href: '/en/pricing/' },
-    secondary: { label: 'Take the product tour', href: '/en/product-tour/' },
+    primary: { label: 'Point your agent at ObjectStack', href: '/en/agent-developer/' },
+    secondary: { label: 'Compare editions and pricing', href: '/en/pricing/' },
     metrics: [
-      { value: '25+', label: 'Runtime services behind every deployed application' },
+      { value: '12', label: 'Typed primitives in the runtime vocabulary, from objects and permissions to AI tools and datasources' },
       { value: '6', label: 'Capability areas, from data modeling to analytics' },
-      { value: '<150k tokens', label: 'A complete CRM including UI, held in one context window' },
+      { value: '4 gates', label: 'Typed, validated, reviewed, governed — between the agent and your users' },
     ],
     artifact: {
       eyebrow: 'Typed metadata your agent writes',
@@ -96,7 +96,7 @@ export const Order = ObjectSchema.create({
         eyebrow: 'Built for AI',
         title: 'Designed to be written by agents, reviewed by people',
         copy:
-          'Every ObjectStack capability above is defined as metadata, which is what makes metadata driven development work when the author is an AI: a whole-context definition, readable diffs, and runtime enforcement. ObjectOS adds the in-app AI and production experience for teams.',
+          `Every ObjectStack capability above is defined as metadata, which is what makes metadata driven development work when the author is an AI: a whole-context definition, readable diffs, and runtime enforcement. ObjectOS, ${p.descriptor}, adds the in-app AI Builder and Ask on top of that open mechanism, with AI governance from Business and hosted or self-managed delivery.`,
         items: [
           {
             title: 'AI Build & Ask',
@@ -112,7 +112,7 @@ export const Order = ObjectSchema.create({
           },
           {
             title: 'Designers & console',
-            body: '16+ open-source ObjectStack admin surfaces — the object designer, flow canvas, approvals inbox, permission matrix, and audit viewer — so people fine-tune everything the AI drafts.',
+            body: 'The open-source Console renders the real app and Studio authors the same metadata visually — the object designer, flow canvas, approvals inbox, permission matrix, and audit viewer — so people fine-tune everything the AI drafts.',
           },
           {
             title: 'The review loop',
@@ -136,12 +136,12 @@ export const Order = ObjectSchema.create({
       {
         question: 'Which capabilities are in the open-source ObjectStack?',
         answer:
-          'The runtime capabilities on this page — data, UI, automation, approvals, permissions, analytics — are part of the open-source ObjectStack target format and runtime. You bring your own AI: a coding agent writes metadata as source files and any MCP client can query your objects. The in-app AI Build and Ask assistants are ObjectOS Cloud and Enterprise capabilities.',
+          'The runtime capabilities on this page — data, UI, automation, approvals, permissions, analytics — are part of open-source ObjectStack, Apache-2.0: the protocol, kernel, CLI, production runtime, Console UI, and MCP server, with no feature gate between development and production. You bring your own AI: a coding agent writes metadata as source files and any MCP client can query your objects. The in-app AI Builder and Ask are what ObjectOS adds — on Cloud and on Enterprise, from its single-node Business Self-Managed entry up.',
       },
       {
         question: 'Can it run in our own infrastructure?',
         answer:
-          'Yes. The open-source ObjectStack runtime can be self-hosted. ObjectOS Enterprise also supports private deployment in a VPC, on local servers, or in air-gapped networks, with local models, internal identity, your own secret management, and enterprise support.',
+          'Yes, three ways. The open-source ObjectStack runtime self-hosts free, with bring-your-own AI over MCP. Self-managed ObjectOS is ObjectOS Enterprise. Its single-node entry option, Business Self-Managed, is a licensed deployment that puts the in-app AI on your own infrastructure, bring your own model or key. Beyond a single node, Enterprise runs in a VPC, on local servers, or in an air-gapped network, with clustering, local models, internal identity, your own secret management, and enterprise support.',
       },
     ],
   } satisfies MarketingPage;

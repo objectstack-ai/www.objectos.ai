@@ -3,14 +3,14 @@ import type { MarketingPage } from '../../../src/content-pages/types';
 const page = {
     slug: 'app-ui',
     navLabel: '应用界面',
-    title: 'ObjectOS 应用界面：从元数据渲染的权限感知界面',
+    title: '应用界面：从元数据渲染的权限感知界面',
     description:
       '表单、视图和仪表盘直接从元数据渲染——按每个用户的权限成形、实时更新，并可在带实时预览的视图设计器里用列检查器与筛选构建器微调。',
     eyebrow: '应用界面',
     heroTitle: '没人手写的界面，人人信得过的视图。',
     lead:
-      '拿一个客服工作台来说：客服在网格里处理待办工单，主管拖着按状态分组的看板，所有人都会看截止日历。在 ObjectOS 里这是一份视图定义——按用户渲染、随记录实时变化，还能在视图设计器里调整，不碰一个文件。',
-    primary: { label: '对比版本与定价', href: '/en/pricing/' },
+      '拿一个客服工作台来说：客服在网格里处理待办工单，主管拖着按状态分组的看板，所有人都会看截止日历。在开源 ObjectStack 运行时上这是一份视图定义——本体的投影，而不是本体的一部分——按用户渲染、随记录实时变化，还能在视图设计器里调整，不碰一个文件。在 ObjectOS 上，产品内 AI Builder 能从一句描述注册出同样的视图。',
+    primary: { label: '阅读界面文档', href: 'https://docs.objectos.ai/docs/build/interface' },
     secondary: { label: '查看报表与分析', href: '/en/analytics/' },
     metrics: [
       { value: '0', label: '列表、表单、详情页——没有手写前端' },
@@ -19,7 +19,7 @@ const page = {
     ],
     artifact: {
       eyebrow: '界面即元数据',
-      title: '视图是可审阅定义的一部分。',
+      title: '视图是本体的投影——同时仍是一份可审阅的 diff。',
       body:
         '这就是那个工作台：带列的网格、按状态分组的看板、截止日历，还有一个存好的"待办工单"列表——一份定义。Agent 加一个字段时，受影响的界面就在同一份小 diff 里，而不是另开一张前端工单。',
       code: `import { defineView } from '@objectstack/spec';
@@ -58,10 +58,10 @@ export const CaseViews = defineView({
     sections: [
       {
         id: 'surfaces',
-        eyebrow: '从元数据渲染',
+        eyebrow: '本体的投影',
         title: '把工作台一个面一个面看过去',
         copy:
-          '类型化字段自带控件与格式，生成的界面外观行为天然一致——不需要先做一个设计系统项目。',
+          '视图、仪表盘、应用和翻译是本体的投影，不是本体的一部分：改对象，界面跟着变；删掉一个界面，它所展示的业务原封不动。类型化字段自带控件与格式，投影出来的界面外观行为天然一致——不需要先做一个设计系统项目。',
         items: [
           {
             title: '视图与列表',
@@ -160,9 +160,9 @@ export const CaseViews = defineView({
           '能。生成的界面覆盖重复度最高的 CRUD 主体，同一套 API 与权限模型支撑你添加的任何定制前端——定制界面绕不过治理。',
       },
       {
-        question: '视图设计器在开源 ObjectStack 里吗？',
+        question: '这里哪些是开源的，ObjectOS 又加了什么？',
         answer:
-          '在。带实时预览的视图设计器、列与筛选检查器、积木式页面画布和响应式页面设计器都随开源 ObjectStack 控制台发布——连同元数据渲染的视图、表单、仪表盘、导航、多语言与实时更新。',
+          '元数据渲染的视图、表单、仪表盘、导航、多语言与实时更新，以及带实时预览的视图设计器、检查器、页面画布和响应式页面设计器，都随开源 ObjectStack Console 发布，Apache-2.0。ObjectOS 加的是产品内 AI Builder：它能从一句对话请求注册视图——比如一个按状态分组的看板——并把变更排队等审批；在开源运行时上，这件事交给你自己的编码 Agent 与 MCP 客户端。',
       },
     ],
   } satisfies MarketingPage;

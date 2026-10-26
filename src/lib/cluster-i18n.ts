@@ -43,13 +43,17 @@ type TextTemplates = {
 };
 
 const NAMES: Record<string, NameMap> = {
+  // The slug and URL keep the category name people search for; the copy no
+  // longer defines the product by it. The name is a noun phrase because the
+  // per-locale templates below interpolate it mid-sentence (ko keeps a final
+  // consonant so the templates' 이/은 particles stay right).
   'ai-native-app-platform': {
-    'zh-Hans': { title: 'AI-native 应用平台', shortTitle: 'AI-native 应用平台' },
-    ja: { title: 'AI-native アプリプラットフォーム', shortTitle: 'AI-native アプリ' },
-    de: { title: 'AI-native App-Plattform', shortTitle: 'AI-native App-Plattform' },
-    es: { title: 'Plataforma de aplicaciones AI-native', shortTitle: 'Plataforma AI-native' },
-    fr: { title: 'Plateforme applicative AI-native', shortTitle: 'Plateforme AI-native' },
-    ko: { title: 'AI-native 앱 플랫폼', shortTitle: 'AI-native 앱 플랫폼' },
+    'zh-Hans': { title: '可执行的业务本体', shortTitle: '可执行业务本体' },
+    ja: { title: '実行可能なビジネスオントロジー', shortTitle: '実行可能なオントロジー' },
+    de: { title: 'Ausführbare Geschäftsontologie', shortTitle: 'Ausführbare Geschäftsontologie' },
+    es: { title: 'Ontología de negocio ejecutable', shortTitle: 'Ontología ejecutable' },
+    fr: { title: 'Ontologie métier exécutable', shortTitle: 'Ontologie exécutable' },
+    ko: { title: '실행 가능한 비즈니스 온톨로지 플랫폼', shortTitle: '실행 가능한 온톨로지' },
   },
   'legacy-system-modernization': {
     'zh-Hans': { title: '用 AI 做遗留系统现代化', shortTitle: '遗留系统现代化' },
@@ -101,11 +105,11 @@ const TEMPLATES: Record<TemplateLocale, TextTemplates> = {
       whyNow: '为什么现在重要',
     },
     description: (name) =>
-      `了解 ${name} 如何连接现有业务系统、建模业务对象，并让 AI 在权限、审批和审计边界内工作。`,
+      `了解 ${name} 如何连接现有业务系统、把业务建模成一份可执行的本体，并让 AI 在权限、审批和审计边界内工作。`,
     lead: (name) =>
-      `${name} 的核心不是再做一个演示页面，而是把真实业务对象、权限、流程、API 和 Agent 工具组织成一个可治理的运行层。`,
+      `${name} 的核心不是再做一个演示页面，而是一份可执行的业务本体：对象与字段、关系、动作、权限、流程，以及 Agent 与工具定义。视图、仪表盘、应用和翻译是它的投影，不是产品本身。`,
     definition: (name) =>
-      `${name} 把客户、工单、订单、设备、合同和审批等业务记录变成 AI 可以理解和调用的结构化对象。ObjectOS 让 AI 使用明确的工具和权限边界，而不是直接绕过系统访问数据。`,
+      `${name} 把客户、工单、订单、设备、合同和审批等业务记录写进同一份本体：对象、权限、动作和流程声明在一起，运行时从中派生数据库、API、界面和 MCP 工具，并在每一次调用上执行权限与审计。ObjectOS 让 AI 使用明确的工具和权限边界，而不是直接绕过系统访问数据。`,
     whyNow: (name) => [
       `${name} 让企业 AI 面向真实业务记录，而不是一次性的导出文件。`,
       '应用生成之后还需要权限、审计、审批和持续演进能力。',
@@ -115,7 +119,7 @@ const TEMPLATES: Record<TemplateLocale, TextTemplates> = {
       '把客户、订单、案件、设备、合同和审批建模成业务对象。',
       '从同一份业务规格生成页面、流程、API 和 Agent 工具。',
       '让用户和 AI Agent 在同一套权限、审批和审计边界内执行动作。',
-      '连接现有 CRM、ERP、数据库和自研系统，而不是强制迁移。',
+      '把已在运行的 CRM、ERP 数据库联邦接入——默认只读、尚在早期——而不是强制迁移。',
     ],
     useCases: () => [
       '围绕维修、服务、审批或内部运营需求生成可运行应用。',
@@ -131,12 +135,12 @@ const TEMPLATES: Record<TemplateLocale, TextTemplates> = {
       {
         question: '这和低代码有什么不同？',
         answer:
-          '低代码主要加速表单和流程搭建。ObjectOS 更关注底层业务对象、权限治理、系统集成、Agent 工具和长期演进。',
+          '低代码平台是最近的亲戚：那里同样由元数据生成表、API 和界面。区别在定义放在哪里、写给谁看。低代码把元数据当作配置存在厂商的数据库里、由人在界面上点出来；ObjectStack 把它写成你仓库里类型化、声明式的 TypeScript——进版本库、按 diff 审阅、运行前经 os validate 校验，并且是为 AI 来写而设计的。',
       },
       {
         question: '是否需要先替换现有系统？',
         answer:
-          '通常不需要。更稳妥的路径是先连接现有系统，把关键记录建模为业务对象，再逐步叠加 AI、流程和新应用。',
+          '通常不需要。更稳妥的路径是先把现有数据库作为只读数据源接入——联邦默认只读、尚在早期，写权限按对象有意开启——把关键记录建模为业务对象，再逐步叠加 AI、流程和新应用。',
       },
     ],
   },
@@ -169,7 +173,7 @@ const TEMPLATES: Record<TemplateLocale, TextTemplates> = {
       '顧客、注文、ケース、設備、契約、承認をビジネスオブジェクトとしてモデル化します。',
       '同じ業務仕様から画面、ワークフロー、API、エージェントツールを生成します。',
       'ユーザーと AI エージェントを同じ権限、承認、監査境界の中で動かします。',
-      'CRM、ERP、データベース、独自システムを移行なしで接続します。',
+      '稼働中の CRM や ERP のデータベースを移行なしでフェデレートします。既定で読み取り専用で、まだ初期段階です。',
     ],
     useCases: () => [
       '修理、サービス、承認、社内業務の要件から実行可能なアプリを作ります。',
@@ -190,7 +194,7 @@ const TEMPLATES: Record<TemplateLocale, TextTemplates> = {
       {
         question: '既存システムの置き換えが必要ですか？',
         answer:
-          '通常は不要です。まず既存システムに接続し、重要な記録をビジネスオブジェクトとしてモデル化してから AI と新しいワークフローを追加します。',
+          '通常は不要です。まず既存データベースを読み取り専用のデータソースとして接続し（フェデレーションは既定で読み取り専用で、まだ初期段階。書き込みはオブジェクト単位で意図的に有効化します）、重要な記録をビジネスオブジェクトとしてモデル化してから AI と新しいワークフローを追加します。',
       },
     ],
   },
@@ -223,7 +227,7 @@ const TEMPLATES: Record<TemplateLocale, TextTemplates> = {
       'Kunden, Aufträge, Fälle, Geräte, Verträge und Freigaben als Business Objects modellieren.',
       'Screens, Workflows, APIs und Agent Tools aus derselben Geschäftsspezifikation erzeugen.',
       'Nutzer und AI Agents in denselben Berechtigungs-, Freigabe- und Audit-Grenzen ausführen.',
-      'CRM, ERP, Datenbanken und eigene Systeme verbinden, ohne eine Migration zu erzwingen.',
+      'Bereits laufende CRM- und ERP-Datenbanken föderieren, ohne eine Migration zu erzwingen – standardmäßig nur lesend und noch früh.',
     ],
     useCases: () => [
       'Aus Service-, Reparatur-, Freigabe- oder Operations-Anforderungen laufende Anwendungen bauen.',
@@ -244,7 +248,7 @@ const TEMPLATES: Record<TemplateLocale, TextTemplates> = {
       {
         question: 'Müssen bestehende Systeme ersetzt werden?',
         answer:
-          'Meist nicht. Der sichere Weg ist, bestehende Systeme zu verbinden, wichtige Datensätze als Business Objects zu modellieren und dann AI sowie neue Workflows zu ergänzen.',
+          'Meist nicht. Der sichere Weg ist, die bestehende Datenbank zuerst als nur lesende Datasource zu verbinden – Föderation ist standardmäßig nur lesend und noch früh, Schreibzugriff wird bewusst pro Objekt freigegeben –, wichtige Datensätze als Business Objects zu modellieren und dann AI sowie neue Workflows zu ergänzen.',
       },
     ],
   },
@@ -277,7 +281,7 @@ const TEMPLATES: Record<TemplateLocale, TextTemplates> = {
       'Modelar clientes, órdenes, casos, equipos, contratos y aprobaciones como objetos de negocio.',
       'Generar pantallas, workflows, APIs y herramientas de agente desde la misma especificación.',
       'Ejecutar usuarios y agentes AI dentro de los mismos límites de permisos, aprobación y auditoría.',
-      'Conectar CRM, ERP, bases de datos y sistemas propios sin forzar una migración.',
+      'Federar las bases de datos de CRM y ERP que ya usas sin forzar una migración — solo lectura por defecto y aún temprano.',
     ],
     useCases: () => [
       'Crear aplicaciones operativas a partir de requisitos de servicio, reparación, aprobación u operaciones internas.',
@@ -298,7 +302,7 @@ const TEMPLATES: Record<TemplateLocale, TextTemplates> = {
       {
         question: '¿Hay que reemplazar los sistemas existentes?',
         answer:
-          'Normalmente no. El camino más seguro es conectar sistemas existentes, modelar los registros clave como objetos de negocio y añadir AI y nuevos workflows por etapas.',
+          'Normalmente no. El camino más seguro es conectar primero la base de datos existente como datasource de solo lectura — la federación es de solo lectura por defecto y aún temprana; las escrituras se habilitan deliberadamente, objeto por objeto —, modelar los registros clave como objetos de negocio y añadir AI y nuevos workflows por etapas.',
       },
     ],
   },
@@ -331,7 +335,7 @@ const TEMPLATES: Record<TemplateLocale, TextTemplates> = {
       'Modéliser clients, commandes, dossiers, équipements, contrats et approbations comme objets métier.',
       'Générer écrans, workflows, APIs et outils d’agents depuis la même spécification métier.',
       'Faire fonctionner utilisateurs et agents AI dans les mêmes limites de permissions, approbation et audit.',
-      'Connecter CRM, ERP, bases de données et systèmes internes sans migration forcée.',
+      'Fédérer les bases CRM et ERP déjà en production sans migration forcée — en lecture seule par défaut, et encore récent.',
     ],
     useCases: () => [
       'Créer des applications opérationnelles à partir de besoins de service, réparation, approbation ou opérations internes.',
@@ -352,7 +356,7 @@ const TEMPLATES: Record<TemplateLocale, TextTemplates> = {
       {
         question: 'Faut-il remplacer les systèmes existants ?',
         answer:
-          'Généralement non. Le chemin le plus sûr consiste à connecter les systèmes existants, modéliser les enregistrements clés comme objets métier, puis ajouter AI et workflows par étapes.',
+          'Généralement non. Le chemin le plus sûr consiste à connecter d’abord la base existante comme datasource en lecture seule — la fédération est en lecture seule par défaut, et encore récente ; l’écriture s’active délibérément, objet par objet —, modéliser les enregistrements clés comme objets métier, puis ajouter AI et workflows par étapes.',
       },
     ],
   },
@@ -385,7 +389,7 @@ const TEMPLATES: Record<TemplateLocale, TextTemplates> = {
       '고객, 주문, 케이스, 장비, 계약, 승인을 비즈니스 객체로 모델링합니다.',
       '같은 비즈니스 명세에서 화면, 워크플로, API, 에이전트 도구를 생성합니다.',
       '사용자와 AI 에이전트를 동일한 권한, 승인, 감사 경계 안에서 실행합니다.',
-      'CRM, ERP, 데이터베이스, 자체 시스템을 강제 마이그레이션 없이 연결합니다.',
+      '이미 운영 중인 CRM, ERP 데이터베이스를 강제 마이그레이션 없이 연합합니다 — 기본 읽기 전용이며 아직 초기 단계입니다.',
     ],
     useCases: () => [
       '수리, 서비스, 승인, 내부 운영 요구사항에서 실행 가능한 애플리케이션을 만듭니다.',
@@ -406,7 +410,23 @@ const TEMPLATES: Record<TemplateLocale, TextTemplates> = {
       {
         question: '기존 시스템을 교체해야 하나요?',
         answer:
-          '대부분 필요하지 않습니다. 기존 시스템을 연결하고 핵심 기록을 비즈니스 객체로 모델링한 뒤 AI와 새 워크플로를 단계적으로 추가하는 것이 더 안전합니다.',
+          '대부분 필요하지 않습니다. 기존 데이터베이스를 먼저 읽기 전용 데이터소스로 연결하고(연합은 기본 읽기 전용이며 아직 초기 단계로, 쓰기는 객체 단위로 의도적으로 활성화합니다), 핵심 기록을 비즈니스 객체로 모델링한 뒤 AI와 새 워크플로를 단계적으로 추가하는 것이 더 안전합니다.',
+      },
+    ],
+  },
+};
+
+// Questions one cluster answers that the shared per-locale template cannot,
+// appended after the template's FAQ. The English cluster carries the same
+// answer in `clusters.ts`; a locale listed here is authored, every other
+// template locale keeps the generic FAQ.
+const EXTRA_FAQ: Partial<Record<string, Partial<Record<TemplateLocale, ClusterFaq[]>>>> = {
+  'self-hosted-ai': {
+    'zh-Hans': [
+      {
+        question: '自托管是免费的吗？ObjectOS 又加了什么？',
+        answer:
+          '免费自托管指的是开源的 ObjectStack 框架（Apache-2.0）：协议、内核、CLI、生产运行时、Console UI 与 MCP 服务器，开发与生产之间没有功能门槛——经 MCP 自带你的 AI。自管部署的 ObjectOS 即 ObjectOS 企业版，按许可付费：其单节点入门选项 Business Self-Managed 在单个节点上提供产品内 AI Builder 与 Ask、AI 治理与自带模型；单节点以上，企业版再提供集群、离线隔离、SCIM、合规鉴证与 SLA 支持。无论哪个版本，你都可以导出本体，拿到开源运行时上运行。起步：npm create objectstack@latest，把编码 Agent 指向生成的项目及其 AGENTS.md，然后 npx os dev --ui。',
       },
     ],
   },
@@ -460,7 +480,7 @@ export function clusterCopy(cluster: Cluster, locale: Locale): ClusterCopy {
     whyNow: template.whyNow(name.title),
     capabilities: template.capabilities(name.title),
     useCases: template.useCases(name.title),
-    faq: template.faq(name.title),
+    faq: [...template.faq(name.title), ...(EXTRA_FAQ[cluster.slug]?.[locale] ?? [])],
   };
 }
 
@@ -482,3 +502,17 @@ export function clusterLabels(locale: Locale): ClusterLabels {
   if (locale === 'zh-Hant') return labelsToHant(clusterLabels('zh-Hans'));
   return TEMPLATES[locale].labels;
 }
+
+/**
+ * Whose page a locale's cluster page stands for. Only English is written per
+ * cluster: every other locale is `TEMPLATES[locale]` with the cluster's name
+ * swapped in (and zh-Hant is that template converted), so the 35 non-English
+ * cluster pages share one body per locale — the scaled-content pattern
+ * AGENTS.md writing rule 9 rules out. Until a cluster is written per locale,
+ * those pages fall back: noindexed, canonical to the English cluster page, and
+ * absent from hreflang (`fallbackRoute` in ./fallback). Their body stays in the
+ * locale it is written in, so they keep their own `lang`.
+ *
+ * When a locale gets real per-cluster copy, answer that locale here.
+ */
+export const clusterSourceLocale = (_locale: Locale): Locale => 'en';

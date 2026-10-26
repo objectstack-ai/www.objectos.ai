@@ -1,8 +1,11 @@
 ---
+import { Image } from 'astro:assets';
+import heroImage from '../assets/objectos-home-hero.png';
 import { getPostsInLocale } from '../lib/posts';
-import { blogPath, formatDate, pricingPath, postPath, type Locale } from '../lib/i18n';
+import { blogPath, formatDate, pricingPath, postPath, ui, type Locale } from '../lib/i18n';
 import { homeCopy } from '../lib/home';
 import { heroLineJoin } from '../lib/positioning';
+import { phraseHtml } from '../../scripts/lib/cjk-phrases.mjs';
 import { termBySlug, termHref, termLabel } from '../lib/terms';
 import { CLUSTERS, clusterPath } from '../lib/clusters';
 import { clusterCopy } from '../lib/cluster-i18n';
@@ -13,6 +16,12 @@ import VideoEmbed from './VideoEmbed.astro';
 // homepage — these URLs are identical in every locale.
 const OVERVIEW_VIDEO_ID = 'CX_FlOoOtr0';
 const YOUTUBE_CHANNEL_URL = 'https://www.youtube.com/@objectstack';
+// The words on the video poster, drawn as HTML over the artwork (see
+// VideoEmbed.astro). The title is this locale's video caption, which every
+// locale already has, split after the product name: "ObjectStack" over "in 90
+// Seconds", "90 秒总览", "を 90 秒で" (a leading particle stays on line one).
+// The eyebrow and the sub-line are this locale's `videoPosterEyebrow` and
+// `videoPosterNote` from `homeCopy` (see the interface note there).
 
 interface Props {
   locale: Locale;
@@ -20,13 +29,20 @@ interface Props {
 
 const { locale } = Astro.props;
 const copy = homeCopy[locale];
+const posterSplit = copy.videoCaption.match(/^(ObjectStack(?: [\u3040-\u309f]+)?) (.+)$/u);
+const posterTitle: [string, string] = posterSplit ? [posterSplit[1], posterSplit[2]] : [copy.videoCaption, ''];
 // The H1 is the canonical T1 split over two lines; `positioning.ts` asserts the
 // two halves rejoin to T1 with exactly this joiner, so the rule lives there.
 const lineJoin = heroLineJoin(locale);
+// Headings in zh and ja carry a <wbr> between phrases (scripts/lib/cjk-phrases.mjs)
+// and break nowhere else; the copy itself is unchanged.
+const ph = (text: string): string => phraseHtml(text, locale);
 const productTourHref = marketingPagePath(locale, 'product-tour');
 const templatesHref = `${marketingPagePath(locale, 'templates')}#catalog`;
 const agentDeveloperHref = marketingPagePath(locale, 'agent-developer');
 const trustCenterHref = marketingPagePath(locale, 'trust-center');
+const ontologyHref = marketingPagePath(locale, 'ontology');
+const compareHref = marketingPagePath(locale, 'compare');
 
 // Capability and AI cards deep-link into the capability pages. Index-based:
 // every locale translates the same arrays in the same order.
@@ -74,16 +90,24 @@ const insightTerms = [
   .map((slug) => termBySlug(slug))
   .filter(Boolean);
 const clusterLinks = CLUSTERS;
-const compareLinks = [
-  { slug: 'airtable-omni-vs-governed-ai-app-platform', tone: 'green' },
-  { slug: 'retool-vs-ai-native-app-platform', tone: 'blue' },
-  { slug: 'is-lovable-safe-for-production', tone: 'amber' },
-];
+// The three "vs" chips land on the comparison page's product-by-product
+// section, where each named product has its post; the section's text link
+// goes to the page itself. Index-based tones, like the template cards.
+const compareTones = ['green', 'blue', 'amber'];
+const compareInDepthHref = `${compareHref}#in-depth`;
 
-const coverSrc = (cover: unknown): string =>
-  typeof cover === 'string'
-    ? cover
-    : (cover as { src?: string })?.src ?? '';
+// A raster post cover is served as WebP at the card's width, not as the
+// 1.5-1.9 MB original: one of three columns (about 345px) on a desktop, one of
+// two at 641-900px, the full column on a phone. The widest candidate covers
+// the phone column at 3x. An SVG cover is a few KB and is served as is.
+const ARTICLE_WIDTHS = [360, 540, 720, 1080];
+const ARTICLE_SIZES = '(max-width: 640px) calc(100vw - 2rem), (max-width: 900px) calc(50vw - 2rem), 360px';
+// The product diagram under the positioning copy, as WebP instead of the
+// 1.7 MB PNG. Its box is at most 850px wide at 3:2 (4:3 on a phone), and
+// object-fit: cover draws the 1.6:1 image about 1.07x (1.2x) the box's width.
+// It sits below the hero and the video at every viewport, so it stays lazy.
+const HERO_WIDTHS = [480, 720, 960, 1280, 1586];
+const HERO_SIZES = '(min-width: 898px) 910px, calc(120vw - 2.4rem)';
 ---
 
 <div class:list={['home', `lang-${locale}`]}>
@@ -97,8 +121,8 @@ const coverSrc = (cover: unknown): string =>
       also the more literal reading of "the video plays directly under the
       headline", since on a phone the lead alone runs about nine lines. */}
   <section class="hero">
-    <p class="eyebrow"><span></span> {copy.eyebrow}</p>
-    <h1>{copy.hero[0]}<br />{lineJoin}<strong>{copy.hero[1]}</strong></h1>
+    <p class="eyebrow"><span></span> <Fragment set:html={ph(copy.eyebrow)} /></p>
+    <h1><span class="title-line" set:html={ph(copy.hero[0])} />{lineJoin}<strong set:html={ph(copy.hero[1])} /></h1>
     <p class="hero-lead">{copy.heroLead}</p>
     <div class="hero-actions">
       <a class="button primary" href={pricingPath(locale)}>{copy.primaryCta} <span>→</span></a>
@@ -109,8 +133,13 @@ const coverSrc = (cover: unknown): string =>
       <VideoEmbed
         videoId={OVERVIEW_VIDEO_ID}
         title={copy.videoCaption}
-        poster="/images/objectstack-overview-poster.svg"
+        poster="/images/objectstack-overview-poster-art.svg"
         playLabel={copy.videoPlayLabel}
+        posterText={{
+          eyebrow: copy.videoPosterEyebrow,
+          title: posterTitle,
+          note: copy.videoPosterNote,
+        }}
       />
       <figcaption>
         <span class="video-name">{copy.videoCaption}</span>
@@ -126,17 +155,19 @@ const coverSrc = (cover: unknown): string =>
 
   <section class="positioning" aria-label={copy.positioningKicker}>
     <p class="section-kicker">{copy.positioningKicker}</p>
-    <h2>{copy.positioningTitle[0]}<br />{lineJoin}{copy.positioningTitle[1]}</h2>
+    <h2><span class="title-line" set:html={ph(copy.positioningTitle[0])} />{lineJoin}<span class="title-line" set:html={ph(copy.positioningTitle[1])} /></h2>
     <p class="positioning-copy">{copy.positioningCopy}</p>
+    <a class="text-link positioning-link" href={ontologyHref}>{copy.positioningLink} <span aria-hidden="true">→</span></a>
     {/* The product diagram used to open the hero. The overview video is the
         page's first visual now, so this sits below it, illustrating the
         positioning it belongs to. */}
     <div class="hero-media">
-      <img
-        src="/images/objectos-home-hero.png"
+      <Image
+        src={heroImage}
         alt={copy.imageAlt}
-        width="1536"
-        height="1024"
+        widths={HERO_WIDTHS}
+        sizes={HERO_SIZES}
+        format="webp"
         loading="lazy"
         decoding="async"
       />
@@ -151,7 +182,7 @@ const coverSrc = (cover: unknown): string =>
     <div class="section-head">
       <div>
         <p class="section-kicker">{copy.capabilitiesKicker}</p>
-        <h2>{copy.capabilitiesTitle[0]}<br />{lineJoin}{copy.capabilitiesTitle[1]}</h2>
+        <h2><span class="title-line" set:html={ph(copy.capabilitiesTitle[0])} />{lineJoin}<span class="title-line" set:html={ph(copy.capabilitiesTitle[1])} /></h2>
       </div>
       <a class="text-link" href={agentDeveloperHref}>{copy.capabilitiesLink} <span>→</span></a>
     </div>
@@ -161,7 +192,7 @@ const coverSrc = (cover: unknown): string =>
           <span class="cap-index">{String(index + 1).padStart(2, '0')}</span>
           <h3>
             <a href={capabilityCardHrefs[index] ?? productTourHref}>
-              {item.title} <span class="card-arrow" aria-hidden="true">→</span>
+              {item.title}&nbsp;<span class="card-arrow" aria-hidden="true">→</span>
             </a>
           </h3>
           <p>{item.copy}</p>
@@ -173,7 +204,7 @@ const coverSrc = (cover: unknown): string =>
   <section class="ai-section" id="ai">
     <div class="ai-copy">
       <p class="section-kicker">{copy.aiKicker}</p>
-      <h2>{copy.aiTitle[0]}<br />{lineJoin}{copy.aiTitle[1]}</h2>
+      <h2><span class="title-line" set:html={ph(copy.aiTitle[0])} />{lineJoin}<span class="title-line" set:html={ph(copy.aiTitle[1])} /></h2>
       <p>{copy.aiCopy}</p>
       <a class="text-link" href={agentDeveloperHref}>{copy.aiLink} <span>→</span></a>
     </div>
@@ -183,7 +214,7 @@ const coverSrc = (cover: unknown): string =>
           <span>{String(index + 1).padStart(2, '0')}</span>
           <h3>
             <a href={aiCardHrefs[index] ?? productTourHref}>
-              {item.title} <span class="card-arrow" aria-hidden="true">→</span>
+              {item.title}&nbsp;<span class="card-arrow" aria-hidden="true">→</span>
             </a>
           </h3>
           <p>{item.copy}</p>
@@ -195,7 +226,7 @@ const coverSrc = (cover: unknown): string =>
   <section class="workflow">
     <div class="workflow-intro">
       <p class="section-kicker">{copy.workflowKicker}</p>
-      <h2>{copy.workflowTitle[0]}<br />{lineJoin}{copy.workflowTitle[1]}</h2>
+      <h2><span class="title-line" set:html={ph(copy.workflowTitle[0])} />{lineJoin}<span class="title-line" set:html={ph(copy.workflowTitle[1])} /></h2>
       <p>{copy.workflowCopy}</p>
     </div>
     <div class="workflow-map" aria-label={copy.workflowKicker}>
@@ -223,7 +254,7 @@ const coverSrc = (cover: unknown): string =>
   <section class="security-section" id="security">
     <div class="security-copy">
       <p class="section-kicker">{copy.securityKicker}</p>
-      <h2>{copy.securityTitle[0]}<br />{lineJoin}{copy.securityTitle[1]}</h2>
+      <h2><span class="title-line" set:html={ph(copy.securityTitle[0])} />{lineJoin}<span class="title-line" set:html={ph(copy.securityTitle[1])} /></h2>
       <p>{copy.securityCopy}</p>
       <a class="text-link" href={trustCenterHref}>{copy.securityLink} <span>→</span></a>
     </div>
@@ -242,7 +273,7 @@ const coverSrc = (cover: unknown): string =>
     <div class="section-head">
       <div>
         <p class="section-kicker">{copy.solutionsKicker}</p>
-        <h2>{copy.solutionsTitle[0]}<br />{lineJoin}{copy.solutionsTitle[1]}</h2>
+        <h2><span class="title-line" set:html={ph(copy.solutionsTitle[0])} />{lineJoin}<span class="title-line" set:html={ph(copy.solutionsTitle[1])} /></h2>
       </div>
     </div>
     <div class="solution-grid">
@@ -254,7 +285,7 @@ const coverSrc = (cover: unknown): string =>
           <span class="solution-mark"></span>
           <h3>{solution.title}</h3>
           <p>{solution.copy}</p>
-          <span class="solution-link">{copy.solutionLink} →</span>
+          <span class="solution-link">{copy.solutionLink}&nbsp;→</span>
         </a>
       ))}
     </div>
@@ -265,20 +296,20 @@ const coverSrc = (cover: unknown): string =>
     <div class="section-head">
       <div>
         <p class="section-kicker">{copy.compareKicker}</p>
-        <h2>{copy.compareTitle[0]}<br />{lineJoin}{copy.compareTitle[1]}</h2>
+        <h2><span class="title-line" set:html={ph(copy.compareTitle[0])} />{lineJoin}<span class="title-line" set:html={ph(copy.compareTitle[1])} /></h2>
       </div>
-      <a class="text-link" href={blogPath(locale)}>{copy.compareLink} <span>→</span></a>
+      <a class="text-link" href={compareHref}>{copy.compareLink} <span>→</span></a>
     </div>
     <div class="solution-grid">
       {copy.comparisons.map((c, index) => (
         <a
-          class:list={['solution', compareLinks[index].tone]}
-          href={postPath(locale, compareLinks[index].slug)}
+          class:list={['solution', compareTones[index]]}
+          href={compareInDepthHref}
         >
           <span class="solution-mark"></span>
           <h3>{c.title}</h3>
           <p>{c.copy}</p>
-          <span class="solution-link">{copy.compareLink} →</span>
+          <span class="solution-link">{copy.compareLink}&nbsp;→</span>
         </a>
       ))}
     </div>
@@ -289,7 +320,7 @@ const coverSrc = (cover: unknown): string =>
       <div class="section-head">
         <div>
           <p class="section-kicker">{copy.insightsKicker}</p>
-          <h2>{copy.insightsTitle}</h2>
+          <h2 set:html={ph(copy.insightsTitle)} />
         </div>
         <a class="text-link" href={blogPath(locale)}>{copy.insightsLink} <span>→</span></a>
       </div>
@@ -301,7 +332,7 @@ const coverSrc = (cover: unknown): string =>
         ))}
       </nav>
       {clusterLinks.length > 0 && (
-        <nav class="cluster-links" aria-label="Topic clusters">
+        <nav class="cluster-links" aria-label={ui[locale].siteNav.topicClusters}>
           {clusterLinks.map((cluster) => (
             <a href={clusterPath(locale, cluster.slug)}>{clusterCopy(cluster, locale).shortTitle}</a>
           ))}
@@ -310,16 +341,28 @@ const coverSrc = (cover: unknown): string =>
       <div class="article-grid">
         {posts.map((post) => (
           <a class="article" href={postPath(locale, post.slug)}>
-            {post.entry.data.cover && (
-              <img
-                src={coverSrc(post.entry.data.cover)}
-                alt={post.entry.data.title}
-                width="800"
-                height="500"
-                loading="lazy"
-                decoding="async"
-              />
-            )}
+            {post.entry.data.cover &&
+              (post.entry.data.cover.format === 'svg' ? (
+                <img
+                  src={post.entry.data.cover.src}
+                  alt={post.entry.data.title}
+                  width={post.entry.data.cover.width}
+                  height={post.entry.data.cover.height}
+                  loading="lazy"
+                  decoding="async"
+                />
+              ) : (
+                <Image
+                  src={post.entry.data.cover}
+                  alt={post.entry.data.title}
+                  width={Math.min(ARTICLE_WIDTHS.at(-1)!, post.entry.data.cover.width)}
+                  widths={ARTICLE_WIDTHS}
+                  sizes={ARTICLE_SIZES}
+                  format="webp"
+                  loading="lazy"
+                  decoding="async"
+                />
+              ))}
             <div>
               <time datetime={post.entry.data.date.toISOString().slice(0, 10)}>
                 {formatDate(locale, post.entry.data.date)}
@@ -335,19 +378,30 @@ const coverSrc = (cover: unknown): string =>
 
   <section class="closing">
     <p class="section-kicker">{copy.closingKicker}</p>
-    <h2>{copy.closingTitle}</h2>
+    <h2 set:html={ph(copy.closingTitle)} />
     <p>{copy.closingCopy}</p>
     <a class="button light" href={topicLink('integration-data')}>{copy.closingCta} <span>→</span></a>
   </section>
 </div>
 
 <style>
+  /* The accents colour text (kickers, indexes, card links), so each clears
+     4.5:1 on --surface and --bg in its theme. Light: green 5.33, blue 6.01,
+     amber 5.34, red 4.90 on --surface. The light values are dark inks that
+     read 2.8-3.1:1 on the dark surface, hence the override: green 7.20,
+     blue 7.03, amber 7.74, red 6.92 on the dark --surface. */
   .home {
     --home-green: #057a58;
     --home-blue: #3157d8;
-    --home-amber: #b7791f;
+    --home-amber: #93600f;
     --home-red: #bd4b4b;
     --panel-shadow: 0 22px 58px -42px rgba(var(--shadow), 0.62);
+  }
+  :global(:root[data-theme='dark']) .home {
+    --home-green: #3fbf8f;
+    --home-blue: #8fa3ff;
+    --home-amber: #e3a54a;
+    --home-red: #f08a8a;
   }
   .home :global(h1),
   .home :global(h2),
@@ -359,6 +413,25 @@ const coverSrc = (cover: unknown): string =>
   .home :global(h2) {
     font-family: var(--font-display);
     font-weight: 760;
+    text-wrap: balance;
+  }
+  /* A two-part heading is two block lines, each balanced on its own. A forced
+     <br> between them kept the desktop shape but, once a part wrapped on a
+     phone, left one word of it alone on a line ("model,", "agents."). */
+  .title-line {
+    display: block;
+  }
+  /* zh and ja headings break only at the <wbr> between phrases, so a word
+     such as ソフトウェア or 网络 is never split across lines; a phrase wider
+     than the line still breaks, as a last resort. */
+  .home :global(h1:lang(zh)),
+  .home :global(h1:lang(ja)),
+  .home :global(h2:lang(zh)),
+  .home :global(h2:lang(ja)),
+  .eyebrow:lang(zh),
+  .eyebrow:lang(ja) {
+    word-break: keep-all;
+    overflow-wrap: anywhere;
   }
   /* Single column since the overview video took over as the page's opening
      visual: the copy block runs full width and the video sits directly under
@@ -398,7 +471,7 @@ const coverSrc = (cover: unknown): string =>
     margin-inline: auto;
   }
   .hero-video {
-    margin-top: 2.5rem;
+    margin-top: 2rem;
     margin-bottom: 0;
   }
   .eyebrow,
@@ -428,6 +501,7 @@ const coverSrc = (cover: unknown): string =>
     display: block;
     margin-bottom: 1.35rem;
     overflow-wrap: anywhere;
+    text-wrap: balance;
   }
   .eyebrow span {
     display: inline-block;
@@ -442,9 +516,9 @@ const coverSrc = (cover: unknown): string =>
        alone, so a 1366x768 laptop got a 74px two-line headline — ~216px, the
        single largest thing between the top of the page and the video. The
        `8vh` term is self-limiting: 8vh reaches the 5rem ceiling at 1000px of
-       viewport height, so at every height where the desktop reading order is
-       kept this computes to exactly what it computed before, and the size
-       meets the old value continuously rather than stepping at a breakpoint.
+       viewport height, so a tall desktop computes exactly what it computed
+       before, and the size meets the old value continuously rather than
+       stepping at a breakpoint.
        (`vh` is the large viewport height, so a collapsing mobile URL bar does
        not resize it — and phones take the fixed 2.7rem below anyway.) */
     font-size: clamp(3.1rem, min(5.4vw, 8vh), 5rem);
@@ -469,6 +543,16 @@ const coverSrc = (cover: unknown): string =>
     line-height: 1.85;
     max-width: 35rem;
     margin-bottom: 1.8rem;
+  }
+  /* Desktop measure and leading for the lead, which runs T2, T4 and E1
+     together: at 35rem/1.85 it was seven lines in en and nine in ja, and with
+     the CTA row under it that was 609-664px of a 625px laptop screen. */
+  @media (min-width: 901px) {
+    .hero-lead {
+      max-width: 40rem;
+      line-height: 1.72;
+      margin-bottom: 1.5rem;
+    }
   }
   .hero-actions {
     display: flex;
@@ -553,6 +637,12 @@ const coverSrc = (cover: unknown): string =>
     border-radius: 8px;
     box-shadow: 0 34px 86px -48px rgba(19, 78, 58, 0.78);
   }
+  /* Dark theme: the same dimming as the marketing pages' hero
+     (MarketingEvidencePage.astro): the white render is muted on the image
+     itself rather than left as a white block on the dark page. */
+  :global(:root[data-theme='dark']) .hero-media img {
+    filter: brightness(0.6) contrast(1.12);
+  }
   .media-note {
     position: absolute;
     right: 1rem;
@@ -570,6 +660,15 @@ const coverSrc = (cover: unknown): string =>
     font-size: 0.72rem;
     line-height: 1.5;
     backdrop-filter: blur(12px);
+  }
+  /* Dark theme: the note was the light theme's near-white glass, which stood
+     out the more once the image under it was dimmed. It takes the dark
+     surface instead; --ink on it is the page's own body-text pair. */
+  :global(:root[data-theme='dark']) .media-note {
+    color: var(--ink);
+    background: color-mix(in srgb, var(--surface) 90%, transparent);
+    border-color: var(--line);
+    box-shadow: 0 12px 30px -18px rgba(0, 0, 0, 0.7);
   }
   .media-note strong {
     display: block;
@@ -637,6 +736,12 @@ const coverSrc = (cover: unknown): string =>
     font-size: 1.03rem;
     line-height: 1.9;
   }
+  /* The positioning section is a block, not a flex head, so the shared
+     text-link needs its own vertical spacing here. */
+  .positioning-link {
+    display: inline-block;
+    margin-top: 0.5rem;
+  }
   .capability-section,
   .ai-section,
   .workflow,
@@ -681,6 +786,9 @@ const coverSrc = (cover: unknown): string =>
   .capability-list li {
     display: grid;
     grid-template-columns: 40px 1fr;
+    /* A row's taller card stretches its neighbour; without this the extra
+       height is shared into the title row and pushes the body down. */
+    align-content: start;
     gap: 0 1rem;
     padding: 2rem 1.5rem 2.2rem 0;
     border-bottom: 1px solid var(--line);
@@ -710,6 +818,18 @@ const coverSrc = (cover: unknown): string =>
   .ai-card h3 a {
     color: inherit;
     text-decoration: none;
+  }
+  /* The title link covers its whole card: the card is the tap target, not
+     the 20px title line, and it is the only link in the card. */
+  .capability-list li,
+  .ai-card {
+    position: relative;
+  }
+  .capability-list h3 a::after,
+  .ai-card h3 a::after {
+    content: '';
+    position: absolute;
+    inset: 0;
   }
   .capability-list h3 a:hover,
   .ai-card h3 a:hover {
@@ -906,8 +1026,9 @@ const coverSrc = (cover: unknown): string =>
     grid-template-columns: repeat(3, 1fr);
     gap: 1rem;
   }
+  /* No min-height: a floor taller than the content only reserved empty space
+     (94px of it above every title, when the mark took the slack). */
   .solution {
-    min-height: 310px;
     display: flex;
     flex-direction: column;
     padding: 1.5rem;
@@ -930,7 +1051,7 @@ const coverSrc = (cover: unknown): string =>
   .solution-mark {
     width: 34px;
     height: 5px;
-    margin-bottom: auto;
+    margin-bottom: 1.6rem;
     background: var(--tone);
     border-radius: 999px;
   }
@@ -944,7 +1065,10 @@ const coverSrc = (cover: unknown): string =>
     line-height: 1.75;
     margin-bottom: 1.4rem;
   }
+  /* The card's slack goes above the link, so titles sit under the mark and
+     the links line up along the bottom of a row. */
   .solution-link {
+    margin-top: auto;
     color: var(--tone);
     font-size: 0.76rem;
     font-weight: 700;
@@ -1010,11 +1134,16 @@ const coverSrc = (cover: unknown): string =>
     color: var(--ink);
     text-decoration: none;
   }
+  /* `height: auto` is load-bearing: the `height` attribute maps to a CSS
+     height, which beats `aspect-ratio` and cut each 16:9 cover to a 344×500
+     sliver. The box is the covers' own 16:9; `contain` letterboxes the odd
+     16:10 cover instead of cropping its title. */
   .article img {
     display: block;
     width: 100%;
-    aspect-ratio: 16 / 10;
-    object-fit: cover;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: contain;
     margin-bottom: 1rem;
     border: 1px solid var(--line);
     border-radius: 8px;
@@ -1066,23 +1195,19 @@ const coverSrc = (cover: unknown): string =>
     background: white;
   }
   /* The video moves directly under the headline, ahead of the lead and the CTA
-     row. Two independent triggers, one rule — the markup and the source order
-     are untouched, so this still costs no duplicated DOM:
+     row, on phones and small tablets (`max-width: 900px`), where the lead alone
+     runs about nine lines and pushed the video off the screen entirely. The
+     markup and the source order are untouched, so this costs no duplicated
+     DOM.
 
-     - NARROW (`max-width: 900px`). On a phone the lead alone runs about nine
-       lines and pushed the video off the screen entirely.
-     - SHORT (`max-height: 1040px`). A laptop is wide but short — 1366x768 and
-       1440x900 machines give ~625px and ~750px of actual viewport — so they
-       never entered the width trigger and kept the desktop stack: eyebrow,
-       headline, a six-line lead and the CTA row, ~746px before the video
-       begins. Measured on the unreordered layout, the frame starts at 746px
-       (en) / 763px (de) and is 529px tall, so half of it clears the fold only
-       from ~1028px of viewport height upward; 1040px is the first round number
-       past that. Above it the desktop reading order is kept and the video is
-       still 56%+ visible — a 1920x1200 desktop is deliberately outside this
-       rule. Below it the desktop order cannot show the video at all, which is
-       the defect. */
-  @media (max-width: 900px), (max-height: 1040px) {
+     A wide but short screen keeps the source order: eyebrow, headline, lead,
+     CTA row, then the video. This rule used to fire on `max-height: 1040px`
+     too, to get the video into a laptop's first screen, and that put the
+     primary CTA under a 529px frame: its bottom was at 1207px on a 1366x625
+     laptop and 1256px at 1920x945, with the lead off-screen as well. The CTA
+     is the screen's job; the video starts right under it (43px of it shows at
+     1366x625 in en, 314px at 1920x945) and the header CTA stays sticky. */
+  @media (max-width: 900px) {
     .hero > .eyebrow {
       order: 1;
     }
@@ -1130,7 +1255,6 @@ const coverSrc = (cover: unknown): string =>
     }
     .solution:last-child {
       grid-column: span 2;
-      min-height: 240px;
     }
     /* Four chips in two rows of two: at tablet widths four columns would be
        ~150px each, which breaks the longer titles onto two lines. */
@@ -1142,6 +1266,19 @@ const coverSrc = (cover: unknown): string =>
   .home.lang-fr .hero h1,
   .home.lang-es .hero h1 {
     font-size: clamp(2.8rem, 4vw, 4rem);
+  }
+  /* A Japanese heading breaks only between phrases, and a phrase keeps its
+     particle (オペレーションを、 is nine characters), so the section headings
+     are sized for the narrowest column they sit in: the workflow column is
+     372px at 1366, which held 6.5 characters at 3.55rem and broke inside
+     オペレーション. 2.5rem holds nine. Phones keep 2rem. */
+  .home.lang-ja .positioning h2,
+  .home.lang-ja .section-head h2,
+  .home.lang-ja .ai-copy h2,
+  .home.lang-ja .workflow-intro h2,
+  .home.lang-ja .security-copy h2,
+  .home.lang-ja .closing h2 {
+    font-size: clamp(2rem, 3vw, 2.5rem);
   }
   @media (max-width: 640px) {
     .hero h1 {
@@ -1164,6 +1301,12 @@ const coverSrc = (cover: unknown): string =>
     .home.lang-fr .hero h1,
     .home.lang-es .hero h1 {
       font-size: 2.25rem;
+    }
+    /* The second line, ソフトウェアである。, is one phrase of ten characters:
+       at 2.7rem it was wider than a 390px phone's column and broke inside it.
+       At 2.15rem it fits the 312px column of a 360px phone. */
+    .home.lang-ja .hero h1 {
+      font-size: 2.15rem;
     }
     .hero-media img {
       aspect-ratio: 4 / 3;
@@ -1207,6 +1350,7 @@ const coverSrc = (cover: unknown): string =>
       grid-template-columns: 1fr;
     }
     .capability-list li,
+    .capability-list li:nth-child(odd),
     .capability-list li:nth-child(even) {
       padding: 1.5rem 0;
       border-right: none;
@@ -1233,7 +1377,6 @@ const coverSrc = (cover: unknown): string =>
     .solution,
     .solution:last-child {
       grid-column: auto;
-      min-height: 260px;
     }
     .closing {
       margin: 4rem -0.5rem 0;

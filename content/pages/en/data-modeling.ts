@@ -3,22 +3,22 @@ import type { MarketingPage } from '../../../src/content-pages/types';
 const page = {
     slug: 'data-modeling',
     navLabel: 'Data modeling',
-    title: 'ObjectOS Data Modeling: From Business Objects to Database and APIs',
+    title: 'Data Modeling: From Business Objects to Database and APIs',
     description:
-      'Objects, relationships, validations, and formulas become tables, migrations, a query language, and REST APIs — with an object designer, an ER diagram, and datasource sync that federates existing databases in place.',
+      'Objects, relationships, validations, and formulas become tables, migrations, a query language, and REST APIs — with an object designer, an ER diagram, and datasource sync that federates a database you already run, read-only by default.',
     eyebrow: 'Data modeling',
     heroTitle: 'Describe the business objects. The database and APIs follow.',
     lead:
-      'Take a subscription-billing system: customers, plans, seats, MRR, renewal dates, status. In ObjectOS that is one compact object definition — tables, migrations, the query engine, and REST endpoints are supplied by the runtime. Your agent can write it, and your team can fine-tune it field by field in the object designer.',
-    primary: { label: 'Compare editions and pricing', href: '/en/pricing/' },
+      'Take a subscription-billing system: customers, plans, seats, MRR, renewal dates, status. Those objects, their fields, and the relations between them are the core of your business ontology, and on the open-source ObjectStack runtime that core is one compact definition — tables, migrations, the query engine, and REST endpoints are supplied by the runtime. Your agent can write it, your team can fine-tune it field by field in the object designer, and on ObjectOS the in-app AI Builder drafts the same objects and fields from a plain-language request.',
+    primary: { label: 'Read the data modeling docs', href: 'https://docs.objectos.ai/docs/build/data' },
     secondary: { label: 'See process automation', href: '/en/automation/' },
     metrics: [
       { value: '20+', label: 'Field types — text, currency, percent, lookup, formula, file' },
       { value: 'Zero', label: 'Hand-written endpoints — REST APIs come from metadata' },
-      { value: 'In place', label: 'Existing databases federate without migration' },
+      { value: 'Read-only first', label: 'A database you already run federates in place — read-only by default, writes opt-in, and early' },
     ],
     artifact: {
-      eyebrow: 'The model is the source',
+      eyebrow: 'The ontology is the source',
       title: 'One object definition. Schema, rules, and API included.',
       body:
         'This is that subscription object: fields, relationships, validation, and history tracking in one reviewable definition. The runtime turns it into tables and migrations, enforces the rules on every write, and serves the API — the same definition an agent can extend and the designer can open.',
@@ -59,7 +59,7 @@ export const Subscription = ObjectSchema.create({
         eyebrow: 'Model the business',
         title: 'Build the subscription system step by step',
         copy:
-          'Definitions stay close to how the business talks: customers, plans, renewals. No ORM classes, no scattered schema files — every step below stays inside one definition.',
+          'The ontology stays close to how the business talks: customers, plans, renewals. No ORM classes, no scattered schema files — every step below stays inside one definition.',
         items: [
           {
             title: 'Objects & relationships',
@@ -100,7 +100,7 @@ export const Subscription = ObjectSchema.create({
           },
           {
             title: 'Datasource sync',
-            body: 'Connection forms generate from the driver’s schema, “Test connection” verifies it, then pick from the remote table list — introspect an existing ERP or CRM database and mount its tables as governed objects.',
+            body: 'Connection forms generate from the driver’s schema, “Test connection” verifies it, then pick from the remote table list — introspect an existing ERP or CRM database and mount its tables as governed objects, read-only by default; writes are enabled deliberately, per object.',
           },
         ],
       },
@@ -136,7 +136,7 @@ export const Subscription = ObjectSchema.create({
         ['Track subscriptions and customers', 'Objects, fields, relationships', 'Tables, migrations, referential integrity'],
         ['Seats can never be oversold', 'One validation expression', 'Enforcement on UI, API, imports, and AI writes'],
         ['An API for the mobile team', 'Nothing extra — the object is enough', 'REST endpoints with permissions and discovery'],
-        ['Use the ERP database we already have', 'A federation definition', 'Introspected external tables as governed objects'],
+        ['Use the ERP database we already have', 'A datasource binding, read-only to start', 'Introspected external tables as governed objects — reads first, writes opt-in per object'],
       ],
     },
     checklistTitle: 'A data review should confirm',
@@ -151,12 +151,12 @@ export const Subscription = ObjectSchema.create({
       {
         question: 'Which databases can it run on?',
         answer:
-          'Postgres, MySQL, SQLite, Turso, and MongoDB are supported today, and the data layer is driver-based. Federation can additionally mount tables from external databases without moving the data.',
+          'Postgres, MySQL, SQLite, Turso, and MongoDB are supported today, and the data layer is driver-based. Federation can additionally mount tables from an external database without moving the data — read-only by default, and early: expect the read path to be the mature one.',
       },
       {
-        question: 'Are the object designer and ER diagram in the open-source ObjectStack?',
+        question: 'What is open source here, and what does ObjectOS add?',
         answer:
-          'Yes. The object designer, the ER data-model designer, and datasource sync ship in the open-source ObjectStack console — alongside objects, relationships, validations, formulas, migrations, the query engine, REST APIs, and file storage.',
+          'All of the data layer: objects, relationships, validations, formulas, migrations, the query engine, REST APIs, file storage, and the object designer, ER diagram, and datasource sync in the Console — Apache-2.0, with no feature gate between development and production. ObjectOS adds the in-app AI Builder, whose built-in tools create packages and objects and add, modify, and delete fields from a chat, queued for human approval before they go live — on Cloud and on Enterprise, from its single-node Business Self-Managed entry up.',
       },
     ],
   } satisfies MarketingPage;

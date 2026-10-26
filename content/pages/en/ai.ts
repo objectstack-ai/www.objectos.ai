@@ -14,8 +14,8 @@ const page = {
     secondary: { label: 'See how agents write metadata', href: '/en/agent-developer/' },
     metrics: [
       { value: '2 paths', label: 'Build with a coding agent in source, or by conversation in the cloud' },
-      { value: '<150k tokens', label: 'A complete CRM, including UI, held in one context window' },
-      { value: '0 bypasses', label: 'Every AI action runs inside user permissions and audit' },
+      { value: 'Held whole', label: 'Apps small enough for AI to hold whole — the bundled CRM loads end-to-end' },
+      { value: 'Business+', label: 'AI action audit, guardrails, and permission scoping start on ObjectOS Business' },
     ],
     artifact: {
       eyebrow: 'The build loop',
@@ -36,7 +36,7 @@ const page = {
         eyebrow: 'AI Build',
         title: 'Two ways to build — one reviewable definition',
         copy:
-          'Whether the AI works in your repository or in an ObjectOS chat panel, the output is the same typed ObjectStack metadata a human reviews and owns. A complete CRM is under 150k tokens: business logic — objects, workflows, and permissions — stays under 100k, and UI metadata adds about 50k.',
+          'Whether the AI works in your repository or in an ObjectOS chat panel, the output is the same typed ObjectStack metadata a human reviews and owns. The definition stays small enough for an agent to hold whole: the objectstack README’s bundled CRM — objects, views, a dashboard, a lead-conversion flow, permission sets, actions, translations — loads end-to-end and refactors in one change.',
         items: [
           {
             title: 'In source, with your coding agent',
@@ -73,7 +73,7 @@ const page = {
           },
           {
             title: 'Everything on the record',
-            body: 'Every Ask query and action lands in the audit log alongside human activity, so review works the same for both.',
+            body: 'On ObjectOS Business and Enterprise, Ask queries and actions land in the audit log alongside human activity, so review works the same for both.',
           },
         ],
       },
@@ -86,15 +86,15 @@ const page = {
         items: [
           {
             title: 'Agent writes source files',
-            body: 'Claude Code, Cursor, or any coding agent edits ObjectStack definitions in your repo; review happens as ordinary git diffs.',
+            body: 'npm create objectstack@latest scaffolds a project and writes an AGENTS.md, so Claude Code, Cursor, or any coding agent starts with the protocol’s rules loaded; it edits ObjectStack definitions in your repo, npx os dev --ui renders them, and review happens as ordinary git diffs.',
           },
           {
             title: 'Any MCP client can ask',
             body: 'The MCP server exposes your objects, queries, and actions to whatever model you run — hosted or fully local.',
           },
           {
-            title: 'Same runtime, same rules',
-            body: 'Permissions, approvals, and audit apply identically. The edition changes who hosts the AI, never how it is governed.',
+            title: 'Same runtime, governance by edition',
+            body: 'On the open-source runtime, MCP tool calls run inside the caller’s permissions and land in the audit log. ObjectOS adds in-app AI by edition: a taste on Free, in-app AI Build and Ask on Team, and AI governance — action audit, guardrails, permission scoping — from Business.',
           },
         ],
       },
@@ -103,20 +103,22 @@ const page = {
       columns: ['Edition', 'How AI builds', 'How AI answers'],
       rows: [
         ['Open-source ObjectStack', 'Your coding agent edits metadata source files; review as git diffs', 'Any MCP client queries governed objects with your own model'],
-        ['ObjectOS Cloud Team & Business', 'In-app AI Build drafts changes; approvals gate structure', 'In-app AI Ask answers and runs approved actions'],
-        ['ObjectOS Enterprise', 'Same, plus private deployment and bring-your-own-model', 'Same, plus local models and internal identity'],
+        ['ObjectOS Cloud Free', 'A taste of in-app AI Build', 'A taste of in-app AI Ask'],
+        ['ObjectOS Cloud Team', 'In-app AI Build drafts changes; approvals gate structure', 'In-app AI Ask answers and runs approved actions'],
+        ['ObjectOS Business (Cloud)', 'Same, plus AI governance: action audit, guardrails, permission scoping', 'Same, with Ask queries and actions audited and guardrailed'],
+        ['ObjectOS Enterprise (self-managed)', 'Same, on your own infrastructure, plus bring-your-own-model', 'Same, plus local models and internal identity'],
       ],
     },
     faqs: [
       {
         question: 'What stops AI from breaking production?',
         answer:
-          'The ObjectStack runtime enforces three guarantees: structural changes require human approval, every action runs inside the requesting user’s permissions, and everything is audited. ObjectOS makes that approval and audit loop available in the production product, so AI can draft quickly but cannot ship silently.',
+          'The ObjectStack runtime enforces two guarantees for any agent working over MCP: structural changes require human approval, and every tool call runs inside the requesting user’s permissions and is audited. ObjectOS Business and Enterprise add AI governance for the in-app AI — action audit, guardrails, permission scoping — so AI can draft quickly but cannot ship silently.',
       },
       {
         question: 'Which models does it use?',
         answer:
-          'Cloud editions run managed models behind AI Build and Ask. The open-source ObjectStack brings your own — any MCP-compatible client or a local model. Enterprise adds bring-your-own-model for private deployments.',
+          'Cloud editions run managed models behind AI Build and Ask. The open-source ObjectStack brings your own — any MCP-compatible client or a local model. Self-managed ObjectOS Enterprise, from its single-node Business Self-Managed entry up, brings your own model or key.',
       },
     ],
   } satisfies MarketingPage;

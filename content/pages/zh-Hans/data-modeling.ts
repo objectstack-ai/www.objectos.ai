@@ -3,22 +3,22 @@ import type { MarketingPage } from '../../../src/content-pages/types';
 const page = {
     slug: 'data-modeling',
     navLabel: '数据建模',
-    title: 'ObjectOS 数据建模：从业务对象到数据库与 API',
+    title: '数据建模：从业务对象到数据库与 API',
     description:
-      '对象、关系、校验和公式自动变成表、迁移、查询语言和 REST API——配备对象设计器、ER 图和数据源同步，现有数据库可原地联邦接入。',
+      '对象、关系、校验和公式自动变成表、迁移、查询语言和 REST API——配备对象设计器、ER 图和数据源同步，已在运行的数据库可联邦接入，默认只读。',
     eyebrow: '数据建模',
     heroTitle: '描述业务对象，数据库和 API 随之而来。',
     lead:
-      '以一个订阅计费系统为例：客户、套餐、席位、MRR、续约日、状态。在 ObjectOS 里，这就是一份紧凑的对象定义——表、迁移、查询引擎和 REST 端点由运行时供给；你的 Agent 能写它，你的团队能在对象设计器里逐字段微调它。',
-    primary: { label: '对比版本与定价', href: '/en/pricing/' },
+      '以一个订阅计费系统为例：客户、套餐、席位、MRR、续约日、状态。这些对象、它们的字段，以及它们之间的关系，就是你的业务本体的核心；在开源 ObjectStack 运行时上，这个核心就是一份紧凑的定义——表、迁移、查询引擎和 REST 端点由运行时供给；你的 Agent 能写它，你的团队能在对象设计器里逐字段微调它，而在 ObjectOS 上，产品内 AI Builder 能从一句描述起草出同样的对象与字段。',
+    primary: { label: '阅读数据建模文档', href: 'https://docs.objectos.ai/docs/build/data' },
     secondary: { label: '查看流程自动化', href: '/en/automation/' },
     metrics: [
       { value: '20+', label: '字段类型——文本、货币、百分比、lookup、公式、文件' },
       { value: '0', label: '手写端点——REST API 直接来自元数据' },
-      { value: '原地', label: '现有数据库无需迁移即可联邦接入' },
+      { value: '先只读', label: '已在运行的数据库原地联邦接入——默认只读、写权限按需开启、尚在早期' },
     ],
     artifact: {
-      eyebrow: '模型即源码',
+      eyebrow: '本体即源码',
       title: '一份对象定义，schema、规则和 API 全在里面。',
       body:
         '这就是那个订阅对象：字段、关系、校验和历史追踪都在一份可审阅的定义里。运行时把它变成表和迁移，在每条写路径上执行规则，并对外提供 API——同一份定义，Agent 能读懂扩展，设计器能打开微调。',
@@ -59,7 +59,7 @@ export const Subscription = ObjectSchema.create({
         eyebrow: '为业务建模',
         title: '把订阅系统一步步建出来',
         copy:
-          '定义贴着业务的说法走：客户、套餐、续约。没有 ORM 类，没有散落各处的 schema 文件——下面每一步都停留在同一份定义里。',
+          '本体贴着业务的说法走：客户、套餐、续约。没有 ORM 类，没有散落各处的 schema 文件——下面每一步都停留在同一份定义里。',
         items: [
           {
             title: '对象与关系',
@@ -100,7 +100,7 @@ export const Subscription = ObjectSchema.create({
           },
           {
             title: '数据源同步',
-            body: '连接表单按驱动自动生成，点"测试连接"验证，再从远程表清单里勾选——introspect 现有 ERP/CRM 数据库，外部表直接生成受治理对象。',
+            body: '连接表单按驱动自动生成，点"测试连接"验证，再从远程表清单里勾选——introspect 现有 ERP/CRM 数据库，外部表直接生成受治理对象，默认只读；写权限按对象有意开启。',
           },
         ],
       },
@@ -136,7 +136,7 @@ export const Subscription = ObjectSchema.create({
         ['管理订阅与客户', '对象、字段、关系', '表、迁移、引用完整性'],
         ['席位数不能超卖', '一条表达式校验规则', '在 UI、API、导入和 AI 写入上强制执行'],
         ['给移动团队一个 API', '不用多写——对象本身就够了', '带权限与发现的 REST 端点'],
-        ['继续用手里的 ERP 数据库', '一份联邦定义', 'introspect 外部表，挂载为受治理对象'],
+        ['继续用手里的 ERP 数据库', '一个数据源绑定，起步只读', 'introspect 外部表，挂载为受治理对象——先读，写权限按对象开启'],
       ],
     },
     checklistTitle: '数据评审应确认',
@@ -151,12 +151,12 @@ export const Subscription = ObjectSchema.create({
       {
         question: '支持哪些数据库？',
         answer:
-          '目前支持 Postgres、MySQL、SQLite、Turso 和 MongoDB，数据层基于驱动架构。联邦还能在不搬移数据的情况下挂载外部数据库的表。',
+          '目前支持 Postgres、MySQL、SQLite、Turso 和 MongoDB，数据层基于驱动架构。联邦还能在不搬移数据的情况下挂载外部数据库的表——默认只读、尚在早期：读路径是成熟的那一条。',
       },
       {
-        question: '对象设计器和 ER 图在开源 ObjectStack 里吗？',
+        question: '这里哪些是开源的，ObjectOS 又加了什么？',
         answer:
-          '在。对象设计器、ER 数据模型设计器、数据源同步，连同对象、关系、校验、公式、迁移、查询引擎、REST API 与文件存储，都是开源 ObjectStack 的一部分。',
+          '整个数据层都是开源的：对象、关系、校验、公式、迁移、查询引擎、REST API、文件存储，以及 Console 里的对象设计器、ER 图和数据源同步——Apache-2.0，开发与生产之间没有功能门槛。ObjectOS 加的是产品内 AI Builder：它的内置工具能从一段对话创建包与对象、增删改字段，并在生效前排队等人审批——在 Cloud 与 Enterprise（含单节点入门选项 Business Self-Managed）上提供。',
       },
     ],
   } satisfies MarketingPage;

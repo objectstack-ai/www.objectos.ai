@@ -29,8 +29,12 @@ export interface PricingCopy {
 
 // CTA targets. Plan CTAs point at the docs "get started" surface; enterprise
 // opens an email. Repoint these at the app signup URL once it is live.
+// The Enterprise contact is sales@, the address the public licence page
+// (docs.objectos.ai/docs/resources/license) names for "contact sales" on
+// Enterprise, the Runtime Subscription and OEM terms; support@ is the
+// billing and refunds address the refund policy names.
 const GET_STARTED = 'https://docs.objectos.ai';
-const CONTACT = 'mailto:support@objectstack.ai';
+const CONTACT = 'mailto:sales@objectstack.ai';
 
 // Prices/quotas mirror the product's source of truth:
 // cloud `packages/service-cloud/src/plan-entitlements.ts` (PLAN_PRICING +
@@ -43,7 +47,7 @@ const pricingEn: PricingCopy = {
   intro:
     'Start on the free plan and upgrade when you need more. Paid plans are billed per AI seat: you pay for the people who use AI, while viewers and non-AI users stay free. Prefer the open-source path? ObjectStack is Apache-2.0: self-host its runtime, bring your own AI through MCP, author metadata as source files, and review changes as diffs. ObjectOS adds the in-app AI Build and Ask experience on Cloud and Enterprise.',
   billingNote:
-    'Prices are in USD per AI seat. The headline price is billed annually (about two months free); monthly billing is also available. Cancel anytime. Exact quotas are shown in the app and at checkout. Private and self-hosted deployment are available on Enterprise, including bring-your-own-model and offline payment options.',
+    'Prices are in USD per AI seat. The headline price is billed annually (about two months free); monthly billing is also available. Cancel anytime. Exact quotas are shown in the app and at checkout. The Cloud plans run up to Business; self-managed ObjectOS is ObjectOS Enterprise. The single-node entry option of Enterprise, Business Self-Managed, is a license for 10–25 AI seats at $540 per AI seat per year, bring your own model or key; beyond a single node, Enterprise is priced by volume, with offline and invoice payment.',
   plans: [
     {
       name: 'Free',
@@ -87,7 +91,7 @@ const pricingEn: PricingCopy = {
       features: [
         'Everything in Team, plus:',
         'SSO / SAML',
-        'Advanced permissions and governance',
+        'AI governance: action audit, guardrails, permission scoping',
         'More included AI credits',
         '1-year audit retention',
       ],
@@ -98,11 +102,12 @@ const pricingEn: PricingCopy = {
       name: 'Enterprise',
       price: 'Custom',
       cadence: 'contact sales',
-      tagline: 'For larger organizations with custom security, deployment, and contracting needs.',
+      tagline: 'For running ObjectOS on your own infrastructure, from a single node to air-gapped clusters.',
       features: [
-        'Private or self-hosted deployment',
+        'Self-managed on your own infrastructure, including air-gapped',
+        'Single-node entry: Business Self-Managed, 10–25 AI seats, $540 / AI seat / yr, bring your own model',
         'Volume AI-seat pricing',
-        'SCIM + compliance (SOC 2 / ISO)',
+        'SCIM, compliance attestations',
         'Clustering / HA / multi-node',
         'SLA + dedicated support',
       ],
@@ -121,7 +126,7 @@ const pricingZhHans: PricingCopy = {
   intro:
     '从免费版开始，需要更多时再升级。付费套餐按 AI 席位计费——只为真正使用 AI 的人付费；查看者与非 AI 用户免费。偏好开源路径？ObjectStack 采用 Apache-2.0：可自托管运行时、经 MCP 自带 AI，以源码方式编写元数据并审阅 diff。ObjectOS 在云端与企业版中提供产品内 AI Build 与 Ask。',
   billingNote:
-    '价格以美元计，按 AI 席位计费。标价为年付价（约省两个月）；也可选择月付。可随时取消。具体配额在应用内和结账时显示。私有/自托管部署在企业版提供(自带模型;支持线下付款)。',
+    '价格以美元计，按 AI 席位计费。标价为年付价（约省两个月）；也可选择月付。可随时取消。具体配额在应用内和结账时显示。云端套餐最高到商业版；自管部署的 ObjectOS 即 ObjectOS 企业版。企业版的单节点入门选项——商业版自管（Business Self-Managed）——为 10–25 个 AI 席位的许可，每 AI 席每年 $540，自带模型或密钥；单节点以上的企业版按量定价，支持线下与发票付款。',
   plans: [
     {
       name: '免费版',
@@ -165,7 +170,7 @@ const pricingZhHans: PricingCopy = {
       features: [
         '含团队版全部,另加:',
         'SSO / SAML',
-        '高级权限与治理',
+        'AI 治理：动作审计、护栏、权限限定',
         '更高 AI 额度',
         '1 年审计留存',
       ],
@@ -176,11 +181,12 @@ const pricingZhHans: PricingCopy = {
       name: '企业版',
       price: '定制',
       cadence: '联系销售',
-      tagline: '面向有定制安全与合同需求的大型组织。',
+      tagline: '面向自管运行 ObjectOS 的组织，从单节点到离线隔离集群。',
       features: [
-        '私有/自托管部署',
+        '自管部署在你自己的基础设施上，含离线隔离（air-gap）',
+        '单节点入门选项：商业版自管，10–25 个 AI 席位、每 AI 席每年 $540、自带模型',
         'AI 席位批量定价',
-        'SCIM + 合规(SOC 2 / ISO)',
+        'SCIM、合规鉴证',
         '集群 / HA / 多节点',
         'SLA + 专属支持',
       ],

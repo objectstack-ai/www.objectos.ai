@@ -3,14 +3,14 @@ import type { MarketingPage } from '../../../src/content-pages/types';
 const page = {
     slug: 'app-ui',
     navLabel: 'App interfaces',
-    title: 'ObjectOS App Interfaces: Permission-Aware Screens Rendered from Metadata',
+    title: 'App Interfaces: Permission-Aware Screens Rendered from Metadata',
     description:
       'Forms, views, and dashboards render straight from metadata — shaped by each user’s permissions, updated in real time, and fine-tuned in a live-preview view designer with column inspectors and filter builders.',
     eyebrow: 'App interfaces',
     heroTitle: 'Screens nobody hand-builds. Views everyone trusts.',
     lead:
-      'Take a support workbench: reps work a grid of open cases, the team lead drags a kanban grouped by status, and everyone checks the due-date calendar. In ObjectOS that is one view definition — rendered per user, live as records change, and adjustable in the view designer without touching a file.',
-    primary: { label: 'Compare editions and pricing', href: '/en/pricing/' },
+      'Take a support workbench: reps work a grid of open cases, the team lead drags a kanban grouped by status, and everyone checks the due-date calendar. On the open-source ObjectStack runtime that is one view definition — a projection of the ontology, not part of it — rendered per user, live as records change, and adjustable in the view designer without touching a file. On ObjectOS, the in-app AI Builder registers the same views from a plain-language request.',
+    primary: { label: 'Read the interface docs', href: 'https://docs.objectos.ai/docs/build/interface' },
     secondary: { label: 'See analytics & reporting', href: '/en/analytics/' },
     metrics: [
       { value: 'Zero', label: 'Hand-built frontend for list, form, and detail surfaces' },
@@ -19,7 +19,7 @@ const page = {
     ],
     artifact: {
       eyebrow: 'A screen as metadata',
-      title: 'The view is part of the reviewable definition.',
+      title: 'The view is a projection of the ontology — and still a reviewable diff.',
       body:
         'This is that workbench: a grid with columns, a kanban grouped by status, a calendar on due dates, and a saved “Open Cases” list — one definition. When an agent adds a field, the affected screens are part of the same small diff, not a frontend ticket.',
       code: `import { defineView } from '@objectstack/spec';
@@ -58,10 +58,10 @@ export const CaseViews = defineView({
     sections: [
       {
         id: 'surfaces',
-        eyebrow: 'Rendered from metadata',
+        eyebrow: 'Projections of the ontology',
         title: 'The workbench, surface by surface',
         copy:
-          'Typed fields carry their own widgets and formatting, so generated screens look and behave consistently without a design-system project.',
+          'Views, dashboards, apps, and translations are projections of the ontology, not part of it: change the objects and the screens follow; remove a screen and the business it showed is unchanged. Typed fields carry their own widgets and formatting, so the projections look and behave consistently without a design-system project.',
         items: [
           {
             title: 'Views & lists',
@@ -160,9 +160,9 @@ export const CaseViews = defineView({
           'Yes. The generated surfaces cover the repetitive CRUD majority, and the same APIs and permission model back any custom frontend you add — custom screens never bypass governance.',
       },
       {
-        question: 'Is the view designer in the open-source ObjectStack?',
+        question: 'What is open source here, and what does ObjectOS add?',
         answer:
-          'Yes. The live-preview view designer, column and filter inspectors, the block-based page canvas, and the responsive page designer ship in the open-source ObjectStack console — alongside metadata-rendered views, forms, dashboards, navigation, localization, and real-time updates.',
+          'The rendered views, forms, dashboards, navigation, localization, and real-time updates, plus the live-preview view designer, inspectors, page canvas, and responsive page designer, all ship in the open-source ObjectStack Console, Apache-2.0. ObjectOS adds the in-app AI Builder, which registers views — a kanban grouped by status, for instance — from a chat request and queues the change for approval; the open runtime leaves that work to your own coding agent and MCP client.',
       },
     ],
   } satisfies MarketingPage;

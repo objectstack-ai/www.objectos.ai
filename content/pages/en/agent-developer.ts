@@ -1,34 +1,41 @@
 import type { MarketingPage } from '../../../src/content-pages/types';
+import { positioning } from '../../../src/lib/positioning';
+
+const p = positioning.en;
 
 const page = {
     slug: 'agent-developer',
     navLabel: 'Agent developer',
     title: 'Agent Developer Guide: How AI Writes ObjectStack Metadata',
     description:
-      'Teach a coding agent the open ObjectStack target format, Strict TypeScript definitions, Zod schemas, validation gate, and whole-context proof needed to generate reviewable applications.',
+      'The README path for a coding agent: npm create objectstack@latest writes an AGENTS.md, the agent writes typed metadata, os validate rejects what would fail at runtime, and npx os dev --ui renders the app for review.',
     eyebrow: 'Agent developer',
-    heroTitle: 'Do not teach every developer to hand-write apps. Teach your agent the target format.',
+    heroTitle: 'Do not teach every developer to hand-write apps. Teach your agent to write the ontology.',
     lead:
-      'ObjectStack is the open target format and runtime for AI-written enterprise software, designed for the agent as writer and the human as reviewer. A complete CRM including UI fits under 150k tokens, so an agent can hold the whole app in one context; Strict TypeScript, Zod schemas, and a validation gate catch invalid output before it reaches the runtime.',
-    primary: { label: 'Read the docs', href: 'https://docs.objectos.ai' },
+      `${p.t2} The ontology is what the agent writes — ${p.t3[1]}, in the README’s four promises — and you are the reviewer: the scaffolder writes an AGENTS.md so the agent starts with the protocol’s rules loaded, Strict TypeScript, Zod schemas, and os validate reject invalid output before it reaches the runtime, and the whole app stays small enough for AI to hold whole.`,
+    primary: { label: 'Follow the README path', href: 'https://github.com/objectstack-ai/objectstack#try-it-in-five-minutes' },
     secondary: { label: 'See template patterns', href: '/en/templates/' },
     metrics: [
-      { value: '<150k tokens', label: 'A complete CRM including UI — one context window' },
-      { value: '<100k tokens', label: 'Objects, workflows, permissions, and business logic' },
-      { value: '~50k tokens', label: 'UI metadata for the complete CRM' },
+      { value: 'AGENTS.md', label: 'Written by the scaffolder, so the agent starts with the protocol’s rules loaded' },
+      { value: '4 gates', label: 'Typed, validated, reviewed, governed — between the agent and your users' },
+      { value: 'Held whole', label: 'Apps small enough for AI to hold whole — the bundled CRM loads end-to-end' },
     ],
     artifact: {
-      eyebrow: 'Agent instruction',
-      title: 'A good rule file makes the target format explicit',
+      eyebrow: 'The README path',
+      title: 'Three commands, and your agent has the rules',
       body:
-        'The most important developer artifact is not a tutorial for hand-coding screens. It is a compact, retrievable instruction set that tells the agent what to edit, what not to invent, which schemas must pass, and how to return both a reviewable diff and proof that it considered the whole application.',
-      code: `When building an ObjectStack app:
-1. Model business objects before UI.
-2. Write Strict TypeScript metadata that conforms to the published Zod schemas.
-3. Prefer metadata definitions over generated application code.
-4. Add conservative permissions and expose AI actions only through approved tools.
-5. Run the validation gate before proposing deployment.
-6. Return a small diff, reviewer checklist, and whole-context proof.`,
+        'The scaffolder installs the AI skills bundle and writes an AGENTS.md, so the agent starts with the protocol’s rules already loaded — not with generic “write me some TypeScript” priors. Describe the requirement in Claude Code, Cursor, or Copilot; the agent writes typed metadata, not a codebase, and the gate rejects what would fail silently at runtime. Then preview the real app in the browser and ask for the next change on a diff you can read.',
+      code: `# 1 · Create a project: installs the AI skills bundle, writes AGENTS.md
+npm create objectstack@latest my-app && cd my-app
+
+# 2 · Open it in Claude Code (or Cursor, Copilot, ...) and describe the need:
+#    "Build a support desk. Add a ticket object with subject, description,
+#     a priority select and a status select. Add a Resolve action that only
+#     shows on tickets that aren't already resolved. Add an Open tickets
+#     list view and a Support nav group. Run npm run validate when done."
+
+# 3 · Preview in the browser
+npx os dev --ui   # -> http://localhost:3000/_console/`,
     },
     sections: [
       {
@@ -40,12 +47,12 @@ const page = {
         items: [
           {
             title: '1. Provide operating context',
-            body: 'Give the agent the business process, object names, permission boundaries, workflow states, integration constraints, and the complete current definition. Under 150k tokens for a full CRM including UI, the app can be inspected as a whole instead of reconstructed from fragments.',
+            body: 'Give the agent the business process, object names, permission boundaries, workflow states, integration constraints, and the complete current definition. The app stays small enough for AI to hold whole — the README’s bundled CRM loads end-to-end — so it can be inspected as a whole instead of reconstructed from fragments.',
             meta: 'Context',
           },
           {
-            title: '2. Generate metadata',
-            body: 'The agent edits object, view, workflow, action, dashboard, translation, and tool definitions as Strict TypeScript rather than generating app glue code.',
+            title: '2. Write the ontology',
+            body: 'The agent edits the ontology — objects and fields, relations, actions, permissions, flows, and tool definitions — and its projections — views, dashboards, translations — as Strict TypeScript rather than generating app glue code.',
             meta: 'Write',
           },
           {

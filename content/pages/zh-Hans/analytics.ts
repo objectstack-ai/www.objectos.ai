@@ -3,14 +3,14 @@ import type { MarketingPage } from '../../../src/content-pages/types';
 const page = {
     slug: 'analytics',
     navLabel: '报表与分析',
-    title: 'ObjectOS 分析：在受治理对象上做仪表盘与报表',
+    title: '报表与分析：在受治理对象上做仪表盘与报表',
     description:
       '在应用运行的同一批受治理对象上做聚合、时间序列、漏斗和仪表盘——配备小部件式仪表盘设计器与分节式报表设计器，权限感知是构造出来的。',
     eyebrow: '报表与分析',
     heroTitle: '答案来自记录系统本身——而不是第二套数据栈。',
     lead:
-      '财务要看按套餐分的 MRR 逐月走势，运营要一块 SLA 仪表盘。常见做法是导出到 BI 工具——权限、口径和新鲜度在那里悄悄漂移。ObjectOS 直接在受治理对象上回答这些问题：数据集定义一次，仪表盘渲染，设计器组装。',
-    primary: { label: '对比版本与定价', href: '/en/pricing/' },
+      '财务要看按套餐分的 MRR 逐月走势，运营要一块 SLA 仪表盘。常见做法是导出到 BI 工具——权限、口径和新鲜度在那里悄悄漂移。ObjectStack 运行时直接在受治理对象上回答这些问题：数据集定义一次，仪表盘渲染，设计器组装；在 ObjectOS 上，“数据问询”助手还能在聊天里、在同一套权限内回答它们。',
+    primary: { label: '阅读仪表盘文档', href: 'https://docs.objectos.ai/docs/build/interface/dashboards' },
     secondary: { label: '查看数据建模', href: '/en/data-modeling/' },
     metrics: [
       { value: '3 种', label: '查询策略：原生 SQL、ObjectQL、内存计算' },
@@ -149,9 +149,9 @@ export const MrrByPlan = defineReport({
           '对业务对象上的运营报表，你不再需要一套独立栈：仪表盘、漏斗和时间序列都跑在平台内。跨系统的数据仓库场景 ObjectOS 与之共存——联邦与 API 让受治理对象很容易被消费。',
       },
       {
-        question: '仪表盘和报表设计器在开源 ObjectStack 里吗？',
+        question: '这里哪些是开源的，ObjectOS 又加了什么？',
         answer:
-          '在。小部件式仪表盘设计器、分节式报表设计器、下钻、聚合、时间序列、漏斗与语义数据集都是开源 ObjectStack 运行时的一部分，权限执行与平台其他部分完全一致。',
+          '聚合、时间序列、漏斗、语义数据集、下钻，以及仪表盘与报表设计器，都是开源 ObjectStack 运行时的一部分，Apache-2.0，权限执行与平台其他部分完全一致。ObjectOS 加的是“数据问询”助手：在聊天里提的问题从同一批数据集得到回答，范围以提问者的权限为界，查询从商业版起受审计与护栏约束。在开源运行时上，同样的问题经任意 MCP 客户端用你自己的模型来问。',
       },
     ],
   } satisfies MarketingPage;

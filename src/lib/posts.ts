@@ -113,10 +113,42 @@ export async function getUsedTerms(
   );
 }
 
+/**
+ * A hub listing fewer posts than this is noindexed. Its only text of its own
+ * is `termDescription` — one sentence shared by every hub of the term's group
+ * with the label swapped in — so a one- or two-post hub is a thin page that
+ * duplicates the posts it lists. It stays built and linked (the menus and the
+ * post chips point at it, and a reader browsing a topic still wants it); it is
+ * kept out of the index, the sitemap and every hub's hreflang set until the
+ * topic has enough writing to stand as a page.
+ */
+export const MIN_INDEXABLE_HUB_POSTS = 3;
+
 /** Every term (any group) with content in `locale` — used to generate hubs. */
 export async function getAllUsedTerms(locale: Locale): Promise<Term[]> {
   const groups = await getPostGroups();
   return TERMS.filter((term) =>
     groups.some((g) => g.langs[locale] && articleHasTerm(g.langs[locale]!.data, term))
   );
+}
+
+/**
+ * The locale whose hub a reader in `locale` should be sent to for `term`, or
+ * `undefined` when no hub to link exists.
+ *
+ * A hub is built only where a published post carries the term — the topics
+ * route emits exactly `getAllUsedTerms(locale)` — so `termHref(locale, term)`
+ * is a dead link wherever that set lacks the term. Hand-curated term lists (a
+ * cluster's `relatedTerms`) are not derived from posts and have no such
+ * guarantee: this answers the reader's own hub when it is built, the English
+ * hub when only that one is, and nothing otherwise.
+ */
+export async function builtHubLocale(
+  term: Term,
+  locale: Locale
+): Promise<Locale | undefined> {
+  for (const candidate of locale === 'en' ? (['en'] as const) : ([locale, 'en'] as const)) {
+    if ((await getAllUsedTerms(candidate)).some((used) => used.slug === term.slug)) return candidate;
+  }
+  return undefined;
 }

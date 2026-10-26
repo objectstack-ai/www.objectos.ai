@@ -1,21 +1,24 @@
 import type { MarketingPage } from '../../../src/content-pages/types';
+import { positioning } from '../../../src/lib/positioning';
+
+const p = positioning['zh-Hans'];
 
 const page = {
     slug: 'forward-deployed-engineers',
     navLabel: '面向 FDE',
     title: 'FDE(前沿部署工程师)工具箱：本体优先的开源技术栈',
     description:
-      'ObjectStack 为 FDE 提供开放目标格式与受治理运行时，让开放业务本体归客户所有；ObjectOS 是可选的商业生产运营平台。',
+      `ObjectStack 为 FDE 提供 Apache-2.0 运行时，让业务本体归客户所有；ObjectOS 是${p.descriptor}，面向需要产品内 AI、托管或自管交付与支持的客户。`,
     eyebrow: '面向前沿部署工程师',
     heroTitle: '像最强的 FDE 团队那样交付，并交出他们从不交出的东西：本体。',
     lead:
-      '前沿部署模式已经胜出：嵌入客户现场、建模业务、快速交付能用的软件。它的弱点在交接——本体被锁在客户要永远租用的平台里。ObjectStack 把本体变成客户仓库里的类型化开放文件，并由其运行时受治理地执行。ObjectOS 是可选的商业生产平台，面向需要产品内 AI、托管或私有部署与支持的客户。',
+      `前沿部署模式已经胜出：嵌入客户现场、建模业务、快速交付能用的软件。它的弱点在交接——本体被锁在客户要永远租用的平台里。ObjectStack 把本体变成客户仓库里的类型化开放文件，并由其运行时受治理地执行。ObjectOS 是${p.descriptor}：面向需要产品内 AI Builder 与 Ask、托管（Cloud）或自管（Enterprise，含单节点入门选项 Business Self-Managed）交付与支持的客户。`,
     primary: { label: '从 ObjectStack 开始', href: 'https://github.com/objectstack-ai/objectstack' },
     secondary: { label: '阅读 FDE 专文', href: '/en/blog/forward-deployed-engineer-tools/' },
     metrics: [
-      { value: '<150k tokens', label: '完整 CRM 全应用（含 UI），小到客户能整体审阅' },
-      { value: '<100k tokens', label: '客户所有的对象、流程、权限与其他业务逻辑' },
-      { value: '约 50k tokens', label: '完整 CRM 定义中的 UI 元数据' },
+      { value: 'Apache-2.0', label: '没有席位可转售——客户零 license 成本自托管运行时' },
+      { value: '1 个制品', label: 'os compile 编译出一个可部署的 JSON 制品，任何 ObjectStack 运行时都能运行' },
+      { value: '整体装下', label: '应用小到 AI 能整体装下——可端到端审阅' },
     ],
     artifact: {
       eyebrow: '交付物',
@@ -72,7 +75,7 @@ const page = {
           },
           {
             title: '安全评审直接读 diff',
-            body: '权限与审计就是元数据。客户安全团队可以审阅完整定义——完整 CRM 全应用小于 150k tokens，业务逻辑小于 100k——而不是信任一个黑盒平台边界。',
+            body: '权限与审计就是元数据。客户安全团队可以审阅完整定义——小到能整体装下，权限与审计都在其中——而不是信任一个黑盒平台边界。',
           },
           {
             title: '任何 AI,都在治理内',
@@ -91,14 +94,14 @@ const page = {
         ['本体在哪里', '锁在供应商平台内', '客户仓库里的类型化文件(Apache-2.0)'],
         ['客户为什么付费', '平台席位，无限期', 'ObjectOS 生产运营——或零 license 自托管 ObjectStack'],
         ['之后谁来维护', '供应商培训的专家', '任意编码智能体 + 人工评审'],
-        ['AI 接入', '仅平台自带助手', '开放 MCP——Claude、Cursor、本地模型'],
+        ['AI 接入', '由供应商的路线图决定', '开放 MCP，默认开启——Claude、Cursor、本地模型'],
         ['安全评审', '信任平台边界', '直接读 diff——权限与审计就是元数据'],
       ],
     },
     checklistTitle: 'FDE 项目检查清单',
     checklist: [
       '先把客户的名词和动词建模成对象与流程,再谈任何界面。',
-      '让整个定义保持在 150k-token 的全应用预算内，Agent 才能整体推理、整体重构。',
+      '让整个定义小到你的 Agent 能整体装下，它才能在一次变更里整体推理、整体重构。',
       '权限默认从严;每一次权限变更都要在 diff 里显式可见。',
       '交接的是仓库、编译制品和评审清单——不是你租户里的一个账号。',
       '保持 MCP 开启,让客户自己的 AI 在其权限内操作应用。',
@@ -112,7 +115,7 @@ const page = {
       {
         question: '服务客户必须用 ObjectOS 吗?',
         answer:
-          '不必须。ObjectStack 是开源目标格式与运行时；其运行时可零 license 成本自托管，Console 与治理齐全。ObjectOS 是面向需要浏览器内 AI Builder、托管云或私有企业版部署、团队运营与支持的客户的商业生产平台。',
+          `不必须。ObjectStack 采用 Apache-2.0——协议、内核、CLI、生产运行时、Console UI 与 MCP 服务器——开发与生产之间没有功能门槛，客户可以零 license 成本自托管。ObjectOS 是${p.descriptor}：客户买它是为了产品内 AI Builder 与 Ask、从商业版起的 AI 治理、托管 Cloud 或自管的 Enterprise 交付（单节点入门选项 Business Self-Managed；单节点以上提供集群、离线隔离与 SCIM），以及官方支持。`,
       },
     ],
   } satisfies MarketingPage;

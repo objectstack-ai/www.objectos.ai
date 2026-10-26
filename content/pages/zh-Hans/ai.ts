@@ -14,8 +14,8 @@ const page = {
     secondary: { label: '看 Agent 如何编写元数据', href: '/en/agent-developer/' },
     metrics: [
       { value: '2 条路径', label: '在源码里用编码 Agent，或在云端用对话' },
-      { value: '<150k tokens', label: '完整 CRM 全应用（含 UI），一个上下文窗口可容纳' },
-      { value: '0 后门', label: '每次 AI 动作都在用户权限与审计之内' },
+      { value: '整体装下', label: '应用小到 AI 能整体装下——README 自带的示例 CRM 可端到端读完' },
+      { value: 'Business 起', label: 'AI 动作审计、护栏与权限限定从 ObjectOS Business 开始提供' },
     ],
     artifact: {
       eyebrow: '构建闭环',
@@ -36,7 +36,7 @@ const page = {
         eyebrow: 'AI Build',
         title: '两种构建方式，同一份可审阅的定义',
         copy:
-          '无论 AI 是在你的代码仓库里工作，还是在 ObjectOS 聊天面板里工作，产出都是由人审阅并拥有的同一种 ObjectStack 类型化元数据。完整 CRM 全应用小于 150k tokens：对象、流程、权限等业务逻辑小于 100k，UI 元数据约 50k。',
+          '无论 AI 是在你的代码仓库里工作，还是在 ObjectOS 聊天面板里工作，产出都是由人审阅并拥有的同一种 ObjectStack 类型化元数据。整份定义小到 Agent 能整体装下：objectstack README 自带的示例 CRM——对象、视图、仪表盘、线索转化流程、权限集、动作、翻译——可以端到端读完，并在一次变更里整体重构。',
         items: [
           {
             title: '在源码里，用你的编码 Agent',
@@ -73,7 +73,7 @@ const page = {
           },
           {
             title: '一切留痕',
-            body: '每次 Ask 的查询与动作都和人的操作一样写入审计日志，审查方式完全相同。',
+            body: '在 ObjectOS Business 与企业版中，Ask 的查询与动作和人的操作一样写入审计日志，审查方式完全相同。',
           },
         ],
       },
@@ -86,15 +86,15 @@ const page = {
         items: [
           {
             title: 'Agent 写源码文件',
-            body: 'Claude Code、Cursor 或任意编码 Agent 直接编辑仓库中的 ObjectStack 定义，审阅就是普通的 git diff。',
+            body: 'npm create objectstack@latest 生成项目并写入 AGENTS.md，Claude Code、Cursor 或任意编码 Agent 一开始就带着协议规则；它直接编辑仓库中的 ObjectStack 定义，npx os dev --ui 把它渲染出来，审阅就是普通的 git diff。',
           },
           {
             title: '任意 MCP 客户端可问询',
             body: 'MCP 服务器把对象、查询和动作暴露给你运行的任何模型——托管的或完全本地的。',
           },
           {
-            title: '同一运行时，同一规则',
-            body: '权限、审批和审计的执行方式完全一致。版本只改变谁来托管 AI，从不改变治理方式。',
+            title: '同一运行时，治理按版本',
+            body: '在开源运行时上，MCP 工具调用在调用者权限内执行并写入审计日志。ObjectOS 按版本提供产品内 AI：免费版可试用，团队版提供产品内 AI Build 与 Ask，AI 治理——动作审计、护栏、权限限定——从商业版起提供。',
           },
         ],
       },
@@ -103,20 +103,22 @@ const page = {
       columns: ['版本', 'AI 如何构建', 'AI 如何回答'],
       rows: [
         ['开源 ObjectStack', '编码 Agent 编辑元数据源码文件，以 git diff 审阅', '任意 MCP 客户端用你自己的模型查询受治理对象'],
-        ['ObjectOS 云端 Team 与 Business', '产品内 AI Build 起草变更，审批把守结构', '产品内 AI Ask 回答问题并执行已批准动作'],
-        ['ObjectOS 企业版', '同上，另支持私有部署与自带模型', '同上，另支持本地模型与内部身份系统'],
+        ['ObjectOS 云端免费版', '产品内 AI Build 试用', '产品内 AI Ask 试用'],
+        ['ObjectOS 云端团队版', '产品内 AI Build 起草变更，审批把守结构', '产品内 AI Ask 回答问题并执行已批准动作'],
+        ['ObjectOS 商业版（云端）', '同上，另加 AI 治理：动作审计、护栏、权限限定', '同上，Ask 的查询与动作受审计与护栏约束'],
+        ['ObjectOS 企业版（自管）', '同上，部署在你自己的基础设施上，另支持自带模型', '同上，另支持本地模型与内部身份系统'],
       ],
     },
     faqs: [
       {
         question: '怎么防止 AI 弄坏生产环境？',
         answer:
-          'ObjectStack 运行时强制三条保证：结构性变更必须经人审批；每个动作都在发起用户的权限之内执行；一切都被审计。ObjectOS 把这套审批与审计闭环提供在生产产品中，因此 AI 可以快速起草，却无法悄悄上线。',
+          'ObjectStack 运行时对任何经 MCP 工作的 Agent 强制两条保证：结构性变更必须经人审批；每次工具调用都在发起用户的权限之内执行并被审计。ObjectOS 商业版与企业版为产品内 AI 另加 AI 治理——动作审计、护栏、权限限定——因此 AI 可以快速起草，却无法悄悄上线。',
       },
       {
         question: '用的是什么模型？',
         answer:
-          '云端版本由托管模型驱动 AI Build 与 Ask。开源 ObjectStack 自带模型——任意兼容 MCP 的客户端或本地模型。企业版支持在私有部署中自带模型。',
+          '云端版本由托管模型驱动 AI Build 与 Ask。开源 ObjectStack 自带模型——任意兼容 MCP 的客户端或本地模型。自管部署的 ObjectOS 企业版（含单节点入门选项商业版自管）自带模型或密钥。',
       },
     ],
   } satisfies MarketingPage;

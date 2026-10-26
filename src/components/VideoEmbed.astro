@@ -16,6 +16,13 @@
  * The frame is a fixed 16/9 box — the same shape as the player that replaces
  * the poster — so clicking play swaps the contents without moving anything
  * below it on the page.
+ *
+ * The poster's words are HTML over a text-free artwork (`posterText`), not
+ * part of the image. Baked into the SVG they were English in every locale,
+ * and a 360px phone drew the 1600px-wide card at 0.2x, its sub-line at about
+ * 5px. As HTML the title is the caller's localized string, the type is sized
+ * to the frame (container units) with a floor, and the play badge and the
+ * title share one layout, so the badge cannot cover the title.
  */
 interface Props {
   /** Video id — the part after `youtu.be/`. */
@@ -26,14 +33,44 @@ interface Props {
   poster: string;
   /** Accessible label for the play button, already localized. */
   playLabel: string;
+  /**
+   * The words drawn on the poster, already localized: an eyebrow, a title in
+   * two lines (the second in the accent colour) and an optional sub-line.
+   * Decorative, so hidden from assistive tech; the play label names the frame.
+   */
+  posterText?: { eyebrow?: string; title: [string, string]; note?: string };
 }
 
-const { videoId, title, poster, playLabel } = Astro.props;
+const { videoId, title, poster, playLabel, posterText } = Astro.props;
+// The eyebrow wraps only between its " · " parts, never inside one (a 360px
+// phone broke "APACHE- / 2.0"); the separator stays with the part before it.
+const eyebrowParts = posterText?.eyebrow?.split(' · ') ?? [];
 ---
 
 <div class="video-embed" data-video-embed data-video-id={videoId} data-video-title={title}>
   <button type="button" class="video-play" aria-label={playLabel}>
     <img src={poster} alt="" width="1600" height="900" loading="eager" decoding="async" />
+    {
+      posterText && (
+        <span class="video-poster-text" aria-hidden="true">
+          {eyebrowParts.length > 0 && (
+            <span class="poster-eyebrow">
+              {eyebrowParts.map((part, i) => (
+                <>
+                  {i > 0 && ' '}
+                  <span class="poster-eyebrow-part">{i < eyebrowParts.length - 1 ? `${part} ·` : part}</span>
+                </>
+              ))}
+            </span>
+          )}
+          <span class="poster-title">
+            <span>{posterText.title[0]}</span>
+            <span class="poster-title-accent">{posterText.title[1]}</span>
+          </span>
+          {posterText.note && <span class="poster-note">{posterText.note}</span>}
+        </span>
+      )
+    }
     <span class="video-scrim" aria-hidden="true"></span>
     <span class="video-badge" aria-hidden="true">
       <svg viewBox="0 0 24 24" width="34" height="34" aria-hidden="true" focusable="false">
@@ -46,6 +83,7 @@ const { videoId, title, poster, playLabel } = Astro.props;
 <style>
   .video-embed {
     position: relative;
+    container-type: inline-size;
     aspect-ratio: 16 / 9;
     overflow: hidden;
     border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
@@ -71,6 +109,95 @@ const { videoId, title, poster, playLabel } = Astro.props;
     width: 100%;
     height: 100%;
     object-fit: cover;
+  }
+  /* The poster's words, placed where the 1600x900 artwork used to draw them
+     (eyebrow baseline at y=146, title lines at 660 and 782, sub-line at 846,
+     left edge at x=110): 1cqw is 16 artwork units. Same face and colours as
+     the old artwork. */
+  .video-poster-text {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 0 6.9cqw 2.65cqw;
+    color: #f4f7f2;
+    font-family: Inter, 'Helvetica Neue', Arial, sans-serif;
+    text-align: left;
+    pointer-events: none;
+  }
+  .poster-eyebrow {
+    position: absolute;
+    top: 7.4cqw;
+    left: 6.9cqw;
+    right: 22cqw;
+    color: #6ee7b7;
+    font-size: max(10px, 1.875cqw);
+    font-weight: 750;
+    letter-spacing: 0.147em;
+    line-height: 1.25;
+  }
+  .poster-eyebrow-part {
+    white-space: nowrap;
+  }
+  .poster-title {
+    display: flex;
+    flex-direction: column;
+    font-size: 7.625cqw;
+    font-weight: 800;
+    letter-spacing: -0.016em;
+    line-height: 1;
+  }
+  .poster-title-accent {
+    color: #34d399;
+  }
+  .poster-note {
+    margin-top: 0.95cqw;
+    color: #aab6ad;
+    font-size: 1.94cqw;
+    font-weight: 500;
+    line-height: 1.2;
+  }
+  /* Below 560px of frame the sub-line would be under 11px: it is left out
+     rather than drawn unreadable. The eyebrow keeps its 10px floor with
+     tighter tracking. The badge moves up and shrinks so it sits between the
+     eyebrow and the title instead of on the title's first line, which it
+     covered at 390 and 360. */
+  @container (max-width: 560px) {
+    .poster-note {
+      display: none;
+    }
+    .poster-eyebrow {
+      letter-spacing: 0.08em;
+    }
+  }
+  @container (max-width: 400px) {
+    .poster-eyebrow {
+      font-size: 9.5px;
+      letter-spacing: 0.04em;
+    }
+  }
+  @container (max-width: 560px) {
+    .video-play .video-badge {
+      top: 40%;
+      width: 52px;
+      height: 52px;
+    }
+    .video-play .video-badge svg {
+      width: 24px;
+      height: 24px;
+      margin-left: 4px;
+    }
+  }
+  /* Below 400px the longer translated eyebrows ("OFFENES PROTOKOLL & RUNTIME
+     · APACHE-2.0", es, fr) wrap to two lines, and at 40% the badge's top edge
+     met the second line's box at 360. At 44% the badge keeps about 6px above a
+     two-line eyebrow and about 17px above the title at 360, and sits centred
+     between a one-line eyebrow and the title instead of 10px under it. */
+  @container (max-width: 400px) {
+    .video-play .video-badge {
+      top: 44%;
+    }
   }
   .video-scrim {
     position: absolute;

@@ -93,6 +93,7 @@ const page = {
         ['Procurement', 'Request, Supplier, PO, Invoice', 'Budget overrides, supplier risk, payment-impacting writes'],
         ['CRM workspace', 'Account, Opportunity, Case, Activity', 'Customer contact policy, field visibility, sales-stage changes'],
         ['Manufacturing', 'Asset, Work Order, Part, Inspection', 'Safety notes, maintenance state, inventory-impacting actions'],
+        ['Employee service', 'Policy, Request, Approval, Employee', 'Employee-data visibility, request routing, policy answers'],
       ],
     },
     checklistTitle: 'Pilot selection checklist',
