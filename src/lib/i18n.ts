@@ -93,7 +93,10 @@ interface Strings {
     product: string;
     developers: string;
     resources: string;
-    docs: string;
+    /** docs.objectos.ai — the product documentation. */
+    productDocs: string;
+    /** objectstack.ai — the developer site: the open protocol, SDK, CLI and docs. */
+    developerDocs: string;
     menu: string;
     productTour: string;
     platform: string;
@@ -167,7 +170,8 @@ const en: Strings = {
     product: 'Product',
     developers: 'Developers',
     resources: 'Resources',
-    docs: 'Docs',
+    productDocs: 'Product docs',
+    developerDocs: 'Developer docs & protocol',
     menu: 'Menu',
     productTour: 'Product tour',
     platform: 'Platform overview',
@@ -228,7 +232,8 @@ const zhHans: Strings = {
     product: '产品',
     developers: '开发者',
     resources: '资源',
-    docs: '文档',
+    productDocs: '产品文档',
+    developerDocs: '开发者文档与协议',
     menu: '菜单',
     productTour: '产品导览',
     platform: '平台总览',
@@ -289,7 +294,8 @@ const ja: Strings = {
     product: '製品',
     developers: '開発者',
     resources: 'リソース',
-    docs: 'Docs',
+    productDocs: '製品ドキュメント',
+    developerDocs: '開発者ドキュメントとプロトコル',
     menu: 'メニュー',
     productTour: 'プロダクトツアー',
     platform: 'プラットフォーム概要',
@@ -350,7 +356,8 @@ const de: Strings = {
     product: 'Produkt',
     developers: 'Entwickler',
     resources: 'Ressourcen',
-    docs: 'Docs',
+    productDocs: 'Produktdokumentation',
+    developerDocs: 'Entwicklerdokumentation & Protokoll',
     menu: 'Menü',
     productTour: 'Produkt-Tour',
     platform: 'Plattform-Überblick',
@@ -411,7 +418,8 @@ const es: Strings = {
     product: 'Producto',
     developers: 'Desarrolladores',
     resources: 'Recursos',
-    docs: 'Docs',
+    productDocs: 'Documentación del producto',
+    developerDocs: 'Documentación para desarrolladores y protocolo',
     menu: 'Menú',
     productTour: 'Recorrido del producto',
     platform: 'Resumen de plataforma',
@@ -472,7 +480,8 @@ const fr: Strings = {
     product: 'Produit',
     developers: 'Développeurs',
     resources: 'Ressources',
-    docs: 'Docs',
+    productDocs: 'Documentation produit',
+    developerDocs: 'Documentation développeur et protocole',
     menu: 'Menu',
     productTour: 'Visite du produit',
     platform: 'Aperçu de la plateforme',
@@ -533,7 +542,8 @@ const ko: Strings = {
     product: '제품',
     developers: '개발자',
     resources: '리소스',
-    docs: '문서',
+    productDocs: '제품 문서',
+    developerDocs: '개발자 문서 및 프로토콜',
     menu: '메뉴',
     productTour: '제품 둘러보기',
     platform: '플랫폼 개요',
@@ -595,7 +605,8 @@ const toHant = (s: Strings): Strings => ({
     product: s2t(s.siteNav.product),
     developers: s2t(s.siteNav.developers),
     resources: s2t(s.siteNav.resources),
-    docs: s2t(s.siteNav.docs),
+    productDocs: s2t(s.siteNav.productDocs),
+    developerDocs: s2t(s.siteNav.developerDocs),
     menu: s2t(s.siteNav.menu),
     productTour: s2t(s.siteNav.productTour),
     platform: s2t(s.siteNav.platform),
