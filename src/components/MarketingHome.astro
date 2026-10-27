@@ -4,7 +4,7 @@ import heroImage from '../assets/objectos-home-hero.png';
 import { getPostsInLocale } from '../lib/posts';
 import { blogPath, formatDate, pricingPath, postPath, ui, type Locale } from '../lib/i18n';
 import { homeCopy } from '../lib/home';
-import { heroLineJoin } from '../lib/positioning';
+import { heroLineJoin, OBJECTSTACK_URL, positioning } from '../lib/positioning';
 import { phraseHtml } from '../../scripts/lib/cjk-phrases.mjs';
 import { termBySlug, termHref, termLabel } from '../lib/terms';
 import { CLUSTERS, clusterPath } from '../lib/clusters';
@@ -29,6 +29,10 @@ interface Props {
 
 const { locale } = Astro.props;
 const copy = homeCopy[locale];
+// The one protocol link on the page: E1 names the three ObjectOS editions, and
+// this link, right under it, says what they are built on and sends the
+// developer to objectstack.ai. Nothing else on the home page links that site.
+const protocolLink = positioning[locale].protocol;
 const posterSplit = copy.videoCaption.match(/^(ObjectStack(?: [\u3040-\u309f]+)?) (.+)$/u);
 const posterTitle: [string, string] = posterSplit ? [posterSplit[1], posterSplit[2]] : [copy.videoCaption, ''];
 // The H1 is the canonical T1 split over two lines; `positioning.ts` asserts the
@@ -124,6 +128,7 @@ const HERO_SIZES = '(min-width: 898px) 910px, calc(120vw - 2.4rem)';
     <p class="eyebrow"><span></span> <Fragment set:html={ph(copy.eyebrow)} /></p>
     <h1><span class="title-line" set:html={ph(copy.hero[0])} />{lineJoin}<strong set:html={ph(copy.hero[1])} /></h1>
     <p class="hero-lead">{copy.heroLead}</p>
+    <a class="text-link hero-protocol-link" href={OBJECTSTACK_URL}>{protocolLink} <span aria-hidden="true">→</span></a>
     <div class="hero-actions">
       <a class="button primary" href={pricingPath(locale)}>{copy.primaryCta} <span>→</span></a>
       <a class="button secondary" href={productTourHref}>{copy.secondaryCta}</a>
@@ -548,6 +553,13 @@ const HERO_SIZES = '(min-width: 898px) 910px, calc(120vw - 2.4rem)';
     font-size: 1.08rem;
     line-height: 1.85;
     max-width: 35rem;
+    margin-bottom: 0.9rem;
+  }
+  /* The protocol link sits between the lead and the CTA row, as the lead's
+     secondary line, so the row keeps the lead's old 1.8rem clearance. The
+     hero is a centred flex column, so the link centres itself too. */
+  .hero-protocol-link {
+    align-self: center;
     margin-bottom: 1.8rem;
   }
   /* Desktop measure and leading for the lead, which runs T2, T4 and E1
@@ -1225,7 +1237,11 @@ const HERO_SIZES = '(min-width: 898px) 910px, calc(120vw - 2.4rem)';
       margin-top: 0.25rem;
       margin-bottom: 2rem;
     }
-    .hero > .hero-lead {
+    .hero > .hero-lead,
+    .hero > .hero-protocol-link {
+      /* Same order value: flex keeps source order within it, so the link
+         stays right under the lead on a phone instead of falling to the top
+         as an unordered child would. */
       order: 4;
     }
     .hero > .hero-actions {
