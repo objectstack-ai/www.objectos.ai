@@ -130,8 +130,21 @@ interface Strings {
     primaryNav: string;
     browseNav: string;
     mobileNav: string;
-    /** Accessible name of the home page's topic-cluster links. */
+    /** Visible label and accessible name of the footer's topic-cluster row. */
     topicClusters: string;
+    /**
+     * Accessible name of the home page's own topic-cluster strip. It differs
+     * from `topicClusters` because the footer row is on the home page too, and
+     * two navigation landmarks with one name cannot be told apart (axe
+     * `landmark-unique`).
+     */
+    featuredClusters: string;
+    /**
+     * Name and tooltip of a language-switcher option for a locale this article
+     * has no translation in; the option opens that locale's blog instead. It
+     * starts with the language's own name, which is the option's visible text.
+     */
+    langUnavailable: (lang: string) => string;
   };
   getStarted: string;
   skipToContent: string;
@@ -200,6 +213,8 @@ const en: Strings = {
     browseNav: 'Browse',
     mobileNav: 'Mobile',
     topicClusters: 'Topic clusters',
+    featuredClusters: 'Featured topic clusters',
+    langUnavailable: (lang) => `${lang} — this article is not available in this language; opens the blog`,
   },
   getStarted: 'Get started',
   skipToContent: 'Skip to content',
@@ -262,6 +277,8 @@ const zhHans: Strings = {
     browseNav: '浏览',
     mobileNav: '移动端导航',
     topicClusters: '专题导航',
+    featuredClusters: '精选专题',
+    langUnavailable: (lang) => `${lang}——本文暂无该语言版本，将打开该语言的博客`,
   },
   getStarted: '开始使用',
   skipToContent: '跳到正文',
@@ -324,6 +341,8 @@ const ja: Strings = {
     browseNav: 'ブラウズ',
     mobileNav: 'モバイルナビゲーション',
     topicClusters: 'トピッククラスター',
+    featuredClusters: '注目のトピッククラスター',
+    langUnavailable: (lang) => `${lang} — この記事にはこの言語の版がありません。ブログ一覧を開きます`,
   },
   getStarted: 'はじめる',
   skipToContent: '本文へ移動',
@@ -386,6 +405,8 @@ const de: Strings = {
     browseNav: 'Durchstöbern',
     mobileNav: 'Mobile Navigation',
     topicClusters: 'Themencluster',
+    featuredClusters: 'Ausgewählte Themencluster',
+    langUnavailable: (lang) => `${lang} – dieser Artikel ist in dieser Sprache nicht verfügbar; öffnet den Blog`,
   },
   getStarted: 'Loslegen',
   skipToContent: 'Zum Inhalt springen',
@@ -448,6 +469,8 @@ const es: Strings = {
     browseNav: 'Explorar',
     mobileNav: 'Navegación móvil',
     topicClusters: 'Grupos temáticos',
+    featuredClusters: 'Grupos temáticos destacados',
+    langUnavailable: (lang) => `${lang}: este artículo no está disponible en este idioma; abre el blog`,
   },
   getStarted: 'Empezar',
   skipToContent: 'Saltar al contenido',
@@ -510,6 +533,8 @@ const fr: Strings = {
     browseNav: 'Parcourir',
     mobileNav: 'Navigation mobile',
     topicClusters: 'Groupes thématiques',
+    featuredClusters: 'Groupes thématiques à la une',
+    langUnavailable: (lang) => `${lang} : cet article n’est pas disponible dans cette langue ; ouvre le blog`,
   },
   getStarted: 'Commencer',
   skipToContent: 'Aller au contenu',
@@ -572,6 +597,8 @@ const ko: Strings = {
     browseNav: '둘러보기',
     mobileNav: '모바일 메뉴',
     topicClusters: '주제 클러스터',
+    featuredClusters: '추천 주제 클러스터',
+    langUnavailable: (lang) => `${lang} — 이 글은 이 언어로 제공되지 않습니다. 블로그 목록으로 이동합니다`,
   },
   getStarted: '시작하기',
   skipToContent: '본문으로 건너뛰기',
@@ -635,6 +662,10 @@ const toHant = (s: Strings): Strings => ({
     browseNav: s2t(s.siteNav.browseNav),
     mobileNav: s2t(s.siteNav.mobileNav),
     topicClusters: s2t(s.siteNav.topicClusters),
+    featuredClusters: s2t(s.siteNav.featuredClusters),
+    // The language name is spliced in after conversion: s2t would rewrite a
+    // Simplified-script name such as 简体中文.
+    langUnavailable: (lang) => s2t(s.siteNav.langUnavailable('{lang}')).replace('{lang}', lang),
   },
   getStarted: s2t(s.getStarted),
   skipToContent: s2t(s.skipToContent),
