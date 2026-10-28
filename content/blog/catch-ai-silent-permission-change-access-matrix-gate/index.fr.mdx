@@ -1,6 +1,6 @@
 ---
 title: "Comment attraper un changement de permission silencieux fait par une AI avant qu'il ne parte en production ? La porte de snapshot de la matrice d'accès, mesurée sur un CRM à 7 entrées"
-description: "Sur @objectstack/cli 17.7.0, os validate laisse passer allowDelete false→true sans un mot. Dans une app qui a opté, os compile fait échouer le build avec une ligne : qui gagne quoi, tant qu'un humain n'a pas régénéré le snapshot."
+description: "Sur @objectstack/cli 18.2.0, os validate laisse passer allowDelete false→true sans un mot. Dans une app qui a opté, os compile fait échouer le build avec une ligne : qui gagne quoi, tant qu'un humain n'a pas régénéré le snapshot."
 author: ObjectStack Team
 date: 2026-10-23
 status: published
@@ -15,13 +15,13 @@ tags:
   - Diff relisible
 ---
 
-**La réponse d'abord.** `os validate` ne lit pas la *valeur* d'`allowDelete` : un agent qui la fait passer de `false` à `true` sur un jeu de permissions passe la validation sans la moindre remarque. C'est ce que [la checklist de revue](/en/blog/how-to-review-ai-generated-app-changes/) appelle « aucune règle ne se déclenche », et cela reste vrai. Il existe une porte qui se déclenche, si l'app y a opté : une **matrice d'accès** committée, une ligne par (jeu de permissions × objet) portant les bits effectifs create, read, edit et delete, que `os compile` redérive des métadonnées à chaque build et compare au snapshot. Une dérive fait échouer le build avec une ligne sémantique, `'crm_sales_user' gains delete on 'crm_opportunity'`, jusqu'à ce qu'un humain régénère le snapshot, et le git diff du snapshot est ce que le relecteur signe. Mesuré sur le `@objectstack/cli` 17.7.0 publié, la version qu'installe `npm create objectstack@latest`, sur l'exemple CRM fourni, dont la matrice compte **sept entrées** : une modification, une ligne de dérive, une ligne de JSON changée.
+**La réponse d'abord.** `os validate` ne lit pas la *valeur* d'`allowDelete` : un agent qui la fait passer de `false` à `true` sur un jeu de permissions passe la validation sans la moindre remarque. C'est ce que [la checklist de revue](/en/blog/how-to-review-ai-generated-app-changes/) appelle « aucune règle ne se déclenche », et cela reste vrai. Il existe une porte qui se déclenche, si l'app y a opté : une **matrice d'accès** committée, une ligne par (jeu de permissions × objet) portant les bits effectifs create, read, edit et delete, que `os compile` redérive des métadonnées à chaque build et compare au snapshot. Une dérive fait échouer le build avec une ligne sémantique, `'crm_sales_user' gains delete on 'crm_opportunity'`, jusqu'à ce qu'un humain régénère le snapshot, et le git diff du snapshot est ce que le relecteur signe. Mesuré sur le `@objectstack/cli` 18.2.0 publié, la version qu'installe `npm create objectstack@latest`, sur l'exemple CRM fourni, dont la matrice compte **sept entrées** : une modification, une ligne de dérive, une ligne de JSON changée.
 
 Le concept à retenir de cet article est **la capacité effective, pas les drapeaux bruts** : la matrice rapporte ce qu'un jeu de permissions peut réellement *faire* une fois les bits super-utilisateur repliés, avec la ligne de base des enregistrements de l'objet sur la même ligne. Le changement a toujours besoin d'un humain. Il ne peut simplement plus être silencieux.
 
 ## Le changement, et les deux commandes
 
-La cible est `examples/app-crm` du dépôt ObjectStack au tag `@objectstack/cli@17.7.0`, installé contre les paquets 17.7.0 publiés plutôt que contre le monorepo. Elle a opté pour la porte : un `access-matrix.json` se trouve à côté d'`objectstack.config.ts`. La modification est celle que l'article de revue a parcourue, un mot à la ligne 45 de `src/security/sales-positions.ts` :
+La cible est `examples/app-crm` du dépôt ObjectStack au tag `@objectstack/cli@18.2.0`, installé contre les paquets 18.2.0 publiés plutôt que contre le monorepo. Elle a opté pour la porte : un `access-matrix.json` se trouve à côté d'`objectstack.config.ts`. La modification est celle que l'article de revue a parcourue, un mot à la ligne 50 de `src/security/sales-positions.ts` :
 
 ```diff
   export const SalesUserPermissionSet = definePermissionSet({
@@ -38,33 +38,34 @@ Première porte, `npx os validate`. La sortie est réduite aux lignes qui compte
 
 ```text
 $ npx os --version
-@objectstack/cli/17.7.0 linux-x64 node-v22.22.2
+@objectstack/cli/18.2.0 linux-x64 node-v22.22.0
 
 $ npx os validate
 ◆ Validate
   → Loading configuration...
   → Validating against ObjectStack Protocol...
-  → Running author-time rules (49)...
+  → Running author-time rules (53)...
   → Checking that every required capability has a provider installable in this edition...
   → Checking package docs (ADR-0046)...
 
-  ✓ Validation passed (684ms)
+  ✓ Validation passed (824ms)
   Security: 3 Positions  2 Permissions
 $ echo $?
 0
 ```
 
-Quarante-neuf règles de temps d'écriture ont tourné. Aucune n'a d'avis sur le fait que les commerciaux devraient ou non supprimer des opportunités, parce que c'est un fait sur votre entreprise et non sur les métadonnées. La phrase de l'article de revue est exacte : les deux valeurs sont valides, les deux sont applicables, le runtime appliquera celle que vous fusionnez.
+Cinquante-trois règles de temps d'écriture ont tourné. Aucune n'a d'avis sur le fait que les commerciaux devraient ou non supprimer des opportunités, parce que c'est un fait sur votre entreprise et non sur les métadonnées. La phrase de l'article de revue est exacte : les deux valeurs sont valides, les deux sont applicables, le runtime appliquera celle que vous fusionnez.
 
-Deuxième porte, `npx os compile`. Même configuration, mêmes 49 règles, puis une étape que `validate` n'a pas :
+Deuxième porte, `npx os compile`. Même configuration, mêmes 53 règles, puis une étape que `validate` n'a pas :
 
 ```text
 $ npx os compile
 ◆ Compile
   → Loading configuration...
   → Normalizing stack definition...
+  → Lowering inline handlers...
   → Validating protocol compliance...
-  → Running author-time rules (49)...
+  → Running author-time rules (53)...
   → Checking that every required capability has a provider installable in this edition...
   → Checking access-matrix snapshot (ADR-0090 D6)...
 
@@ -75,14 +76,15 @@ $ echo $?
 1
 ```
 
-`os build` est la même commande sous un autre nom (dans le code source de la CLI 17.7.0, `Build extends Compile`) et échoue avec la même ligne. Avec `--json`, l'échec devient une charge utile qu'une étape de CI peut lire :
+`os build` est la même commande sous un autre nom (dans le code source de la CLI 18.2.0, `Build extends Compile`) et échoue avec la même ligne. Avec `--json`, l'échec devient une charge utile qu'une étape de CI peut lire :
 
 ```json
 { "success": false, "error": "access matrix drift",
-  "changes": ["'crm_sales_user' gains delete on 'crm_opportunity'"] }
+  "changes": ["'crm_sales_user' gains delete on 'crm_opportunity'"],
+  "warnings": [ … ], "conversions": [] }
 ```
 
-![Deux commandes, une porte : os validate exécute les 49 règles de temps d'écriture et passe, parce qu'aucune règle ne lit la valeur d'allowDelete ; os compile exécute les mêmes règles, puis dérive la matrice d'accès des métadonnées, la compare à l'access-matrix.json committé et fait échouer le build avec une ligne sémantique jusqu'à ce qu'un humain régénère le snapshot et committe son diff](./two-commands-one-gate-en.svg)
+![Deux commandes, une porte : os validate exécute les 53 règles de temps d'écriture et passe, parce qu'aucune règle ne lit la valeur d'allowDelete ; os compile exécute les mêmes règles, puis dérive la matrice d'accès des métadonnées, la compare à l'access-matrix.json committé et fait échouer le build avec une ligne sémantique jusqu'à ce qu'un humain régénère le snapshot et committe son diff](./two-commands-one-gate-en.svg)
 
 C'est là tout le mécanisme, et le reste de cet article porte sur ce que la ligne signifie, sur la raison pour laquelle elle dit *delete* alors que le code source disait `allowDelete`, et sur ce que la porte ne fait pas.
 
@@ -96,10 +98,10 @@ AI drafts permission metadata on this platform; the one thing it must never do i
 
 (Sur cette plateforme, l'AI rédige des métadonnées de permissions ; la seule chose qu'elle ne doit jamais faire est de changer *en silence* qui peut faire quoi. La porte de la matrice d'accès fait de chaque changement de capacité un **événement de build visible et relisible** : la matrice (jeu de permissions × objet) est dérivée purement des métadonnées à chaque `os compile`, comparée à un snapshot committé, et toute dérive **fait échouer le build** avec une explication sémantique jusqu'à ce qu'un humain régénère le snapshot.)
 
-Trois faits à son sujet, chacun vérifié sur 17.7.0 :
+Trois faits à son sujet, chacun vérifié sur 18.2.0 :
 
-- **Elle est par app et optionnelle.** On committe un `access-matrix.json` à côté d'`objectstack.config.ts` ; le premier se génère avec `os compile --update-access-matrix`. Pas de fichier, pas de porte : la CLI lit le chemin une fois et traite un fichier absent comme « n'a pas opté ». Les deux exemples fournis, `app-crm` et `app-showcase`, sont livrés avec la porte activée. Un échafaudage neuf de `npm create objectstack@latest` ne l'est pas : le modèle 17.7.0 ne contient aucun `access-matrix.json`, la première commande de l'activation vous revient donc.
-- **Ce n'est pas l'une des 49 règles.** Le code source de la CLI la classe comme « pas une règle du registre : elle lit (et, avec le drapeau, écrit) un fichier à côté de la configuration au lieu de répondre à une question sur la stack ». C'est pourquoi `validate` et `lint` ne la voient jamais : ils exécutent le registre, et la porte du snapshot habite dans `compile`.
+- **Elle est par app et optionnelle.** On committe un `access-matrix.json` à côté d'`objectstack.config.ts` ; le premier se génère avec `os compile --update-access-matrix`. Pas de fichier, pas de porte : la CLI lit le chemin une fois et traite un fichier absent comme « n'a pas opté ». Les deux exemples fournis, `app-crm` et `app-showcase`, sont livrés avec la porte activée. Un échafaudage neuf de `npm create objectstack@latest` ne l'est pas : le modèle 18.2.0 ne contient aucun `access-matrix.json`, la première commande de l'activation vous revient donc.
+- **Ce n'est pas l'une des 53 règles.** Le code source de la CLI la classe comme « pas une règle du registre : elle lit (et, avec le drapeau, écrit) un fichier à côté de la configuration au lieu de répondre à une question sur la stack ». C'est pourquoi `validate` et `lint` ne la voient jamais : ils exécutent le registre, et la porte du snapshot habite dans `compile`.
 - **Elle est petite.** La matrice committée complète du CRM compte sept entrées, et sept lignes sont toutes les autorisations que l'app déclare : six objets pour `crm_sales_user` et une ligne d'insertion seule pour le profil anonyme `guest_portal` derrière le formulaire public web-to-lead.
 
 | Jeu de permissions | Objet | create | read | edit | delete | View All | Modify All | Ligne de base des enregistrements (OWD) |
@@ -130,7 +132,7 @@ Sur le disque, chaque ligne est un objet JSON. La ligne `crm_opportunity`, avant
 }
 ```
 
-Les lignes de dérive sont générées à partir d'un diff de deux tableaux de ce genre, et il existe exactement cinq formes de ligne. C'est le vocabulaire qu'un relecteur va lire, les voici donc, tirées du code source 17.7.0 de `diffAccessMatrix` :
+Les lignes de dérive sont générées à partir d'un diff de deux tableaux de ce genre, et il existe exactement cinq formes de ligne. C'est le vocabulaire qu'un relecteur va lire, les voici donc, tirées du code source 18.2.0 de `diffAccessMatrix` :
 
 | Ce qui a changé | La ligne |
 | :--- | :--- |
@@ -144,7 +146,7 @@ Notre modification est la troisième forme. La ligne dit *gains delete* plutôt 
 
 ## La capacité effective, pas les drapeaux bruts
 
-Regardez de nouveau la ligne ci-dessus. Elle a une colonne `delete`, pas une colonne `allowDelete`, et la différence est délibérée : la matrice rapporte la capacité **effective**. Dans la spécification 17.7.0, une seule fonction décide si une permission d'objet accorde un verbe, et c'est la même fonction que la porte d'application du runtime interroge avant de répondre 403. Son repli, tiré d'`objectPermissionGrants` dans `@objectstack/spec` :
+Regardez de nouveau la ligne ci-dessus. Elle a une colonne `delete`, pas une colonne `allowDelete`, et la différence est délibérée : la matrice rapporte la capacité **effective**. Dans la spécification 18.2.0, une seule fonction décide si une permission d'objet accorde un verbe, et c'est la même fonction que la porte d'application du runtime interroge avant de répondre 403. Son repli, tiré d'`objectPermissionGrants` dans `@objectstack/spec` :
 
 - `read` est vrai quand `allowRead` est vrai, **ou** `viewAllRecords` est vrai, **ou** `modifyAllRecords` est vrai.
 - `edit`, `delete` et `transfer` sont vrais quand leur propre bit est vrai **ou** `modifyAllRecords` est vrai.
@@ -153,9 +155,9 @@ Regardez de nouveau la ligne ci-dessus. Elle a une colonne `delete`, pas une col
 
 Le propre commentaire de la spécification sur la raison pour laquelle ce n'est pas `permission[target] === true` décrit l'écart entre déclaré et appliqué « tourné dans le sens dangereux : un prédicat qui cache une action au seul administrateur qui a le pouvoir de l'utiliser ». Une matrice construite à partir des bits `allow*` bruts aurait le même angle mort. La matrice interroge donc le repli, et les deux colonnes super-utilisateur restent à côté en bits bruts, parce qu'elles sont le contexte dans lequel un relecteur lit les colonnes CRUD.
 
-![La capacité effective, pas les drapeaux bruts : les six bits bruts d'un jeu de permissions traversent le repli de la spécification, objectPermissionGrants, où View All et Modify All élargissent read, edit et delete et où create n'a pas de raccourci, et aboutissent à une ligne de matrice dont create, read, edit et delete sont effectifs, dont les colonnes View All et Modify All sont les bits bruts gardés comme contexte, et qui porte la ligne de base des enregistrements de l'objet ; mesuré sur 17.7.0, passer modifyAllRecords à true en laissant allowDelete à false produit deux lignes de dérive, gains delete et gains Modify All Data](./effective-not-raw-en.svg)
+![La capacité effective, pas les drapeaux bruts : les six bits bruts d'un jeu de permissions traversent le repli de la spécification, objectPermissionGrants, où View All et Modify All élargissent read, edit et delete et où create n'a pas de raccourci, et aboutissent à une ligne de matrice dont create, read, edit et delete sont effectifs, dont les colonnes View All et Modify All sont les bits bruts gardés comme contexte, et qui porte la ligne de base des enregistrements de l'objet ; mesuré sur 18.2.0, remplacer allowDelete false par modifyAllRecords true sur la ligne, une ligne source qui ne nomme aucun delete, produit deux lignes de dérive, gains delete et gains Modify All Data](./effective-not-raw-en.svg)
 
-La conséquence mesurable : une autre modification d'une seule clé sur la même ligne, en laissant `allowDelete: false` exactement tel quel et en ajoutant `modifyAllRecords: true`, produit deux lignes au lieu d'une, et la première est le delete que personne n'a tapé :
+La conséquence mesurable : une autre modification d'une seule ligne sur la même ligne, en remplaçant `allowDelete: false` par `modifyAllRecords: true`, produit deux lignes au lieu d'une, et la première est le delete que personne n'a tapé :
 
 ```text
 $ npx os compile
@@ -164,7 +166,19 @@ $ npx os compile
   • 'crm_sales_user' gains Modify All Data on 'crm_opportunity'
 ```
 
-`npx os validate` sur cette modification : `✓ Validation passed (575ms)`. Le drapeau brut dit toujours `false` ; la matrice dit `true`, parce que le runtime laisserait passer la suppression, et le travail de la matrice est de dire au relecteur ce que dirait le 403, pas ce que dit le fichier source.
+`npx os validate` sur cette modification : `✓ Validation passed (732ms)`. La ligne source ne dit plus rien de delete ; la matrice dit `true`, parce que le runtime laisserait passer la suppression, et le travail de la matrice est de dire au relecteur ce que dirait le 403, pas ce que dit le fichier source.
+
+Une paire que la spécification n'accepte plus, et c'est la modification évidente à essayer : laisser `allowDelete: false` en place et ajouter `modifyAllRecords: true` à côté. Avant 18.2.0, cette paire se chargeait, et la matrice était la seule porte qui signalait le delete ainsi accordé. Depuis 18.2.0, la spécification la refuse avant qu'une règle ou une porte ne s'exécute, `validate` sort en 1 et `compile` en 2, avec le même message :
+
+```text
+$ npx os validate
+  ✗ [ { "code": "custom", "path": ["objects", "crm_opportunity", "allowDelete"],
+        "message": "allowDelete: false is refused beside modifyAllRecords: true since @objectstack/spec 18 (ADR-0049): Modify All Records is the write bypass for edit, delete and transfer, and the permission evaluator grants delete on the bypass bit before it reads allowDelete, so this false is never enforced. …" } ]
+$ echo $?
+1
+```
+
+C'est le repli ci-dessus, appliqué une porte plus tôt : un `false` que le runtime ignorerait est désormais une erreur de schéma et non un mensonge silencieux, et ce que signifie l'écriture acceptée, c'est la ligne de la matrice qui le dit.
 
 La dernière colonne compte pour la même raison. La deuxième passe de l'article de revue vous disait de lire le `sharingModel` d'un objet même quand le diff n'y touche pas, parce que `public_read_write` sur un objet de démonstration copié signifie lecture et écriture pour toute l'organisation, toutes portes au vert. Ici la ligne de base est sur la ligne, à côté de l'autorisation, et un changement de ligne de base est une ligne de dérive à part entière, marquée *affects every principal*, parce qu'un basculement de l'OWD change d'un coup ce que signifie chaque ligne de cet objet.
 
@@ -178,7 +192,7 @@ $ npx os compile --update-access-matrix
   → Access matrix snapshot written to access-matrix.json (ADR-0090 D6) — review the diff.
   → Writing artifact...
 
-  ✓ Build complete (592ms)
+  ✓ Build complete (1121ms)
 
 $ git diff -U8 access-matrix.json
 @@ -46,17 +46,17 @@
@@ -199,7 +213,7 @@ $ git diff -U8 access-matrix.json
 
 $ npx os compile
   → Checking access-matrix snapshot (ADR-0090 D6)...
-  ✓ Build complete (508ms)
+  ✓ Build complete (702ms)
 ```
 
 Deux notes pratiques tirées de l'exécution. Le drapeau réécrit tout le fichier sans condition ; après une régénération, comparez donc le nombre de hunks dans `access-matrix.json` au nombre de lignes sémantiques imprimées par le compile en échec : une ligne, un hunk, et tout ce qui dépasse est un changement que vous n'avez pas demandé. Et lisez le hunk avec `-U8` plutôt qu'avec les trois lignes de contexte par défaut. Les clés `permissionSet` et `object` de la ligne se trouvent cinq et six lignes au-dessus du bit modifié ; un `git diff` par défaut vous montre `"delete": false → true` avec le nom de la ligne coupé, et la ligne sémantique du compile devient alors la seule chose qui vous dise *de qui* était ce delete.
@@ -222,7 +236,7 @@ La documentation résume le lien entre les deux derniers en une phrase : la matr
 
 Cinq limites, dites franchement, parce que la phrase « le build attrape les changements de permissions » est de celles qu'on répète sans leurs conditions.
 
-1. **Elle est optionnelle, et désactivée par défaut.** Un échafaudage 17.7.0 neuf n'a pas de snapshot, donc pas de porte. L'activation tient en une commande et un fichier committé, et la pull request qui ajoute ce fichier est celle à relire avec le plus de soin : ce snapshot est la ligne de base contre laquelle chaque diff ultérieur sera lu.
+1. **Elle est optionnelle, et désactivée par défaut.** Un échafaudage 18.2.0 neuf n'a pas de snapshot, donc pas de porte. L'activation tient en une commande et un fichier committé, et la pull request qui ajoute ce fichier est celle à relire avec le plus de soin : ce snapshot est la ligne de base contre laquelle chaque diff ultérieur sera lu.
 2. **Elle tourne dans `compile` et `build`, jamais dans `validate` ni `lint`.** Mesuré plus haut : la même modification, `validate` en exit 0 sans mention de la matrice, `compile` en exit 1. Une chaîne de CI qui exécute `os validate` et déclare l'app vérifiée n'a pas exécuté cette porte.
 3. **Elle rend le changement visible, pas impossible.** `--update-access-matrix` est un drapeau, et un agent peut l'exécuter et committer lui-même le nouveau snapshot. Ce que l'agent ne peut pas faire, c'est faire disparaître le changement de capacité de la pull request : la ligne est dans le diff, qu'un humain ou un modèle l'ait régénérée. Le troisième échelon de l'échelle de revue, *est-ce correct ?*, reste celui du relecteur, et l'apport de la porte est que la question arrive désormais avec la forme de la réponse sur une seule ligne.
 4. **Son périmètre est (jeu de permissions × objet).** Create, read, edit, delete, les deux bits super-utilisateur, la profondeur de lecture et d'écriture, et la ligne de base de l'objet. Pas la sécurité au niveau des champs, pas les règles de partage, pas les prédicats au niveau des lignes, pas quels utilisateurs détiennent le jeu (ce sont des données de runtime, comme le disent déjà les limites de l'article de revue), et pas ce que fait le corps d'une action une fois qu'il s'exécute.

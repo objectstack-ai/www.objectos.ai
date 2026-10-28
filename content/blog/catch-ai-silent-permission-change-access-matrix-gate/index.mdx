@@ -1,6 +1,6 @@
 ---
 title: "How Do You Catch an AI's Silent Permission Change Before It Ships? The Access-Matrix Snapshot Gate, on a 7-Entry CRM"
-description: "On @objectstack/cli 17.7.0, os validate passes an agent's allowDelete false-to-true flip with no finding. os compile on an opted-in app fails the build with one line naming who gains what, until a human regenerates the snapshot."
+description: "On @objectstack/cli 18.2.0, os validate passes an agent's allowDelete false-to-true flip with no finding. os compile on an opted-in app fails the build with one line naming who gains what, until a human regenerates the snapshot."
 author: ObjectStack Team
 date: 2026-10-23
 status: published
@@ -15,13 +15,13 @@ tags:
   - Reviewable diff
 ---
 
-**Answer first.** `os validate` does not read the *value* of `allowDelete`, so an agent that flips it from `false` to `true` on a permission set passes validation with no finding. That is what [the review checklist](/en/blog/how-to-review-ai-generated-app-changes/) means by "no rule fires", and it stays true. There is one gate that does fire, if the app opts in: a committed **access matrix**, one row per (permission set × object) carrying the effective create, read, edit and delete bits, which `os compile` re-derives from the metadata on every build and diffs against the snapshot. Drift fails the build with a semantic line, `'crm_sales_user' gains delete on 'crm_opportunity'`, until a human regenerates the snapshot, and the snapshot's git diff is what the reviewer signs. Measured on the published `@objectstack/cli` 17.7.0, the version `npm create objectstack@latest` installs, against the bundled CRM example whose matrix has **seven entries**: one edit, one drift line, one changed line of JSON.
+**Answer first.** `os validate` does not read the *value* of `allowDelete`, so an agent that flips it from `false` to `true` on a permission set passes validation with no finding. That is what [the review checklist](/en/blog/how-to-review-ai-generated-app-changes/) means by "no rule fires", and it stays true. There is one gate that does fire, if the app opts in: a committed **access matrix**, one row per (permission set × object) carrying the effective create, read, edit and delete bits, which `os compile` re-derives from the metadata on every build and diffs against the snapshot. Drift fails the build with a semantic line, `'crm_sales_user' gains delete on 'crm_opportunity'`, until a human regenerates the snapshot, and the snapshot's git diff is what the reviewer signs. Measured on the published `@objectstack/cli` 18.2.0, the version `npm create objectstack@latest` installs, against the bundled CRM example whose matrix has **seven entries**: one edit, one drift line, one changed line of JSON.
 
 The concept worth keeping from this post is **effective capability, not raw flags**: the matrix reports what a permission set can actually *do* once the super-user bits are folded in, with the object's record baseline on the same row. The change still needs a human. It can no longer be silent.
 
 ## The change, and the two commands
 
-The target is `examples/app-crm` from the ObjectStack repository at the tag `@objectstack/cli@17.7.0`, installed against the published 17.7.0 packages rather than the monorepo. It is opted in: an `access-matrix.json` sits next to `objectstack.config.ts`. The edit is the one the review post worked through, and it is one word on line 45 of `src/security/sales-positions.ts`:
+The target is `examples/app-crm` from the ObjectStack repository at the tag `@objectstack/cli@18.2.0`, installed against the published 18.2.0 packages rather than the monorepo. It is opted in: an `access-matrix.json` sits next to `objectstack.config.ts`. The edit is the one the review post worked through, and it is one word on line 50 of `src/security/sales-positions.ts`:
 
 ```diff
   export const SalesUserPermissionSet = definePermissionSet({
@@ -38,33 +38,34 @@ First door, `npx os validate`. The output is trimmed to the lines that matter; n
 
 ```text
 $ npx os --version
-@objectstack/cli/17.7.0 linux-x64 node-v22.22.2
+@objectstack/cli/18.2.0 linux-x64 node-v22.22.0
 
 $ npx os validate
 ◆ Validate
   → Loading configuration...
   → Validating against ObjectStack Protocol...
-  → Running author-time rules (49)...
+  → Running author-time rules (53)...
   → Checking that every required capability has a provider installable in this edition...
   → Checking package docs (ADR-0046)...
 
-  ✓ Validation passed (684ms)
+  ✓ Validation passed (824ms)
   Security: 3 Positions  2 Permissions
 $ echo $?
 0
 ```
 
-Forty-nine author-time rules ran. None of them has an opinion about whether sales representatives should delete opportunities, because that is a fact about your company and not about the metadata. The review post's sentence is exactly right: both values are valid, both are enforceable, the runtime will enforce whichever one you merge.
+Fifty-three author-time rules ran. None of them has an opinion about whether sales representatives should delete opportunities, because that is a fact about your company and not about the metadata. The review post's sentence is exactly right: both values are valid, both are enforceable, the runtime will enforce whichever one you merge.
 
-Second door, `npx os compile`. Same configuration, same 49 rules, and then one more step that `validate` does not have:
+Second door, `npx os compile`. Same configuration, same 53 rules, and then one more step that `validate` does not have:
 
 ```text
 $ npx os compile
 ◆ Compile
   → Loading configuration...
   → Normalizing stack definition...
+  → Lowering inline handlers...
   → Validating protocol compliance...
-  → Running author-time rules (49)...
+  → Running author-time rules (53)...
   → Checking that every required capability has a provider installable in this edition...
   → Checking access-matrix snapshot (ADR-0090 D6)...
 
@@ -75,14 +76,15 @@ $ echo $?
 1
 ```
 
-`os build` is the same command under another name (in the 17.7.0 CLI source, `Build extends Compile`), and it fails with the same line. With `--json`, the failure is a payload a CI step can read:
+`os build` is the same command under another name (in the 18.2.0 CLI source, `Build extends Compile`), and it fails with the same line. With `--json`, the failure is a payload a CI step can read:
 
 ```json
 { "success": false, "error": "access matrix drift",
-  "changes": ["'crm_sales_user' gains delete on 'crm_opportunity'"] }
+  "changes": ["'crm_sales_user' gains delete on 'crm_opportunity'"],
+  "warnings": [ … ], "conversions": [] }
 ```
 
-![Two commands, one gate: os validate runs the 49 author-time rules and passes, because no rule reads the value of allowDelete; os compile runs the same rules, then derives the access matrix from the metadata, diffs it against the committed access-matrix.json, and fails the build with a semantic line until a human regenerates the snapshot and commits its diff](./two-commands-one-gate-en.svg)
+![Two commands, one gate: os validate runs the 53 author-time rules and passes, because no rule reads the value of allowDelete; os compile runs the same rules, then derives the access matrix from the metadata, diffs it against the committed access-matrix.json, and fails the build with a semantic line until a human regenerates the snapshot and commits its diff](./two-commands-one-gate-en.svg)
 
 That is the whole mechanism, and the rest of this post is about what the line means, why it says *delete* when the source said `allowDelete`, and what the gate does not do.
 
@@ -92,10 +94,10 @@ The ObjectStack docs describe it in one paragraph, worth quoting rather than par
 
 > AI drafts permission metadata on this platform; the one thing it must never do is *silently* change who can do what. The access-matrix gate makes every capability change a **visible, reviewable build event**: the (permission set × object) matrix is derived purely from metadata on every `os compile`, diffed against a committed snapshot, and any drift **fails the build** with a semantic explanation until a human regenerates the snapshot.
 
-Three facts about it, each checked on 17.7.0:
+Three facts about it, each checked on 18.2.0:
 
-- **It is per-app and opt-in.** Commit an `access-matrix.json` next to `objectstack.config.ts`; generate the first one with `os compile --update-access-matrix`. No file, no gate: the CLI reads the path once and treats a missing file as "not opted in". The two bundled examples, `app-crm` and `app-showcase`, ship opted in. A fresh `npm create objectstack@latest` scaffold does not: the 17.7.0 template contains no `access-matrix.json`, so the first command of the opt-in is yours to run.
-- **It is not one of the 49 rules.** The CLI source files it under "not a registry rule: it reads (and with the flag, writes) a file next to the config rather than answering a question about the stack." That is why `validate` and `lint` never see it: they run the registry, and the snapshot gate lives in `compile`.
+- **It is per-app and opt-in.** Commit an `access-matrix.json` next to `objectstack.config.ts`; generate the first one with `os compile --update-access-matrix`. No file, no gate: the CLI reads the path once and treats a missing file as "not opted in". The two bundled examples, `app-crm` and `app-showcase`, ship opted in. A fresh `npm create objectstack@latest` scaffold does not: the 18.2.0 template contains no `access-matrix.json`, so the first command of the opt-in is yours to run.
+- **It is not one of the 53 rules.** The CLI source files it under "not a registry rule: it reads (and with the flag, writes) a file next to the config rather than answering a question about the stack." That is why `validate` and `lint` never see it: they run the registry, and the snapshot gate lives in `compile`.
 - **It is small.** The CRM's whole committed matrix is seven entries, and seven rows is every grant the app declares: six objects for `crm_sales_user` and one insert-only row for the anonymous `guest_portal` profile behind the public web-to-lead form.
 
 | Permission set | Object | create | read | edit | delete | View All | Modify All | Record baseline (OWD) |
@@ -126,7 +128,7 @@ On disk, each row is one JSON object. The `crm_opportunity` row, before the edit
 }
 ```
 
-The drift lines are generated from a diff of two such tables, and there are exactly five shapes of line. They are the vocabulary a reviewer is going to read, so here they are, from the 17.7.0 source of `diffAccessMatrix`:
+The drift lines are generated from a diff of two such tables, and there are exactly five shapes of line. They are the vocabulary a reviewer is going to read, so here they are, from the 18.2.0 source of `diffAccessMatrix`:
 
 | What changed | The line |
 | :--- | :--- |
@@ -140,7 +142,7 @@ Our edit is the third shape. The line says *gains delete* rather than quoting th
 
 ## Effective capability, not raw flags
 
-Look again at the row above. It has a `delete` column, not an `allowDelete` column, and the difference is deliberate: the matrix reports **effective** capability. In the 17.7.0 spec, one function decides whether an object permission grants a verb, and it is the same function the runtime's enforcement door asks before it answers 403. Its fold, from `objectPermissionGrants` in `@objectstack/spec`:
+Look again at the row above. It has a `delete` column, not an `allowDelete` column, and the difference is deliberate: the matrix reports **effective** capability. In the 18.2.0 spec, one function decides whether an object permission grants a verb, and it is the same function the runtime's enforcement door asks before it answers 403. Its fold, from `objectPermissionGrants` in `@objectstack/spec`:
 
 - `read` is true when `allowRead` is true, **or** `viewAllRecords` is true, **or** `modifyAllRecords` is true.
 - `edit`, `delete` and `transfer` are true when their own bit is true **or** `modifyAllRecords` is true.
@@ -149,9 +151,9 @@ Look again at the row above. It has a `delete` column, not an `allowDelete` colu
 
 The spec's own comment on why it is not `permission[target] === true` is the declared-versus-enforced gap "pointed the dangerous way round: a predicate hiding an action from the one administrator who holds the power to use it." A matrix built from the raw `allow*` bits would have the same blind spot. So the matrix asks the fold, and the two super-user columns are kept as raw bits beside it, because they are the context a reviewer reads the CRUD columns against.
 
-![Effective capability, not raw flags: the six raw bits on a permission set pass through the spec's fold, objectPermissionGrants, where View All and Modify All widen read, edit and delete and create has no bypass, and land as one matrix row whose create, read, edit and delete are effective, whose View All and Modify All columns are the raw bits kept as context, and which carries the object's record baseline; measured on 17.7.0, setting modifyAllRecords true while allowDelete stays false produces two drift lines, gains delete and gains Modify All Data](./effective-not-raw-en.svg)
+![Effective capability, not raw flags: the six raw bits on a permission set pass through the spec's fold, objectPermissionGrants, where View All and Modify All widen read, edit and delete and create has no bypass, and land as one matrix row whose create, read, edit and delete are effective, whose View All and Modify All columns are the raw bits kept as context, and which carries the object's record baseline; measured on 18.2.0, replacing allowDelete false with modifyAllRecords true on the row, one source line that names no delete, produces two drift lines, gains delete and gains Modify All Data](./effective-not-raw-en.svg)
 
-The measurable consequence: a different one-key edit on the same row, leaving `allowDelete: false` exactly as it was and adding `modifyAllRecords: true`, produces two lines rather than one, and the first of them is the delete nobody typed:
+The measurable consequence: a different one-line edit on the same row, replacing `allowDelete: false` with `modifyAllRecords: true`, produces two lines rather than one, and the first of them is the delete nobody typed:
 
 ```text
 $ npx os compile
@@ -160,7 +162,19 @@ $ npx os compile
   • 'crm_sales_user' gains Modify All Data on 'crm_opportunity'
 ```
 
-`npx os validate` on that edit: `✓ Validation passed (575ms)`. The raw flag still says `false`; the matrix says `true`, because the runtime would let the delete through, and the matrix's job is to tell the reviewer what the 403 would say, not what the source file says.
+`npx os validate` on that edit: `✓ Validation passed (732ms)`. The source line no longer says anything about delete; the matrix says `true`, because the runtime would let the delete through, and the matrix's job is to tell the reviewer what the 403 would say, not what the source file says.
+
+One pair the spec no longer accepts, and it is the obvious edit to try: leaving `allowDelete: false` in place and adding `modifyAllRecords: true` beside it. Before 18.2.0 that pair loaded, and the matrix was the only door that reported the delete it granted. Since 18.2.0 the spec refuses it before any rule or gate runs, `validate` exit 1 and `compile` exit 2 with the same message:
+
+```text
+$ npx os validate
+  ✗ [ { "code": "custom", "path": ["objects", "crm_opportunity", "allowDelete"],
+        "message": "allowDelete: false is refused beside modifyAllRecords: true since @objectstack/spec 18 (ADR-0049): Modify All Records is the write bypass for edit, delete and transfer, and the permission evaluator grants delete on the bypass bit before it reads allowDelete, so this false is never enforced. …" } ]
+$ echo $?
+1
+```
+
+That is the fold above, enforced one door earlier: a `false` the runtime would ignore is now a schema error rather than a silent lie, and what the accepted spelling means is what the matrix row says.
 
 The last column matters for the same reason. The review post's second pass told you to read an object's `sharingModel` even when the diff does not touch it, because `public_read_write` on a copied demo object is org-wide read and write with every gate green. Here the baseline sits on the row next to the grant, and a baseline change is its own drift line, marked *affects every principal*, because an OWD swing changes what every row for that object means at once.
 
@@ -174,7 +188,7 @@ $ npx os compile --update-access-matrix
   → Access matrix snapshot written to access-matrix.json (ADR-0090 D6) — review the diff.
   → Writing artifact...
 
-  ✓ Build complete (592ms)
+  ✓ Build complete (1121ms)
 
 $ git diff -U8 access-matrix.json
 @@ -46,17 +46,17 @@
@@ -195,7 +209,7 @@ $ git diff -U8 access-matrix.json
 
 $ npx os compile
   → Checking access-matrix snapshot (ADR-0090 D6)...
-  ✓ Build complete (508ms)
+  ✓ Build complete (702ms)
 ```
 
 Two practical notes from running it. The flag rewrites the whole file unconditionally, so after a regeneration compare the number of hunks in `access-matrix.json` with the number of semantic lines the failing compile printed: one line, one hunk, and anything extra is a change you did not ask for. And read the hunk with `-U8` rather than the default three lines of context. The row's `permissionSet` and `object` keys sit five and six lines above the changed bit, so a default `git diff` shows you `"delete": false → true` with the row's name cut off, and the semantic line from the compile is then the only thing telling you *whose* delete it was.
@@ -218,7 +232,7 @@ The docs put the relationship between the last two in one sentence: the matrix "
 
 Five limits, stated plainly, because the sentence "the build catches permission changes" is the kind that gets repeated without its conditions.
 
-1. **It is opt-in, and the default is off.** A fresh 17.7.0 scaffold has no snapshot, so it has no gate. The opt-in is one command and one committed file, and the pull request that adds the file is the one to review most carefully: that snapshot is the baseline every later diff is read against.
+1. **It is opt-in, and the default is off.** A fresh 18.2.0 scaffold has no snapshot, so it has no gate. The opt-in is one command and one committed file, and the pull request that adds the file is the one to review most carefully: that snapshot is the baseline every later diff is read against.
 2. **It runs in `compile` and `build`, never in `validate` or `lint`.** Measured above: the same edit, `validate` exit 0 with no mention of the matrix, `compile` exit 1. A CI pipeline that runs `os validate` and calls the app checked has not run this gate.
 3. **It makes the change visible, not impossible.** `--update-access-matrix` is one flag, and an agent can run it and commit the new snapshot itself. What the agent cannot do is make the capability change disappear from the pull request: the row is in the diff whether a human or a model regenerated it. The third rung of the review ladder, *is this right*, is still the reviewer's, and the gate's contribution is that the question now arrives with the answer's shape on one line.
 4. **Its scope is (permission set × object).** Create, read, edit, delete, the two super-user bits, read and write depth, and the object's baseline. Not field-level security, not sharing rules, not row-level predicates, not which users hold the set (that is runtime data, as the review post's limits already say), and not what an action body does once it runs.

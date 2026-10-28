@@ -1,6 +1,6 @@
 ---
 title: 怎样在上线前抓住 AI 悄悄改掉的权限？访问矩阵快照门禁，在一张 7 条记录的 CRM 矩阵上实测
-description: 在 @objectstack/cli 17.7.0 上，os validate 对 Agent 把 allowDelete 从 false 改成 true 毫无发现；在选择加入的应用里，os compile 会让构建失败，并用一行话说清谁多了什么权限，直到有人重新生成快照。
+description: 在 @objectstack/cli 18.2.0 上，os validate 对 Agent 把 allowDelete 从 false 改成 true 毫无发现；在选择加入的应用里，os compile 会让构建失败，并用一行话说清谁多了什么权限，直到有人重新生成快照。
 author: ObjectStack Team
 date: 2026-10-23
 status: published
@@ -15,13 +15,13 @@ tags:
   - 可评审的 diff
 ---
 
-**先说答案。** `os validate` 不读取 `allowDelete` 的*值*，所以 Agent 把某个权限集上的这个键从 `false` 改成 `true`，验证照样通过，没有任何发现。这就是[那篇评审清单](/en/blog/how-to-review-ai-generated-app-changes/)说的「没有规则被触发」，而且这句话现在依然成立。但有一道门禁会被触发——前提是应用选择加入：一份提交进仓库的**访问矩阵**，每个（权限集 × 对象）一行，记录有效的 create、read、edit、delete 位；`os compile` 每次构建都会从元数据重新推导这张矩阵，再与快照比对。只要有漂移，构建就失败，并打印一行语义化的说明——`'crm_sales_user' gains delete on 'crm_opportunity'`——直到有人重新生成快照；而快照的 git diff，就是评审人要签字的东西。全部在已发布的 `@objectstack/cli` 17.7.0 上实测，也就是 `npm create objectstack@latest` 装上的那个版本，对象是自带的 CRM 示例，它的矩阵共有**七条记录**：一处改动，一行漂移，一行 JSON 变化。
+**先说答案。** `os validate` 不读取 `allowDelete` 的*值*，所以 Agent 把某个权限集上的这个键从 `false` 改成 `true`，验证照样通过，没有任何发现。这就是[那篇评审清单](/en/blog/how-to-review-ai-generated-app-changes/)说的「没有规则被触发」，而且这句话现在依然成立。但有一道门禁会被触发——前提是应用选择加入：一份提交进仓库的**访问矩阵**，每个（权限集 × 对象）一行，记录有效的 create、read、edit、delete 位；`os compile` 每次构建都会从元数据重新推导这张矩阵，再与快照比对。只要有漂移，构建就失败，并打印一行语义化的说明——`'crm_sales_user' gains delete on 'crm_opportunity'`——直到有人重新生成快照；而快照的 git diff，就是评审人要签字的东西。全部在已发布的 `@objectstack/cli` 18.2.0 上实测，也就是 `npm create objectstack@latest` 装上的那个版本，对象是自带的 CRM 示例，它的矩阵共有**七条记录**：一处改动，一行漂移，一行 JSON 变化。
 
 这篇文章值得记住的概念是：**有效能力，不是原始标志位**。矩阵报告的是把超级用户位折叠进去之后，一个权限集到底*能做什么*，并把对象的记录基线写在同一行。改动仍然需要人来判断，但它再也无法悄无声息。
 
 ## 这处改动，和两条命令
 
-对象是 ObjectStack 仓库里 `@objectstack/cli@17.7.0` 标签下的 `examples/app-crm`，装的是已发布的 17.7.0 包，而不是 monorepo。它已经选择加入：`objectstack.config.ts` 旁边放着一份 `access-matrix.json`。改动就是评审那篇文章走过的那一处，`src/security/sales-positions.ts` 第 45 行，一个词：
+对象是 ObjectStack 仓库里 `@objectstack/cli@18.2.0` 标签下的 `examples/app-crm`，装的是已发布的 18.2.0 包，而不是 monorepo。它已经选择加入：`objectstack.config.ts` 旁边放着一份 `access-matrix.json`。改动就是评审那篇文章走过的那一处，`src/security/sales-positions.ts` 第 50 行，一个词：
 
 ```diff
   export const SalesUserPermissionSet = definePermissionSet({
@@ -38,33 +38,34 @@ tags:
 
 ```text
 $ npx os --version
-@objectstack/cli/17.7.0 linux-x64 node-v22.22.2
+@objectstack/cli/18.2.0 linux-x64 node-v22.22.0
 
 $ npx os validate
 ◆ Validate
   → Loading configuration...
   → Validating against ObjectStack Protocol...
-  → Running author-time rules (49)...
+  → Running author-time rules (53)...
   → Checking that every required capability has a provider installable in this edition...
   → Checking package docs (ADR-0046)...
 
-  ✓ Validation passed (684ms)
+  ✓ Validation passed (824ms)
   Security: 3 Positions  2 Permissions
 $ echo $?
 0
 ```
 
-四十九条作者期规则跑完了。没有一条对「销售代表该不该删除商机」有看法，因为那是关于你公司的事实，不是关于元数据的事实。评审那篇文章的句子一字不差地成立：两个值都合法，两个值都可执行，你合并哪个，运行时就执行哪个。
+五十三条作者期规则跑完了。没有一条对「销售代表该不该删除商机」有看法，因为那是关于你公司的事实，不是关于元数据的事实。评审那篇文章的句子一字不差地成立：两个值都合法，两个值都可执行，你合并哪个，运行时就执行哪个。
 
-第二道门，`npx os compile`。同一份配置，同样的 49 条规则，然后多了一步 `validate` 没有的：
+第二道门，`npx os compile`。同一份配置，同样的 53 条规则，然后多了一步 `validate` 没有的：
 
 ```text
 $ npx os compile
 ◆ Compile
   → Loading configuration...
   → Normalizing stack definition...
+  → Lowering inline handlers...
   → Validating protocol compliance...
-  → Running author-time rules (49)...
+  → Running author-time rules (53)...
   → Checking that every required capability has a provider installable in this edition...
   → Checking access-matrix snapshot (ADR-0090 D6)...
 
@@ -75,14 +76,15 @@ $ echo $?
 1
 ```
 
-`os build` 是同一条命令的另一个名字（在 17.7.0 的 CLI 源码里，`Build extends Compile`），它以同一行失败。加上 `--json`，失败就是一份 CI 步骤能读的载荷：
+`os build` 是同一条命令的另一个名字（在 18.2.0 的 CLI 源码里，`Build extends Compile`），它以同一行失败。加上 `--json`，失败就是一份 CI 步骤能读的载荷：
 
 ```json
 { "success": false, "error": "access matrix drift",
-  "changes": ["'crm_sales_user' gains delete on 'crm_opportunity'"] }
+  "changes": ["'crm_sales_user' gains delete on 'crm_opportunity'"],
+  "warnings": [ … ], "conversions": [] }
 ```
 
-![两条命令，一道门禁：os validate 跑 49 条作者期规则并通过，因为没有规则读取 allowDelete 的值；os compile 跑同一批规则，然后从元数据推导出访问矩阵，与已提交的 access-matrix.json 比对，并以一行语义化说明让构建失败，直到有人重新生成快照并提交它的 diff](./two-commands-one-gate.svg)
+![两条命令，一道门禁：os validate 跑 53 条作者期规则并通过，因为没有规则读取 allowDelete 的值；os compile 跑同一批规则，然后从元数据推导出访问矩阵，与已提交的 access-matrix.json 比对，并以一行语义化说明让构建失败，直到有人重新生成快照并提交它的 diff](./two-commands-one-gate.svg)
 
 机制就这么多。文章接下来讲这一行是什么意思、源码里写的明明是 `allowDelete` 为什么它说 *delete*，以及这道门禁不做什么。
 
@@ -96,10 +98,10 @@ AI drafts permission metadata on this platform; the one thing it must never do i
 
 （AI 在这个平台上起草权限元数据；它唯一绝不能做的事，是*悄悄*改变谁能做什么。访问矩阵门禁把每一次能力变化都变成**看得见、可评审的构建事件**：（权限集 × 对象）矩阵在每次 `os compile` 时纯粹由元数据推导，与已提交的快照比对，任何漂移都会**让构建失败**并给出语义化解释，直到有人重新生成快照。）
 
-关于它的三个事实，每一条都在 17.7.0 上核对过：
+关于它的三个事实，每一条都在 18.2.0 上核对过：
 
-- **按应用、选择加入。** 在 `objectstack.config.ts` 旁边提交一份 `access-matrix.json`；第一份用 `os compile --update-access-matrix` 生成。没有文件，就没有门禁：CLI 只读一次这个路径，文件不存在就当作「未选择加入」。自带的两个示例 `app-crm` 和 `app-showcase` 都已加入。而一个新的 `npm create objectstack@latest` 脚手架没有：17.7.0 的模板里不含 `access-matrix.json`，所以加入的第一条命令得由你来跑。
-- **它不是那 49 条规则之一。** CLI 源码把它归为「不是注册表规则：它读取（带上标志时还会写入）配置旁边的一个文件，而不是回答一个关于栈的问题」。这正是 `validate` 和 `lint` 永远看不到它的原因：它们跑的是注册表，而快照门禁住在 `compile` 里。
+- **按应用、选择加入。** 在 `objectstack.config.ts` 旁边提交一份 `access-matrix.json`；第一份用 `os compile --update-access-matrix` 生成。没有文件，就没有门禁：CLI 只读一次这个路径，文件不存在就当作「未选择加入」。自带的两个示例 `app-crm` 和 `app-showcase` 都已加入。而一个新的 `npm create objectstack@latest` 脚手架没有：18.2.0 的模板里不含 `access-matrix.json`，所以加入的第一条命令得由你来跑。
+- **它不是那 53 条规则之一。** CLI 源码把它归为「不是注册表规则：它读取（带上标志时还会写入）配置旁边的一个文件，而不是回答一个关于栈的问题」。这正是 `validate` 和 `lint` 永远看不到它的原因：它们跑的是注册表，而快照门禁住在 `compile` 里。
 - **它很小。** CRM 已提交的整张矩阵只有七条记录，而七行就是这个应用声明的全部授权：`crm_sales_user` 的六个对象，加上公开 web-to-lead 表单背后匿名 `guest_portal` 配置那一条只能新建的记录。
 
 | 权限集 | 对象 | create | read | edit | delete | View All | Modify All | 记录基线（OWD） |
@@ -130,7 +132,7 @@ AI drafts permission metadata on this platform; the one thing it must never do i
 }
 ```
 
-漂移行由两张这样的表做 diff 生成，而且行的形态恰好只有五种。它们是评审人将要阅读的词汇，所以按 17.7.0 里 `diffAccessMatrix` 的源码列在这里：
+漂移行由两张这样的表做 diff 生成，而且行的形态恰好只有五种。它们是评审人将要阅读的词汇，所以按 18.2.0 里 `diffAccessMatrix` 的源码列在这里：
 
 | 发生了什么 | 打印的行 |
 | :--- | :--- |
@@ -144,7 +146,7 @@ AI drafts permission metadata on this platform; the one thing it must never do i
 
 ## 有效能力，不是原始标志位
 
-再看一眼上面那一行。它有一列 `delete`，而不是 `allowDelete`，这个差别是有意为之：矩阵报告的是**有效**能力。在 17.7.0 的规范里，由一个函数决定一条对象权限是否授予某个动作，而运行时的执行门在回答 403 之前问的也是同一个函数。它的折叠规则，出自 `@objectstack/spec` 里的 `objectPermissionGrants`：
+再看一眼上面那一行。它有一列 `delete`，而不是 `allowDelete`，这个差别是有意为之：矩阵报告的是**有效**能力。在 18.2.0 的规范里，由一个函数决定一条对象权限是否授予某个动作，而运行时的执行门在回答 403 之前问的也是同一个函数。它的折叠规则，出自 `@objectstack/spec` 里的 `objectPermissionGrants`：
 
 - `read` 为真，当 `allowRead` 为真，**或** `viewAllRecords` 为真，**或** `modifyAllRecords` 为真。
 - `edit`、`delete`、`transfer` 为真，当各自的位为真**或** `modifyAllRecords` 为真。
@@ -153,9 +155,9 @@ AI drafts permission metadata on this platform; the one thing it must never do i
 
 规范自己对「为什么不是 `permission[target] === true`」的注释，说的是声明与执行之间的缺口「指向危险的那一边：一个谓词把某个动作藏起来，不让唯一有权使用它的管理员看见」。一张用原始 `allow*` 位拼出来的矩阵会有同一个盲点。所以矩阵去问折叠，而两个超级用户列作为原始位留在旁边，因为它们是评审人阅读 CRUD 列时的上下文。
 
-![有效能力，不是原始标志位：权限集上的六个原始位经过规范的折叠 objectPermissionGrants——View All 与 Modify All 扩大 read、edit、delete，create 没有旁路——落成矩阵的一行：create、read、edit、delete 是有效位，View All 与 Modify All 列是作为上下文保留的原始位，并带着对象的记录基线；在 17.7.0 上实测，把 modifyAllRecords 设为 true 而 allowDelete 保持 false，会产生两条漂移行：gains delete 与 gains Modify All Data](./effective-not-raw.svg)
+![有效能力，不是原始标志位：权限集上的六个原始位经过规范的折叠 objectPermissionGrants——View All 与 Modify All 扩大 read、edit、delete，create 没有旁路——落成矩阵的一行：create、read、edit、delete 是有效位，View All 与 Modify All 列是作为上下文保留的原始位，并带着对象的记录基线；在 18.2.0 上实测，把这一行的 allowDelete false 换成 modifyAllRecords true——一行不含 delete 一词的源码——会产生两条漂移行：gains delete 与 gains Modify All Data](./effective-not-raw.svg)
 
-可以测量的后果是：对同一行做另一处只改一个键的改动，`allowDelete: false` 原样不动，只加上 `modifyAllRecords: true`，得到的是两行而不是一行，而其中第一行就是谁也没有敲过的那个 delete：
+可以测量的后果是：对同一行做另一处只改一行的改动，把 `allowDelete: false` 换成 `modifyAllRecords: true`，得到的是两行而不是一行，而其中第一行就是谁也没有敲过的那个 delete：
 
 ```text
 $ npx os compile
@@ -164,7 +166,19 @@ $ npx os compile
   • 'crm_sales_user' gains Modify All Data on 'crm_opportunity'
 ```
 
-对这处改动跑 `npx os validate`：`✓ Validation passed (575ms)`。原始标志位仍然写着 `false`；矩阵说的是 `true`，因为运行时会放这个删除过去，而矩阵的职责是告诉评审人 403 会怎么说，不是源文件怎么写。
+对这处改动跑 `npx os validate`：`✓ Validation passed (732ms)`。源码那一行已经不再提 delete；矩阵说的是 `true`，因为运行时会放这个删除过去，而矩阵的职责是告诉评审人 403 会怎么说，不是源文件怎么写。
+
+有一种写法规范已经不再接受，而它恰恰是最先会想到的改法：`allowDelete: false` 原样不动，在旁边加上 `modifyAllRecords: true`。18.2.0 之前这个组合能加载，而报告它所授予的那个 delete 的，只有矩阵这一道门。从 18.2.0 起，规范在任何规则或门禁跑起来之前就拒绝它，`validate` 退出码 1，`compile` 退出码 2，消息相同：
+
+```text
+$ npx os validate
+  ✗ [ { "code": "custom", "path": ["objects", "crm_opportunity", "allowDelete"],
+        "message": "allowDelete: false is refused beside modifyAllRecords: true since @objectstack/spec 18 (ADR-0049): Modify All Records is the write bypass for edit, delete and transfer, and the permission evaluator grants delete on the bypass bit before it reads allowDelete, so this false is never enforced. …" } ]
+$ echo $?
+1
+```
+
+这就是上面那个折叠，提前一道门执行：一个运行时本来会忽略的 `false`，现在是 schema 错误而不是无声的谎言；被接受的那种写法意味着什么，由矩阵的那一行来说。
 
 最后一列重要的理由也一样。评审那篇文章的第二遍要求你即使 diff 没碰到某个对象，也要去读它的 `sharingModel`，因为一个照抄来的演示对象上的 `public_read_write`，意味着全组织可读可写，而所有门禁一路绿灯。在这里，基线就写在授权旁边的同一行上，基线的变化是一条独立的漂移行，还标着 *affects every principal*（影响每一个主体），因为 OWD 一摆动，该对象的每一行的含义都同时变了。
 
@@ -178,7 +192,7 @@ $ npx os compile --update-access-matrix
   → Access matrix snapshot written to access-matrix.json (ADR-0090 D6) — review the diff.
   → Writing artifact...
 
-  ✓ Build complete (592ms)
+  ✓ Build complete (1121ms)
 
 $ git diff -U8 access-matrix.json
 @@ -46,17 +46,17 @@
@@ -199,7 +213,7 @@ $ git diff -U8 access-matrix.json
 
 $ npx os compile
   → Checking access-matrix snapshot (ADR-0090 D6)...
-  ✓ Build complete (508ms)
+  ✓ Build complete (702ms)
 ```
 
 跑下来有两条实用的提醒。这个标志会无条件重写整个文件，所以重新生成之后，把 `access-matrix.json` 里的 hunk 数和失败那次 compile 打印的语义行数对一对：一行对一个 hunk，多出来的就是你没要求的变化。另外，读 hunk 时用 `-U8`，别用默认的三行上下文。这一行的 `permissionSet` 和 `object` 键在被改的那一位上方五、六行处，默认的 `git diff` 给你看的是 `"delete": false → true`，却把这一行的名字截掉了，这时能告诉你那是*谁的* delete 的，就只剩 compile 打印的那条语义行。
@@ -222,7 +236,7 @@ $ npx os compile
 
 五条限制，直说，因为「构建会抓住权限变化」这种句子，最容易被去掉条件之后转述。
 
-1. **它是选择加入的，默认关闭。** 一个新的 17.7.0 脚手架没有快照，也就没有门禁。加入只需一条命令和一份提交的文件，而添加这份文件的那个 pull request，正是最该仔细评审的：那份快照是之后每一次 diff 的比对基线。
+1. **它是选择加入的，默认关闭。** 一个新的 18.2.0 脚手架没有快照，也就没有门禁。加入只需一条命令和一份提交的文件，而添加这份文件的那个 pull request，正是最该仔细评审的：那份快照是之后每一次 diff 的比对基线。
 2. **它跑在 `compile` 和 `build` 里，从不跑在 `validate` 或 `lint` 里。** 上面测过了：同一处改动，`validate` exit 0 且完全不提矩阵，`compile` exit 1。一条只跑 `os validate` 就宣布应用已检查的 CI 流水线，并没有跑过这道门禁。
 3. **它让改动变得可见，而不是变得不可能。** `--update-access-matrix` 只是一个标志，Agent 自己也能跑它、自己提交新快照。Agent 做不到的是让能力变化从 pull request 里消失：不管是人还是模型重新生成的，那一行都在 diff 里。评审阶梯的第三级——*这样对吗*——仍然归评审人，门禁的贡献在于，这个问题现在带着答案的形状，用一行话送到你面前。
 4. **它的范围是（权限集 × 对象）。** create、read、edit、delete，两个超级用户位，读写深度，以及对象的基线。不包括字段级安全，不包括共享规则，不包括行级谓词，不包括哪些用户持有这个权限集（那是运行时数据，评审那篇的限制里已经说过），也不包括一个动作体跑起来之后做了什么。
