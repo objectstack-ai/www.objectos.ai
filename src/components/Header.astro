@@ -4,6 +4,7 @@ import {
   blogPath,
   homePath,
   pricingPath,
+  securityPath,
   LOCALES,
   LANG_NATIVE,
   type Locale,
@@ -12,6 +13,7 @@ import { getUsedTerms } from '../lib/posts';
 import { termHref, groupMeta, type TermGroup } from '../lib/terms';
 import { marketingPagePath } from '../content-pages/registry';
 import { glossaryIndexPath } from '../glossary/registry';
+import { CLUSTERS, clusterPath } from '../lib/clusters';
 import { OBJECTSTACK_URL } from '../lib/positioning';
 import Logo from './Logo.astro';
 
@@ -29,9 +31,16 @@ interface Props {
    * is right for page types with no fallback (blog, topics).
    */
   navAlternates?: Partial<Record<Locale, string>>;
+  /**
+   * A blog article. Its browse row (Home / Topics / Audience / Industry)
+   * scrolls away with the page instead of sticking under the bar: on an
+   * article it filters nothing, and sticking cost a 390x844 phone 47px of
+   * reading height on top of the bar's 59.
+   */
+  article?: boolean;
 }
 
-const { locale, alternates = {}, navAlternates } = Astro.props;
+const { locale, alternates = {}, navAlternates, article = false } = Astro.props;
 const switcherTargets = navAlternates ?? alternates;
 const t = ui[locale];
 const pathname = Astro.url.pathname;
@@ -55,12 +64,16 @@ const agentGuideHref = marketingPagePath(locale, 'agent-developer');
 const templatesHref = marketingPagePath(locale, 'templates');
 const storiesHref = marketingPagePath(locale, 'customer-stories');
 const glossaryHref = glossaryIndexPath(locale);
+const compareHref = marketingPagePath(locale, 'compare');
+const securityHref = securityPath(locale);
+const clusterHrefs = CLUSTERS.map((cluster) => clusterPath(locale, cluster.slug));
 
 // Two documentation sites, labelled by role: docs.objectos.ai documents the
 // product, objectstack.ai (`OBJECTSTACK_URL`) is the developer site — the open
 // protocol, SDK, CLI and docs that every ObjectOS edition is built on.
 const DOCS_URL = 'https://docs.objectos.ai';
 const DEVELOPERS_URL = OBJECTSTACK_URL;
+// GitHub is the bar's icon button and a footer link; the menus do not repeat it.
 const GITHUB_URL = 'https://github.com/objectstack-ai/objectstack';
 
 const inBlog = pathname.startsWith(`/${locale}/blog`);
@@ -71,6 +84,29 @@ const inGlossary = pathname.startsWith(glossaryHref);
 // Topic terms feed the Resources menu (only those with content in this locale).
 const topicTerms = (await getUsedTerms('topic', locale)).filter((term) => !term.parent);
 const onTopic = (href: string) => pathname.startsWith(href);
+
+// `aria-current` for an active link: "page" when the link is this very page,
+// "true" when it is the section the page sits in (a glossary term under
+// Glossary, a paged topic hub under its topic).
+const current = (active: boolean, href: string) =>
+  active ? (pathname === href ? 'page' : 'true') : undefined;
+
+// Language switcher targets. A blog page that names its per-locale equivalents
+// but has none in some locale (an article not translated into it) sends the
+// reader to that locale's blog, not its home page, and marks the option
+// unavailable. Every other page type either names all eight locales (its
+// fallback design) or names none (the 404s), and keeps the home-page fallback.
+const namesAlternates = Object.keys(switcherTargets).length > 0;
+const langOptions = LOCALES.map((l) => {
+  const href = switcherTargets[l];
+  const unavailable = !href && inBlog && namesAlternates && l !== locale;
+  return {
+    locale: l,
+    href: href ?? (unavailable ? blogPath(l) : homePath(l)),
+    unavailable,
+    note: unavailable ? t.siteNav.langUnavailable(LANG_NATIVE[l]) : undefined,
+  };
+});
 
 // Primary nav model — one source of truth for both the desktop dropdowns and
 // the mobile drawer, so they can never drift apart. A group with more than one
@@ -100,6 +136,9 @@ const groups: NavGroup[] = [
       pathname === productTourHref ||
       pathname === platformHref ||
       pathname === trustCenterHref ||
+      // Evaluation pages with no menu item of their own.
+      pathname === compareHref ||
+      pathname === securityHref ||
       capabilityItems.some((it) => it.active),
     sections: [
       {
@@ -125,7 +164,6 @@ const groups: NavGroup[] = [
           { label: t.siteNav.agentGuide, href: agentGuideHref, active: pathname === agentGuideHref },
           { label: t.siteNav.productDocs, href: DOCS_URL, external: true, active: false },
           { label: t.siteNav.developerDocs, href: DEVELOPERS_URL, external: true, active: false },
-          { label: 'GitHub', href: GITHUB_URL, external: true, active: false },
           { label: t.siteNav.templates, href: templatesHref, active: pathname === templatesHref },
         ],
       },
@@ -134,7 +172,9 @@ const groups: NavGroup[] = [
   {
     id: 'resources',
     label: t.siteNav.resources,
-    active: inBlog || inGlossary || pathname === storiesHref,
+    // The topic-cluster (pillar) pages have no menu item; they are reading
+    // guides, so they light up Resources.
+    active: inBlog || inGlossary || pathname === storiesHref || clusterHrefs.includes(pathname),
     sections: [
       {
         items: [
@@ -193,6 +233,7 @@ const menus = (
                     <a
                       class:list={['menu-item', { active: it.active }]}
                       href={it.href}
+                      aria-current={current(it.active, it.href)}
                       target={it.external ? '_blank' : undefined}
                       rel={it.external ? 'noopener' : undefined}>
                       {it.label}
@@ -248,12 +289,14 @@ const menus = (
         </button>
         <div class="menu-panel lang-panel" id="menu-lang">
           {
-            LOCALES.map((l) => (
+            langOptions.map((o) => (
               <a
-                class:list={['menu-item', { active: l === locale }]}
-                href={switcherTargets[l] ?? homePath(l)}
-                data-lang={l}>
-                {LANG_NATIVE[l]}
+                class:list={['menu-item', { active: o.locale === locale, unavailable: o.unavailable }]}
+                href={o.href}
+                aria-label={o.note}
+                title={o.note}
+                data-lang={o.locale}>
+                {LANG_NATIVE[o.locale]}
               </a>
             ))
           }
@@ -277,47 +320,51 @@ const menus = (
       </button>
     </div>
   </div>
-
-  {
-    inBlog && menus.length > 0 && (
-      <nav class="blognav" aria-label={t.siteNav.browseNav}>
-        <div class="mainnav-inner">
-          <a
-            class:list={['nav-link', { active: onBlogHome }]}
-            href={blogHref}
-            aria-current={onBlogHome ? 'page' : undefined}>
-            {t.all}
-          </a>
-          {menus.map((m) => (
-            <div class="menu" data-menu>
-              <button
-                type="button"
-                class:list={['menu-trigger', { active: m.active }]}
-                aria-expanded="false"
-                aria-controls={`menu-axis-${m.group}`}
-                data-menu-trigger>
-                {groupMeta(m.group).label[locale]}
-                <span class="caret" aria-hidden="true">▾</span>
-              </button>
-              <div class="menu-panel" id={`menu-axis-${m.group}`}>
-                {m.terms.map((term) => (
-                  <a
-                    class:list={[
-                      'menu-item',
-                      { active: pathname.startsWith(termHref(locale, term)) },
-                    ]}
-                    href={termHref(locale, term)}>
-                    {term.label[locale]}
-                  </a>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </nav>
-    )
-  }
 </header>
+
+<!-- The blog browse row is the header's sibling, not its child, so that it can
+     stick under the bar on the blog index and hubs (where it filters the list)
+     and scroll away on an article (where it filters nothing). -->
+{
+  inBlog && menus.length > 0 && (
+    <nav class:list={['blognav', { sticky: !article }]} aria-label={t.siteNav.browseNav}>
+      <div class="mainnav-inner">
+        <a
+          class:list={['nav-link', { active: onBlogHome }]}
+          href={blogHref}
+          aria-current={onBlogHome ? 'page' : undefined}>
+          {t.all}
+        </a>
+        {menus.map((m) => (
+          <div class="menu" data-menu>
+            <button
+              type="button"
+              class:list={['menu-trigger', { active: m.active }]}
+              aria-expanded="false"
+              aria-controls={`menu-axis-${m.group}`}
+              data-menu-trigger>
+              {groupMeta(m.group).label[locale]}
+              <span class="caret" aria-hidden="true">▾</span>
+            </button>
+            <div class="menu-panel" id={`menu-axis-${m.group}`}>
+              {m.terms.map((term) => (
+                <a
+                  class:list={[
+                    'menu-item',
+                    { active: pathname.startsWith(termHref(locale, term)) },
+                  ]}
+                  href={termHref(locale, term)}
+                  aria-current={current(pathname.startsWith(termHref(locale, term)), termHref(locale, term))}>
+                  {term.label[locale]}
+                </a>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </nav>
+  )
+}
 
 <!-- Mobile drawer: every destination lives here, so nothing is unreachable on
      small screens (including the primary sections from a blog article). -->
@@ -350,6 +397,7 @@ const menus = (
                     <a
                       class:list={['drawer-link', { active: it.active }]}
                       href={it.href}
+                      aria-current={current(it.active, it.href)}
                       target={it.external ? '_blank' : undefined}
                       rel={it.external ? 'noopener' : undefined}>
                       {it.label}
@@ -362,7 +410,12 @@ const menus = (
           </details>
         ))
       }
-      <a class:list={['drawer-flat', { active: inPricing }]} href={pricingHref}>{t.footer.pricing}</a>
+      <a
+        class:list={['drawer-flat', { active: inPricing }]}
+        href={pricingHref}
+        aria-current={inPricing ? 'page' : undefined}>
+        {t.footer.pricing}
+      </a>
     </nav>
 
     <a class="drawer-cta" href={pricingHref}>{t.getStarted}</a>
@@ -370,23 +423,19 @@ const menus = (
     <div class="drawer-foot">
       <div class="drawer-langs">
         {
-          LOCALES.map((l) => (
+          langOptions.map((o) => (
             <a
-              class:list={['drawer-lang', { active: l === locale }]}
-              href={switcherTargets[l] ?? homePath(l)}
-              data-lang={l}>
-              {LANG_NATIVE[l]}
+              class:list={['drawer-lang', { active: o.locale === locale, unavailable: o.unavailable }]}
+              href={o.href}
+              aria-label={o.note}
+              title={o.note}
+              data-lang={o.locale}>
+              {LANG_NATIVE[o.locale]}
             </a>
           ))
         }
       </div>
       <div class="drawer-utils">
-        <a class="drawer-util" href={GITHUB_URL} target="_blank" rel="noopener">
-          <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" fill="currentColor">
-            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z" />
-          </svg>
-          GitHub
-        </a>
         <button type="button" class="drawer-util" data-theme-toggle>
           <span class="moon" aria-hidden="true">☾</span>
           <span class="sun" aria-hidden="true">☀</span>
@@ -430,6 +479,19 @@ const menus = (
   // outside click, focus leaving the menu, or Escape closes it, and Escape
   // hands focus back to the trigger.
   const menus = document.querySelectorAll<HTMLElement>('[data-menu]');
+  const siteHeader = document.querySelector<HTMLElement>('.site-header');
+  // A blog-axis panel is position:fixed on a phone (it has to escape the
+  // row's horizontal scroller), so it is placed from its trigger. Returns
+  // false when the trigger has scrolled up under the bar.
+  function placeAxisPanel(menu: HTMLElement): boolean {
+    if (!menu.closest('.blognav')) return true;
+    const trigger = menu.querySelector('[data-menu-trigger]');
+    if (!trigger) return true;
+    const bottom = trigger.getBoundingClientRect().bottom;
+    if (bottom < (siteHeader?.getBoundingClientRect().bottom ?? 0)) return false;
+    menu.style.setProperty('--axis-panel-top', `${Math.round(bottom + 4)}px`);
+    return true;
+  }
   function closeMenu(m: HTMLElement) {
     m.classList.remove('open');
     m.querySelector('[data-menu-trigger]')?.setAttribute('aria-expanded', 'false');
@@ -446,6 +508,7 @@ const menus = (
       const open = menu.classList.toggle('open');
       trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
       closeAll(menu);
+      if (open) placeAxisPanel(menu);
     });
     menu.addEventListener('focusout', (e) => {
       const next = (e as FocusEvent).relatedTarget as Node | null;
@@ -453,6 +516,17 @@ const menus = (
     });
   });
   document.addEventListener('click', () => closeAll());
+  // On an article the browse row scrolls with the page: an open axis panel
+  // follows its trigger, and closes once the trigger goes under the bar.
+  window.addEventListener(
+    'scroll',
+    () => {
+      document.querySelectorAll<HTMLElement>('.blognav:not(.sticky) [data-menu].open').forEach((m) => {
+        if (!placeAxisPanel(m)) closeMenu(m);
+      });
+    },
+    { passive: true }
+  );
 
   // Mobile drawer: a modal dialog. Opening moves focus to its close button,
   // makes everything behind it inert, and keeps Tab inside it; closing
@@ -796,9 +870,25 @@ const menus = (
     white-space: nowrap;
   }
 
-  /* Blog browse row (in-page filter) */
+  /* Blog browse row (in-page filter). Opaque, unlike the bar's glass: when
+     it sat inside the 0.78-alpha header, text scrolling under it showed
+     through. The mix is the glass bar's own tone over the page ground, so
+     the two rows still read as one header at rest. z-index 9 keeps it under
+     the bar (10), whose panels open over it, and over the page, which its
+     own panels open over. */
   .blognav {
-    border-top: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+    position: relative;
+    z-index: 9;
+    background: color-mix(in srgb, var(--surface) 78%, var(--bg));
+    border-bottom: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  }
+  /* The blog index and hubs: stuck under the bar. `top` is the bar's height,
+     so the header's 1px bottom border overlaps the row's top edge and no
+     slit opens between them. */
+  .blognav.sticky {
+    position: sticky;
+    top: 64px;
+    box-shadow: 0 10px 28px -26px rgba(var(--shadow), 0.55);
   }
   .mainnav-inner {
     max-width: var(--maxw);
@@ -810,25 +900,29 @@ const menus = (
     flex-wrap: wrap;
     gap: 0.15rem;
   }
+  /* The row's one plain link, set like the triggers beside it (size, weight,
+     box and active state), so it does not read as a disabled item. */
   .nav-link {
+    display: inline-flex;
+    align-items: center;
     font-family: inherit;
-    font-size: 0.88rem;
+    font-size: 0.84rem;
+    font-weight: 650;
     color: var(--ink-soft);
     text-decoration: none;
-    padding: 0.4rem 0.65rem;
-    border-radius: 8px;
+    padding: 0.43rem 0.72rem;
+    border-radius: 6px;
     white-space: nowrap;
     transition:
       color 0.15s,
-      background 0.15s;
+      background 0.15s,
+      box-shadow 0.16s ease;
   }
-  .nav-link:hover {
-    color: var(--ink);
-    background: var(--surface-sunk);
-  }
+  .nav-link:hover,
   .nav-link.active {
     color: var(--ink);
-    font-weight: 600;
+    background: var(--surface-sunk);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--line) 70%, transparent);
   }
 
   /* Mobile drawer */
@@ -977,10 +1071,13 @@ const menus = (
     gap: 0.3rem;
   }
   .drawer-lang {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
     font-size: 0.82rem;
     color: var(--ink-soft);
     text-decoration: none;
-    padding: 0.4rem 0.6rem;
+    padding: 0.4rem 0.75rem;
     border: 1px solid var(--line);
     border-radius: 999px;
   }
@@ -989,6 +1086,20 @@ const menus = (
     border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
     background: var(--accent-soft);
     font-weight: 600;
+  }
+  /* A locale this article has no translation in: the option still works (it
+     opens that locale's blog) but reads as secondary. --muted, not opacity,
+     so the text keeps AA contrast; the dashed edge carries the difference. */
+  .menu-item.unavailable,
+  .drawer-lang.unavailable {
+    color: var(--muted);
+  }
+  .menu-item.unavailable {
+    outline: 1px dashed color-mix(in srgb, var(--muted) 45%, transparent);
+    outline-offset: -3px;
+  }
+  .drawer-lang.unavailable {
+    border-style: dashed;
   }
   .drawer-utils {
     display: flex;
@@ -1055,7 +1166,13 @@ const menus = (
       padding-right: 1rem;
       padding-left: 1rem;
     }
+    .blognav.sticky {
+      top: 58px;
+    }
+    /* 0.5rem, not 1.25rem: the row overflowed a 360px screen by 7px. The
+       first item's own padding still lines its text up near the wordmark. */
     .mainnav-inner {
+      padding: 0 0.5rem;
       flex-wrap: nowrap;
       overflow-x: auto;
       scrollbar-width: none;
@@ -1068,13 +1185,15 @@ const menus = (
     .menu-trigger {
       min-height: 40px;
     }
-    /* Blog axis dropdowns escape the horizontal-scroll container on mobile. */
+    /* Blog axis dropdowns escape the horizontal-scroll container on mobile.
+       The script sets --axis-panel-top from the trigger when a panel opens,
+       since the row sits at a different height when it does not stick. */
     .blognav .menu-panel {
       position: fixed;
-      top: 104px;
+      top: var(--axis-panel-top, 104px);
       right: 1rem;
       left: 1rem;
-      max-height: calc(100vh - 120px);
+      max-height: calc(100vh - var(--axis-panel-top, 104px) - 16px);
       overflow-y: auto;
     }
   }
