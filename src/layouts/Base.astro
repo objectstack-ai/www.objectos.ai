@@ -8,6 +8,7 @@ import { marketingPagePath } from '../content-pages/registry';
 import { glossaryIndexPath } from '../glossary/registry';
 import { htmlLang, OG_LOCALE, pricingPath, privacyPath, rssPath, termsPath, ui, type Locale } from '../lib/i18n';
 import { ORGANIZATION_ID, ORGANIZATION_SAME_AS } from '../lib/organization';
+import { OBJECTSTACK_URL } from '../lib/positioning';
 
 interface Props {
   title: string;
@@ -217,7 +218,8 @@ const jsonLdHtml = (value: Record<string, unknown>) =>
           <a href={marketingPagePath(locale, 'customer-stories')}>{t.siteNav.referenceStories}</a>
           <a href={glossaryIndexPath(locale)}>{t.siteNav.glossary}</a>
           <a href={pricingPath(locale)}>{t.footer.pricing}</a>
-          <a href="https://docs.objectos.ai" target="_blank" rel="noopener">{t.siteNav.docs}</a>
+          <a href="https://docs.objectos.ai" target="_blank" rel="noopener">{t.siteNav.productDocs}</a>
+          <a href={OBJECTSTACK_URL} target="_blank" rel="noopener">{t.siteNav.developerDocs}</a>
           <a href="https://github.com/objectstack-ai/objectstack" target="_blank" rel="noopener">GitHub</a>
           <a href="/llms.txt" translate="no">llms.txt</a>
           <a href={rssPath(locale)}>RSS</a>
@@ -314,6 +316,29 @@ const jsonLdHtml = (value: Record<string, unknown>) =>
         line-height: 1.65;
         -webkit-font-smoothing: antialiased;
         text-rendering: optimizeLegibility;
+      }
+      /* Korean running text breaks only at the spaces between words, never
+         between the syllables of one word. Korean puts a space between words,
+         so keep-all alone is the fix; zh and ja have no spaces and keep the
+         default CJK breaking. The rule is set once, on the ko page root, and
+         is inherited from there, so a component rule on a subtree (a heading,
+         a table cell, inline code) still wins. `overflow-wrap: anywhere` is
+         the last resort for a token wider than its line (a URL, an
+         identifier, a long compound), so keep-all never overflows.
+         Inline code inherits keep-all too, so a particle stays on the line
+         of the code it follows (`context`로); its own overflow-wrap rule
+         still lets a long identifier wrap. Two things are reset to the
+         values they had before this rule: an element in another language on
+         a ko page (the English fallback <main>, an English-only part of a
+         page), and pre, which keeps its own wrapping. :where() keeps both
+         rules at zero specificity, so any component rule beats them. */
+      :where(:root:lang(ko)) {
+        word-break: keep-all;
+        overflow-wrap: anywhere;
+      }
+      :where(:root:lang(ko) :is([lang]:not(:lang(ko)), pre:lang(ko))) {
+        word-break: normal;
+        overflow-wrap: normal;
       }
       :root[data-theme='dark'] body {
         background:
