@@ -2,7 +2,7 @@
 title: "When Should You Not Use an Executable Business Ontology?"
 description: "Five workloads where an executable business ontology is the wrong tool today, what to use instead, the cost of choosing wrong, and a sourced decision table."
 author: ObjectStack Team
-date: 2026-11-05
+date: 2026-10-28
 status: published
 topic: app-building
 audience: it
@@ -17,7 +17,7 @@ tags:
 
 **Short answer: not for five workloads, and the ObjectStack documentation names them itself.** Replacing the core ERP or finance system of a large enterprise. Work whose value is integrating many existing systems. Analytics over data lakes. Algorithm-heavy domains such as pricing or scheduling, unless the algorithm is wrapped as an action. And anything that must run on a certified platform. For each there is a better tool, and this post says which one, why it is the right call, and what it costs to choose wrong. At the end: a decision table with a source on every row, and a ten-question self-check you can run on your own case before you install anything.
 
-An honest list of where a product is the wrong tool is the most useful thing a vendor can publish, because it is the one thing a buyer cannot get from the sales deck. ObjectStack's one-line positioning is "One executable business ontology. AI writes it, the runtime runs it, agents operate it, you own it." Everything below is about the edges of that sentence, taken from the project's own [when-to-use page](https://objectstack.ai/docs/concepts/when-to-use) and [comparison page](https://objectstack.ai/docs/concepts/compare) at `origin/main` on 2026-10-16, and from the source file where the limit is a line of code. This site's [comparison page](/en/compare/) already lists the five workloads and the five questions in one line each; this post is the long form: a scenario for each, the alternative and its case, the cost, and the deciding fact.
+An honest list of where a product is the wrong tool is the most useful thing a vendor can publish, because it is the one thing a buyer cannot get from the sales deck. ObjectStack's one-line positioning is "One executable business ontology. AI writes it, the runtime runs it, agents operate it, you own it." Everything below is about the edges of that sentence, taken from the project's own [when-to-use page](https://objectstack.ai/docs/concepts/when-to-use) and [comparison page](https://objectstack.ai/docs/concepts/compare) at tag `@objectstack/cli@18.2.0`, read 2026-10-28, and from the source file where the limit is a line of code. This site's [comparison page](/en/compare/) already lists the five workloads and the five questions in one line each; this post is the long form: a scenario for each, the alternative and its case, the cost, and the deciding fact.
 
 ## The six-kind test
 
@@ -57,7 +57,7 @@ The honest path exists, and it is narrow: connect read-only, measure, enable wri
 
 **The cost of choosing wrong.** One of two copies. Either you load the lake into app objects, and now you have a second copy of three years of events with its own freshness and its own bill, in a row store derived from a business definition rather than designed for scans; or you federate a warehouse table and find you are sending analytical questions through an engine built to answer row-level queries for an application, with filter pushdown and nothing that knows a columnar file. The dashboards will render. They will not be the dashboards the merchandising team asked for.
 
-**The deciding fact.** The drivers the README lists are PostgreSQL, MySQL, SQLite, MongoDB, Turso, SQLite in WebAssembly and in-memory. There is no lake format, no columnar engine and no object-storage driver, and the dataset layer binds to an object, not to a table in a lake.
+**The deciding fact.** The datasources the README lists are PostgreSQL, MySQL, SQLite, MongoDB and in-memory; the package directory, which the README now hands to `CONTRIBUTING.md`, adds Turso and SQLite in WebAssembly. There is no lake format, no columnar engine and no object-storage driver, and the dataset layer binds to an object, not to a table in a lake.
 
 ## 4. Algorithm-heavy domains, such as pricing or scheduling
 
@@ -93,13 +93,13 @@ The comparison page adds two concessions that are not on the not-a-fit list, bec
 
 ## The decision table
 
-Every row: the workload, whether it is a fit today and what to use instead, and the one fact that decides it, with its source. "Today" is a date: the sources are objectstack `origin/main` at `43567a8f`, read on 2026-10-16. Sources are named by file: when-to-use, compare and ontology are `content/docs/concepts/*.mdx`; external-datasources and analytics are under `content/docs/data-modeling/`; glossary is under `content/docs/getting-started/`; `engine.ts` is `packages/objectql/src/engine.ts`; `dataset.zod.ts` and `action.zod.ts` are under `packages/spec/src/ui/`.
+Every row: the workload, whether it is a fit today and what to use instead, and the one fact that decides it, with its source. "Today" is a date: the sources are objectstack at tag `@objectstack/cli@18.2.0`, the version `npm view @objectstack/cli dist-tags` reported as `latest` on 2026-10-28, read that day. Sources are named by file: when-to-use, compare and ontology are `content/docs/concepts/*.mdx`; external-datasources and analytics are under `content/docs/data-modeling/`; glossary is under `content/docs/getting-started/`; `engine.ts` is `packages/objectql/src/engine.ts`; `dataset.zod.ts` and `action.zod.ts` are under `packages/spec/src/ui/`; README and `CONTRIBUTING.md` are at the repository root.
 
 | Workload | Fit today? What to use instead | The deciding fact (source) |
 | :--- | :--- | :--- |
 | Core ERP or finance of a large enterprise | **No.** The packaged system; build around it | Regulation and edge cases are the product; the runtime's twelve capabilities include no ledger, tax or payroll engine (when-to-use; README capability table) |
 | Integrating many existing systems | **No.** A semantic or context layer; an operational ontology where there is writeback | Federation is read-only by default, twice: `allowWrites` on the datasource and `writable` on the object (external-datasources; `assertWriteAllowed` in `engine.ts`) |
-| Analytics over a data lake | **No.** A warehouse query engine, a metric layer, BI | A dataset binds to a base object; the drivers are row stores, with no lake format (analytics; `dataset.zod.ts`; README drivers) |
+| Analytics over a data lake | **No.** A warehouse query engine, a metric layer, BI | A dataset binds to a base object; the drivers are row stores, with no lake format (analytics; `dataset.zod.ts`; README datasources; `CONTRIBUTING.md` drivers) |
 | Algorithm-heavy domain | **Not for the algorithm.** Code; behind a `script` action when the rest is a business app | `ActionType` is script, url, modal, flow, api, form; the solver is never a type (`action.zod.ts`; when-to-use) |
 | Must run on a certified platform | **Not without work you own.** A certified platform, or certify your deployment | No compliance certification of its own; even the conformance kit is "planned" (when-to-use; glossary) |
 | Reasoning over heterogeneous data | **No.** A knowledge ontology with a reasoner | No inheritance, no axioms, no reasoner; `abstract` removed under ADR-0049 (ontology; compare) |
@@ -142,7 +142,7 @@ And it does not say that failing one row fails the workload. Most real cases spl
 
 ## Where ObjectOS sits in this list
 
-Nothing above changes with the edition. "Want the same loop hosted, in the browser, nothing to install? That's ObjectOS, the commercial runtime environment built on ObjectStack." ObjectOS runs hosted in the browser with nothing to install (ObjectOS Cloud) or self-managed on your own infrastructure (ObjectOS Enterprise), and on either edition you can export your ontology and run it on the open-source ObjectStack runtime. The five workloads are about what an executable ontology can express, not about where it runs, so the list reads the same on every host. The one question that is about the host, certification, the security page answers for ObjectOS in the same terms as the open-source page: it depends on the running deployment.
+Nothing above changes with the edition. "Want the same loop hosted, in the browser, nothing to install? That's ObjectOS, the commercial runtime environment built on ObjectStack." ObjectOS comes in three editions: ObjectOS Community, open source and free to self-host; ObjectOS Cloud, hosted in the browser with nothing to install; and ObjectOS Enterprise, self-managed on your own infrastructure. On every edition you can export your ontology and run it on another. The five workloads are about what an executable ontology can express, not about where it runs, so the list reads the same on every host. The one question that is about the host, certification, the security page answers for ObjectOS in the same terms as the open-source page: it depends on the running deployment.
 
 ## If your case passed
 
