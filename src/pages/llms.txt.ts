@@ -12,7 +12,7 @@ import {
 } from '../lib/i18n';
 import { CLUSTERS, clusterPath } from '../lib/clusters';
 import { clusterCopy } from '../lib/cluster-i18n';
-import { positioning } from '../lib/positioning';
+import { CLOUD_SIGNIN_URL, CLOUD_SIGNUP_URL, positioning } from '../lib/positioning';
 import { getMarketingPages, marketingPagePath } from '../content-pages/registry';
 import {
   getGlossaryTerms,
@@ -94,6 +94,7 @@ export const GET: APIRoute = async ({ site }) => {
     `- [Glossary](${absoluteUrl(site, glossaryIndexPath('en'))}): One-sentence definitions of the vocabulary this site uses, each linked to the pages and articles that apply it.`,
     `- [Articles](${absoluteUrl(site, blogPath('en'))}): Practical writing on executable business ontologies and AI-written software, enterprise AI agents, integration, modernization, and governance.`,
     `- [Documentation](https://docs.objectos.ai/): Product and developer documentation.`,
+    `- [Sign up for ObjectOS Cloud](${CLOUD_SIGNUP_URL}): Create an account on the hosted edition, in Public Preview; existing accounts [sign in](${CLOUD_SIGNIN_URL}).`,
     '',
     '## Glossary',
     '',

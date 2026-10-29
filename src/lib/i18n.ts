@@ -147,6 +147,8 @@ interface Strings {
     langUnavailable: (lang: string) => string;
   };
   getStarted: string;
+  /** The ObjectOS Cloud sign-in link in the header, drawer and footer. */
+  signIn: string;
   skipToContent: string;
   /**
    * `platform` is the footer's short label; the header uses the longer
@@ -217,6 +219,7 @@ const en: Strings = {
     langUnavailable: (lang) => `${lang} — this article is not available in this language; opens the blog`,
   },
   getStarted: 'Get started',
+  signIn: 'Sign in',
   skipToContent: 'Skip to content',
   footer: { terms: 'Terms & License', privacy: 'Privacy', pricing: 'Pricing', refunds: 'Refunds', platform: 'Platform' },
   notFound: {
@@ -281,6 +284,7 @@ const zhHans: Strings = {
     langUnavailable: (lang) => `${lang}——本文暂无该语言版本，将打开该语言的博客`,
   },
   getStarted: '开始使用',
+  signIn: '登录',
   skipToContent: '跳到正文',
   footer: { terms: '许可协议', privacy: '隐私政策', pricing: '定价', refunds: '退款政策', platform: '平台' },
   notFound: {
@@ -345,6 +349,7 @@ const ja: Strings = {
     langUnavailable: (lang) => `${lang} — この記事にはこの言語の版がありません。ブログ一覧を開きます`,
   },
   getStarted: 'はじめる',
+  signIn: 'ログイン',
   skipToContent: '本文へ移動',
   footer: { terms: '利用規約・ライセンス', privacy: 'プライバシー', pricing: '料金', refunds: '返金', platform: 'プラットフォーム' },
   notFound: {
@@ -409,6 +414,7 @@ const de: Strings = {
     langUnavailable: (lang) => `${lang} – dieser Artikel ist in dieser Sprache nicht verfügbar; öffnet den Blog`,
   },
   getStarted: 'Loslegen',
+  signIn: 'Anmelden',
   skipToContent: 'Zum Inhalt springen',
   footer: { terms: 'Bedingungen & Lizenz', privacy: 'Datenschutz', pricing: 'Preise', refunds: 'Rückerstattung', platform: 'Plattform' },
   notFound: {
@@ -473,6 +479,7 @@ const es: Strings = {
     langUnavailable: (lang) => `${lang}: este artículo no está disponible en este idioma; abre el blog`,
   },
   getStarted: 'Empezar',
+  signIn: 'Iniciar sesión',
   skipToContent: 'Saltar al contenido',
   footer: { terms: 'Términos y licencia', privacy: 'Privacidad', pricing: 'Precios', refunds: 'Reembolsos', platform: 'Plataforma' },
   notFound: {
@@ -537,6 +544,7 @@ const fr: Strings = {
     langUnavailable: (lang) => `${lang} : cet article n’est pas disponible dans cette langue ; ouvre le blog`,
   },
   getStarted: 'Commencer',
+  signIn: 'Se connecter',
   skipToContent: 'Aller au contenu',
   footer: { terms: 'Conditions et licence', privacy: 'Confidentialité', pricing: 'Tarifs', refunds: 'Remboursements', platform: 'Plateforme' },
   notFound: {
@@ -601,6 +609,7 @@ const ko: Strings = {
     langUnavailable: (lang) => `${lang} — 이 글은 이 언어로 제공되지 않습니다. 블로그 목록으로 이동합니다`,
   },
   getStarted: '시작하기',
+  signIn: '로그인',
   skipToContent: '본문으로 건너뛰기',
   footer: { terms: '약관 및 라이선스', privacy: '개인정보 보호', pricing: '가격', refunds: '환불', platform: '플랫폼' },
   notFound: {
@@ -668,6 +677,7 @@ const toHant = (s: Strings): Strings => ({
     langUnavailable: (lang) => s2t(s.siteNav.langUnavailable('{lang}')).replace('{lang}', lang),
   },
   getStarted: s2t(s.getStarted),
+  signIn: s2t(s.signIn),
   skipToContent: s2t(s.skipToContent),
   footer: {
     terms: s2t(s.footer.terms),
