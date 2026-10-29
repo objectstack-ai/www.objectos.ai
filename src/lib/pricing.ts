@@ -1,6 +1,6 @@
 import { s2t } from './zhconvert';
 import type { Locale } from './i18n';
-import { positioning } from './positioning';
+import { CLOUD_SIGNUP_URL, positioning } from './positioning';
 
 export interface PricingPlan {
   name: string;
@@ -27,13 +27,13 @@ export interface PricingCopy {
   refundsLabel: string;
 }
 
-// CTA targets. Plan CTAs point at the docs "get started" surface; enterprise
-// opens an email. Repoint these at the app signup URL once it is live.
+// CTA targets. The Free and Team buttons open the ObjectOS Cloud sign-up page;
+// enterprise opens an email.
 // The Enterprise contact is sales@, the address the public licence page
 // (docs.objectos.ai/docs/resources/license) names for "contact sales" on
 // Enterprise, the Runtime Subscription and OEM terms; support@ is the
 // billing and refunds address the refund policy names.
-const GET_STARTED = 'https://docs.objectos.ai';
+const GET_STARTED = CLOUD_SIGNUP_URL;
 const CONTACT = 'mailto:sales@objectstack.ai';
 // ObjectOS Community has no checkout: its button goes to the objectstack
 // deployment docs (the runtime image and `os start` live in that repository).
