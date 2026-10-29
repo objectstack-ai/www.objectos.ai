@@ -85,7 +85,11 @@ export const LANG_NATIVE: Record<Locale, string> = {
   ko: '한국어',
 };
 
-type StatusKey = 'published' | 'archived';
+// The statuses a status pill labels. A production build renders only
+// `published` posts (src/lib/posts.ts), so a pill reading "Published" told a
+// reader nothing; only a post that would not ship gets a pill, in `astro dev`
+// or a CONTENT_INCLUDE_ARCHIVED build.
+type StatusKey = 'archived';
 
 interface Strings {
   siteName: string;
@@ -241,7 +245,7 @@ const en: Strings = {
   updated: 'Updated',
   empty: 'No articles yet.',
   relatedTitle: 'Related articles',
-  status: { published: 'Published', archived: 'Archived' },
+  status: { archived: 'Archived' },
 };
 
 const zhHans: Strings = {
@@ -306,7 +310,7 @@ const zhHans: Strings = {
   updated: '更新于',
   empty: '还没有文章。',
   relatedTitle: '相关文章',
-  status: { published: '已发布', archived: '已归档' },
+  status: { archived: '已归档' },
 };
 
 const ja: Strings = {
@@ -371,7 +375,7 @@ const ja: Strings = {
   updated: '更新日',
   empty: '記事はまだありません。',
   relatedTitle: '関連記事',
-  status: { published: '公開済み', archived: 'アーカイブ済み' },
+  status: { archived: 'アーカイブ済み' },
 };
 
 const de: Strings = {
@@ -436,7 +440,7 @@ const de: Strings = {
   updated: 'Aktualisiert',
   empty: 'Noch keine Artikel.',
   relatedTitle: 'Ähnliche Artikel',
-  status: { published: 'Veröffentlicht', archived: 'Archiviert' },
+  status: { archived: 'Archiviert' },
 };
 
 const es: Strings = {
@@ -501,7 +505,7 @@ const es: Strings = {
   updated: 'Actualizado',
   empty: 'Aún no hay artículos.',
   relatedTitle: 'Artículos relacionados',
-  status: { published: 'Publicado', archived: 'Archivado' },
+  status: { archived: 'Archivado' },
 };
 
 const fr: Strings = {
@@ -566,7 +570,7 @@ const fr: Strings = {
   updated: 'Mis à jour',
   empty: 'Aucun article pour le moment.',
   relatedTitle: 'Articles liés',
-  status: { published: 'Publié', archived: 'Archivé' },
+  status: { archived: 'Archivé' },
 };
 
 const ko: Strings = {
@@ -631,7 +635,7 @@ const ko: Strings = {
   updated: '업데이트',
   empty: '아직 글이 없습니다.',
   relatedTitle: '관련 글',
-  status: { published: '게시됨', archived: '보관됨' },
+  status: { archived: '보관됨' },
 };
 
 // Traditional UI is auto-derived from Simplified (s2twp) — never hand-kept.
@@ -705,10 +709,7 @@ const toHant = (s: Strings): Strings => ({
   updated: s2t(s.updated),
   empty: s2t(s.empty),
   relatedTitle: s2t(s.relatedTitle),
-  status: {
-    published: s2t(s.status.published),
-    archived: s2t(s.status.archived),
-  },
+  status: { archived: s2t(s.status.archived) },
 });
 
 export const ui: Record<Locale, Strings> = {
@@ -726,6 +727,5 @@ export const ui: Record<Locale, Strings> = {
 // so one colour cannot clear 4.5:1 in light and dark. Values and ratios live
 // with the tokens in src/layouts/Base.astro.
 export const STATUS_COLOR: Record<StatusKey, string> = {
-  published: 'var(--status-published)',
   archived: 'var(--status-archived)',
 };
