@@ -3,7 +3,7 @@ title: 既存の業務システムを移行せずに AI-native にする
 description: セルフマネージドの ObjectOS（Enterprise）で、すでに動いているデータベースを既定の読み取り専用で接続し、コーディングエージェントでテーブルをオブジェクトとしてモデル化すれば、元のシステムを壊さず、権限の下で実データに AI を載せられます。
 author: ObjectStack Team
 date: 2026-05-30
-updated: 2026-10-15T10:00:00+08:00
+updated: 2026-10-29T10:00:00+08:00
 status: published
 topic: integration-data
 audience: general
@@ -43,27 +43,27 @@ CRM には触りません。営業担当も気づきません。同じ行デー�
 
 ### 1. データベースをデータソースとして接続する
 
-データソースは名前付き接続です。Postgres、MySQL、MongoDB、SQLite などを扱えます。認証情報は環境変数から読み、ソースに直書きしません。最初は分析だけなら、読み取りレプリカや読み取り専用 DB ユーザーを使えば、書き込みは物理的に起きません。
+データソースは名前付き接続です。Postgres、MySQL、MongoDB、SQLite などを扱えます。接続情報は環境変数から読みます。パスワードはソースにも `config` にも直書きしません。暗号化されてシークレットストアに保管され、データソースが持つのはストアが発行した不透明なハンドル `external.credentialsRef` だけです。最初は分析だけなら、読み取りレプリカや読み取り専用 DB ユーザーを使えば、書き込みは物理的に起きません。
 
 ```ts
-import type { Datasource } from '@objectstack/spec';
+import { defineDatasource } from '@objectstack/spec/data';
 
-export const BusinessDb: Datasource = {
+export const BusinessDb = defineDatasource({
   name: 'business_primary',
   label: 'Business System (Postgres)',
   driver: 'postgres',
   config: {
-    connection: {
-      host: process.env.BIZ_DB_HOST,
-      user: process.env.BIZ_DB_USER,
-      password: process.env.BIZ_DB_PASSWORD,
-      database: process.env.BIZ_DB_NAME,
-    },
+    host: process.env.BIZ_DB_HOST,
+    database: process.env.BIZ_DB_NAME,
+    username: process.env.BIZ_DB_USER,
   },
+  external: { credentialsRef: process.env.BIZ_DB_CREDENTIALS_REF },
   pool: { min: 1, max: 10 },
   active: true,
-};
+});
 ```
+
+`defineDatasource` はファイルの読み込み時に、この宣言を Postgres ドライバー自身の config スキーマで検証します。キーの綴り間違い（`username` を `user` と書くなど）やパスワードの直書きは、接続する前にその場で失敗します。
 
 ### 2. コーディングエージェントでテーブルをオブジェクトにする
 

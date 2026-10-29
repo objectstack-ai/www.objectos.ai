@@ -3,7 +3,7 @@ title: "Add AI to Existing Systems Without Migration: Connect Your Database"
 description: On self-managed ObjectOS (Enterprise), connect the database you already run — read-only by default — let a coding agent model its tables as objects, and put AI on real data under your permissions, system of record untouched.
 author: ObjectStack Team
 date: 2026-05-30
-updated: 2026-10-15T10:00:00+08:00
+updated: 2026-10-29T10:00:00+08:00
 status: published
 topic: integration-data
 audience: general
@@ -70,29 +70,34 @@ There are four steps, and none of them is "rebuild your app."
 ### 1. Connect the database as a datasource
 
 A datasource is a named connection — Postgres, MySQL, MongoDB, SQLite.
-Credentials come from the environment, never inlined in source. If you only
-want to analyze first, point it at a read replica or a read-only DB user
-and writes simply can't happen.
+Connection details come from the environment, and the password is never
+inlined — not in source, not in `config`. It lives encrypted in the secret
+store; the datasource carries only the opaque handle the store minted for it,
+`external.credentialsRef`. If you only want to analyze first, point it at a
+read replica or a read-only DB user and writes simply can't happen.
 
 ```ts
-import type { Datasource } from '@objectstack/spec';
+import { defineDatasource } from '@objectstack/spec/data';
 
-export const BusinessDb: Datasource = {
+export const BusinessDb = defineDatasource({
   name: 'business_primary',
   label: 'Business System (Postgres)',
   driver: 'postgres',
   config: {
-    connection: {
-      host: process.env.BIZ_DB_HOST,
-      user: process.env.BIZ_DB_USER,
-      password: process.env.BIZ_DB_PASSWORD,
-      database: process.env.BIZ_DB_NAME,
-    },
+    host: process.env.BIZ_DB_HOST,
+    database: process.env.BIZ_DB_NAME,
+    username: process.env.BIZ_DB_USER,
   },
+  external: { credentialsRef: process.env.BIZ_DB_CREDENTIALS_REF },
   pool: { min: 1, max: 10 },
   active: true,
-};
+});
 ```
+
+`defineDatasource` checks the declaration against the Postgres driver's own
+config schema when the file loads, so a misspelled key (`user` for
+`username`) or an inlined `password` fails right there, before anything
+connects.
 
 ### 2. Model the tables as objects — with a coding agent
 
