@@ -26,10 +26,15 @@ for (const root of document.querySelectorAll('[data-demo]')) {
     toggle.dataset.state = playing ? 'playing' : 'paused';
     toggle.setAttribute('aria-label', (playing ? toggle.dataset.pauseLabel : toggle.dataset.playLabel) ?? '');
   };
+  // The video's poster is the image the reader is already looking at, the
+  // responsive candidate the browser picked, so it comes from the cache. Not
+  // `poster.src`: that is the widest candidate, a second download.
+  const setPoster = () => {
+    if (poster.currentSrc && !video.getAttribute('poster')) video.poster = poster.currentSrc;
+  };
   const play = () => {
     if (!video.getAttribute('src')) {
-      // The poster the reader is already looking at, from the cache.
-      video.poster = poster.currentSrc || poster.src;
+      setPoster();
       video.src = source;
     }
     video.muted = true;
@@ -44,6 +49,7 @@ for (const root of document.querySelectorAll('[data-demo]')) {
     }
   };
 
+  poster.addEventListener('load', setPoster);
   video.addEventListener('play', sync);
   video.addEventListener('pause', sync);
   toggle.addEventListener('click', () => {
@@ -59,5 +65,6 @@ for (const root of document.querySelectorAll('[data-demo]')) {
     { rootMargin: '200px 0px' },
   ).observe(root);
   toggle.hidden = false;
+  setPoster();
   sync();
 }
