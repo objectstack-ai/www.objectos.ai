@@ -8,3 +8,35 @@
 # the next request.
 /_astro/*
   Cache-Control: public, max-age=31536000, immutable
+
+# Security headers for every path. Pages merges every block whose pattern
+# matches a URL, so /_astro/* files get these and the Cache-Control rule above.
+#
+# HSTS omits `preload` (a maintainer opt-in). Sent from www.objectos.ai,
+# includeSubDomains covers *.www.objectos.ai only, not sibling hosts.
+#
+# Permissions-Policy turns off features nothing here uses. It leaves out every
+# feature the YouTube player's `allow` attribute asks for (VideoEmbed.astro):
+# switching one off at the top would also switch it off inside the player.
+#
+# CSP, measured over the whole built dist/: no external script, stylesheet,
+# font or image; one third-party frame (the click-to-play YouTube embed); and
+# four distinct inline scripts, allowed by hash rather than 'unsafe-inline':
+#   MROl… theme pre-paint, src/layouts/Base.astro (every page but /)
+#   w7kU… menus, theme toggle, drawer, src/components/Header.astro (same)
+#   UDyX… YouTube facade, src/components/VideoEmbed.astro (locale homes)
+#   7HfA… language redirect, src/pages/index.astro (/ only)
+# An edit to any of those four script bodies changes its hash, and the browser
+# would then refuse to run it. `pnpm seo:smoke` (CI, before deploy) fails on
+# it, naming each unlisted 'sha256-…' digest and each listed digest no page
+# uses: replace the old digest with the new one it prints.
+# JSON-LD blocks are data, not script, and CSP does not apply to them.
+# style-src keeps 'unsafe-inline': the built pages carry thousands of style=
+# attributes (code highlighting among them), which hashes cannot cover.
+/*
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: SAMEORIGIN
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), hid=(), midi=(), magnetometer=(), display-capture=(), browsing-topics=()
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'sha256-MROlkXV7qZMmgpiViKWX7vedcy/kpsdTj607FDRs0J0=' 'sha256-w7kUWlpw/CSmjMvtXx+yxv7OH7zL50EzQzSJNJjht4g=' 'sha256-UDyX13IlhVqh51pbuohNxhGd8zlz5igCWbpbe4UCltE=' 'sha256-7HfAlwoqCm4eoryFyKWMfdZMivqvJIEELXCpr4bXpbI='; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; media-src 'self'; frame-src https://www.youtube-nocookie.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'

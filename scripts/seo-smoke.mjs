@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createHash } from 'node:crypto';
 import { access, readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { cwd, exit } from 'node:process';
@@ -783,6 +784,7 @@ if (internalLinksChecked === 0) {
   }
 }
 
+let inlineScriptDigests = 0;
 // ─── Cache headers for hashed assets ────────────────────────────────────────
 //
 // Every file astro writes under /_astro/ has a content hash in its name, so it
@@ -799,6 +801,30 @@ if (internalLinksChecked === 0) {
   const unhashed = assets.filter((name) => !/\.[A-Za-z0-9_-]{8}(?:_[A-Za-z0-9_-]+)?\.[a-z0-9]+$/.test(name));
   if (assets.length === 0) issues.push('_astro/: no assets found — the immutable rule covers nothing');
   for (const name of unhashed) issues.push(`_astro/${name}: not content-hashed, but /_astro/* is cached as immutable`);
+
+  // The /* block's CSP allows inline scripts by sha256 only, so an edited script
+  // body is blocked in production, and `astro dev`/`preview` never serve
+  // _headers to show it. Every inline script CSP governs (no type, a JavaScript
+  // type, module, importmap, speculationrules; data blocks such as ld+json are
+  // not governed) must be listed, and a listed digest no page uses is an issue
+  // too, so the policy allows exactly what ships.
+  const csp = /^\/\*[ \t]*\n(?:[ \t]+.*\n)*?[ \t]+Content-Security-Policy:(.*)$/im.exec(headers ?? '')?.[1] ?? '';
+  const allowed = new Set(/(?:^|;)\s*script-src\b([^;]*)/.exec(csp)?.[1].match(/'sha256-[A-Za-z0-9+/]+=*'/g) ?? []);
+  const used = new Map();
+  for (const page of pages.values()) {
+    for (const [, attrs, body] of page.html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)) {
+      const type = (attrOf(attrs, 'type') ?? '').trim().toLowerCase();
+      if (/\ssrc=/.test(attrs) || !/^(|module|importmap|speculationrules|(text|application)\/(x-)?(java|ecma)script)$/.test(type)) continue;
+      const digest = `'sha256-${createHash('sha256').update(body).digest('base64')}'`;
+      used.set(digest, { file: used.get(digest)?.file ?? page.file, count: (used.get(digest)?.count ?? 0) + 1 });
+    }
+  }
+  if (!csp) issues.push('_headers: the /* block has no Content-Security-Policy');
+  for (const [digest, { file, count }] of used) {
+    if (!allowed.has(digest)) issues.push(`${file}: inline script ${digest} (on ${count} page${count === 1 ? '' : 's'}) is not in the /* CSP script-src, so the browser blocks it`);
+  }
+  for (const digest of allowed) if (!used.has(digest)) issues.push(`_headers: CSP script-src lists ${digest}, which no built page uses`);
+  inlineScriptDigests = used.size;
 }
 
 // ─── Open Graph and the Organization node ───────────────────────────────────
@@ -830,5 +856,6 @@ if (issues.length > 0) {
 console.log(
   `SEO smoke test passed (${htmlFiles.length} HTML pages checked; ${sitemapChecked} sitemap URLs against ` +
     `${noindexedBuilt} noindexed pages; ${annotationsChecked} canonical/hreflang annotations; ` +
-    `${langBlocksJudged} prose blocks language-checked; ${internalLinksChecked} internal links redirect-checked)`
+    `${langBlocksJudged} prose blocks language-checked; ${internalLinksChecked} internal links redirect-checked; ` +
+    `${inlineScriptDigests} inline script digests CSP-checked)`
 );
