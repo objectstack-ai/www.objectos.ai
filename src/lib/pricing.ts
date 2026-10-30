@@ -148,10 +148,8 @@ const pricingEn: PricingCopy = {
         },
         {
           name: 'Enterprise',
-          price: 'From $540',
-          cadence: 'per AI seat / year',
-          billedNote: 'single node, 10–25 AI seats',
-          altPrice: 'Beyond a single node: custom',
+          price: 'Custom',
+          cadence: 'contact sales',
           tagline: 'ObjectOS on your own infrastructure — from a single node to air-gapped clusters.',
           features: [
             'Business Self-Managed — single-node entry: 10–25 AI seats, $540 / AI seat / yr, bring your own model',
@@ -258,10 +256,8 @@ const pricingZhHans: PricingCopy = {
         },
         {
           name: '企业版',
-          price: '$540 起',
-          cadence: '每 AI 席 / 年',
-          billedNote: '单节点，10–25 个 AI 席位',
-          altPrice: '单节点以上：定制',
+          price: '定制',
+          cadence: '联系销售',
           tagline: '在你自己的基础设施上运行 ObjectOS——从单节点到离线隔离集群。',
           features: [
             '商业版自管——单节点入门选项：10–25 个 AI 席位、每 AI 席每年 $540、自带模型',
