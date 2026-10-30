@@ -85,7 +85,11 @@ export const LANG_NATIVE: Record<Locale, string> = {
   ko: '한국어',
 };
 
-type StatusKey = 'published' | 'archived';
+// The statuses a status pill labels. A production build renders only
+// `published` posts (src/lib/posts.ts), so a pill reading "Published" told a
+// reader nothing; only a post that would not ship gets a pill, in `astro dev`
+// or a CONTENT_INCLUDE_ARCHIVED build.
+type StatusKey = 'archived';
 
 interface Strings {
   siteName: string;
@@ -130,10 +134,25 @@ interface Strings {
     primaryNav: string;
     browseNav: string;
     mobileNav: string;
-    /** Accessible name of the home page's topic-cluster links. */
+    /** Visible label and accessible name of the footer's topic-cluster row. */
     topicClusters: string;
+    /**
+     * Accessible name of the home page's own topic-cluster strip. It differs
+     * from `topicClusters` because the footer row is on the home page too, and
+     * two navigation landmarks with one name cannot be told apart (axe
+     * `landmark-unique`).
+     */
+    featuredClusters: string;
+    /**
+     * Name and tooltip of a language-switcher option for a locale this article
+     * has no translation in; the option opens that locale's blog instead. It
+     * starts with the language's own name, which is the option's visible text.
+     */
+    langUnavailable: (lang: string) => string;
   };
   getStarted: string;
+  /** The ObjectOS Cloud sign-in link in the header, drawer and footer. */
+  signIn: string;
   skipToContent: string;
   /**
    * `platform` is the footer's short label; the header uses the longer
@@ -200,8 +219,11 @@ const en: Strings = {
     browseNav: 'Browse',
     mobileNav: 'Mobile',
     topicClusters: 'Topic clusters',
+    featuredClusters: 'Featured topic clusters',
+    langUnavailable: (lang) => `${lang} — this article is not available in this language; opens the blog`,
   },
   getStarted: 'Get started',
+  signIn: 'Sign in',
   skipToContent: 'Skip to content',
   footer: { terms: 'Terms & License', privacy: 'Privacy', pricing: 'Pricing', refunds: 'Refunds', platform: 'Platform' },
   notFound: {
@@ -223,7 +245,7 @@ const en: Strings = {
   updated: 'Updated',
   empty: 'No articles yet.',
   relatedTitle: 'Related articles',
-  status: { published: 'Published', archived: 'Archived' },
+  status: { archived: 'Archived' },
 };
 
 const zhHans: Strings = {
@@ -262,8 +284,11 @@ const zhHans: Strings = {
     browseNav: '浏览',
     mobileNav: '移动端导航',
     topicClusters: '专题导航',
+    featuredClusters: '精选专题',
+    langUnavailable: (lang) => `${lang}——本文暂无该语言版本，将打开该语言的博客`,
   },
   getStarted: '开始使用',
+  signIn: '登录',
   skipToContent: '跳到正文',
   footer: { terms: '许可协议', privacy: '隐私政策', pricing: '定价', refunds: '退款政策', platform: '平台' },
   notFound: {
@@ -285,7 +310,7 @@ const zhHans: Strings = {
   updated: '更新于',
   empty: '还没有文章。',
   relatedTitle: '相关文章',
-  status: { published: '已发布', archived: '已归档' },
+  status: { archived: '已归档' },
 };
 
 const ja: Strings = {
@@ -324,8 +349,11 @@ const ja: Strings = {
     browseNav: 'ブラウズ',
     mobileNav: 'モバイルナビゲーション',
     topicClusters: 'トピッククラスター',
+    featuredClusters: '注目のトピッククラスター',
+    langUnavailable: (lang) => `${lang} — この記事にはこの言語の版がありません。ブログ一覧を開きます`,
   },
   getStarted: 'はじめる',
+  signIn: 'ログイン',
   skipToContent: '本文へ移動',
   footer: { terms: '利用規約・ライセンス', privacy: 'プライバシー', pricing: '料金', refunds: '返金', platform: 'プラットフォーム' },
   notFound: {
@@ -347,7 +375,7 @@ const ja: Strings = {
   updated: '更新日',
   empty: '記事はまだありません。',
   relatedTitle: '関連記事',
-  status: { published: '公開済み', archived: 'アーカイブ済み' },
+  status: { archived: 'アーカイブ済み' },
 };
 
 const de: Strings = {
@@ -386,8 +414,11 @@ const de: Strings = {
     browseNav: 'Durchstöbern',
     mobileNav: 'Mobile Navigation',
     topicClusters: 'Themencluster',
+    featuredClusters: 'Ausgewählte Themencluster',
+    langUnavailable: (lang) => `${lang} – dieser Artikel ist in dieser Sprache nicht verfügbar; öffnet den Blog`,
   },
   getStarted: 'Loslegen',
+  signIn: 'Anmelden',
   skipToContent: 'Zum Inhalt springen',
   footer: { terms: 'Bedingungen & Lizenz', privacy: 'Datenschutz', pricing: 'Preise', refunds: 'Rückerstattung', platform: 'Plattform' },
   notFound: {
@@ -409,7 +440,7 @@ const de: Strings = {
   updated: 'Aktualisiert',
   empty: 'Noch keine Artikel.',
   relatedTitle: 'Ähnliche Artikel',
-  status: { published: 'Veröffentlicht', archived: 'Archiviert' },
+  status: { archived: 'Archiviert' },
 };
 
 const es: Strings = {
@@ -448,8 +479,11 @@ const es: Strings = {
     browseNav: 'Explorar',
     mobileNav: 'Navegación móvil',
     topicClusters: 'Grupos temáticos',
+    featuredClusters: 'Grupos temáticos destacados',
+    langUnavailable: (lang) => `${lang}: este artículo no está disponible en este idioma; abre el blog`,
   },
   getStarted: 'Empezar',
+  signIn: 'Iniciar sesión',
   skipToContent: 'Saltar al contenido',
   footer: { terms: 'Términos y licencia', privacy: 'Privacidad', pricing: 'Precios', refunds: 'Reembolsos', platform: 'Plataforma' },
   notFound: {
@@ -471,7 +505,7 @@ const es: Strings = {
   updated: 'Actualizado',
   empty: 'Aún no hay artículos.',
   relatedTitle: 'Artículos relacionados',
-  status: { published: 'Publicado', archived: 'Archivado' },
+  status: { archived: 'Archivado' },
 };
 
 const fr: Strings = {
@@ -510,8 +544,11 @@ const fr: Strings = {
     browseNav: 'Parcourir',
     mobileNav: 'Navigation mobile',
     topicClusters: 'Groupes thématiques',
+    featuredClusters: 'Groupes thématiques à la une',
+    langUnavailable: (lang) => `${lang} : cet article n’est pas disponible dans cette langue ; ouvre le blog`,
   },
   getStarted: 'Commencer',
+  signIn: 'Se connecter',
   skipToContent: 'Aller au contenu',
   footer: { terms: 'Conditions et licence', privacy: 'Confidentialité', pricing: 'Tarifs', refunds: 'Remboursements', platform: 'Plateforme' },
   notFound: {
@@ -533,7 +570,7 @@ const fr: Strings = {
   updated: 'Mis à jour',
   empty: 'Aucun article pour le moment.',
   relatedTitle: 'Articles liés',
-  status: { published: 'Publié', archived: 'Archivé' },
+  status: { archived: 'Archivé' },
 };
 
 const ko: Strings = {
@@ -572,8 +609,11 @@ const ko: Strings = {
     browseNav: '둘러보기',
     mobileNav: '모바일 메뉴',
     topicClusters: '주제 클러스터',
+    featuredClusters: '추천 주제 클러스터',
+    langUnavailable: (lang) => `${lang} — 이 글은 이 언어로 제공되지 않습니다. 블로그 목록으로 이동합니다`,
   },
   getStarted: '시작하기',
+  signIn: '로그인',
   skipToContent: '본문으로 건너뛰기',
   footer: { terms: '약관 및 라이선스', privacy: '개인정보 보호', pricing: '가격', refunds: '환불', platform: '플랫폼' },
   notFound: {
@@ -595,7 +635,7 @@ const ko: Strings = {
   updated: '업데이트',
   empty: '아직 글이 없습니다.',
   relatedTitle: '관련 글',
-  status: { published: '게시됨', archived: '보관됨' },
+  status: { archived: '보관됨' },
 };
 
 // Traditional UI is auto-derived from Simplified (s2twp) — never hand-kept.
@@ -635,8 +675,13 @@ const toHant = (s: Strings): Strings => ({
     browseNav: s2t(s.siteNav.browseNav),
     mobileNav: s2t(s.siteNav.mobileNav),
     topicClusters: s2t(s.siteNav.topicClusters),
+    featuredClusters: s2t(s.siteNav.featuredClusters),
+    // The language name is spliced in after conversion: s2t would rewrite a
+    // Simplified-script name such as 简体中文.
+    langUnavailable: (lang) => s2t(s.siteNav.langUnavailable('{lang}')).replace('{lang}', lang),
   },
   getStarted: s2t(s.getStarted),
+  signIn: s2t(s.signIn),
   skipToContent: s2t(s.skipToContent),
   footer: {
     terms: s2t(s.footer.terms),
@@ -664,10 +709,7 @@ const toHant = (s: Strings): Strings => ({
   updated: s2t(s.updated),
   empty: s2t(s.empty),
   relatedTitle: s2t(s.relatedTitle),
-  status: {
-    published: s2t(s.status.published),
-    archived: s2t(s.status.archived),
-  },
+  status: { archived: s2t(s.status.archived) },
 });
 
 export const ui: Record<Locale, Strings> = {
@@ -685,6 +727,5 @@ export const ui: Record<Locale, Strings> = {
 // so one colour cannot clear 4.5:1 in light and dark. Values and ratios live
 // with the tokens in src/layouts/Base.astro.
 export const STATUS_COLOR: Record<StatusKey, string> = {
-  published: 'var(--status-published)',
   archived: 'var(--status-archived)',
 };

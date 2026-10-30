@@ -33,6 +33,15 @@ import type { Locale } from './i18n';
  */
 export const OBJECTSTACK_URL = 'https://objectstack.ai';
 
+/**
+ * ObjectOS Cloud's account pages. The header CTA, the home hero, the pricing
+ * page's Free and Team buttons and the footer all link these two constants,
+ * so the hosted product is named in one place. `cloud.objectos.ai/` itself
+ * redirects to this site, so the links name the console's own pages.
+ */
+export const CLOUD_SIGNUP_URL = 'https://cloud.objectos.ai/_console/register';
+export const CLOUD_SIGNIN_URL = 'https://cloud.objectos.ai/_console/login';
+
 export const CANONICAL = {
   t1: 'The ontology is the software.',
   t2: 'One executable business ontology. AI writes it, the runtime runs it, agents operate it, you own it.',

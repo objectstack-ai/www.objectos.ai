@@ -1,0 +1,149 @@
+---
+title: "When Should You Not Use an Executable Business Ontology?"
+description: "Five workloads where an executable business ontology is the wrong tool today, what to use instead, the cost of choosing wrong, and a sourced decision table."
+author: ObjectStack Team
+date: 2026-10-28
+status: published
+topic: app-building
+audience: it
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Ontology
+  - Executable business ontology
+  - When to use
+---
+
+**Short answer: not for five workloads, and the ObjectStack documentation names them itself.** Replacing the core ERP or finance system of a large enterprise. Work whose value is integrating many existing systems. Analytics over data lakes. Algorithm-heavy domains such as pricing or scheduling, unless the algorithm is wrapped as an action. And anything that must run on a certified platform. For each there is a better tool, and this post says which one, why it is the right call, and what it costs to choose wrong. At the end: a decision table with a source on every row, and a ten-question self-check you can run on your own case before you install anything.
+
+An honest list of where a product is the wrong tool is the most useful thing a vendor can publish, because it is the one thing a buyer cannot get from the sales deck. ObjectStack's one-line positioning is "One executable business ontology. AI writes it, the runtime runs it, agents operate it, you own it." Everything below is about the edges of that sentence, taken from the project's own [when-to-use page](https://objectstack.ai/docs/concepts/when-to-use) and [comparison page](https://objectstack.ai/docs/concepts/compare) at tag `@objectstack/cli@18.2.0`, read 2026-10-28, and from the source file where the limit is a line of code. This site's [comparison page](/en/compare/) already lists the five workloads and the five questions in one line each; this post is the long form: a scenario for each, the alternative and its case, the cost, and the deciding fact.
+
+## The six-kind test
+
+One test covers all five cases, so it is worth stating first. The concepts page defines the core of an executable business ontology as six kinds of thing: objects and fields, relations, actions, permissions, flows, and agent and tool definitions. The runtime derives the database, the API, the UI and the agent tools from those six, and enforces them on every call. Code does not disappear, but it moves into the runtime, as hooks, action bodies, CEL and constrained JSX, inside the fence the six kinds define.
+
+So ask of any workload: **is the hard part one of the six kinds?** If the difficult, valuable, risky part of the work is deciding what exists, how it relates, what may be done, by whom, and what happens when, the ontology is the tool, and an agent can write it. If the hard part is something else, a statutory calculation, a connection to forty systems, a scan over a petabyte, a solver, an auditor's certificate, then that part is not expressible as a definition, and the ontology at best wraps it and at worst imitates it. Call that the **six-kind test**. The five workloads below each fail it for a different reason, which is why they need five different alternatives rather than one.
+
+## 1. The core ERP or finance system of a large enterprise
+
+**The scenario.** A manufacturer with four thousand people has run its general ledger, consolidation and payroll on a packaged ERP for twelve years. A coding agent, shown the chart of accounts, offers to re-declare it as objects, with posting rules as flows and tax as formulas. The demo is convincing: journals, a trial balance, an approval on every entry.
+
+**What to use instead, and why it is right.** The packaged system, and build around it. The when-to-use page: "A general ledger, consolidation, tax and payroll carry regulation and edge cases that packaged systems already encode. Build around that core, not instead of it." In that market the regulation is the product. A payroll engine is a library of jurisdictions, filing calendars and retroactive corrections, maintained by people whose only job is to keep it current; a consolidation engine is years of intercompany eliminations and currency-translation edge cases. None of that is "what exists and who may do what". It is calculation, and it changes when a government changes it, not when your business does.
+
+**The cost of choosing wrong.** A second ledger. Every rule you re-encoded is now your diff to maintain, your audit to pass and your defect when the tax year rolls over, while the packaged system you kept for statutory reporting disagrees with your copy a little more each quarter. The agent that wrote the rules in a day cannot read a tax code for you.
+
+**The deciding fact.** The README's capability table lists twelve things the runtime provides: objects and fields, permissions, automation, approvals, views, dashboards and reports, actions, APIs and SDK, AI tools, translations, seed data, datasources. A ledger, a tax engine and a payroll run are not on it, and the project does not say they are coming.
+
+What is a fit, by the same page, is the long tail around that core: "vendor onboarding, inspections, internal requests", the spreadsheets and forms that track what the ERP does not. Each becomes a typed definition instead of a file that gets emailed around, and each can read the ERP's data without owning it, which is the next case.
+
+## 2. Workloads whose value is integrating many existing systems
+
+**The scenario.** A bank wants its agents to answer a customer question from core banking, the CRM, the card platform and the ticketing system at once, and to write a status back to two of them. None of those systems is moving. The job is to make them legible to an agent and to act across them.
+
+**What to use instead, and why.** A layer over the systems: a semantic or context layer for the reading, an operational ontology of the Palantir kind when there is writeback to govern. The comparison page concedes this plainly: "When the data already lives in a warehouse, a lakehouse and a dozen operational systems, these start where you are." Those products are built around the assumption that the system of record stays put; their object model is a view, their writes are writeback, and their value grows with the number of systems underneath. ObjectStack is built on the opposite assumption, that the ontology *is* the system and the database is derived from it.
+
+**The cost of choosing wrong.** This is the case most often got wrong, because the first week goes well. ObjectStack can federate an external database as a datasource with `schemaMode: 'external'`, and a read model over a legacy table is a short afternoon. Then the writes. Federated writes are off by default twice over: the datasource must declare `external.allowWrites: true` and the object must declare `external.writable: true`, and "with either gate off, insert/update/delete on the federated object is rejected." The gate is not advisory: `assertWriteAllowed` runs at the top of the engine's `insert` and `update`, before defaults, hooks and validation. Flip both gates per object and you now own write semantics against a schema you do not control, and `schemaMode: 'external'` fails boot on a schema mismatch, so an upstream column rename takes your app down. Or you build sync jobs instead, and by then you have built the integration layer you were trying not to buy, inside a tool whose own docs call its federation "early".
+
+**The deciding fact.** Two opt-ins, both default off: `allowWrites` on the datasource and `writable` on the object (`content/docs/data-modeling/external-datasources.mdx`, the section on writes), enforced by `assertWriteAllowed` in `packages/objectql/src/engine.ts`.
+
+The honest path exists, and it is narrow: connect read-only, measure, enable writes one object at a time, cut over per object. [How to move an internal system to metadata](/en/blog/how-to-move-an-internal-system-to-metadata/) walks it, including the cases where the right answer is not to move at all. That path is for a system you intend to *replace*. If you intend to keep forty systems and read across them, it is the wrong road.
+
+## 3. Analytics over data lakes
+
+**The scenario.** A retailer has three years of clickstream and point-of-sale events in object storage, as Parquet and Iceberg tables, and the merchandising team wants dashboards. Someone notices that the platform has dashboards, reports and a dataset layer its docs call semantic, and proposes pointing it at the lake.
+
+**What to use instead, and why.** The warehouse stack: a query engine built for columnar scans, a metric or semantic layer over it, and a BI tool on top. The analytics layer in ObjectStack is a metric layer for the application's own rows. Its documentation defines a dataset as "a base object, the relationships to include, and the declared dimensions and measures", with joins derived from the object graph; the schema makes that literal, describing a dataset's `object` as "Base object name". The when-to-use page says it in one sentence: the analytics layer "defines metrics over the app's own objects for its reports and dashboards. It is not built to query a lake." A warehouse semantic layer does the same job over a lake, and this site's comparison page says a company doing serious BI will still want one.
+
+**The cost of choosing wrong.** One of two copies. Either you load the lake into app objects, and now you have a second copy of three years of events with its own freshness and its own bill, in a row store derived from a business definition rather than designed for scans; or you federate a warehouse table and find you are sending analytical questions through an engine built to answer row-level queries for an application, with filter pushdown and nothing that knows a columnar file. The dashboards will render. They will not be the dashboards the merchandising team asked for.
+
+**The deciding fact.** The datasources the README lists are PostgreSQL, MySQL, SQLite, MongoDB and in-memory; the package directory, which the README now hands to `CONTRIBUTING.md`, adds Turso and SQLite in WebAssembly. There is no lake format, no columnar engine and no object-storage driver, and the dataset layer binds to an object, not to a table in a lake.
+
+## 4. Algorithm-heavy domains, such as pricing or scheduling
+
+**The scenario.** A logistics company's product is a route optimiser: a solver that takes a day's orders and a fleet and produces a plan, with a dispatch board where planners drag stops between vehicles and watch the plan re-solve. The orders, vehicles, drivers and plans are plainly objects; the company asks whether the whole thing could be an executable ontology.
+
+**What to use instead, and why.** Code, for the solver and for the board, and here the ontology's own documentation is the steelman. The when-to-use page: the ontology "declares what can be done; it does not express an optimiser." An action's `type` is one of `script`, `url`, `modal`, `flow`, `api` or `form`, and a `script` action's handler is code that runs with the app's full data authority. The definition owns the door, the permission on the door and the audit of who walked through it. The algorithm behind the door is yours, in whatever language solves it. The interface is the same story in the other direction: the comparison page says the Console is "server-driven from metadata, and an interface unlike any business app is easier to build directly."
+
+**The cost of choosing wrong.** Building the part that matters in the place with the least freedom. A solver can live behind an action, and for a scheduling run triggered from a record that is exactly right. A dispatch board cannot: constrained JSX in pages "is parsed into a server-driven UI tree, never executed as code", by design, so every interaction the planners need becomes a negotiation with a renderer built for lists, forms and boards. Six months in, the ontology is a thin wrapper around the thing you actually sell.
+
+**The deciding fact.** `ActionType` in `packages/spec/src/ui/action.zod.ts` is the closed set `script | url | modal | flow | api | form`. The algorithm is never one of them, only the route to it.
+
+The split that works: the business half, orders, vehicles, drivers, who may approve a plan, what happens when a plan is published, as the ontology, where an agent can write and operate it; the solver as code behind a `script` action, so permissions, audit and agent access apply to it like any other action; the planners' board as its own application. If the board *is* the product, start there.
+
+## 5. Workloads that require a certified platform
+
+**The scenario.** A hospital group wants an intake workflow, and its procurement requires that the platform it runs on hold a named attestation. A public-sector tender asks the same question of an ISO certificate. The workload itself, forms, routing, approvals and an audit trail, is a textbook fit.
+
+**What to use instead, and why.** Either a platform that holds the certificate, or a deployment you certify yourself, and the decision is the buyer's calendar, not the vendor's roadmap. The when-to-use page: "ObjectStack is open-source software you deploy and operate, and it carries no compliance certification of its own. Where a workload must run on a certified platform, certifying your deployment is work you own." That is not evasion; it is how certification works. An attestation covers a running environment, its controls and its operators, and an Apache-2.0 repository is none of those. This site's [security page](/en/security/) says the same of the commercial edition: "Certification depends on your running deployment, not a binary alone."
+
+**The cost of choosing wrong.** Discovering this at procurement rather than at design, when the timeline already assumed the platform brought its certificate. The audit then lands on your plan, unbudgeted, in front of the go-live.
+
+**The deciding fact.** The project's glossary lists even its own protocol conformance kit as "planned", with "no TCK program or certification mechanism in the codebase today". There is nothing to point an auditor at but your deployment.
+
+The workload is still a fit; the host is the question. The honest sequence is to price the certification work first, then decide.
+
+## Two more places another category starts ahead
+
+The comparison page adds two concessions that are not on the not-a-fit list, because they are about a kind of problem rather than a kind of workload. Both go through the six-kind test the same way.
+
+**Reasoning over heterogeneous data.** If the question is "what follows from everything we know", with class hierarchies, derived facts and consistency checks across vocabularies, that is a knowledge ontology's job, and ObjectStack has "no object inheritance, no axioms and no reasoner". The `abstract` key was removed from the spec rather than left as a promise. The definition is validated, then run; nothing is inferred at runtime. [The definition post](/en/blog/what-does-the-ontology-is-the-software-mean/) gives this negation its full treatment.
+
+**Ecosystem maturity.** Salesforce, Odoo and ERPNext "bring years of production use, packaged applications, app marketplaces and implementation partners. ObjectStack is younger; expect to build more of it yourself." If you need a packaged app this quarter and an implementation partner in your city, a younger platform is the wrong bet however its definitions are written.
+
+## The decision table
+
+Every row: the workload, whether it is a fit today and what to use instead, and the one fact that decides it, with its source. "Today" is a date: the sources are objectstack at tag `@objectstack/cli@18.2.0`, the version `npm view @objectstack/cli dist-tags` reported as `latest` on 2026-10-28, read that day. Sources are named by file: when-to-use, compare and ontology are `content/docs/concepts/*.mdx`; external-datasources and analytics are under `content/docs/data-modeling/`; glossary is under `content/docs/getting-started/`; `engine.ts` is `packages/objectql/src/engine.ts`; `dataset.zod.ts` and `action.zod.ts` are under `packages/spec/src/ui/`; README and `CONTRIBUTING.md` are at the repository root.
+
+| Workload | Fit today? What to use instead | The deciding fact (source) |
+| :--- | :--- | :--- |
+| Core ERP or finance of a large enterprise | **No.** The packaged system; build around it | Regulation and edge cases are the product; the runtime's twelve capabilities include no ledger, tax or payroll engine (when-to-use; README capability table) |
+| Integrating many existing systems | **No.** A semantic or context layer; an operational ontology where there is writeback | Federation is read-only by default, twice: `allowWrites` on the datasource and `writable` on the object (external-datasources; `assertWriteAllowed` in `engine.ts`) |
+| Analytics over a data lake | **No.** A warehouse query engine, a metric layer, BI | A dataset binds to a base object; the drivers are row stores, with no lake format (analytics; `dataset.zod.ts`; README datasources; `CONTRIBUTING.md` drivers) |
+| Algorithm-heavy domain | **Not for the algorithm.** Code; behind a `script` action when the rest is a business app | `ActionType` is script, url, modal, flow, api, form; the solver is never a type (`action.zod.ts`; when-to-use) |
+| Must run on a certified platform | **Not without work you own.** A certified platform, or certify your deployment | No compliance certification of its own; even the conformance kit is "planned" (when-to-use; glossary) |
+| Reasoning over heterogeneous data | **No.** A knowledge ontology with a reasoner | No inheritance, no axioms, no reasoner; `abstract` removed under ADR-0049 (ontology; compare) |
+| Needs a mature ecosystem now | **Not yet.** A metadata platform with packaged apps and partners | "ObjectStack is younger; expect to build more of it yourself" (compare) |
+| A new business app: CRM, ticketing, approvals, operations, internal tools | **Yes.** | Objects, relations, actions, permissions and flows are most of what these apps are (when-to-use) |
+| The long tail around a core ERP | **Yes.** | Small, specific, changes often; one typed definition per app, reading the ERP without owning it (when-to-use) |
+| A back office operated by agents from day one | **Yes.** | Every deployment is an MCP server, on by default, under the user's permissions (when-to-use; README) |
+
+![The self-check in two stages. Stage one, five exclusions, any yes means the ontology is not the tool for that part: a ledger, consolidation, tax or payroll calculation; value mostly in systems you keep and do not own; data at rest in a lake or warehouse; a solver, optimiser or an interface unlike any business app; a platform that must hold a named certification. Stage two, the five questions before you start: what we have, how it relates, what can be done, who may do it, what happens when. Three verdicts: five noes and five answers is a fit and a day's work for an agent; any yes splits the workload on that line; noes without answers means no tool helps yet.](./self-check-en.svg)
+
+## Run the self-check
+
+Ten questions, two stages, ten minutes. Stage one is the exclusion list; stage two is the when-to-use page's "Five questions before you start", quoted as it prints them.
+
+**Stage one. Any yes means the ontology is not the tool for that part.**
+
+1. Is the hard part of this workload a regulated calculation that a packaged system already encodes: a ledger, consolidation, tax, payroll?
+2. Does most of the value come from reading and writing systems you will keep and do not own?
+3. Is the data you want to analyse at rest in a lake or a warehouse rather than in the application's own records?
+4. Is the core of the product a solver, an optimiser or a simulation, or an interface unlike any business app?
+5. Must the workload run on a platform that holds a named certification, with no budget to certify a deployment of your own?
+
+**Stage two. Can your team answer these for the business, today?**
+
+6. "What we have — the objects and their fields."
+7. "How it relates — the lookups and master-detail links between them."
+8. "What can be done — the actions a user or an agent may take on a record."
+9. "Who may do it — permission sets, row-level and field-level security, sharing."
+10. "What happens when — record triggers, scheduled jobs, approvals, workflows."
+
+Five noes and five answers: the ontology is, in the page's words, "a day's work, because an agent does the writing." Five noes and no answers: "no tool helps yet, this one included. The first investment is answering these five questions, not installing anything." A yes in stage one: split the workload along that line, keep the part that passed, and use the table's alternative for the rest.
+
+## What this list does not say
+
+It does not say these limits are permanent. The page is titled "not a fit *today*", federation is called "early", and the table above carries a date; read it against the current page before you decide.
+
+It does not say the alternatives are better in general. A semantic layer is the right tool for reading across forty systems and the wrong one for running a ticketing desk, for the reasons the second section gives in the other direction. Each row's alternative is right for that row.
+
+And it does not say that failing one row fails the workload. Most real cases split: the intake workflow is a fit and the host is a procurement question; the dispatch domain is a fit and the solver is code; the departmental apps around the ERP are a fit and the ledger stays where it is. The six-kind test is applied to the hard part, not to the project name.
+
+## Where ObjectOS sits in this list
+
+Nothing above changes with the edition. "Want the same loop hosted, in the browser, nothing to install? That's ObjectOS, the commercial runtime environment built on ObjectStack." ObjectOS comes in three editions: ObjectOS Community, open source and free to self-host; ObjectOS Cloud, hosted in the browser with nothing to install; and ObjectOS Enterprise, self-managed on your own infrastructure. On every edition you can export your ontology and run it on another. The five workloads are about what an executable ontology can express, not about where it runs, so the list reads the same on every host. The one question that is about the host, certification, the security page answers for ObjectOS in the same terms as the open-source page: it depends on the running deployment.
+
+## If your case passed
+
+Then the fastest honest next step is not a demo; it is a definition. Point your coding agent at ObjectStack, with the rule file, the skills bundle and the tool server covered in [how to point your agent at ObjectStack](/en/blog/how-to-point-your-agent-at-objectstack/), and ask it for the first object: a few fields, one relation, one action, one permission set and one trigger. Run `npm run validate`, and read the diff before you read the Console. If you can read the whole diff and it says what your business does, the six-kind test has passed in practice, and [what the definition is](/en/ontology/) is the next page to hand the agent. If you cannot, nothing in this post was ever going to help, and you have just saved a project.

@@ -893,6 +893,31 @@ function splitFrontmatter(source, file) {
   };
 }
 
+// YAML that parses but is not a mapping — empty, a bare scalar, a list, a lone
+// date — is rejected here, before any caller reads a field. Left as-is, every
+// `data.<key>` on it is `undefined`, and `--published` then skips the file as
+// "not published": the gate printed a pass and the build died later at
+// `astro.config.mjs` load, where `scripts/lib/post-dates.mjs` throws on the
+// same file. This check is that reader's, worded for this gate's report.
+function parseFrontmatterData(raw, file) {
+  const data = yaml.load(raw);
+  if (Object.prototype.toString.call(data) !== '[object Object]') {
+    const got =
+      data === undefined || data === null
+        ? 'nothing'
+        : Array.isArray(data)
+          ? 'a list'
+          : data instanceof Date
+            ? 'a date'
+            : `a ${typeof data}`;
+    throw new Error(
+      `${file} has empty or non-object frontmatter (YAML parsed it as ${got}; ` +
+        'it must be a mapping of `key: value` fields)'
+    );
+  }
+  return data;
+}
+
 // ─── Search-snippet width ──────────────────────────────────────────────────
 //
 // A results page shows about 60 columns of a title and 160 of a description
@@ -1103,7 +1128,7 @@ async function readTermHubs() {
   for (const file of await walk(BLOG)) {
     let data;
     try {
-      data = yaml.load(splitFrontmatter(await readFile(file, 'utf8'), file).raw) ?? {};
+      data = parseFrontmatterData(splitFrontmatter(await readFile(file, 'utf8'), file).raw, file);
     } catch {
       continue; // malformed frontmatter is reported by the main pass
     }
@@ -1489,7 +1514,7 @@ for (const file of files) {
   try {
     frontmatter = splitFrontmatter(source, rel);
     body = frontmatter.body;
-    data = yaml.load(frontmatter.raw) ?? {};
+    data = parseFrontmatterData(frontmatter.raw, rel);
   } catch (error) {
     addIssue(issues, rel, null, 'error', error.message);
     continue;
