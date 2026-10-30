@@ -778,6 +778,24 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
         font-size: 1.12rem;
         overflow-wrap: anywhere;
       }
+      /* Latin-script titles and headings hyphenate a word wider than the
+         column (by the <html lang> dictionary) instead of splitting it at an
+         arbitrary letter: at 360 `overflow-wrap: anywhere` alone rendered
+         `Produktionsdatenba` / `nk` and `Metadatengenerieru` / `ng`. It stays
+         above as the last resort for a word with no hyphenation point.
+         Only words of 12+ letters hyphenate, 5 kept on each side, so short
+         words still wrap whole. zh, ja and ko keep their keep-all rules. */
+      h1:is(:lang(en), :lang(de), :lang(fr), :lang(es)),
+      .prose :is(h2, h3):is(:lang(en), :lang(de), :lang(fr), :lang(es)) {
+        -webkit-hyphens: auto;
+        hyphens: auto;
+        hyphenate-limit-chars: 12 5 5;
+      }
+      /* An identifier in a heading must not gain a hyphen it does not have. */
+      .prose :is(h2, h3) code {
+        -webkit-hyphens: manual;
+        hyphens: manual;
+      }
       .prose pre {
         margin-right: -0.25rem;
         margin-left: -0.25rem;
