@@ -15,7 +15,7 @@ tags:
   - 비즈니스 규칙
 ---
 
-**결론부터.** ObjectStack 앱의 비즈니스 규칙에는 세 곳의 집이 있고, 어디에 둘지는 취향이 아니라 표로 정해집니다. 지금 쓰이는 레코드 하나만으로, I/O 없이 판정할 수 있는 규칙은 객체 위의 **검증 규칙**입니다. 저장되기 전에 그 레코드 자체를 바꿔야 하는 규칙은 **before 훅**입니다. 나머지 모두 — 부수 효과, 승인, 멈추는 것, 시계에 따라 도는 것 — 는 **플로우**이며, 문서는 플로우를 기본값으로 둡니다: “플로우는 애플리케이션 로직의 기본 표면이고, 훅은 노드 그래프가 표현할 수 없는 것을 위한 최후의 받침이다.” 이유는 구조적이며, 그것이 바로 리뷰어가 실제로 확인하는 지점입니다: **플로우는 데이터로 리뷰되고, 훅은 코드로 리뷰됩니다.** ObjectStack 저장소에 번들된 CRM은 이런 규칙을 **일곱 개** — 검증 다섯, 훅 하나, 플로우 하나 — 선언하고, 하나하나가 표가 가리키는 자리에 있습니다. 아래에는 그 표, 일곱 규칙, 각 집이 쓰기를 거부하거나 다시 쓰는 REST 트랜스크립트, 그리고 같은 오타를 두 집에 심어 두 가지 리뷰 강도를 보이는 실험이 있습니다. 모두 공개된 `@objectstack/cli` 17.7.0 — `npm create objectstack@latest`가 설치하는 버전 — 에서 측정했습니다.
+**결론부터.** ObjectStack 앱의 비즈니스 규칙에는 세 곳의 집이 있고, 어디에 둘지는 취향이 아니라 표로 정해집니다. 지금 쓰이는 레코드 하나만으로, I/O 없이 판정할 수 있는 규칙은 객체 위의 **검증 규칙**입니다. 저장되기 전에 그 레코드 자체를 바꿔야 하는 규칙은 **before 훅**입니다. 나머지 모두 — 부수 효과, 승인, 멈추는 것, 시계에 따라 도는 것 — 는 **플로우**이며, 문서는 플로우를 기본값으로 둡니다: “플로우는 애플리케이션 로직의 기본 표면이고, 훅은 노드 그래프가 표현할 수 없는 것을 위한 최후의 받침이다.” 이유는 구조적이며, 그것이 바로 리뷰어가 실제로 확인하는 지점입니다: **플로우는 데이터로 리뷰되고, 훅은 코드로 리뷰됩니다.** ObjectStack 저장소에 번들된 CRM은 이런 규칙을 **일곱 개** — 검증 다섯, 훅 하나, 플로우 하나 — 선언하고, 하나하나가 표가 가리키는 자리에 있습니다. 아래에는 그 표, 일곱 규칙, 각 집이 쓰기를 거부하거나 다시 쓰는 REST 트랜스크립트, 그리고 같은 오타를 두 집에 심어 두 가지 리뷰 강도를 보이는 실험이 있습니다. 모두 공개된 `@objectstack/cli` 18.2.0 — `npm create objectstack@latest`가 설치하는 버전 — 에서 측정했습니다.
 
 ## 에이전트가 받는 한 문장
 
@@ -27,10 +27,10 @@ tags:
 
 규칙의 *형태*마다 맞는 집은 하나뿐이며, “40%를 넘는 할인은 승인이 필요하다”는 사실 한 문장을 입은 두 규칙입니다. “예외 없이 40% 초과는 허용되지 않는다”는 레코드에 대한 술어 — 검증 규칙입니다. “누군가 그 예외를 승인해야 한다”는 멈춰서 사람을 기다립니다 — 플로우입니다. 훅은 둘 다 잘하지 못합니다: 인라인으로 돌기 때문에 멈출 수 없고, 쓰기를 거부한다 해도 누구도 필드 단위로 diff할 수 없는 코드로 거부합니다.
 
-ObjectStack 모노레포에 들어 있는 [CRM 예제](https://github.com/objectstack-ai/objectstack/tree/%40objectstack/cli%4017.7.0/examples/app-crm)는 이미 그 선택을 했습니다. `discount_cap` 규칙은 검증이고, 객체 안에, 데이터로 있습니다:
+ObjectStack 모노레포에 들어 있는 [CRM 예제](https://github.com/objectstack-ai/objectstack/tree/%40objectstack/cli%4018.2.0/examples/app-crm)는 이미 그 선택을 했습니다. `discount_cap` 규칙은 검증이고, 객체 안에, 데이터로 있습니다:
 
 ```ts
-// examples/app-crm/src/objects/opportunity.object.ts  (@objectstack/cli@17.7.0)
+// examples/app-crm/src/objects/opportunity.object.ts  (@objectstack/cli@18.2.0)
 validations: [
   {
     type: 'script' as const,
@@ -70,7 +70,7 @@ validations: [
 
 ## 규칙 일곱, CRM 하나
 
-17.7.0 태그의 CRM 예제는 여섯 객체에 걸쳐 일곱 개의 비즈니스 규칙을 선언합니다. 각 규칙이 사는 집과, 그곳에 놓은 표의 행을 함께 적습니다. 이 수가 제목의 숫자이며, `src/objects/*.object.ts`의 `validations` 배열과 `src/hooks/`, `src/flows/`에서 직접 다시 셀 수 있습니다.
+18.2.0 태그의 CRM 예제는 여섯 객체에 걸쳐 일곱 개의 비즈니스 규칙을 선언합니다. 각 규칙이 사는 집과, 그곳에 놓은 표의 행을 함께 적습니다. 이 수가 제목의 숫자이며, `src/objects/*.object.ts`의 `validations` 배열과 `src/hooks/`, `src/flows/`에서 직접 다시 셀 수 있습니다.
 
 | # | 규칙을 한 문장으로 | 집 | 구성 요소 | 표의 행 |
 | :-- | :--- | :--- | :--- | :--- |
@@ -85,7 +85,7 @@ validations: [
 규칙 6은 유일한 훅이며 전부 읽어 볼 가치가 있습니다. 표가 훅에 남겨 둔 바로 그 형태 — 들어오는 레코드의 변경, 그 외에는 아무것도 없음 — 이기 때문입니다:
 
 ```ts
-// examples/app-crm/src/hooks/opportunity.hook.ts  (@objectstack/cli@17.7.0)
+// examples/app-crm/src/hooks/opportunity.hook.ts  (@objectstack/cli@18.2.0)
 export const OpportunityStageHook = defineHook({
   name: 'opportunity_stage_probability',
   object: 'crm_opportunity',
@@ -99,21 +99,21 @@ export const OpportunityStageHook = defineHook({
 });
 ```
 
-규칙 7은 유일한 플로우이고, 그 마지막 노드가 쓰기를 하는 노드입니다. 그 쓰기 집합은 코드가 아닙니다. 리터럴 객체 이름 옆에 놓인 리터럴 필드 이름 맵입니다:
+규칙 7은 유일한 플로우이고, 그 마지막 노드가 쓰기를 하는 노드입니다. 그 쓰기 집합은 코드가 아닙니다. 리터럴 객체 이름 옆에 놓인 리터럴 필드 이름 맵이고, 계산되는 두 값은 CEL 값 봉투입니다 — 함수 본문이 아니라 여전히 데이터입니다:
 
 ```ts
-// examples/app-crm/src/flows/convert-lead.flow.ts  (@objectstack/cli@17.7.0)
+// examples/app-crm/src/flows/convert-lead.flow.ts  (@objectstack/cli@18.2.0)
 {
   id: 'update_lead',
   type: 'update_record',
   label: 'Mark Lead Converted',
   config: {
     objectName: 'crm_lead',
-    filter: { id: '{recordId}' },
+    filter: { id: { dialect: 'cel', source: 'recordId' } },
     fields: {
       status:                'converted',
-      account:               '{account_id}',
-      converted_opportunity: '{opportunity_id}',
+      account:               { dialect: 'cel', source: 'account_id' },
+      converted_opportunity: { dialect: 'cel', source: 'opportunity_id' },
     },
   },
 },
@@ -123,7 +123,7 @@ export const OpportunityStageHook = defineHook({
 
 ## API에서 본 집 세 곳
 
-예제를 17.7.0에서 부팅하고(`objectstack dev --compile`), 서버가 빈 데이터베이스에 시드하는 개발 관리자로 한 번 로그인한 뒤 — 부팅 배너가 계정을 출력합니다 — 생성된 REST API를 호출합니다. 네 번의 호출, 규칙 형태마다 하나씩.
+예제를 18.2.0에서 부팅하고(`objectstack dev --compile`), 서버가 빈 데이터베이스에 시드하는 개발 관리자로 한 번 로그인한 뒤 — 부팅 배너가 계정을 출력합니다 — 생성된 REST API를 호출합니다. 네 번의 호출, 규칙 형태마다 하나씩.
 
 **집 1, `script` 검증.** 45% 할인으로 기회를 생성:
 
@@ -160,13 +160,13 @@ POST /api/v1/data/crm_opportunity
 **집 2, before 훅.** 시드된 “Acme — Q3 Platform Renewal” — 단계 `proposal`, 확률 70 — 을 마감합니다:
 
 ```text
-PATCH /api/v1/data/crm_opportunity/1YgCIjOainwOGgaR
+PATCH /api/v1/data/crm_opportunity/WQwHS5B2yI9pOTqc
 { "stage": "closed_won" }
 
 200 { "record": { "name": "Acme — Q3 Platform Renewal", "stage": "closed_won",
                   "probability": 100, "expected_revenue": 120000, … } }
 
-GET /api/v1/data/crm_opportunity/1YgCIjOainwOGgaR
+GET /api/v1/data/crm_opportunity/WQwHS5B2yI9pOTqc
 200 { "record": { "stage": "closed_won", "probability": 100, … } }
 ```
 
@@ -175,74 +175,72 @@ GET /api/v1/data/crm_opportunity/1YgCIjOainwOGgaR
 **집 1, `state_machine` 검증.** “Initech — Expansion” — 단계 `prospecting` — 을 한 번에 마감해 봅니다:
 
 ```text
-PATCH /api/v1/data/crm_opportunity/Ifv5H8Vukee1ecja
+PATCH /api/v1/data/crm_opportunity/WsD7hH7IEgUvPhDK
 { "stage": "closed_won" }
 
 400 { "error": "Invalid stage transition.",
       "code": "VALIDATION_FAILED",
-      "fields": [ { "field": "stage", "code": "invalid_transition", "label": "Stage",
+      "fields": [ { "field": "stage", "code": "invalid_transition",
+                    "message": "Invalid stage transition.", "label": "Stage",
                     "constraint": { "from": "prospecting", "to": "closed_won" } } ],
       "object": "crm_opportunity" }
 ```
 
 선언된 전이인 `prospecting → qualification`은 `200`을 돌려줍니다. 술어가 쓰기를 거부하기 전에 훅이 `probability`를 다시 썼는지는 밖에서 보이지 않고, 중요하지도 않습니다: 쓰기는 착지하지 않았고, 레코드는 원래대로입니다.
 
-집 세 곳, 구별되는 봉투 세 가지: 규칙 위반은 `VALIDATION_FAILED`와 작성된 메시지를 지니고; 훅은 바꾼 값 외에는 흔적을 남기지 않으며; 플로우 — 규칙 7 — 는 화면에서 구동되므로 단일 REST 호출이 없는데, 그것 자체가 어디에 사는지에 대한 사실입니다.
+집 세 곳, 구별되는 봉투 세 가지: 규칙 위반은 `VALIDATION_FAILED`와 작성된 메시지를 지니고; 훅은 바꾼 값 외에는 흔적을 남기지 않으며(훅이 거부할 때는, 문서에 따르면, API가 규칙의 `VALIDATION_FAILED`가 아니라 코드 `VALIDATION_ERROR`를 지닌 `400`으로 답합니다); 플로우 — 규칙 7 — 는 화면에서 구동되므로 단일 REST 호출이 없는데, 그것 자체가 어디에 사는지에 대한 사실입니다.
 
 ## 같은 오타를 두 집에
 
-표의 “이유” 열이 기대고 있는 측정입니다. 실수 하나 — 쓰기에서 잘못 쓴 필드 이름 — 를 플로우와 훅에 심습니다. 그리고 17.7.0에서 `os validate`를 실행합니다.
+표의 “이유” 열이 기대고 있는 측정입니다. 실수 하나 — 쓰기에서 잘못 쓴 필드 이름 — 를 플로우와 훅에 심습니다. 그리고 18.2.0에서 `os validate`를 실행합니다.
 
 플로우의 `update_record` 노드에서 `converted_opportunity`를 잘못 쓰면:
 
 ```text
 ✗ Author-time rules failed (1 issue)
   • flow "crm_convert_lead_wizard" › node "Mark Lead Converted": update_record
-    writes 'converted_oportunity', but object 'crm_lead' declares no such field.
-    The node hands its fields map to the engine as an ordinary caller payload,
-    so the declared-field door REFUSES the whole write — INVALID_FIELD / 400,
-    identically on every datasource, before any statement is built. …
-      Did you mean 'converted_opportunity'? Fix the field name, or declare
-      'converted_oportunity' on the object. This gates the build rather than
-      warning: the key is literal and so is the object, so unlike the
-      hook/action body rules there is nothing here that could have been
-      mis-extracted.
+    writes 'converted_oportunity', but object 'crm_lead' declares no such field,
+    so the write is refused (INVALID_FIELD / 400) and the step fails the run
+      fix: Did you mean 'converted_opportunity'? Fix the field name, or declare
+      'converted_oportunity' on the object
       rule: flow-node-write-unknown-field  at flows[0].nodes[6].config.fields.converted_oportunity
+      — `os explain flow-node-write-unknown-field` for why an undeclared field write is refused
 exit=1
 ```
 
 훅 본문에서, 쓰기 집합 린트가 인식하는 리터럴 형태 — `ctx.input.probabilty = 100` — 로 `probability`를 잘못 쓰면:
 
 ```text
-✓ Validation passed (564ms)
+✓ Validation passed (542ms)
+  …
   ⚠ hook "opportunity_stage_probability" › body: body writes 'probabilty' to its
-    input, but object 'crm_opportunity' declares no such field. The sandboxed
-    script runs clean and the value is copied back onto the record payload
-    unfiltered, so the write is then REFUSED at run time — INVALID_FIELD / 400,
-    identically on every driver. The record is never written, and the refusal
-    names the field far from the body that wrote it. (judged on the metadata
-    body lowered from the inline handler)
-    rule: hook-body-write-unknown-field
+    input, but object 'crm_opportunity' declares no such field, so the write is
+    refused (INVALID_FIELD / 400) (judged on the metadata body lowered from the
+    inline handler)
+    fix: Did you mean 'probability'? Fix the field name, or declare 'probabilty'
+    on the object
+    rule: hook-body-write-unknown-field  at hooks[0].handler
+    — `os explain hook-body-write-unknown-field` for why an undeclared field write is refused
 exit=0
 ```
 
-같은 실수, 같은 고침, 두 가지 강도. 플로우 노드는 “이걸 쓰려 했나요”가 붙은 **오류**이며 0이 아닌 종료 코드; 훅 본문은 **경고**이며 빌드는 녹색입니다. 문서는 그 이유를 한 문장으로 말합니다: 노드의 `fields`는 “리터럴 `objectName` 옆에 놓인 리터럴 맵이어서 무엇도 잘못 읽을 수 없었다”, 반면 훅 본문의 쓰기 집합은 “파서가 인식할 수 있는 리터럴 패턴에 대해서만” 검사됩니다. 필드의 존재는 쓰기가 데이터일 때 *확실한 사실*이고, 쓰기가 코드일 때 *최선의 노력*입니다.
+같은 실수, 같은 고침, 두 가지 강도. 두 답 모두 고침을 적어 줍니다 — `Did you mean …?` — 다른 것은 강도와 앵커입니다: 플로우 노드는 정확한 `fields` 키에 고정된 **오류**이며 0이 아닌 종료 코드; 훅 본문은 `handler` 전체에 고정된 **경고**이며 빌드는 녹색입니다. 문서는 그 이유를 한 문장으로 말합니다: 노드의 `fields`는 “리터럴 `objectName` 옆에 놓인 리터럴 맵이어서 무엇도 잘못 읽을 수 없었다”, 반면 훅 본문의 쓰기 집합은 “파서가 인식할 수 있는 리터럴 패턴에 대해서만” 검사됩니다. 필드의 존재는 쓰기가 데이터일 때 *확실한 사실*이고, 쓰기가 코드일 때 *최선의 노력*입니다. (두 번째 트랜스크립트에서 생략한 줄은 스택 요약이고, 깨끗한 실행도 출력하는 아홉 개의 `field-no-consumers` 권고가 훅 경고 뒤에 이어집니다.)
 
-![같은 잘못 쓴 필드 이름을 세 곳에 심고 os validate 17.7.0이 답한 것: 플로우 update_record 노드에서는 “이걸 쓰려 했나요”가 붙은 오류와 종료 코드 1; ctx.input.field로 쓴 훅 본문에서는 경고와 종료 코드 0; CRM이 출하하는 그대로의, ctx.input의 로컬 별칭을 통한 훅 본문에서는 아무것도 없고 종료 코드 0. 셋 모두 런타임에서 INVALID_FIELD 400으로 거부되며, 이 받침은 필드를 쓴 줄에서 멀리 떨어진 곳에서 필드 이름을 말한다](./same-typo-three-answers-en.svg)
+![같은 잘못 쓴 필드 이름을 세 곳에 심고 os validate 18.2.0이 답한 것: 플로우 update_record 노드에서는 fields 키에 고정되고 “이걸 쓰려 했나요”가 붙은 오류와 종료 코드 1; ctx.input.field로 쓴 훅 본문에서는 handler에 고정되고 같은 “이걸 쓰려 했나요”가 붙은 경고와 종료 코드 0; CRM이 출하하는 그대로의, ctx.input의 로컬 별칭을 통한 훅 본문에서는 아무것도 없고 종료 코드 0. 셋 모두 런타임에서 INVALID_FIELD 400으로 거부되며, 이 받침은 필드 이름은 말하지만 그것을 쓴 줄은 말하지 않는다](./same-typo-three-answers-en.svg)
 
 그리고 세 번째 답이 있는데, 리뷰 방식을 바꿔야 하는 것은 바로 그것입니다. CRM이 출하하는 훅은 `ctx.input.probability`를 직접 쓰지 않습니다. 로컬 별칭을 통해 씁니다 — `const input = ctx.input; … input.probability = 100` — 그리고 문서는 별칭이 붙은 입력을 규칙이 “*조용히* 포기하는” 형태 중 하나로 올려 두었습니다. “v1은 데이터 흐름 분석을 하지 않기” 때문입니다. 저장소에 쓰인 그대로의 훅에서 필드를 잘못 쓰면 `os validate`는 **아무 말도 하지 않습니다**: 종료 코드 0, 경고 없음, 출력은 깨끗한 실행과 바이트 단위로 동일합니다. 이 일에 대한 문서 자신의 한 줄이 기억해야 할 문장입니다: “**경고가 없다는 것은 건강 증명서가 아니다.**”
 
 셋 모두 런타임에서는 같은 자리에 떨어집니다. CRM의 쓰기 경로는 모든 드라이버에서 알려지지 않은 필드를 거부하며, 손으로 친 페이로드에도 똑같이 합니다:
 
 ```text
-PATCH /api/v1/data/crm_opportunity/S1wBMgLWazLLQ6ns
+PATCH /api/v1/data/crm_opportunity/emhPM9WKJqqGzaME
 { "probabilty": 100 }
 
 400 { "error": "Unknown field 'probabilty' on object 'crm_opportunity'",
       "code": "INVALID_FIELD", "field": "probabilty", "object": "crm_opportunity" }
 ```
 
-그러니 실수는 절대 영속화되지 않습니다. 다른 것은 *언제 알게 되는가*와 *누가 말해 주는가*입니다: 플로우는 `validate`에서, 고침까지 적어서; 리터럴 훅은 `validate`에서, 권고로; 별칭 훅은 첫 실제 쓰기에서, “그것을 쓴 본문에서 멀리 떨어진 곳에서 필드 이름을 말하는” 거부로.
+그러니 실수는 절대 영속화되지 않습니다. 다른 것은 *언제 알게 되는가*와 *누가 말해 주는가*입니다: 플로우는 `validate`에서, 고침까지 적어서; 리터럴 훅은 `validate`에서, 권고로; 별칭 훅은 첫 실제 쓰기에서, 필드 이름은 말하되 그것을 쓴 본문은 말하지 않는 거부로.
 
 ## 데이터로 리뷰 가능, 코드로 리뷰 가능
 
@@ -260,7 +258,7 @@ CRM의 모든 검증 규칙은 데이터로 리뷰 가능합니다. `state_machi
 - **`cross_field`는 더 강한 검사가 아닙니다.** `script`와 같은 술어를 실행합니다. 엔진이 필드를 가로질러 무언가를 더 해 주리라 기대하고 고르면 그런 일은 일어나지 않습니다; 오류 메시지가 어디에 떨어질지를 고르는 것뿐입니다.
 - **쓰기 집합 린트는 파서에 묶여 있습니다.** 계산된 키, 스프레드, 동적 객체 이름, 별칭 입력, 다른 패키지가 선언한 객체는 모두 설계상 보이지 않습니다 — 거짓 양성은 권고 린트를 죽입니다. 런타임 받침은 모든 드라이버에서 같지만, 그것은 받침입니다. 문서의 실무 규칙은 그대로입니다: `hook-body-write-unknown-field`를 관례적으로 빌드 실패로 취급하고, 파서가 볼 수 없는 것은 손으로 확인하십시오.
 - **이 CRM에는 레코드로 트리거되는 플로우가 없습니다.** 유일한 플로우는 사용자가 띄우는 화면 위저드입니다. 첫 문장의 “누군가 예외를 승인한다” 절반은 `approval` 노드가 있는 플로우이고, ObjectStack 저장소는 그 승인 플로우 예시를 더 큰 showcase 예제에 두었으며 여기에는 없습니다. 결정 표는 그것을 다루지만, 이 CRM은 연습하지 않습니다.
-- **일곱은 이 CRM의 수**이며, `@objectstack/cli@17.7.0` 기준입니다. `origin/main`의 문서는 다음 메이저를 기술합니다; 위에 인용한 세 구절은 태그와 `origin/main` 사이에서 바이트 단위로 동일해서 이 글이 인용할 수 있지만, 설치하는 버전에서 트랜스크립트를 다시 실행하십시오.
+- **일곱은 이 CRM의 수**이며, `@objectstack/cli@18.2.0` 기준이고, 위에 인용한 세 문서 구절도 같은 태그에서 읽었습니다. 설치하는 버전에서 트랜스크립트를 다시 실행하십시오: 최근 두 릴리스 사이에 수는 일곱 그대로였지만 플로우 노드의 계산되는 값은 `'{…}'` 템플릿에서 CEL 값 봉투로 모양이 바뀌었습니다. 재실행이 잡아내는 것이 바로 이런 종류의 표류입니다.
 
 ## 에이전트를 표로 향하게 하기
 

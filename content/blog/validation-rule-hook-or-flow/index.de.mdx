@@ -15,7 +15,7 @@ tags:
   - Geschäftsregeln
 ---
 
-**Die Antwort zuerst.** Eine Geschäftsregel in einer ObjectStack-App hat drei mögliche Zuhause, und die Wahl ist eine Tabelle, keine Geschmacksfrage. Eine Regel, die sich allein aus dem einen Datensatz entscheiden lässt, der gerade geschrieben wird, ohne I/O, ist eine **Validierungsregel** auf dem Objekt. Eine Regel, die den ausstehenden Datensatz vor dem Speichern ändern muss, ist ein **Before-Hook**. Alles andere – Seiteneffekte, Genehmigungen, alles, was pausiert, alles, was nach der Uhr läuft – ist ein **Flow**, und die Dokumentation macht den Flow zum Standard: „Ein Flow ist die Standardfläche für Anwendungslogik; ein Hook ist der Rückhalt für das, was ein Knotengraph nicht ausdrücken kann.“ Der Grund ist strukturell, und er ist genau das, was ein Reviewer tatsächlich prüft: **Ein Flow wird als Daten reviewt, ein Hook als Code.** Das im ObjectStack-Repository mitgelieferte CRM deklariert **sieben** solche Regeln – fünf Validierungen, einen Hook, einen Flow – und jede sitzt dort, wo die Tabelle sie hinstellt. Unten: die Tabelle, die sieben Regeln, ein REST-Transkript, in dem jedes Zuhause einen Schreibvorgang ablehnt oder umschreibt, und ein Tippfehler, in zwei Zuhause gepflanzt, um die zwei Review-Stärken zu zeigen. Alles gemessen auf der veröffentlichten `@objectstack/cli` 17.7.0, der Version, die `npm create objectstack@latest` installiert.
+**Die Antwort zuerst.** Eine Geschäftsregel in einer ObjectStack-App hat drei mögliche Zuhause, und die Wahl ist eine Tabelle, keine Geschmacksfrage. Eine Regel, die sich allein aus dem einen Datensatz entscheiden lässt, der gerade geschrieben wird, ohne I/O, ist eine **Validierungsregel** auf dem Objekt. Eine Regel, die den ausstehenden Datensatz vor dem Speichern ändern muss, ist ein **Before-Hook**. Alles andere – Seiteneffekte, Genehmigungen, alles, was pausiert, alles, was nach der Uhr läuft – ist ein **Flow**, und die Dokumentation macht den Flow zum Standard: „Ein Flow ist die Standardfläche für Anwendungslogik; ein Hook ist der Rückhalt für das, was ein Knotengraph nicht ausdrücken kann.“ Der Grund ist strukturell, und er ist genau das, was ein Reviewer tatsächlich prüft: **Ein Flow wird als Daten reviewt, ein Hook als Code.** Das im ObjectStack-Repository mitgelieferte CRM deklariert **sieben** solche Regeln – fünf Validierungen, einen Hook, einen Flow – und jede sitzt dort, wo die Tabelle sie hinstellt. Unten: die Tabelle, die sieben Regeln, ein REST-Transkript, in dem jedes Zuhause einen Schreibvorgang ablehnt oder umschreibt, und ein Tippfehler, in zwei Zuhause gepflanzt, um die zwei Review-Stärken zu zeigen. Alles gemessen auf der veröffentlichten `@objectstack/cli` 18.2.0, der Version, die `npm create objectstack@latest` installiert.
 
 ## Der Satz, den ein Agent bekommt
 
@@ -27,10 +27,10 @@ Eine Product Ownerin schreibt eine Zeile in ein Planungsdokument: *Rabatte über
 
 Für jede *Form* von Regel ist nur eines richtig, und „Rabatte über 40 % brauchen eine Genehmigung“ sind in Wahrheit zwei Regeln in einem Satz. „Über 40 % ist ohne Ausnahme nicht erlaubt“ ist ein Prädikat über den Datensatz – eine Validierungsregel. „Jemand muss die Ausnahme genehmigen“ pausiert und wartet auf einen Menschen – ein Flow. Ein Hook kann beides nicht gut: Er läuft inline, kann also nicht pausieren, und wenn er den Schreibvorgang ablehnt, tut er das als Code, den niemand Feld für Feld diffen kann.
 
-Das [CRM-Beispiel](https://github.com/objectstack-ai/objectstack/tree/%40objectstack/cli%4017.7.0/examples/app-crm) im ObjectStack-Monorepo hat diese Entscheidung bereits getroffen. Seine Regel `discount_cap` ist eine Validierung, im Objekt, als Daten:
+Das [CRM-Beispiel](https://github.com/objectstack-ai/objectstack/tree/%40objectstack/cli%4018.2.0/examples/app-crm) im ObjectStack-Monorepo hat diese Entscheidung bereits getroffen. Seine Regel `discount_cap` ist eine Validierung, im Objekt, als Daten:
 
 ```ts
-// examples/app-crm/src/objects/opportunity.object.ts  (@objectstack/cli@17.7.0)
+// examples/app-crm/src/objects/opportunity.object.ts  (@objectstack/cli@18.2.0)
 validations: [
   {
     type: 'script' as const,
@@ -70,7 +70,7 @@ Zwei Dinge in dieser Tabelle verdreht man leicht. Validierungsregeln laufen nie 
 
 ## Sieben Regeln, ein CRM
 
-Das CRM-Beispiel am Tag 17.7.0 deklariert sieben Geschäftsregeln über seine sechs Objekte. Hier sind sie, jede mit dem Zuhause, in dem sie lebt, und der Tabellenzeile, die sie dorthin gestellt hat. Die Zahl ist die Zahl im Titel; zählen Sie selbst nach, anhand der `validations`-Arrays in `src/objects/*.object.ts` plus `src/hooks/` und `src/flows/`.
+Das CRM-Beispiel am Tag 18.2.0 deklariert sieben Geschäftsregeln über seine sechs Objekte. Hier sind sie, jede mit dem Zuhause, in dem sie lebt, und der Tabellenzeile, die sie dorthin gestellt hat. Die Zahl ist die Zahl im Titel; zählen Sie selbst nach, anhand der `validations`-Arrays in `src/objects/*.object.ts` plus `src/hooks/` und `src/flows/`.
 
 | # | Die Regel als Satz | Zuhause | Konstrukt | Tabellenzeile |
 | :-- | :--- | :--- | :--- | :--- |
@@ -85,7 +85,7 @@ Das CRM-Beispiel am Tag 17.7.0 deklariert sieben Geschäftsregeln über seine se
 Regel 6 ist der einzige Hook, und es lohnt sich, sie ganz zu lesen, denn sie hat genau die Form, die die Tabelle Hooks vorbehält – eine Änderung des Datensatzes auf dem Weg hinein, und sonst nichts:
 
 ```ts
-// examples/app-crm/src/hooks/opportunity.hook.ts  (@objectstack/cli@17.7.0)
+// examples/app-crm/src/hooks/opportunity.hook.ts  (@objectstack/cli@18.2.0)
 export const OpportunityStageHook = defineHook({
   name: 'opportunity_stage_probability',
   object: 'crm_opportunity',
@@ -99,21 +99,21 @@ export const OpportunityStageHook = defineHook({
 });
 ```
 
-Regel 7 ist der einzige Flow, und sein letzter Knoten ist der, der schreibt. Seine Schreibmenge ist kein Code; sie ist eine literale Map von Feldnamen neben einem literalen Objektnamen:
+Regel 7 ist der einzige Flow, und sein letzter Knoten ist der, der schreibt. Seine Schreibmenge ist kein Code; sie ist eine literale Map von Feldnamen neben einem literalen Objektnamen, und die beiden Werte, die sie berechnet, sind CEL-Wertumschläge – immer noch Daten, kein Funktionskörper:
 
 ```ts
-// examples/app-crm/src/flows/convert-lead.flow.ts  (@objectstack/cli@17.7.0)
+// examples/app-crm/src/flows/convert-lead.flow.ts  (@objectstack/cli@18.2.0)
 {
   id: 'update_lead',
   type: 'update_record',
   label: 'Mark Lead Converted',
   config: {
     objectName: 'crm_lead',
-    filter: { id: '{recordId}' },
+    filter: { id: { dialect: 'cel', source: 'recordId' } },
     fields: {
       status:                'converted',
-      account:               '{account_id}',
-      converted_opportunity: '{opportunity_id}',
+      account:               { dialect: 'cel', source: 'account_id' },
+      converted_opportunity: { dialect: 'cel', source: 'opportunity_id' },
     },
   },
 },
@@ -123,7 +123,7 @@ Halten Sie diese beiden Formen nebeneinander. Sie sind das ganze Argument.
 
 ## Drei Zuhause an der API
 
-Starten Sie das Beispiel auf 17.7.0 (`objectstack dev --compile`), melden Sie sich einmal als der Dev-Admin an, den der Server auf einer leeren Datenbank anlegt – das Boot-Banner druckt das Konto –, und bedienen Sie die generierte REST-API. Vier Aufrufe, einer pro Regelform.
+Starten Sie das Beispiel auf 18.2.0 (`objectstack dev --compile`), melden Sie sich einmal als der Dev-Admin an, den der Server auf einer leeren Datenbank anlegt – das Boot-Banner druckt das Konto –, und bedienen Sie die generierte REST-API. Vier Aufrufe, einer pro Regelform.
 
 **Zuhause 1, eine `script`-Validierung.** Eine Opportunity mit 45 % Rabatt anlegen:
 
@@ -160,13 +160,13 @@ Dieselbe Engine, derselbe Umschlag, ein Unterschied: Der Fehler ist an `close_da
 **Zuhause 2, der Before-Hook.** Nehmen Sie die geseedete „Acme — Q3 Platform Renewal“ – Phase `proposal`, Wahrscheinlichkeit 70 – und schließen Sie sie ab:
 
 ```text
-PATCH /api/v1/data/crm_opportunity/1YgCIjOainwOGgaR
+PATCH /api/v1/data/crm_opportunity/WQwHS5B2yI9pOTqc
 { "stage": "closed_won" }
 
 200 { "record": { "name": "Acme — Q3 Platform Renewal", "stage": "closed_won",
                   "probability": 100, "expected_revenue": 120000, … } }
 
-GET /api/v1/data/crm_opportunity/1YgCIjOainwOGgaR
+GET /api/v1/data/crm_opportunity/WQwHS5B2yI9pOTqc
 200 { "record": { "stage": "closed_won", "probability": 100, … } }
 ```
 
@@ -175,74 +175,72 @@ Niemand hat `probability` gesendet. Der Hook hat den ausstehenden Datensatz umge
 **Zuhause 1, eine `state_machine`-Validierung.** Nehmen Sie „Initech — Expansion“ – Phase `prospecting` – und versuchen Sie, sie in einem Sprung abzuschließen:
 
 ```text
-PATCH /api/v1/data/crm_opportunity/Ifv5H8Vukee1ecja
+PATCH /api/v1/data/crm_opportunity/WsD7hH7IEgUvPhDK
 { "stage": "closed_won" }
 
 400 { "error": "Invalid stage transition.",
       "code": "VALIDATION_FAILED",
-      "fields": [ { "field": "stage", "code": "invalid_transition", "label": "Stage",
+      "fields": [ { "field": "stage", "code": "invalid_transition",
+                    "message": "Invalid stage transition.", "label": "Stage",
                     "constraint": { "from": "prospecting", "to": "closed_won" } } ],
       "object": "crm_opportunity" }
 ```
 
 `prospecting → qualification`, ein deklarierter Übergang, liefert `200`. Ob der Hook `probability` umgeschrieben hat, bevor das Prädikat den Schreibvorgang abgelehnt hat, ist von außen unsichtbar, und es spielt keine Rolle: Der Schreibvorgang ist nie gelandet, und der Datensatz bleibt, was er war.
 
-Drei Zuhause, drei unterscheidbare Umschläge: Ein Regelverstoß trägt `VALIDATION_FAILED` und die verfasste Nachricht; ein Hook hinterlässt keine Spur außer dem Wert, den er geändert hat; ein Flow – Regel 7 – wird von einem Screen aus gesteuert und hat deshalb keinen einzelnen REST-Aufruf, was selbst eine Tatsache darüber ist, wo er lebt.
+Drei Zuhause, drei unterscheidbare Umschläge: Ein Regelverstoß trägt `VALIDATION_FAILED` und die verfasste Nachricht; ein Hook hinterlässt keine Spur außer dem Wert, den er geändert hat – und wenn ein Hook ablehnt, antwortet die API laut Dokumentation mit `400` und dem Code `VALIDATION_ERROR`, nicht mit dem `VALIDATION_FAILED` einer Regel; ein Flow – Regel 7 – wird von einem Screen aus gesteuert und hat deshalb keinen einzelnen REST-Aufruf, was selbst eine Tatsache darüber ist, wo er lebt.
 
 ## Derselbe Tippfehler in zwei Zuhause
 
-Hier ist die Messung, auf der die „Warum“-Spalte der Tabelle ruht. Nehmen Sie einen Fehler – einen falsch geschriebenen Feldnamen in einem Schreibvorgang – und pflanzen Sie ihn in den Flow und in den Hook. Dann führen Sie `os validate` auf 17.7.0 aus.
+Hier ist die Messung, auf der die „Warum“-Spalte der Tabelle ruht. Nehmen Sie einen Fehler – einen falsch geschriebenen Feldnamen in einem Schreibvorgang – und pflanzen Sie ihn in den Flow und in den Hook. Dann führen Sie `os validate` auf 18.2.0 aus.
 
 Im `update_record`-Knoten des Flows `converted_opportunity` falsch schreiben:
 
 ```text
 ✗ Author-time rules failed (1 issue)
   • flow "crm_convert_lead_wizard" › node "Mark Lead Converted": update_record
-    writes 'converted_oportunity', but object 'crm_lead' declares no such field.
-    The node hands its fields map to the engine as an ordinary caller payload,
-    so the declared-field door REFUSES the whole write — INVALID_FIELD / 400,
-    identically on every datasource, before any statement is built. …
-      Did you mean 'converted_opportunity'? Fix the field name, or declare
-      'converted_oportunity' on the object. This gates the build rather than
-      warning: the key is literal and so is the object, so unlike the
-      hook/action body rules there is nothing here that could have been
-      mis-extracted.
+    writes 'converted_oportunity', but object 'crm_lead' declares no such field,
+    so the write is refused (INVALID_FIELD / 400) and the step fails the run
+      fix: Did you mean 'converted_opportunity'? Fix the field name, or declare
+      'converted_oportunity' on the object
       rule: flow-node-write-unknown-field  at flows[0].nodes[6].config.fields.converted_oportunity
+      — `os explain flow-node-write-unknown-field` for why an undeclared field write is refused
 exit=1
 ```
 
 Im Hook-Body `probability` falsch schreiben, in der literalen Form, die der Schreibmengen-Linter erkennt – `ctx.input.probabilty = 100`:
 
 ```text
-✓ Validation passed (564ms)
+✓ Validation passed (542ms)
+  …
   ⚠ hook "opportunity_stage_probability" › body: body writes 'probabilty' to its
-    input, but object 'crm_opportunity' declares no such field. The sandboxed
-    script runs clean and the value is copied back onto the record payload
-    unfiltered, so the write is then REFUSED at run time — INVALID_FIELD / 400,
-    identically on every driver. The record is never written, and the refusal
-    names the field far from the body that wrote it. (judged on the metadata
-    body lowered from the inline handler)
-    rule: hook-body-write-unknown-field
+    input, but object 'crm_opportunity' declares no such field, so the write is
+    refused (INVALID_FIELD / 400) (judged on the metadata body lowered from the
+    inline handler)
+    fix: Did you mean 'probability'? Fix the field name, or declare 'probabilty'
+    on the object
+    rule: hook-body-write-unknown-field  at hooks[0].handler
+    — `os explain hook-body-write-unknown-field` for why an undeclared field write is refused
 exit=0
 ```
 
-Derselbe Fehler, dieselbe Korrektur, zwei Stärken. Der Flow-Knoten ist ein **Fehler** mit „Meinten Sie“ und einem Exit ungleich null; der Hook-Body ist eine **Warnung**, und der Build ist grün. Die Dokumentation sagt in einem Satz, warum: Die `fields` des Knotens „sind eine literale Map neben einem literalen `objectName`, sodass nichts sie falsch gelesen haben kann“, während die Schreibmenge eines Hook-Bodys „nur auf die literalen Muster geprüft wird, die ein Parser erkennen kann“. Die Existenz eines Felds ist eine *Gewissheit*, wenn der Schreibvorgang Daten ist, und ein *bestmöglicher Versuch*, wenn er Code ist.
+Derselbe Fehler, dieselbe Korrektur, zwei Stärken. Beide Antworten schreiben die Korrektur aus – `Did you mean …?` –, und was sich unterscheidet, sind Stärke und Anker: Der Flow-Knoten ist ein **Fehler**, am exakten `fields`-Schlüssel verankert, mit einem Exit ungleich null; der Hook-Body ist eine **Warnung**, am ganzen `handler` verankert, und der Build ist grün. Die Dokumentation sagt in einem Satz, warum: Die `fields` des Knotens „sind eine literale Map neben einem literalen `objectName`, sodass nichts sie falsch gelesen haben kann“, während die Schreibmenge eines Hook-Bodys „nur auf die literalen Muster geprüft wird, die ein Parser erkennen kann“. Die Existenz eines Felds ist eine *Gewissheit*, wenn der Schreibvorgang Daten ist, und ein *bestmöglicher Versuch*, wenn er Code ist. (Die ausgelassenen Zeilen im zweiten Transkript sind die Stack-Zusammenfassung; die neun `field-no-consumers`-Hinweise, die auch der saubere Lauf druckt, folgen auf die Hook-Warnung.)
 
-![Derselbe falsch geschriebene Feldname an drei Stellen gepflanzt und was os validate 17.7.0 antwortet: in einem Flow-update_record-Knoten ein Fehler mit „Meinten Sie“ und Exit 1; in einem als ctx.input.field geschriebenen Hook-Body eine Warnung und Exit 0; im Hook-Body, wie das CRM ihn ausliefert, über einen lokalen Alias von ctx.input, gar nichts und Exit 0. Alle drei werden zur Laufzeit mit INVALID_FIELD 400 abgelehnt, dem Rückhalt, der das Feld weit entfernt von der Stelle benennt, an der es geschrieben wurde](./same-typo-three-answers-en.svg)
+![Derselbe falsch geschriebene Feldname an drei Stellen gepflanzt und was os validate 18.2.0 antwortet: in einem Flow-update_record-Knoten ein am fields-Schlüssel verankerter Fehler mit „Meinten Sie“ und Exit 1; in einem als ctx.input.field geschriebenen Hook-Body eine am handler verankerte Warnung mit demselben „Meinten Sie“ und Exit 0; im Hook-Body, wie das CRM ihn ausliefert, über einen lokalen Alias von ctx.input, gar nichts und Exit 0. Alle drei werden zur Laufzeit mit INVALID_FIELD 400 abgelehnt, dem Rückhalt, der das Feld benennt, aber nicht die Zeile, die es geschrieben hat](./same-typo-three-answers-en.svg)
 
 Und es gibt eine dritte Antwort, und sie ist die, die ändern sollte, wie Sie reviewen. Der Hook des CRM, wie er ausgeliefert wird, schreibt nicht direkt `ctx.input.probability`. Er schreibt über einen lokalen Alias – `const input = ctx.input; … input.probability = 100` –, und die Dokumentation führt aliasierten Input unter den Formen auf, bei denen die Regel „*stillschweigend* aussteigt“, weil „v1 keine Datenflussanalyse macht“. Schreiben Sie das Feld im Hook genau so falsch, wie er im Repository steht, und `os validate` sagt **nichts**: Exit 0, keine Warnung, Ausgabe byteidentisch mit dem sauberen Lauf. Die Zeile der Dokumentation dazu ist die, die man sich merken sollte: „**Eine fehlende Warnung ist kein Gesundheitszeugnis.**“
 
 Alle drei landen zur Laufzeit an derselben Stelle. Der Schreibpfad des CRM lehnt ein unbekanntes Feld auf jedem Treiber ab, auch bei einer von Hand getippten Payload:
 
 ```text
-PATCH /api/v1/data/crm_opportunity/S1wBMgLWazLLQ6ns
+PATCH /api/v1/data/crm_opportunity/emhPM9WKJqqGzaME
 { "probabilty": 100 }
 
 400 { "error": "Unknown field 'probabilty' on object 'crm_opportunity'",
       "code": "INVALID_FIELD", "field": "probabilty", "object": "crm_opportunity" }
 ```
 
-Der Fehler wird also nie persistiert. Was sich unterscheidet, ist, *wann Sie es erfahren* und *wer es Ihnen sagt*: der Flow bei `validate`, mit ausgeschriebener Korrektur; der literale Hook bei `validate`, als Hinweis; der aliasierte Hook beim ersten echten Schreibvorgang, durch eine Ablehnung, die „das Feld weit entfernt von dem Body benennt, der es geschrieben hat“.
+Der Fehler wird also nie persistiert. Was sich unterscheidet, ist, *wann Sie es erfahren* und *wer es Ihnen sagt*: der Flow bei `validate`, mit ausgeschriebener Korrektur; der literale Hook bei `validate`, als Hinweis; der aliasierte Hook beim ersten echten Schreibvorgang, durch eine Ablehnung, die das Feld benennt, aber nicht den Body, der es geschrieben hat.
 
 ## Als Daten reviewbar, als Code reviewbar
 
@@ -260,7 +258,7 @@ Die Dokumentation schließt das eine Schlupfloch in diesem Argument. Logik, die 
 - **`cross_field` ist keine stärkere Prüfung.** Es führt dasselbe Prädikat aus wie `script`. Wer es wählt und erwartet, dass die Engine über Felder hinweg etwas Zusätzliches tut, wird enttäuscht; man wählt nur, wo die Fehlermeldung landet.
 - **Der Schreibmengen-Linter ist durch einen Parser begrenzt.** Berechnete Schlüssel, Spreads, dynamische Objektnamen, aliasierter Input und Objekte, die ein anderes Paket deklariert, sind für ihn alle unsichtbar, absichtlich – ein Falschpositiv würde einen Hinweis-Linter töten. Der Laufzeit-Rückhalt ist auf jedem Treiber derselbe, aber er ist ein Rückhalt. Die praktische Regel der Dokumentation gilt: `hook-body-write-unknown-field` per Konvention als Build-Fehler behandeln und von Hand prüfen, was der Parser nicht sehen kann.
 - **Das CRM hat keinen Record-getriggerten Flow.** Sein einziger Flow ist ein Screen-Wizard, den ein Nutzer startet. Die Hälfte „jemand genehmigt die Ausnahme“ des Eingangssatzes ist ein Flow mit einem `approval`-Knoten, und das ObjectStack-Repository hält seine ausgearbeiteten Genehmigungs-Flows im größeren Showcase-Beispiel, nicht hier. Die Entscheidungstabelle deckt ihn ab; dieses CRM übt ihn nicht.
-- **Sieben ist die Zahl dieses CRM**, bei `@objectstack/cli@17.7.0`. Die Dokumentation auf `origin/main` beschreibt das nächste Major; die drei oben zitierten Stellen sind zwischen dem Tag und `origin/main` byteidentisch, weshalb dieser Text sie zitieren kann, aber führen Sie das Transkript auf der Version erneut aus, die Sie installieren.
+- **Sieben ist die Zahl dieses CRM**, bei `@objectstack/cli@18.2.0`, und die drei oben zitierten Dokumentationsstellen sind an demselben Tag gelesen. Führen Sie das Transkript auf der Version erneut aus, die Sie installieren: Zwischen zwei jüngeren Releases blieb die Zahl bei sieben, während die berechneten Werte des Flow-Knotens ihre Form änderten, von `'{…}'`-Templates zu CEL-Wertumschlägen – genau die Art Drift, die ein erneuter Lauf findet.
 
 ## Richten Sie Ihren Agent auf die Tabelle
 

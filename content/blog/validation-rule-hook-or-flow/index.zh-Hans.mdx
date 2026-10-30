@@ -15,7 +15,7 @@ tags:
   - 业务规则
 ---
 
-**先给结论。** ObjectStack 应用里的一条业务规则有三个可能的家，选哪一个是一张表，不是口味。只凭正在写入的那一条记录就能判定、不做任何 I/O 的规则，是对象上的**校验规则**。必须在保存之前改写待保存记录的规则，是**前置钩子**。其余的一切——副作用、审批、任何会暂停的东西、任何按时钟走的东西——是**流程**，而且文档把流程定为默认：「流程是应用逻辑的默认落点；钩子是节点图表达不了的东西的兜底。」理由是结构性的，也正是审阅者真正要核对的那件事：**流程以数据的形式接受审阅，钩子以代码的形式接受审阅。** ObjectStack 仓库自带的 CRM 声明了**七条**这样的规则——五条校验、一个钩子、一个流程——每一条都落在表里说的位置。下面依次是：这张表；七条规则；一份 REST 记录，三个家各自拒绝或改写一次写入；以及把同一个拼写错误分别种进两个家，看两种审阅强度。全部在已发布的 `@objectstack/cli` 17.7.0 上测得，也就是 `npm create objectstack@latest` 装上的那个版本。
+**先给结论。** ObjectStack 应用里的一条业务规则有三个可能的家，选哪一个是一张表，不是口味。只凭正在写入的那一条记录就能判定、不做任何 I/O 的规则，是对象上的**校验规则**。必须在保存之前改写待保存记录的规则，是**前置钩子**。其余的一切——副作用、审批、任何会暂停的东西、任何按时钟走的东西——是**流程**，而且文档把流程定为默认：「流程是应用逻辑的默认落点；钩子是节点图表达不了的东西的兜底。」理由是结构性的，也正是审阅者真正要核对的那件事：**流程以数据的形式接受审阅，钩子以代码的形式接受审阅。** ObjectStack 仓库自带的 CRM 声明了**七条**这样的规则——五条校验、一个钩子、一个流程——每一条都落在表里说的位置。下面依次是：这张表；七条规则；一份 REST 记录，三个家各自拒绝或改写一次写入；以及把同一个拼写错误分别种进两个家，看两种审阅强度。全部在已发布的 `@objectstack/cli` 18.2.0 上测得，也就是 `npm create objectstack@latest` 装上的那个版本。
 
 ## Agent 拿到的那句话
 
@@ -27,10 +27,10 @@ tags:
 
 对每一种*形状*的规则，只有一个家是对的，而「折扣超过 40% 需要审批」其实是两条规则穿了一句话。「没有例外批准，超过 40% 不允许」是对记录的谓词——校验规则。「得有人批准这个例外」会暂停并等一个人——流程。钩子两样都做不好：它内联运行，所以不能暂停；如果它拒绝写入，它是以一段没人能逐字段 diff 的代码拒绝的。
 
-ObjectStack 单仓里自带的 [CRM 示例](https://github.com/objectstack-ai/objectstack/tree/%40objectstack/cli%4017.7.0/examples/app-crm)已经做了这个选择。它的 `discount_cap` 规则是一条校验，住在对象里，是数据：
+ObjectStack 单仓里自带的 [CRM 示例](https://github.com/objectstack-ai/objectstack/tree/%40objectstack/cli%4018.2.0/examples/app-crm)已经做了这个选择。它的 `discount_cap` 规则是一条校验，住在对象里，是数据：
 
 ```ts
-// examples/app-crm/src/objects/opportunity.object.ts  (@objectstack/cli@17.7.0)
+// examples/app-crm/src/objects/opportunity.object.ts  (@objectstack/cli@18.2.0)
 validations: [
   {
     type: 'script' as const,
@@ -70,7 +70,7 @@ validations: [
 
 ## 七条规则，一个 CRM
 
-17.7.0 标签处的 CRM 示例，在六个对象上声明了七条业务规则。下面逐条列出它住的家，以及把它放到那里的那一行表。这个数就是标题里的数字；你可以从 `src/objects/*.object.ts` 的 `validations` 数组，再加上 `src/hooks/` 和 `src/flows/`，自己重数一遍。
+18.2.0 标签处的 CRM 示例，在六个对象上声明了七条业务规则。下面逐条列出它住的家，以及把它放到那里的那一行表。这个数就是标题里的数字；你可以从 `src/objects/*.object.ts` 的 `validations` 数组，再加上 `src/hooks/` 和 `src/flows/`，自己重数一遍。
 
 | # | 规则，写成一句话 | 家 | 构造 | 表里的哪一行 |
 | :-- | :--- | :--- | :--- | :--- |
@@ -85,7 +85,7 @@ validations: [
 第 6 条是唯一的钩子，值得整个读一遍，因为它正是表留给钩子的那种形状——改写一条正在进来的记录，别的什么都不做：
 
 ```ts
-// examples/app-crm/src/hooks/opportunity.hook.ts  (@objectstack/cli@17.7.0)
+// examples/app-crm/src/hooks/opportunity.hook.ts  (@objectstack/cli@18.2.0)
 export const OpportunityStageHook = defineHook({
   name: 'opportunity_stage_probability',
   object: 'crm_opportunity',
@@ -99,21 +99,21 @@ export const OpportunityStageHook = defineHook({
 });
 ```
 
-第 7 条是唯一的流程，它的最后一个节点就是写入的那个。它的写入集不是代码，而是一张字面量的字段名映射，旁边是一个字面量的对象名：
+第 7 条是唯一的流程，它的最后一个节点就是写入的那个。它的写入集不是代码，而是一张字面量的字段名映射，旁边是一个字面量的对象名；它要计算的两个值是 CEL 值信封——仍然是数据，不是函数体：
 
 ```ts
-// examples/app-crm/src/flows/convert-lead.flow.ts  (@objectstack/cli@17.7.0)
+// examples/app-crm/src/flows/convert-lead.flow.ts  (@objectstack/cli@18.2.0)
 {
   id: 'update_lead',
   type: 'update_record',
   label: 'Mark Lead Converted',
   config: {
     objectName: 'crm_lead',
-    filter: { id: '{recordId}' },
+    filter: { id: { dialect: 'cel', source: 'recordId' } },
     fields: {
       status:                'converted',
-      account:               '{account_id}',
-      converted_opportunity: '{opportunity_id}',
+      account:               { dialect: 'cel', source: 'account_id' },
+      converted_opportunity: { dialect: 'cel', source: 'opportunity_id' },
     },
   },
 },
@@ -123,7 +123,7 @@ export const OpportunityStageHook = defineHook({
 
 ## 三个家，在 API 上
 
-在 17.7.0 上启动示例（`objectstack dev --compile`），以服务器在空数据库上播种的开发管理员登录一次——启动横幅会打印这个账号——然后驱动生成的 REST API。四次调用，每种规则形状一次。
+在 18.2.0 上启动示例（`objectstack dev --compile`），以服务器在空数据库上播种的开发管理员登录一次——启动横幅会打印这个账号——然后驱动生成的 REST API。四次调用，每种规则形状一次。
 
 **家 1，一条 `script` 校验。** 以 45% 的折扣创建一个商机：
 
@@ -160,13 +160,13 @@ POST /api/v1/data/crm_opportunity
 **家 2，前置钩子。** 取种子数据里的「Acme — Q3 Platform Renewal」——阶段 `proposal`，概率 70——把它关掉：
 
 ```text
-PATCH /api/v1/data/crm_opportunity/1YgCIjOainwOGgaR
+PATCH /api/v1/data/crm_opportunity/WQwHS5B2yI9pOTqc
 { "stage": "closed_won" }
 
 200 { "record": { "name": "Acme — Q3 Platform Renewal", "stage": "closed_won",
                   "probability": 100, "expected_revenue": 120000, … } }
 
-GET /api/v1/data/crm_opportunity/1YgCIjOainwOGgaR
+GET /api/v1/data/crm_opportunity/WQwHS5B2yI9pOTqc
 200 { "record": { "stage": "closed_won", "probability": 100, … } }
 ```
 
@@ -175,74 +175,72 @@ GET /api/v1/data/crm_opportunity/1YgCIjOainwOGgaR
 **家 1，一条 `state_machine` 校验。** 取「Initech — Expansion」——阶段 `prospecting`——试着一步关单：
 
 ```text
-PATCH /api/v1/data/crm_opportunity/Ifv5H8Vukee1ecja
+PATCH /api/v1/data/crm_opportunity/WsD7hH7IEgUvPhDK
 { "stage": "closed_won" }
 
 400 { "error": "Invalid stage transition.",
       "code": "VALIDATION_FAILED",
-      "fields": [ { "field": "stage", "code": "invalid_transition", "label": "Stage",
+      "fields": [ { "field": "stage", "code": "invalid_transition",
+                    "message": "Invalid stage transition.", "label": "Stage",
                     "constraint": { "from": "prospecting", "to": "closed_won" } } ],
       "object": "crm_opportunity" }
 ```
 
 `prospecting → qualification` 是声明过的转换，返回 `200`。钩子有没有在谓词拒绝写入之前改写 `probability`，从外面看不见，也无关紧要：写入没有落地，记录保持原样。
 
-三个家，三种分得开的信封：规则失败带着 `VALIDATION_FAILED` 和编写好的消息；钩子除了它改掉的那个值之外不留痕迹；流程——第 7 条——是从屏幕驱动的，所以没有单独的一次 REST 调用，这本身就是关于它住在哪的事实。
+三个家，三种分得开的信封：规则失败带着 `VALIDATION_FAILED` 和编写好的消息；钩子除了它改掉的那个值之外不留痕迹（文档说，钩子若拒绝写入，API 回答的是带代码 `VALIDATION_ERROR` 的 `400`，而不是规则的 `VALIDATION_FAILED`）；流程——第 7 条——是从屏幕驱动的，所以没有单独的一次 REST 调用，这本身就是关于它住在哪的事实。
 
 ## 同一个拼写错误，两个家
 
-这是表里「为什么」一列所依据的测量。拿一个错误——写入里拼错一个字段名——分别种进流程和钩子，然后在 17.7.0 上跑 `os validate`。
+这是表里「为什么」一列所依据的测量。拿一个错误——写入里拼错一个字段名——分别种进流程和钩子，然后在 18.2.0 上跑 `os validate`。
 
 在流程的 `update_record` 节点里，把 `converted_opportunity` 拼错：
 
 ```text
 ✗ Author-time rules failed (1 issue)
   • flow "crm_convert_lead_wizard" › node "Mark Lead Converted": update_record
-    writes 'converted_oportunity', but object 'crm_lead' declares no such field.
-    The node hands its fields map to the engine as an ordinary caller payload,
-    so the declared-field door REFUSES the whole write — INVALID_FIELD / 400,
-    identically on every datasource, before any statement is built. …
-      Did you mean 'converted_opportunity'? Fix the field name, or declare
-      'converted_oportunity' on the object. This gates the build rather than
-      warning: the key is literal and so is the object, so unlike the
-      hook/action body rules there is nothing here that could have been
-      mis-extracted.
+    writes 'converted_oportunity', but object 'crm_lead' declares no such field,
+    so the write is refused (INVALID_FIELD / 400) and the step fails the run
+      fix: Did you mean 'converted_opportunity'? Fix the field name, or declare
+      'converted_oportunity' on the object
       rule: flow-node-write-unknown-field  at flows[0].nodes[6].config.fields.converted_oportunity
+      — `os explain flow-node-write-unknown-field` for why an undeclared field write is refused
 exit=1
 ```
 
 在钩子体里，以写入集检查能识别的字面形式把 `probability` 拼错——`ctx.input.probabilty = 100`：
 
 ```text
-✓ Validation passed (564ms)
+✓ Validation passed (542ms)
+  …
   ⚠ hook "opportunity_stage_probability" › body: body writes 'probabilty' to its
-    input, but object 'crm_opportunity' declares no such field. The sandboxed
-    script runs clean and the value is copied back onto the record payload
-    unfiltered, so the write is then REFUSED at run time — INVALID_FIELD / 400,
-    identically on every driver. The record is never written, and the refusal
-    names the field far from the body that wrote it. (judged on the metadata
-    body lowered from the inline handler)
-    rule: hook-body-write-unknown-field
+    input, but object 'crm_opportunity' declares no such field, so the write is
+    refused (INVALID_FIELD / 400) (judged on the metadata body lowered from the
+    inline handler)
+    fix: Did you mean 'probability'? Fix the field name, or declare 'probabilty'
+    on the object
+    rule: hook-body-write-unknown-field  at hooks[0].handler
+    — `os explain hook-body-write-unknown-field` for why an undeclared field write is refused
 exit=0
 ```
 
-同一个错误，同一种修法，两种强度。流程节点是一个**错误**，带着「你是不是想写」和非零退出码；钩子体是一个**警告**，构建是绿的。文档用一句话说明了原因：节点的 `fields`「是一张字面量映射，旁边是字面量的 `objectName`，所以没有什么能把它读错」，而钩子体的写入集「只按解析器能识别的字面模式」检查。当写入是数据时，字段是否存在是一个*确定的事实*；当写入是代码时，它只是*尽力而为*。
+同一个错误，同一种修法，两种强度。两个回答都把修法写了出来——`Did you mean …?`——不同的是强度和锚点：流程节点是一个**错误**，钉在 `fields` 里那个确切的键上，带非零退出码；钩子体是一个**警告**，钉在整个 `handler` 上，构建是绿的。文档用一句话说明了原因：节点的 `fields`「是一张字面量映射，旁边是字面量的 `objectName`，所以没有什么能把它读错」，而钩子体的写入集「只按解析器能识别的字面模式」检查。当写入是数据时，字段是否存在是一个*确定的事实*；当写入是代码时，它只是*尽力而为*。（第二份记录里省略的几行是栈的摘要；干净运行同样会打印的九条 `field-no-consumers` 建议跟在钩子警告之后。）
 
-![同一个拼错的字段名种在三个地方，以及 os validate 17.7.0 的回答：在流程的 update_record 节点里，一个带「你是不是想写」的错误，退出码 1；在写成 ctx.input.field 的钩子体里，一个警告，退出码 0；在 CRM 随仓发布的钩子体里，通过 ctx.input 的本地别名写入，什么都没有，退出码 0。三者在运行时都被 INVALID_FIELD 400 拒绝，这个兜底在远离写它的那一行的地方点出字段名](./same-typo-three-answers.svg)
+![同一个拼错的字段名种在三个地方，以及 os validate 18.2.0 的回答：在流程的 update_record 节点里，一个钉在 fields 键上、带「你是不是想写」的错误，退出码 1；在写成 ctx.input.field 的钩子体里，一个钉在 handler 上、带同样「你是不是想写」的警告，退出码 0；在 CRM 随仓发布的钩子体里，通过 ctx.input 的本地别名写入，什么都没有，退出码 0。三者在运行时都被 INVALID_FIELD 400 拒绝，这个兜底点出字段名，却不点出写它的那一行](./same-typo-three-answers.svg)
 
 还有第三种回答，而它才是应该改变你审阅方式的那个。CRM 随仓发布的钩子并不直接写 `ctx.input.probability`。它通过一个本地别名写——`const input = ctx.input; … input.probability = 100`——而文档把别名化的输入列在规则「*静默*放弃」的形状里，因为「v1 不做数据流分析」。按仓库里的原样在钩子里拼错这个字段，`os validate` **什么都不说**：退出码 0，没有警告，输出与干净的那次运行逐字节相同。文档自己给这件事的那一句，正是应该记住的那一句：「**没有警告，不等于健康证明。**」
 
 三种写法在运行时落到同一个地方。CRM 的写入路径在每个驱动上都拒绝未知字段，对手工敲出来的载荷也一样：
 
 ```text
-PATCH /api/v1/data/crm_opportunity/S1wBMgLWazLLQ6ns
+PATCH /api/v1/data/crm_opportunity/emhPM9WKJqqGzaME
 { "probabilty": 100 }
 
 400 { "error": "Unknown field 'probabilty' on object 'crm_opportunity'",
       "code": "INVALID_FIELD", "field": "probabilty", "object": "crm_opportunity" }
 ```
 
-所以这个错误永远不会被持久化。不同的是*你什么时候知道*和*谁告诉你*：流程在 `validate` 时就知道，而且修法已经写明；字面写法的钩子在 `validate` 时知道，但只是建议；别名写法的钩子要等到第一次真实写入，由一个「在远离写它的那段代码的地方点出字段名」的拒绝来告诉你。
+所以这个错误永远不会被持久化。不同的是*你什么时候知道*和*谁告诉你*：流程在 `validate` 时就知道，而且修法已经写明；字面写法的钩子在 `validate` 时知道，但只是建议；别名写法的钩子要等到第一次真实写入，由一个点出字段名、却不点出写它的那段代码的拒绝来告诉你。
 
 ## 以数据审阅，以代码审阅
 
@@ -260,7 +258,7 @@ CRM 里的每一条校验规则都是以数据审阅的。`state_machine` 是最
 - **`cross_field` 不是更强的检查。** 它跑的是和 `script` 一样的谓词。如果你指望它让引擎跨字段多做点什么，它不会；你只是在选错误消息落在哪里。
 - **写入集检查受解析器所限。** 计算键、展开、动态对象名、别名化的输入，以及由另一个包声明的对象，对它全都不可见，这是设计使然——一个误报会杀死一条建议性的 lint。运行时兜底在每个驱动上都一样，但它是兜底。文档的实用规则仍然成立：按惯例把 `hook-body-write-unknown-field` 当作构建失败，解析器看不见的东西用手检查。
 - **这个 CRM 没有记录触发的流程。** 它唯一的流程是用户发起的屏幕向导。开头那句话的「得有人批准这个例外」那一半，是一个带 `approval` 节点的流程，而 ObjectStack 仓库把演示用的审批流程放在更大的 showcase 示例里，不在这里。决策表覆盖了它；这个 CRM 没有演练它。
-- **七是这个 CRM 的数，** 在 `@objectstack/cli@17.7.0` 处。`origin/main` 上的文档描述的是下一个大版本；上面引用的三段在标签和 `origin/main` 之间逐字节相同，所以本文可以引用它们，但请在你装到的任何版本上重跑这份记录。
+- **七是这个 CRM 的数，** 在 `@objectstack/cli@18.2.0` 处，上面引用的三段文档也是在同一个标签处读的。请在你装到的任何版本上重跑这份记录：最近两个版本之间，数仍是七，而流程节点里计算的值却换了形状，从 `'{…}'` 模板变成了 CEL 值信封——重跑抓到的正是这种漂移。
 
 ## 把 Agent 指向这张表
 

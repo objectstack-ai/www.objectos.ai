@@ -15,7 +15,7 @@ tags:
   - Reglas de negocio
 ---
 
-**La respuesta primero.** Una regla de negocio en una app de ObjectStack tiene tres casas posibles, y la elección es una tabla, no una cuestión de gusto. Una regla que puede decidirse a partir del único registro que se está escribiendo, sin I/O, es una **regla de validación** en el objeto. Una regla que debe cambiar el registro pendiente antes de guardarlo es un **hook before**. Todo lo demás —efectos secundarios, aprobaciones, cualquier cosa que se detenga, cualquier cosa que corra con reloj— es un **flow**, y la documentación hace del flow el valor por defecto: «un flow es la superficie por defecto para la lógica de aplicación; un hook es el respaldo para lo que un grafo de nodos no puede expresar». La razón es estructural, y es justo lo que un revisor comprueba de verdad: **un flow se revisa como datos, un hook se revisa como código.** El CRM que viene en el repositorio de ObjectStack declara **siete** reglas así —cinco validaciones, un hook, un flow— y cada una está donde la tabla dice. Abajo: la tabla, las siete reglas, una transcripción REST en la que cada casa rechaza o reescribe una escritura, y una errata plantada en dos casas para mostrar las dos fuerzas de revisión. Todo medido en la `@objectstack/cli` 17.7.0 publicada, la versión que instala `npm create objectstack@latest`.
+**La respuesta primero.** Una regla de negocio en una app de ObjectStack tiene tres casas posibles, y la elección es una tabla, no una cuestión de gusto. Una regla que puede decidirse a partir del único registro que se está escribiendo, sin I/O, es una **regla de validación** en el objeto. Una regla que debe cambiar el registro pendiente antes de guardarlo es un **hook before**. Todo lo demás —efectos secundarios, aprobaciones, cualquier cosa que se detenga, cualquier cosa que corra con reloj— es un **flow**, y la documentación hace del flow el valor por defecto: «un flow es la superficie por defecto para la lógica de aplicación; un hook es el respaldo para lo que un grafo de nodos no puede expresar». La razón es estructural, y es justo lo que un revisor comprueba de verdad: **un flow se revisa como datos, un hook se revisa como código.** El CRM que viene en el repositorio de ObjectStack declara **siete** reglas así —cinco validaciones, un hook, un flow— y cada una está donde la tabla dice. Abajo: la tabla, las siete reglas, una transcripción REST en la que cada casa rechaza o reescribe una escritura, y una errata plantada en dos casas para mostrar las dos fuerzas de revisión. Todo medido en la `@objectstack/cli` 18.2.0 publicada, la versión que instala `npm create objectstack@latest`.
 
 ## La frase que recibe un agente
 
@@ -27,10 +27,10 @@ Un product owner escribe una línea en un documento de planificación: *los desc
 
 Solo una es correcta para cada *forma* de regla, y «los descuentos de más del 40 % necesitan aprobación» son en realidad dos reglas vestidas con una frase. «Más del 40 % no está permitido sin una excepción» es un predicado sobre el registro: una regla de validación. «Alguien tiene que aprobar la excepción» se detiene y espera a una persona: un flow. Un hook no hace bien ninguna de las dos: corre en línea, así que no puede detenerse, y si rechaza la escritura, la rechaza como código que nadie puede comparar campo a campo.
 
-El [ejemplo de CRM](https://github.com/objectstack-ai/objectstack/tree/%40objectstack/cli%4017.7.0/examples/app-crm) que viene en el monorepo de ObjectStack ya tomó esa decisión. Su regla `discount_cap` es una validación, en el objeto, como datos:
+El [ejemplo de CRM](https://github.com/objectstack-ai/objectstack/tree/%40objectstack/cli%4018.2.0/examples/app-crm) que viene en el monorepo de ObjectStack ya tomó esa decisión. Su regla `discount_cap` es una validación, en el objeto, como datos:
 
 ```ts
-// examples/app-crm/src/objects/opportunity.object.ts  (@objectstack/cli@17.7.0)
+// examples/app-crm/src/objects/opportunity.object.ts  (@objectstack/cli@18.2.0)
 validations: [
   {
     type: 'script' as const,
@@ -70,7 +70,7 @@ Dos cosas de esa tabla se confunden con facilidad. Las reglas de validación nun
 
 ## Siete reglas, un CRM
 
-El ejemplo de CRM en la etiqueta 17.7.0 declara siete reglas de negocio en sus seis objetos. Aquí están, cada una con la casa en la que vive y la fila de la tabla que la puso ahí. La cuenta es el número del título; vuelva a contarla usted mismo a partir de los arrays `validations` de `src/objects/*.object.ts`, más `src/hooks/` y `src/flows/`.
+El ejemplo de CRM en la etiqueta 18.2.0 declara siete reglas de negocio en sus seis objetos. Aquí están, cada una con la casa en la que vive y la fila de la tabla que la puso ahí. La cuenta es el número del título; vuelva a contarla usted mismo a partir de los arrays `validations` de `src/objects/*.object.ts`, más `src/hooks/` y `src/flows/`.
 
 | # | La regla, en una frase | Casa | Construcción | Fila de la tabla |
 | :-- | :--- | :--- | :--- | :--- |
@@ -85,7 +85,7 @@ El ejemplo de CRM en la etiqueta 17.7.0 declara siete reglas de negocio en sus s
 La regla 6 es el único hook, y merece leerse entera, porque tiene exactamente la forma que la tabla reserva a los hooks: una mutación del registro de camino hacia dentro, y nada más:
 
 ```ts
-// examples/app-crm/src/hooks/opportunity.hook.ts  (@objectstack/cli@17.7.0)
+// examples/app-crm/src/hooks/opportunity.hook.ts  (@objectstack/cli@18.2.0)
 export const OpportunityStageHook = defineHook({
   name: 'opportunity_stage_probability',
   object: 'crm_opportunity',
@@ -99,21 +99,21 @@ export const OpportunityStageHook = defineHook({
 });
 ```
 
-La regla 7 es el único flow, y su último nodo es el que escribe. Su conjunto de escritura no es código; es un mapa literal de nombres de campo junto a un nombre de objeto literal:
+La regla 7 es el único flow, y su último nodo es el que escribe. Su conjunto de escritura no es código; es un mapa literal de nombres de campo junto a un nombre de objeto literal, y los dos valores que calcula son sobres de valor CEL: siguen siendo datos, no un cuerpo de función:
 
 ```ts
-// examples/app-crm/src/flows/convert-lead.flow.ts  (@objectstack/cli@17.7.0)
+// examples/app-crm/src/flows/convert-lead.flow.ts  (@objectstack/cli@18.2.0)
 {
   id: 'update_lead',
   type: 'update_record',
   label: 'Mark Lead Converted',
   config: {
     objectName: 'crm_lead',
-    filter: { id: '{recordId}' },
+    filter: { id: { dialect: 'cel', source: 'recordId' } },
     fields: {
       status:                'converted',
-      account:               '{account_id}',
-      converted_opportunity: '{opportunity_id}',
+      account:               { dialect: 'cel', source: 'account_id' },
+      converted_opportunity: { dialect: 'cel', source: 'opportunity_id' },
     },
   },
 },
@@ -123,7 +123,7 @@ Ponga esas dos formas una junto a la otra. Son todo el argumento.
 
 ## Tres casas en la API
 
-Arranque el ejemplo en 17.7.0 (`objectstack dev --compile`), inicie sesión una vez como el admin de desarrollo que el servidor siembra en una base de datos vacía —el banner de arranque imprime la cuenta— y use la API REST generada. Cuatro llamadas, una por forma de regla.
+Arranque el ejemplo en 18.2.0 (`objectstack dev --compile`), inicie sesión una vez como el admin de desarrollo que el servidor siembra en una base de datos vacía —el banner de arranque imprime la cuenta— y use la API REST generada. Cuatro llamadas, una por forma de regla.
 
 **Casa 1, una validación `script`.** Crear una oportunidad con un 45 % de descuento:
 
@@ -160,13 +160,13 @@ Mismo motor, mismo sobre, una diferencia: el error se ancla en `close_date`, por
 **Casa 2, el hook before.** Tome la «Acme — Q3 Platform Renewal» sembrada —etapa `proposal`, probabilidad 70— y ciérrela:
 
 ```text
-PATCH /api/v1/data/crm_opportunity/1YgCIjOainwOGgaR
+PATCH /api/v1/data/crm_opportunity/WQwHS5B2yI9pOTqc
 { "stage": "closed_won" }
 
 200 { "record": { "name": "Acme — Q3 Platform Renewal", "stage": "closed_won",
                   "probability": 100, "expected_revenue": 120000, … } }
 
-GET /api/v1/data/crm_opportunity/1YgCIjOainwOGgaR
+GET /api/v1/data/crm_opportunity/WQwHS5B2yI9pOTqc
 200 { "record": { "stage": "closed_won", "probability": 100, … } }
 ```
 
@@ -175,74 +175,72 @@ Nadie envió `probability`. El hook reescribió el registro pendiente antes de q
 **Casa 1, una validación `state_machine`.** Tome «Initech — Expansion» —etapa `prospecting`— e intente cerrarla de un salto:
 
 ```text
-PATCH /api/v1/data/crm_opportunity/Ifv5H8Vukee1ecja
+PATCH /api/v1/data/crm_opportunity/WsD7hH7IEgUvPhDK
 { "stage": "closed_won" }
 
 400 { "error": "Invalid stage transition.",
       "code": "VALIDATION_FAILED",
-      "fields": [ { "field": "stage", "code": "invalid_transition", "label": "Stage",
+      "fields": [ { "field": "stage", "code": "invalid_transition",
+                    "message": "Invalid stage transition.", "label": "Stage",
                     "constraint": { "from": "prospecting", "to": "closed_won" } } ],
       "object": "crm_opportunity" }
 ```
 
 `prospecting → qualification`, una transición declarada, devuelve `200`. Si el hook reescribió `probability` antes de que el predicado rechazara la escritura es invisible desde fuera, y no importa: la escritura nunca aterrizó, y el registro sigue siendo lo que era.
 
-Tres casas, tres sobres distinguibles: un fallo de regla lleva `VALIDATION_FAILED` y el mensaje escrito; un hook no deja rastro salvo el valor que cambió; un flow —la regla 7— se dirige desde una pantalla, así que no tiene una única llamada REST, lo que ya es en sí un hecho sobre dónde vive.
+Tres casas, tres sobres distinguibles: un fallo de regla lleva `VALIDATION_FAILED` y el mensaje escrito; un hook no deja rastro salvo el valor que cambió —y cuando un hook rechaza, dice la documentación, la API responde `400` con el código `VALIDATION_ERROR`, no el `VALIDATION_FAILED` de una regla—; un flow —la regla 7— se dirige desde una pantalla, así que no tiene una única llamada REST, lo que ya es en sí un hecho sobre dónde vive.
 
 ## La misma errata en dos casas
 
-Esta es la medición en la que se apoya la columna «por qué» de la tabla. Tome un error —un nombre de campo mal escrito en una escritura— y plántelo en el flow y en el hook. Luego ejecute `os validate` en 17.7.0.
+Esta es la medición en la que se apoya la columna «por qué» de la tabla. Tome un error —un nombre de campo mal escrito en una escritura— y plántelo en el flow y en el hook. Luego ejecute `os validate` en 18.2.0.
 
 En el nodo `update_record` del flow, escriba mal `converted_opportunity`:
 
 ```text
 ✗ Author-time rules failed (1 issue)
   • flow "crm_convert_lead_wizard" › node "Mark Lead Converted": update_record
-    writes 'converted_oportunity', but object 'crm_lead' declares no such field.
-    The node hands its fields map to the engine as an ordinary caller payload,
-    so the declared-field door REFUSES the whole write — INVALID_FIELD / 400,
-    identically on every datasource, before any statement is built. …
-      Did you mean 'converted_opportunity'? Fix the field name, or declare
-      'converted_oportunity' on the object. This gates the build rather than
-      warning: the key is literal and so is the object, so unlike the
-      hook/action body rules there is nothing here that could have been
-      mis-extracted.
+    writes 'converted_oportunity', but object 'crm_lead' declares no such field,
+    so the write is refused (INVALID_FIELD / 400) and the step fails the run
+      fix: Did you mean 'converted_opportunity'? Fix the field name, or declare
+      'converted_oportunity' on the object
       rule: flow-node-write-unknown-field  at flows[0].nodes[6].config.fields.converted_oportunity
+      — `os explain flow-node-write-unknown-field` for why an undeclared field write is refused
 exit=1
 ```
 
 En el cuerpo del hook, escriba mal `probability` en la forma literal que reconoce el lint del conjunto de escritura: `ctx.input.probabilty = 100`:
 
 ```text
-✓ Validation passed (564ms)
+✓ Validation passed (542ms)
+  …
   ⚠ hook "opportunity_stage_probability" › body: body writes 'probabilty' to its
-    input, but object 'crm_opportunity' declares no such field. The sandboxed
-    script runs clean and the value is copied back onto the record payload
-    unfiltered, so the write is then REFUSED at run time — INVALID_FIELD / 400,
-    identically on every driver. The record is never written, and the refusal
-    names the field far from the body that wrote it. (judged on the metadata
-    body lowered from the inline handler)
-    rule: hook-body-write-unknown-field
+    input, but object 'crm_opportunity' declares no such field, so the write is
+    refused (INVALID_FIELD / 400) (judged on the metadata body lowered from the
+    inline handler)
+    fix: Did you mean 'probability'? Fix the field name, or declare 'probabilty'
+    on the object
+    rule: hook-body-write-unknown-field  at hooks[0].handler
+    — `os explain hook-body-write-unknown-field` for why an undeclared field write is refused
 exit=0
 ```
 
-Mismo error, misma corrección, dos fuerzas. El nodo de flow es un **error** con un «quiso decir» y una salida distinta de cero; el cuerpo del hook es una **advertencia** y la compilación está en verde. La documentación explica por qué en una frase: los `fields` del nodo «son un mapa literal junto a un `objectName` literal, así que nada pudo leerlo mal», mientras que el conjunto de escritura de un cuerpo de hook se comprueba «solo para los patrones literales que un parser puede reconocer». La existencia de un campo es una *certeza* cuando la escritura es datos y un *mejor esfuerzo* cuando la escritura es código.
+Mismo error, misma corrección, dos fuerzas. Las dos respuestas escriben la corrección —`Did you mean …?`— y lo que cambia es la fuerza y el ancla: el nodo de flow es un **error**, anclado a la clave exacta de `fields`, con una salida distinta de cero; el cuerpo del hook es una **advertencia**, anclada al `handler` entero, y la compilación está en verde. La documentación explica por qué en una frase: los `fields` del nodo «son un mapa literal junto a un `objectName` literal, así que nada pudo leerlo mal», mientras que el conjunto de escritura de un cuerpo de hook se comprueba «solo para los patrones literales que un parser puede reconocer». La existencia de un campo es una *certeza* cuando la escritura es datos y un *mejor esfuerzo* cuando la escritura es código. (Las líneas omitidas en la segunda transcripción son el resumen del stack; los nueve avisos `field-no-consumers` que también imprime la ejecución limpia siguen a la advertencia del hook.)
 
-![El mismo nombre de campo mal escrito plantado en tres sitios y lo que responde os validate 17.7.0: en un nodo update_record de flow, un error con un «quiso decir» y salida 1; en un cuerpo de hook escrito como ctx.input.field, una advertencia y salida 0; en el cuerpo del hook tal como lo distribuye el CRM, a través de un alias local de ctx.input, nada en absoluto y salida 0. Los tres se rechazan en tiempo de ejecución con INVALID_FIELD 400, el respaldo que nombra el campo lejos de donde se escribió](./same-typo-three-answers-en.svg)
+![El mismo nombre de campo mal escrito plantado en tres sitios y lo que responde os validate 18.2.0: en un nodo update_record de flow, un error anclado a la clave de fields, con un «quiso decir» y salida 1; en un cuerpo de hook escrito como ctx.input.field, una advertencia anclada al handler, con el mismo «quiso decir» y salida 0; en el cuerpo del hook tal como lo distribuye el CRM, a través de un alias local de ctx.input, nada en absoluto y salida 0. Los tres se rechazan en tiempo de ejecución con INVALID_FIELD 400, el respaldo que nombra el campo pero no la línea que lo escribió](./same-typo-three-answers-en.svg)
 
 Y hay una tercera respuesta, que es la que debería cambiar cómo revisa. El hook del CRM, tal como se distribuye, no escribe `ctx.input.probability` directamente. Escribe a través de un alias local —`const input = ctx.input; … input.probability = 100`—, y la documentación lista la entrada con alias entre las formas en las que la regla «se retira *en silencio*», porque «v1 no hace análisis de flujo de datos». Escriba mal el campo en el hook exactamente como está escrito en el repositorio y `os validate` **no dice nada**: salida 0, sin advertencia, salida byte a byte idéntica a la ejecución limpia. La propia línea de la documentación para esto es la que hay que memorizar: «**Una advertencia ausente no es un certificado de buena salud.**»
 
 Las tres aterrizan en el mismo sitio en tiempo de ejecución. La ruta de escritura del CRM rechaza un campo desconocido en todos los drivers, y lo hace también para un payload escrito a mano:
 
 ```text
-PATCH /api/v1/data/crm_opportunity/S1wBMgLWazLLQ6ns
+PATCH /api/v1/data/crm_opportunity/emhPM9WKJqqGzaME
 { "probabilty": 100 }
 
 400 { "error": "Unknown field 'probabilty' on object 'crm_opportunity'",
       "code": "INVALID_FIELD", "field": "probabilty", "object": "crm_opportunity" }
 ```
 
-Así que el error nunca se persiste. Lo que cambia es *cuándo se entera* y *quién se lo dice*: el flow en `validate`, con la corrección escrita; el hook literal en `validate`, como aviso; el hook con alias en la primera escritura real, mediante un rechazo que «nombra el campo lejos del cuerpo que lo escribió».
+Así que el error nunca se persiste. Lo que cambia es *cuándo se entera* y *quién se lo dice*: el flow en `validate`, con la corrección escrita; el hook literal en `validate`, como aviso; el hook con alias en la primera escritura real, mediante un rechazo que nombra el campo y no el cuerpo que lo escribió.
 
 ## Revisable como datos, revisable como código
 
@@ -260,7 +258,7 @@ La documentación cierra el único resquicio de ese argumento. La lógica que de
 - **`cross_field` no es una comprobación más fuerte.** Ejecuta el mismo predicado que `script`. Si lo elige esperando que el motor haga algo extra entre campos, no lo hará; está eligiendo dónde cae el mensaje de error.
 - **El lint del conjunto de escritura está acotado por un parser.** Claves calculadas, spreads, nombres de objeto dinámicos, entradas con alias y objetos declarados por otro paquete le son todos invisibles, por diseño: un falso positivo mataría a un lint consultivo. El respaldo en tiempo de ejecución es el mismo en todos los drivers, pero es un respaldo. La regla práctica de la documentación se mantiene: trate `hook-body-write-unknown-field` como un fallo de compilación por convención, y compruebe a mano lo que el parser no puede ver.
 - **El CRM no tiene ningún flow disparado por registro.** Su único flow es un asistente de pantalla que lanza un usuario. La mitad «alguien aprueba la excepción» de la frase inicial es un flow con un nodo `approval`, y el repositorio de ObjectStack guarda sus flows de aprobación trabajados en el ejemplo showcase, más grande, no aquí. La tabla de decisión lo cubre; este CRM no lo ejercita.
-- **Siete es el número de este CRM**, en `@objectstack/cli@17.7.0`. La documentación en `origin/main` describe la siguiente versión mayor; los tres pasajes citados arriba son idénticos byte a byte entre la etiqueta y `origin/main`, que es por lo que este artículo puede citarlos, pero vuelva a ejecutar la transcripción en la versión que instale.
+- **Siete es el número de este CRM**, en `@objectstack/cli@18.2.0`, y los tres pasajes de la documentación citados arriba se leen en esa misma etiqueta. Vuelva a ejecutar la transcripción en la versión que instale: entre dos versiones recientes la cuenta se quedó en siete mientras los valores calculados del nodo de flow cambiaron de forma, de plantillas `'{…}'` a sobres de valor CEL, que es exactamente la clase de deriva que una repetición detecta.
 
 ## Apunte su agente a la tabla
 
