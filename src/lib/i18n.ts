@@ -85,7 +85,11 @@ export const LANG_NATIVE: Record<Locale, string> = {
   ko: '한국어',
 };
 
-type StatusKey = 'published' | 'archived';
+// The statuses a status pill labels. A production build renders only
+// `published` posts (src/lib/posts.ts), so a pill reading "Published" told a
+// reader nothing; only a post that would not ship gets a pill, in `astro dev`
+// or a CONTENT_INCLUDE_ARCHIVED build.
+type StatusKey = 'archived';
 
 interface Strings {
   siteName: string;
@@ -93,7 +97,10 @@ interface Strings {
     product: string;
     developers: string;
     resources: string;
-    docs: string;
+    /** docs.objectos.ai — the product documentation. */
+    productDocs: string;
+    /** objectstack.ai — the developer site: the open protocol, SDK, CLI and docs. */
+    developerDocs: string;
     menu: string;
     productTour: string;
     platform: string;
@@ -127,10 +134,25 @@ interface Strings {
     primaryNav: string;
     browseNav: string;
     mobileNav: string;
-    /** Accessible name of the home page's topic-cluster links. */
+    /** Visible label and accessible name of the footer's topic-cluster row. */
     topicClusters: string;
+    /**
+     * Accessible name of the home page's own topic-cluster strip. It differs
+     * from `topicClusters` because the footer row is on the home page too, and
+     * two navigation landmarks with one name cannot be told apart (axe
+     * `landmark-unique`).
+     */
+    featuredClusters: string;
+    /**
+     * Name and tooltip of a language-switcher option for a locale this article
+     * has no translation in; the option opens that locale's blog instead. It
+     * starts with the language's own name, which is the option's visible text.
+     */
+    langUnavailable: (lang: string) => string;
   };
   getStarted: string;
+  /** The ObjectOS Cloud sign-in link in the header, drawer and footer. */
+  signIn: string;
   skipToContent: string;
   /**
    * `platform` is the footer's short label; the header uses the longer
@@ -167,7 +189,8 @@ const en: Strings = {
     product: 'Product',
     developers: 'Developers',
     resources: 'Resources',
-    docs: 'Docs',
+    productDocs: 'Product docs',
+    developerDocs: 'Developer docs & protocol',
     menu: 'Menu',
     productTour: 'Product tour',
     platform: 'Platform overview',
@@ -196,8 +219,11 @@ const en: Strings = {
     browseNav: 'Browse',
     mobileNav: 'Mobile',
     topicClusters: 'Topic clusters',
+    featuredClusters: 'Featured topic clusters',
+    langUnavailable: (lang) => `${lang} — this article is not available in this language; opens the blog`,
   },
   getStarted: 'Get started',
+  signIn: 'Sign in',
   skipToContent: 'Skip to content',
   footer: { terms: 'Terms & License', privacy: 'Privacy', pricing: 'Pricing', refunds: 'Refunds', platform: 'Platform' },
   notFound: {
@@ -219,7 +245,7 @@ const en: Strings = {
   updated: 'Updated',
   empty: 'No articles yet.',
   relatedTitle: 'Related articles',
-  status: { published: 'Published', archived: 'Archived' },
+  status: { archived: 'Archived' },
 };
 
 const zhHans: Strings = {
@@ -228,7 +254,8 @@ const zhHans: Strings = {
     product: '产品',
     developers: '开发者',
     resources: '资源',
-    docs: '文档',
+    productDocs: '产品文档',
+    developerDocs: '开发者文档与协议',
     menu: '菜单',
     productTour: '产品导览',
     platform: '平台总览',
@@ -257,8 +284,11 @@ const zhHans: Strings = {
     browseNav: '浏览',
     mobileNav: '移动端导航',
     topicClusters: '专题导航',
+    featuredClusters: '精选专题',
+    langUnavailable: (lang) => `${lang}——本文暂无该语言版本，将打开该语言的博客`,
   },
   getStarted: '开始使用',
+  signIn: '登录',
   skipToContent: '跳到正文',
   footer: { terms: '许可协议', privacy: '隐私政策', pricing: '定价', refunds: '退款政策', platform: '平台' },
   notFound: {
@@ -272,7 +302,7 @@ const zhHans: Strings = {
   all: '首页',
   audience: '受众',
   articlesTitle: '文章',
-  articlesLead: (n) => `${n} 篇关于构建 AI-native 软件的文章。`,
+  articlesLead: (n) => `${n} 篇关于可执行业务本体、运行时治理与 Agent 操作应用的文章。`,
   backToList: '全部文章',
   alsoOn: '同步发布于',
   references: '参考链接',
@@ -280,7 +310,7 @@ const zhHans: Strings = {
   updated: '更新于',
   empty: '还没有文章。',
   relatedTitle: '相关文章',
-  status: { published: '已发布', archived: '已归档' },
+  status: { archived: '已归档' },
 };
 
 const ja: Strings = {
@@ -289,7 +319,8 @@ const ja: Strings = {
     product: '製品',
     developers: '開発者',
     resources: 'リソース',
-    docs: 'Docs',
+    productDocs: '製品ドキュメント',
+    developerDocs: '開発者ドキュメントとプロトコル',
     menu: 'メニュー',
     productTour: 'プロダクトツアー',
     platform: 'プラットフォーム概要',
@@ -318,8 +349,11 @@ const ja: Strings = {
     browseNav: 'ブラウズ',
     mobileNav: 'モバイルナビゲーション',
     topicClusters: 'トピッククラスター',
+    featuredClusters: '注目のトピッククラスター',
+    langUnavailable: (lang) => `${lang} — この記事にはこの言語の版がありません。ブログ一覧を開きます`,
   },
   getStarted: 'はじめる',
+  signIn: 'ログイン',
   skipToContent: '本文へ移動',
   footer: { terms: '利用規約・ライセンス', privacy: 'プライバシー', pricing: '料金', refunds: '返金', platform: 'プラットフォーム' },
   notFound: {
@@ -333,7 +367,7 @@ const ja: Strings = {
   all: 'ホーム',
   audience: '読者',
   articlesTitle: '記事',
-  articlesLead: (n) => `AI-native ソフトウェア構築に関する ${n} 本の記事。`,
+  articlesLead: (n) => `実行可能なビジネスオントロジー、ランタイムガバナンス、エージェントが操作するアプリケーションに関する ${n} 本の記事。`,
   backToList: 'すべての記事',
   alsoOn: '同時掲載',
   references: '参考リンク',
@@ -341,7 +375,7 @@ const ja: Strings = {
   updated: '更新日',
   empty: '記事はまだありません。',
   relatedTitle: '関連記事',
-  status: { published: '公開済み', archived: 'アーカイブ済み' },
+  status: { archived: 'アーカイブ済み' },
 };
 
 const de: Strings = {
@@ -350,7 +384,8 @@ const de: Strings = {
     product: 'Produkt',
     developers: 'Entwickler',
     resources: 'Ressourcen',
-    docs: 'Docs',
+    productDocs: 'Produktdokumentation',
+    developerDocs: 'Entwicklerdokumentation & Protokoll',
     menu: 'Menü',
     productTour: 'Produkt-Tour',
     platform: 'Plattform-Überblick',
@@ -379,8 +414,11 @@ const de: Strings = {
     browseNav: 'Durchstöbern',
     mobileNav: 'Mobile Navigation',
     topicClusters: 'Themencluster',
+    featuredClusters: 'Ausgewählte Themencluster',
+    langUnavailable: (lang) => `${lang} – dieser Artikel ist in dieser Sprache nicht verfügbar; öffnet den Blog`,
   },
   getStarted: 'Loslegen',
+  signIn: 'Anmelden',
   skipToContent: 'Zum Inhalt springen',
   footer: { terms: 'Bedingungen & Lizenz', privacy: 'Datenschutz', pricing: 'Preise', refunds: 'Rückerstattung', platform: 'Plattform' },
   notFound: {
@@ -394,7 +432,7 @@ const de: Strings = {
   all: 'Start',
   audience: 'Zielgruppe',
   articlesTitle: 'Artikel',
-  articlesLead: (n) => `${n} ${n === 1 ? 'Artikel' : 'Artikel'} über den Aufbau AI-nativer Software.`,
+  articlesLead: (n) => `${n} ${n === 1 ? 'Artikel' : 'Artikel'} über ausführbare Geschäftsontologien, Runtime-Governance und von Agents bediente Anwendungen.`,
   backToList: 'Alle Artikel',
   alsoOn: 'Auch veröffentlicht auf',
   references: 'Referenzen',
@@ -402,7 +440,7 @@ const de: Strings = {
   updated: 'Aktualisiert',
   empty: 'Noch keine Artikel.',
   relatedTitle: 'Ähnliche Artikel',
-  status: { published: 'Veröffentlicht', archived: 'Archiviert' },
+  status: { archived: 'Archiviert' },
 };
 
 const es: Strings = {
@@ -411,7 +449,8 @@ const es: Strings = {
     product: 'Producto',
     developers: 'Desarrolladores',
     resources: 'Recursos',
-    docs: 'Docs',
+    productDocs: 'Documentación del producto',
+    developerDocs: 'Documentación para desarrolladores y protocolo',
     menu: 'Menú',
     productTour: 'Recorrido del producto',
     platform: 'Resumen de plataforma',
@@ -440,8 +479,11 @@ const es: Strings = {
     browseNav: 'Explorar',
     mobileNav: 'Navegación móvil',
     topicClusters: 'Grupos temáticos',
+    featuredClusters: 'Grupos temáticos destacados',
+    langUnavailable: (lang) => `${lang}: este artículo no está disponible en este idioma; abre el blog`,
   },
   getStarted: 'Empezar',
+  signIn: 'Iniciar sesión',
   skipToContent: 'Saltar al contenido',
   footer: { terms: 'Términos y licencia', privacy: 'Privacidad', pricing: 'Precios', refunds: 'Reembolsos', platform: 'Plataforma' },
   notFound: {
@@ -455,7 +497,7 @@ const es: Strings = {
   all: 'Inicio',
   audience: 'Audiencia',
   articlesTitle: 'Artículos',
-  articlesLead: (n) => `${n} ${n === 1 ? 'artículo' : 'artículos'} sobre crear software AI-native.`,
+  articlesLead: (n) => `${n} ${n === 1 ? 'artículo' : 'artículos'} sobre ontologías de negocio ejecutables, gobernanza del runtime y aplicaciones operadas por agentes.`,
   backToList: 'Todos los artículos',
   alsoOn: 'También publicado en',
   references: 'Referencias',
@@ -463,7 +505,7 @@ const es: Strings = {
   updated: 'Actualizado',
   empty: 'Aún no hay artículos.',
   relatedTitle: 'Artículos relacionados',
-  status: { published: 'Publicado', archived: 'Archivado' },
+  status: { archived: 'Archivado' },
 };
 
 const fr: Strings = {
@@ -472,7 +514,8 @@ const fr: Strings = {
     product: 'Produit',
     developers: 'Développeurs',
     resources: 'Ressources',
-    docs: 'Docs',
+    productDocs: 'Documentation produit',
+    developerDocs: 'Documentation développeur et protocole',
     menu: 'Menu',
     productTour: 'Visite du produit',
     platform: 'Aperçu de la plateforme',
@@ -501,8 +544,11 @@ const fr: Strings = {
     browseNav: 'Parcourir',
     mobileNav: 'Navigation mobile',
     topicClusters: 'Groupes thématiques',
+    featuredClusters: 'Groupes thématiques à la une',
+    langUnavailable: (lang) => `${lang} : cet article n’est pas disponible dans cette langue ; ouvre le blog`,
   },
   getStarted: 'Commencer',
+  signIn: 'Se connecter',
   skipToContent: 'Aller au contenu',
   footer: { terms: 'Conditions et licence', privacy: 'Confidentialité', pricing: 'Tarifs', refunds: 'Remboursements', platform: 'Plateforme' },
   notFound: {
@@ -516,7 +562,7 @@ const fr: Strings = {
   all: 'Accueil',
   audience: 'Audience',
   articlesTitle: 'Articles',
-  articlesLead: (n) => `${n} ${n === 1 ? 'article' : 'articles'} sur la construction de logiciels AI-native.`,
+  articlesLead: (n) => `${n} ${n === 1 ? 'article' : 'articles'} sur les ontologies métier exécutables, la gouvernance du runtime et les applications opérées par les agents.`,
   backToList: 'Tous les articles',
   alsoOn: 'Également publié sur',
   references: 'Références',
@@ -524,7 +570,7 @@ const fr: Strings = {
   updated: 'Mis à jour',
   empty: 'Aucun article pour le moment.',
   relatedTitle: 'Articles liés',
-  status: { published: 'Publié', archived: 'Archivé' },
+  status: { archived: 'Archivé' },
 };
 
 const ko: Strings = {
@@ -533,7 +579,8 @@ const ko: Strings = {
     product: '제품',
     developers: '개발자',
     resources: '리소스',
-    docs: '문서',
+    productDocs: '제품 문서',
+    developerDocs: '개발자 문서 및 프로토콜',
     menu: '메뉴',
     productTour: '제품 둘러보기',
     platform: '플랫폼 개요',
@@ -562,8 +609,11 @@ const ko: Strings = {
     browseNav: '둘러보기',
     mobileNav: '모바일 메뉴',
     topicClusters: '주제 클러스터',
+    featuredClusters: '추천 주제 클러스터',
+    langUnavailable: (lang) => `${lang} — 이 글은 이 언어로 제공되지 않습니다. 블로그 목록으로 이동합니다`,
   },
   getStarted: '시작하기',
+  signIn: '로그인',
   skipToContent: '본문으로 건너뛰기',
   footer: { terms: '약관 및 라이선스', privacy: '개인정보 보호', pricing: '가격', refunds: '환불', platform: '플랫폼' },
   notFound: {
@@ -577,7 +627,7 @@ const ko: Strings = {
   all: '홈',
   audience: '대상',
   articlesTitle: '글',
-  articlesLead: (n) => `AI-native 소프트웨어 구축에 관한 글 ${n}개.`,
+  articlesLead: (n) => `실행 가능한 비즈니스 온톨로지, 런타임 거버넌스, 에이전트가 운영하는 애플리케이션에 관한 글 ${n}개.`,
   backToList: '전체 글',
   alsoOn: '동시 게시',
   references: '참고 링크',
@@ -585,7 +635,7 @@ const ko: Strings = {
   updated: '업데이트',
   empty: '아직 글이 없습니다.',
   relatedTitle: '관련 글',
-  status: { published: '게시됨', archived: '보관됨' },
+  status: { archived: '보관됨' },
 };
 
 // Traditional UI is auto-derived from Simplified (s2twp) — never hand-kept.
@@ -595,7 +645,8 @@ const toHant = (s: Strings): Strings => ({
     product: s2t(s.siteNav.product),
     developers: s2t(s.siteNav.developers),
     resources: s2t(s.siteNav.resources),
-    docs: s2t(s.siteNav.docs),
+    productDocs: s2t(s.siteNav.productDocs),
+    developerDocs: s2t(s.siteNav.developerDocs),
     menu: s2t(s.siteNav.menu),
     productTour: s2t(s.siteNav.productTour),
     platform: s2t(s.siteNav.platform),
@@ -624,8 +675,13 @@ const toHant = (s: Strings): Strings => ({
     browseNav: s2t(s.siteNav.browseNav),
     mobileNav: s2t(s.siteNav.mobileNav),
     topicClusters: s2t(s.siteNav.topicClusters),
+    featuredClusters: s2t(s.siteNav.featuredClusters),
+    // The language name is spliced in after conversion: s2t would rewrite a
+    // Simplified-script name such as 简体中文.
+    langUnavailable: (lang) => s2t(s.siteNav.langUnavailable('{lang}')).replace('{lang}', lang),
   },
   getStarted: s2t(s.getStarted),
+  signIn: s2t(s.signIn),
   skipToContent: s2t(s.skipToContent),
   footer: {
     terms: s2t(s.footer.terms),
@@ -653,10 +709,7 @@ const toHant = (s: Strings): Strings => ({
   updated: s2t(s.updated),
   empty: s2t(s.empty),
   relatedTitle: s2t(s.relatedTitle),
-  status: {
-    published: s2t(s.status.published),
-    archived: s2t(s.status.archived),
-  },
+  status: { archived: s2t(s.status.archived) },
 });
 
 export const ui: Record<Locale, Strings> = {
@@ -674,6 +727,5 @@ export const ui: Record<Locale, Strings> = {
 // so one colour cannot clear 4.5:1 in light and dark. Values and ratios live
 // with the tokens in src/layouts/Base.astro.
 export const STATUS_COLOR: Record<StatusKey, string> = {
-  published: 'var(--status-published)',
   archived: 'var(--status-archived)',
 };

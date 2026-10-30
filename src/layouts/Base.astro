@@ -8,6 +8,7 @@ import { marketingPagePath } from '../content-pages/registry';
 import { glossaryIndexPath } from '../glossary/registry';
 import { htmlLang, OG_LOCALE, pricingPath, privacyPath, rssPath, termsPath, ui, type Locale } from '../lib/i18n';
 import { ORGANIZATION_ID, ORGANIZATION_SAME_AS } from '../lib/organization';
+import { CLOUD_SIGNIN_URL, OBJECTSTACK_URL } from '../lib/positioning';
 
 interface Props {
   title: string;
@@ -195,7 +196,7 @@ const jsonLdHtml = (value: Record<string, unknown>) =>
   </head>
   <body>
     <a class="skip-link" href="#main-content">{t.skipToContent}</a>
-    <Header {locale} {alternates} {navAlternates} />
+    <Header {locale} {alternates} {navAlternates} article={type === 'article'} />
     <main id="main-content" tabindex="-1" lang={contentLocale === locale ? undefined : htmlLang(contentLocale)}>
       <slot />
     </main>
@@ -217,8 +218,10 @@ const jsonLdHtml = (value: Record<string, unknown>) =>
           <a href={marketingPagePath(locale, 'customer-stories')}>{t.siteNav.referenceStories}</a>
           <a href={glossaryIndexPath(locale)}>{t.siteNav.glossary}</a>
           <a href={pricingPath(locale)}>{t.footer.pricing}</a>
-          <a href="https://docs.objectos.ai" target="_blank" rel="noopener">{t.siteNav.docs}</a>
+          <a href="https://docs.objectos.ai" target="_blank" rel="noopener">{t.siteNav.productDocs}</a>
+          <a href={OBJECTSTACK_URL} target="_blank" rel="noopener">{t.siteNav.developerDocs}</a>
           <a href="https://github.com/objectstack-ai/objectstack" target="_blank" rel="noopener">GitHub</a>
+          <a href={CLOUD_SIGNIN_URL}>{t.signIn}</a>
           <a href="/llms.txt" translate="no">llms.txt</a>
           <a href={rssPath(locale)}>RSS</a>
           <a href={privacyPath(locale)}>{t.footer.privacy}</a>
@@ -247,8 +250,7 @@ const jsonLdHtml = (value: Record<string, unknown>) =>
         --accent-soft: #eef2ff;
         --ring: #3d58f0;
         /* The post status pill (src/lib/i18n.ts STATUS_COLOR) on its own 9%
-           tint of --surface: published 5.03, archived 5.31. */
-        --status-published: #037552;
+           tint of --surface: archived 5.31. */
         --status-archived: #68625d;
         --shadow: 21, 26, 23;
         --maxw: 1120px;
@@ -270,13 +272,12 @@ const jsonLdHtml = (value: Record<string, unknown>) =>
         --ink: #f4f7f2;
         --ink-soft: #aab6ad;
         /* --muted 5.42 on --surface, 4.76 on --surface-sunk. Ring 7.06 on
-           --surface. Status pill on its tint: published 6.19, archived 5.69. */
+           --surface. Status pill on its tint: archived 5.69. */
         --muted: #8a968d;
         --line: #2a3931;
         --accent: #91a3ff;
         --accent-soft: #202849;
         --ring: #91a3ff;
-        --status-published: #3fbf8f;
         --status-archived: #a8a29e;
         --shadow: 0, 0, 0;
       }
@@ -314,6 +315,29 @@ const jsonLdHtml = (value: Record<string, unknown>) =>
         line-height: 1.65;
         -webkit-font-smoothing: antialiased;
         text-rendering: optimizeLegibility;
+      }
+      /* Korean running text breaks only at the spaces between words, never
+         between the syllables of one word. Korean puts a space between words,
+         so keep-all alone is the fix; zh and ja have no spaces and keep the
+         default CJK breaking. The rule is set once, on the ko page root, and
+         is inherited from there, so a component rule on a subtree (a heading,
+         a table cell, inline code) still wins. `overflow-wrap: anywhere` is
+         the last resort for a token wider than its line (a URL, an
+         identifier, a long compound), so keep-all never overflows.
+         Inline code inherits keep-all too, so a particle stays on the line
+         of the code it follows (`context`로); its own overflow-wrap rule
+         still lets a long identifier wrap. Two things are reset to the
+         values they had before this rule: an element in another language on
+         a ko page (the English fallback <main>, an English-only part of a
+         page), and pre, which keeps its own wrapping. :where() keeps both
+         rules at zero specificity, so any component rule beats them. */
+      :where(:root:lang(ko)) {
+        word-break: keep-all;
+        overflow-wrap: anywhere;
+      }
+      :where(:root:lang(ko) :is([lang]:not(:lang(ko)), pre:lang(ko))) {
+        word-break: normal;
+        overflow-wrap: normal;
       }
       :root[data-theme='dark'] body {
         background:

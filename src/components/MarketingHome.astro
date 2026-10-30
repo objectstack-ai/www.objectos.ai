@@ -1,10 +1,13 @@
 ---
 import { Image } from 'astro:assets';
-import heroImage from '../assets/objectos-home-hero.png';
+import demoPoster from '../assets/objectos-home-demo-poster.png';
+import demoVideo from '../assets/objectos-home-demo.mp4';
+import demoScript from '../assets/objectos-home-demo.js?url&no-inline';
 import { getPostsInLocale } from '../lib/posts';
-import { blogPath, formatDate, pricingPath, postPath, ui, type Locale } from '../lib/i18n';
+import { blogPath, formatDate, postPath, ui, type Locale } from '../lib/i18n';
+import { s2t } from '../lib/zhconvert';
 import { homeCopy } from '../lib/home';
-import { heroLineJoin } from '../lib/positioning';
+import { CLOUD_SIGNUP_URL, heroLineJoin, OBJECTSTACK_URL, positioning } from '../lib/positioning';
 import { phraseHtml } from '../../scripts/lib/cjk-phrases.mjs';
 import { termBySlug, termHref, termLabel } from '../lib/terms';
 import { CLUSTERS, clusterPath } from '../lib/clusters';
@@ -29,6 +32,10 @@ interface Props {
 
 const { locale } = Astro.props;
 const copy = homeCopy[locale];
+// The one protocol link on the page: E1 names the three ObjectOS editions, and
+// this link, right under it, says what they are built on and sends the
+// developer to objectstack.ai. Nothing else on the home page links that site.
+const protocolLink = positioning[locale].protocol;
 const posterSplit = copy.videoCaption.match(/^(ObjectStack(?: [\u3040-\u309f]+)?) (.+)$/u);
 const posterTitle: [string, string] = posterSplit ? [posterSplit[1], posterSplit[2]] : [copy.videoCaption, ''];
 // The H1 is the canonical T1 split over two lines; `positioning.ts` asserts the
@@ -102,12 +109,76 @@ const compareInDepthHref = `${compareHref}#in-depth`;
 // the phone column at 3x. An SVG cover is a few KB and is served as is.
 const ARTICLE_WIDTHS = [360, 540, 720, 1080];
 const ARTICLE_SIZES = '(max-width: 640px) calc(100vw - 2rem), (max-width: 900px) calc(50vw - 2rem), 360px';
-// The product diagram under the positioning copy, as WebP instead of the
-// 1.7 MB PNG. Its box is at most 850px wide at 3:2 (4:3 on a phone), and
-// object-fit: cover draws the 1.6:1 image about 1.07x (1.2x) the box's width.
-// It sits below the hero and the video at every viewport, so it stays lazy.
-const HERO_WIDTHS = [480, 720, 960, 1280, 1586];
-const HERO_SIZES = '(min-width: 898px) 910px, calc(120vw - 2.4rem)';
+// The 30-second run recording under the positioning copy: one definition
+// boots, an agent creates a record over MCP, a read-only identity is refused.
+// It is the objectstack README's own recording
+// (objectstack-ai/objectstack `docs/screenshots/readme-demo.gif`, git blob
+// 2575202e, 1200x675, 486 KiB), re-encoded rather than shipped as a GIF:
+//   ffmpeg -i readme-demo.gif -an -vf "fps=25,crop=1200:674:0:0,format=yuv420p" \
+//     -c:v libx264 -preset veryslow -tune animation -crf 34 -g 250 \
+//     -profile:v high -movflags +faststart -map_metadata -1 objectos-home-demo.mp4
+// H.264 needs an even height, so the GIF's last (background) row is cropped.
+// The MP4 is 250 KiB; VP9 WebM at the same legibility came out larger
+// (264 KiB at crf 46), so there is no WebM source. The poster is the GIF's
+// beat-three frame (the refusal), cropped the same way.
+//
+// Neither image nor video is fetched until it nears the viewport: the poster is a
+// lazy WebP <Image> under the video, and `objectos-home-demo.js`
+// gives the video its source and plays it only once it is near the viewport
+// and the reader allows motion. Under `prefers-reduced-motion: reduce` the
+// video is never loaded and the poster is what shows; the toggle still lets
+// the reader start it. The box is the recording's own 1200:674, as width and
+// height attributes and as a CSS aspect ratio, so nothing moves when it loads.
+// It is at most 850px wide (the positioning column), the page width less the
+// gutters on a phone.
+const DEMO_WIDTH = 1200;
+const DEMO_HEIGHT = 674;
+const DEMO_POSTER_WIDTHS = [480, 720, 960, 1200];
+const DEMO_POSTER_SIZES = '(min-width: 898px) 850px, calc(100vw - 2.4rem)';
+// The recording's text alternative, and the toggle's two labels. Spelled here
+// rather than in `homeCopy` (src/lib/home.ts) only because this change is
+// scoped to this component; zh-Hant is generated from zh-Hans, as homeCopy
+// does it. The three beats follow the README's alt text for the GIF.
+const DEMO_COPY_HANS = {
+  alt: '一段 30 秒的真实运行录屏，分三步。一：Team 对象的类型化定义在一个全新数据库上启动，Console 列出已有团队。二：一个 Agent 用管理员的 API Key 通过 MCP 调用 create_record，新的 Data Guild 记录出现在 Console 中，创建人是 Dev Admin。三：同一个调用改用只读的 Auditor Key 发送，被权限错误拒绝，Console 里仍然只有三行。',
+  pause: '暂停录屏',
+  play: '播放录屏',
+};
+const DEMO_COPY: Record<Locale, { alt: string; pause: string; play: string }> = {
+  en: {
+    alt: "A 30-second recording of a real run, in three beats. One: the Team object's typed definition boots on a fresh database, and the Console lists its teams. Two: an agent sends an MCP create_record call with the admin's API key; the new Data Guild record appears in the Console, created by Dev Admin. Three: the same call, sent with a read-only Auditor key, is refused with a permission error, and the Console still shows three rows.",
+    pause: 'Pause the recording',
+    play: 'Play the recording',
+  },
+  'zh-Hans': DEMO_COPY_HANS,
+  'zh-Hant': { alt: s2t(DEMO_COPY_HANS.alt), pause: s2t(DEMO_COPY_HANS.pause), play: s2t(DEMO_COPY_HANS.play) },
+  ja: {
+    alt: '実際の実行を収めた 30 秒の録画で、3 つの場面からなります。1：Team オブジェクトの型付き定義が新しいデータベース上で起動し、Console にチームが一覧表示されます。2：エージェントが管理者の API キーで MCP の create_record を呼び出し、新しい Data Guild レコードが Dev Admin の作成として Console に表示されます。3：同じ呼び出しを読み取り専用の Auditor キーで送ると権限エラーで拒否され、Console は 3 行のままです。',
+    pause: '録画を一時停止',
+    play: '録画を再生',
+  },
+  de: {
+    alt: 'Eine 30-Sekunden-Aufnahme eines echten Laufs in drei Schritten. Eins: Die typisierte Definition des Team-Objekts startet auf einer frischen Datenbank, und die Console listet die Teams. Zwei: Ein Agent sendet mit dem API-Schlüssel des Admins einen MCP-Aufruf create_record; der neue Datensatz Data Guild erscheint in der Console, erstellt von Dev Admin. Drei: Derselbe Aufruf mit einem schreibgeschützten Auditor-Schlüssel wird mit einem Berechtigungsfehler abgelehnt, und die Console zeigt weiterhin drei Zeilen.',
+    pause: 'Aufnahme anhalten',
+    play: 'Aufnahme abspielen',
+  },
+  es: {
+    alt: 'Una grabación de 30 segundos de una ejecución real, en tres pasos. Uno: la definición tipada del objeto Team arranca sobre una base de datos nueva y la Console lista sus equipos. Dos: un agente envía una llamada MCP create_record con la clave de API del administrador; el nuevo registro Data Guild aparece en la Console, creado por Dev Admin. Tres: la misma llamada, enviada con una clave de Auditor de solo lectura, se rechaza con un error de permisos y la Console sigue mostrando tres filas.',
+    pause: 'Pausar la grabación',
+    play: 'Reproducir la grabación',
+  },
+  fr: {
+    alt: 'Un enregistrement de 30 secondes d’une exécution réelle, en trois temps. Un : la définition typée de l’objet Team démarre sur une base de données neuve et la Console liste ses équipes. Deux : un agent envoie un appel MCP create_record avec la clé d’API de l’administrateur ; le nouvel enregistrement Data Guild apparaît dans la Console, créé par Dev Admin. Trois : le même appel, envoyé avec une clé Auditor en lecture seule, est refusé avec une erreur de permission, et la Console affiche toujours trois lignes.',
+    pause: 'Mettre l’enregistrement en pause',
+    play: 'Lire l’enregistrement',
+  },
+  ko: {
+    alt: '실제 실행을 담은 30초 녹화로, 세 단계로 구성됩니다. 하나: Team 객체의 타입 정의가 새 데이터베이스에서 부팅되고 Console에 팀 목록이 표시됩니다. 둘: 에이전트가 관리자의 API 키로 MCP create_record 호출을 보내면, 새 Data Guild 레코드가 Dev Admin이 만든 것으로 Console에 나타납니다. 셋: 같은 호출을 읽기 전용 Auditor 키로 보내면 권한 오류로 거부되고, Console에는 여전히 세 행만 남습니다.',
+    pause: '녹화 일시정지',
+    play: '녹화 재생',
+  },
+};
+const demoCopy = DEMO_COPY[locale];
 ---
 
 <div class:list={['home', `lang-${locale}`]}>
@@ -124,10 +195,10 @@ const HERO_SIZES = '(min-width: 898px) 910px, calc(120vw - 2.4rem)';
     <p class="eyebrow"><span></span> <Fragment set:html={ph(copy.eyebrow)} /></p>
     <h1><span class="title-line" set:html={ph(copy.hero[0])} />{lineJoin}<strong set:html={ph(copy.hero[1])} /></h1>
     <p class="hero-lead">{copy.heroLead}</p>
+    <a class="text-link hero-protocol-link" href={OBJECTSTACK_URL}>{protocolLink} <span aria-hidden="true">→</span></a>
     <div class="hero-actions">
-      <a class="button primary" href={pricingPath(locale)}>{copy.primaryCta} <span>→</span></a>
+      <a class="button primary" href={CLOUD_SIGNUP_URL}>{copy.primaryCta} <span>→</span></a>
       <a class="button secondary" href={productTourHref}>{copy.secondaryCta}</a>
-      <a class="button secondary" href={YOUTUBE_CHANNEL_URL} target="_blank" rel="noopener">YouTube</a>
     </div>
     <figure class="hero-video">
       <VideoEmbed
@@ -158,24 +229,51 @@ const HERO_SIZES = '(min-width: 898px) 910px, calc(120vw - 2.4rem)';
     <h2><span class="title-line" set:html={ph(copy.positioningTitle[0])} />{lineJoin}<span class="title-line" set:html={ph(copy.positioningTitle[1])} /></h2>
     <p class="positioning-copy">{copy.positioningCopy}</p>
     <a class="text-link positioning-link" href={ontologyHref}>{copy.positioningLink} <span aria-hidden="true">→</span></a>
-    {/* The product diagram used to open the hero. The overview video is the
-        page's first visual now, so this sits below it, illustrating the
-        positioning it belongs to. */}
-    <div class="hero-media">
-      <Image
-        src={heroImage}
-        alt={copy.imageAlt}
-        widths={HERO_WIDTHS}
-        sizes={HERO_SIZES}
-        format="webp"
-        loading="lazy"
-        decoding="async"
-      />
-      <div class="media-note">
-        <span class="live-dot"></span>
-        <span><strong>{copy.imageNoteTitle}</strong>{copy.imageNote}</span>
+    {/* The run recording. The overview video is the page's first visual, so
+        this sits below it, showing the positioning it belongs to working.
+        The poster image carries the text alternative; the video over it is
+        the same content in motion, so it is hidden from assistive tech. The
+        pause/play toggle sits beside the caption, not over the recording,
+        and stays `hidden` until the script runs (no script, no video). */}
+    <figure class="hero-media" data-demo>
+      <div class="demo-frame">
+        <Image
+          src={demoPoster}
+          alt={demoCopy.alt}
+          widths={DEMO_POSTER_WIDTHS}
+          sizes={DEMO_POSTER_SIZES}
+          format="webp"
+          loading="lazy"
+          decoding="async"
+        />
+        <video
+          width={DEMO_WIDTH}
+          height={DEMO_HEIGHT}
+          muted
+          loop
+          playsinline
+          preload="none"
+          disablepictureinpicture
+          data-src={demoVideo}
+          aria-hidden="true"
+          tabindex="-1"
+        ></video>
       </div>
-    </div>
+      <figcaption class="demo-bar">
+        <button type="button" class="demo-toggle" data-pause-label={demoCopy.pause} data-play-label={demoCopy.play} aria-label={demoCopy.play} hidden>
+          <svg class="icon-play" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+            <path d="M8 5.14v13.72a1 1 0 0 0 1.52.86l11.14-6.86a1 1 0 0 0 0-1.72L9.52 4.28A1 1 0 0 0 8 5.14Z" fill="currentColor" />
+          </svg>
+          <svg class="icon-pause" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+            <path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" fill="currentColor" />
+          </svg>
+        </button>
+        <span class="media-note">
+          <span class="live-dot"></span>
+          <span><strong>{copy.imageNoteTitle}</strong>{copy.imageNote}</span>
+        </span>
+      </figcaption>
+    </figure>
   </section>
 
   <section class="capability-section" id="capabilities">
@@ -332,7 +430,7 @@ const HERO_SIZES = '(min-width: 898px) 910px, calc(120vw - 2.4rem)';
         ))}
       </nav>
       {clusterLinks.length > 0 && (
-        <nav class="cluster-links" aria-label={ui[locale].siteNav.topicClusters}>
+        <nav class="cluster-links" aria-label={ui[locale].siteNav.featuredClusters}>
           {clusterLinks.map((cluster) => (
             <a href={clusterPath(locale, cluster.slug)}>{clusterCopy(cluster, locale).shortTitle}</a>
           ))}
@@ -423,13 +521,19 @@ const HERO_SIZES = '(min-width: 898px) 910px, calc(120vw - 2.4rem)';
   }
   /* zh and ja headings break only at the <wbr> between phrases, so a word
      such as ソフトウェア or 网络 is never split across lines; a phrase wider
-     than the line still breaks, as a last resort. */
+     than the line still breaks, as a last resort. ko breaks at its own
+     spaces, so keep-all alone keeps 시스템 whole; no <wbr>. The ko card
+     titles (h3) take it too: they carry no <wbr>, so zh and ja h3 cannot. */
   .home :global(h1:lang(zh)),
   .home :global(h1:lang(ja)),
+  .home :global(h1:lang(ko)),
   .home :global(h2:lang(zh)),
   .home :global(h2:lang(ja)),
+  .home :global(h2:lang(ko)),
+  .home :global(h3:lang(ko)),
   .eyebrow:lang(zh),
-  .eyebrow:lang(ja) {
+  .eyebrow:lang(ja),
+  .eyebrow:lang(ko) {
     word-break: keep-all;
     overflow-wrap: anywhere;
   }
@@ -542,6 +646,13 @@ const HERO_SIZES = '(min-width: 898px) 910px, calc(120vw - 2.4rem)';
     font-size: 1.08rem;
     line-height: 1.85;
     max-width: 35rem;
+    margin-bottom: 0.9rem;
+  }
+  /* The protocol link sits between the lead and the CTA row, as the lead's
+     secondary line, so the row keeps the lead's old 1.8rem clearance. The
+     hero is a centred flex column, so the link centres itself too. */
+  .hero-protocol-link {
+    align-self: center;
     margin-bottom: 1.8rem;
   }
   /* Desktop measure and leading for the lead, which runs T2, T4 and E1
@@ -615,11 +726,11 @@ const HERO_SIZES = '(min-width: 898px) 910px, calc(120vw - 2.4rem)';
     margin: 0.1rem 0 0;
   }
   .hero-media {
-    position: relative;
-    isolation: isolate;
-    margin-top: 3rem;
+    margin: 3rem 0 0;
   }
-  .hero-media::before {
+  /* The offset outline behind the media box, drawn by the box itself so the
+     caption under it stays outside the outline. */
+  .demo-frame::before {
     content: '';
     position: absolute;
     inset: -18px 22px 28px -20px;
@@ -627,43 +738,91 @@ const HERO_SIZES = '(min-width: 898px) 910px, calc(120vw - 2.4rem)';
     border: 1px solid color-mix(in srgb, var(--home-green) 28%, transparent);
     border-radius: 8px;
   }
-  .hero-media img {
-    display: block;
-    width: 100%;
-    height: auto;
-    aspect-ratio: 3 / 2;
-    object-fit: cover;
+  /* The recording's own 1200:674 box. The poster and the video fill it at
+     the same size, the video on top; until the video has a frame (or ever,
+     under reduced motion) it is transparent and the poster shows through.
+     The recording is real, mostly dark product UI, so unlike the old
+     illustration it is not dimmed in the dark theme. */
+  .demo-frame {
+    position: relative;
+    isolation: isolate;
+    aspect-ratio: 1200 / 674;
+    background: #0b0b10;
     border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
     border-radius: 8px;
     box-shadow: 0 34px 86px -48px rgba(19, 78, 58, 0.78);
   }
-  /* Dark theme: the same dimming as the marketing pages' hero
-     (MarketingEvidencePage.astro): the white render is muted on the image
-     itself rather than left as a white block on the dark page. */
-  :global(:root[data-theme='dark']) .hero-media img {
-    filter: brightness(0.6) contrast(1.12);
-  }
-  .media-note {
+  .demo-frame img,
+  .demo-frame video {
     position: absolute;
-    right: 1rem;
-    bottom: 1rem;
-    max-width: 250px;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 7px;
+  }
+  /* The caption row: the pause/play toggle, then the section caption. Both
+     sit under the recording; anything over it would cover the product. */
+  .demo-bar {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 0.9rem;
+  }
+  /* Pause and play, for a loop that would otherwise run for as long as it is
+     on screen. */
+  .demo-toggle {
+    display: grid;
+    flex: 0 0 auto;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    margin-right: auto;
+    padding: 0;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    cursor: pointer;
+  }
+  .demo-toggle[hidden] {
+    display: none;
+  }
+  .demo-toggle:hover {
+    border-color: var(--home-green);
+  }
+  .demo-toggle:focus-visible {
+    outline: 2px solid var(--home-green);
+    outline-offset: 2px;
+  }
+  .demo-toggle .icon-pause,
+  .demo-toggle[data-state='playing'] .icon-play {
+    display: none;
+  }
+  .demo-toggle[data-state='playing'] .icon-pause {
+    display: block;
+  }
+  /* The section caption. It used to float over the illustration's corner;
+     over a recording that would cover the product, so it sits under it. */
+  .media-note {
+    max-width: 320px;
     display: flex;
     gap: 0.65rem;
     align-items: flex-start;
     padding: 0.75rem 0.85rem;
     color: #292524;
     background: rgba(255, 255, 255, 0.92);
-    border: 1px solid rgba(255, 255, 255, 0.8);
+    border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
     border-radius: 8px;
     box-shadow: 0 12px 30px -18px rgba(0, 0, 0, 0.4);
     font-size: 0.72rem;
     line-height: 1.5;
-    backdrop-filter: blur(12px);
+    text-align: left;
   }
-  /* Dark theme: the note was the light theme's near-white glass, which stood
-     out the more once the image under it was dimmed. It takes the dark
-     surface instead; --ink on it is the page's own body-text pair. */
+  /* Dark theme: the caption takes the dark surface; --ink on it is the
+     page's own body-text pair. */
   :global(:root[data-theme='dark']) .media-note {
     color: var(--ink);
     background: color-mix(in srgb, var(--surface) 90%, transparent);
@@ -1219,7 +1378,11 @@ const HERO_SIZES = '(min-width: 898px) 910px, calc(120vw - 2.4rem)';
       margin-top: 0.25rem;
       margin-bottom: 2rem;
     }
-    .hero > .hero-lead {
+    .hero > .hero-lead,
+    .hero > .hero-protocol-link {
+      /* Same order value: flex keeps source order within it, so the link
+         stays right under the lead on a phone instead of falling to the top
+         as an unordered child would. */
       order: 4;
     }
     .hero > .hero-actions {
@@ -1284,18 +1447,11 @@ const HERO_SIZES = '(min-width: 898px) 910px, calc(120vw - 2.4rem)';
     .hero h1 {
       font-size: 2.7rem;
     }
-    /* Three buttons wrapping freely left "YouTube" stranded alone on a second
-       row, centred under the other two, which reads as unfinished. A 2-up grid
-       with the primary spanning the full width fills both rows exactly. */
-    .hero-actions {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
+    /* The two CTAs share one row and grow to fill it. A locale whose labels
+       do not fit side by side (French below about 400px) wraps to two
+       full-width rows rather than two ragged, centred buttons. */
     .hero-actions .button {
-      width: 100%;
-    }
-    .hero-actions .button.primary {
-      grid-column: 1 / -1;
+      flex: 1 1 auto;
     }
     .home.lang-de .hero h1,
     .home.lang-fr .hero h1,
@@ -1308,13 +1464,11 @@ const HERO_SIZES = '(min-width: 898px) 910px, calc(120vw - 2.4rem)';
     .home.lang-ja .hero h1 {
       font-size: 2.15rem;
     }
-    .hero-media img {
-      aspect-ratio: 4 / 3;
-    }
     .media-note {
-      display: none;
+      flex: 1 1 auto;
+      max-width: none;
     }
-    .hero-media::before {
+    .demo-frame::before {
       inset: -10px 12px 18px -10px;
     }
     /* One column on phones. Two columns survive down here only by getting
@@ -1389,12 +1543,12 @@ const HERO_SIZES = '(min-width: 898px) 910px, calc(120vw - 2.4rem)';
     .home.lang-es .hero h1 {
       font-size: 2rem;
     }
-    .hero-actions {
-      display: grid;
-      grid-template-columns: 1fr;
-    }
-    .hero-actions .button {
-      width: 100%;
-    }
   }
 </style>
+
+{/* The recording's player script, as a same-origin file rather than a
+    component `<script>`: Vite inlines a script that small into the page, and
+    an inline script runs only if the site's Content-Security-Policy lists its
+    hash. `?url&no-inline` keeps it a hashed file under /_astro/, which
+    `script-src 'self'` already allows. */}
+<script is:inline type="module" src={demoScript}></script>

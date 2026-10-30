@@ -3,7 +3,7 @@ title: 给现有系统加 AI：连接数据库，而不是先迁移
 description: 在自管部署的 ObjectOS（企业版）里，把已经运行的数据库接入（默认只读），让 agent 把关键数据表建模为对象，再在你的权限边界内叠加 AI 能力；原系统继续运行，AI 走受控对象层。
 author: ObjectStack Team
 date: 2026-05-30
-updated: 2026-10-15T10:00:00+08:00
+updated: 2026-10-29T10:00:00+08:00
 status: published
 topic: integration-data
 audience: general
@@ -61,29 +61,32 @@ AI 的对象与权限边界。
 
 ### 1. 将数据库连接为数据源
 
-数据源是一个具名连接 —— Postgres、MySQL、MongoDB、SQLite。凭据来自环境
-变量，绝不写死在源码里。如果你想先做分析，把它指向只读副本或只读数据库
-用户，写入便根本无从发生。
+数据源是一个具名连接 —— Postgres、MySQL、MongoDB、SQLite。连接信息来自环境
+变量；密码则从不内联 —— 既不写在源码里，也不写进 `config`。它加密存放在密钥
+存储中，数据源只携带存储为它签发的不透明句柄 `external.credentialsRef`。如果
+你想先做分析，把它指向只读副本或只读数据库用户，写入便根本无从发生。
 
 ```ts
-import type { Datasource } from '@objectstack/spec';
+import { defineDatasource } from '@objectstack/spec/data';
 
-export const BusinessDb: Datasource = {
+export const BusinessDb = defineDatasource({
   name: 'business_primary',
   label: 'Business System (Postgres)',
   driver: 'postgres',
   config: {
-    connection: {
-      host: process.env.BIZ_DB_HOST,
-      user: process.env.BIZ_DB_USER,
-      password: process.env.BIZ_DB_PASSWORD,
-      database: process.env.BIZ_DB_NAME,
-    },
+    host: process.env.BIZ_DB_HOST,
+    database: process.env.BIZ_DB_NAME,
+    username: process.env.BIZ_DB_USER,
   },
+  external: { credentialsRef: process.env.BIZ_DB_CREDENTIALS_REF },
   pool: { min: 1, max: 10 },
   active: true,
-};
+});
 ```
+
+`defineDatasource` 在文件加载时就按 Postgres 驱动自己的配置 schema 校验这份
+声明，所以拼错的键（把 `username` 写成 `user`）或内联的 `password` 会当场报错，
+不必等到连接时才暴露。
 
 ### 2. 将数据表建模为对象 —— 交给编码 Agent
 
