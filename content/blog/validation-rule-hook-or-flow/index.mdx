@@ -1,0 +1,285 @@
+---
+title: "Validation Rule, Hook, or Flow? Where a Business Rule Should Live in an AI-Written App — One CRM, Seven Rules, Three Homes"
+description: "Seven business rules on one CRM, three homes each could take. The choice is a table, not a taste: a predicate is a validation rule, a rewrite of the pending record is a hook, everything else is a flow, which reviews as data."
+author: ObjectStack Team
+date: 2026-10-21
+status: published
+topic: app-building
+audience: developer
+solutions:
+  - crm
+industries: []
+cover: ./cover-en.svg
+tags:
+  - AI agents
+  - Business rules
+---
+
+**Answer first.** A business rule in an ObjectStack app has three possible homes, and the choice is a table, not a matter of taste. A rule that can be decided from the one record being written, with no I/O, is a **validation rule** on the object. A rule that must change the pending record before it is saved is a **before hook**. Everything else — side effects, approvals, anything that pauses, anything on a clock — is a **flow**, and the docs make the flow the default: "a flow is the default surface for application logic; a hook is the backstop for what a node graph cannot express." The reason is structural, and it is the thing a reviewer actually checks: **a flow reviews as data, a hook reviews as code.** The bundled CRM in the ObjectStack repository declares **seven** such rules — five validations, one hook, one flow — and every one sits where the table says it should. Below, the table, the seven rules, a REST transcript of each home refusing or rewriting a write, and one typo planted in two homes to show the two review strengths. All of it measured on the published `@objectstack/cli` 18.2.0, the version `npm create objectstack@latest` installs.
+
+## The sentence an agent gets
+
+A product owner writes one line in a planning doc: *discounts over 40% need approval.* An agent asked to implement it can put that sentence in three places, and all three parse, build and boot:
+
+- as a **validation rule** on `crm_opportunity` — a CEL predicate that refuses the write;
+- as a **hook** — a `beforeInsert` / `beforeUpdate` handler that inspects `ctx.input` and throws, or quietly sets a field;
+- as a **flow** — a record-change trigger that opens an approval request and parks the record until someone decides.
+
+Only one is right for each *shape* of rule, and "discounts over 40% need approval" is actually two rules wearing one sentence. "Over 40% is not allowed without an exception" is a predicate over the record — a validation rule. "Someone has to approve the exception" pauses and waits for a person — a flow. A hook can do neither well: it runs inline, so it cannot pause, and if it refuses the write, it refuses it as code nobody can diff field by field.
+
+The [CRM example](https://github.com/objectstack-ai/objectstack/tree/%40objectstack/cli%4018.2.0/examples/app-crm) that ships in the ObjectStack monorepo has already made that call. Its `discount_cap` rule is a validation, in the object, as data:
+
+```ts
+// examples/app-crm/src/objects/opportunity.object.ts  (@objectstack/cli@18.2.0)
+validations: [
+  {
+    type: 'script' as const,
+    name: 'discount_cap',
+    label: 'Discount Cap 40%',
+    description: 'Discounts over 40% require special approval.',
+    condition: P`record.discount_percent != null && record.discount_percent > 40`,
+    message: 'Discount cannot exceed 40% without an approved exception.',
+    severity: 'error' as const,
+  },
+```
+
+That is the first home. The other two are on the same object, and the rest of this piece is about telling them apart.
+
+## The decision, as a table
+
+Three doc passages settle the question, and none of them says "it depends".
+
+The validation docs define what a validation rule *is*, and the definition is the test: "A validation rule is a deterministic, synchronous, side-effect-free predicate over a single record — it must be decidable from the incoming write (and, on update, the prior record) with no I/O." They "run automatically on the write path (insert/update)". Three things that look like validation are explicitly sent elsewhere: async or remote checks go to the form layer; a custom handler goes to a `beforeInsert` / `beforeUpdate` hook; and delete-time guards go to a `beforeDelete` hook, because "there is no `'delete'` validation event".
+
+The hooks docs give the working rule between the other two homes — "**a flow is the default surface for application logic; a hook is the backstop** for what a node graph cannot express" — and a six-row table. Merged with the validation definition, the whole decision fits in one:
+
+| The rule… | Home | Why |
+| :--- | :--- | :--- |
+| can be decided from the one record being written, with no I/O | **Validation rule** on the object | It is a predicate; the engine evaluates it on every insert and update, whoever writes |
+| must change the pending record in the same write, before it is saved | **Before hook** | The row the docs reserve for a hook: it rewrites the payload the engine is about to save; a flow node writes as an ordinary caller, in its own write |
+| is an invariant across objects, on every write path, no matter who writes | **Hook** | "The backstop duty itself" |
+| intercepts reads (`beforeFind` / `afterFind`) | **Hook** | Flows have no read events |
+| has side effects after a save — create records, notify, call HTTP, request approval | **Flow** (`record_change`) | The default surface |
+| pauses — approvals, screens, timers, signals | **Flow** | "A hook runs inline and cannot pause" |
+| runs on a clock or relative to a date | **Flow** (`schedule` / `timeRelative`) | Declares the organization it runs as |
+| must block a delete | **`beforeDelete` hook** | Validation rules have no delete event |
+
+![A decision tree with three homes: a predicate over the single record being written is a validation rule on the object, which runs on insert and update and never on delete; a change to the pending record before it is saved is a before hook, which runs inline and cannot pause; and side effects, approvals, anything that pauses or runs on a clock is a flow, the default, which reviews as data](./three-homes-en.svg)
+
+Two things in that table are easy to get backwards. Validation rules never run on delete — a delete carries no record payload to validate — so "an opportunity with open line items cannot be deleted" is a `beforeDelete` hook, not a rule. And "default" is the doc's word, not a soft preference: when a hook and a flow could both express a rule, the flow wins unless the rule needs something only a hook has, which is the pending record or a read event.
+
+## Seven rules, one CRM
+
+The CRM example at the 18.2.0 tag declares seven business rules across its six objects. Here they are, each with the home it lives in and the row of the table that put it there. The count is the number in the title; re-count it yourself from the `validations` arrays in `src/objects/*.object.ts`, plus `src/hooks/` and `src/flows/`.
+
+| # | The rule, as a sentence | Home | Construct | Row of the table |
+| :-- | :--- | :--- | :--- | :--- |
+| 1 | A discount above 40% is refused without an approved exception | Validation on `crm_opportunity` — `discount_cap` | `script`, CEL predicate | Decidable from the record alone |
+| 2 | An open opportunity cannot be created with a close date in the past | Validation on `crm_opportunity` — `opp_close_date_not_past` | `cross_field`, `events: ['insert']` | Same predicate engine as `script`; the error attaches to `close_date` |
+| 3 | Stages move in order; `closed_won` is terminal | Validation on `crm_opportunity` — `opp_stage_transitions` | `state_machine` | Prior state plus next state, no I/O |
+| 4 | Lead statuses move in order; `converted` and `disqualified` are terminal | Validation on `crm_lead` — `lead_status_transitions` | `state_machine` | Same |
+| 5 | A lead score is between 0 and 100 | Validation on `crm_lead` — `lead_score_range` | `script` | Predicate |
+| 6 | A won deal's probability is 100, a lost deal's is 0 | Hook — `opportunity_stage_probability` | `beforeInsert`, `beforeUpdate` | Changes the pending record in the same write |
+| 7 | Converting a lead creates a customer and an opportunity and marks the lead converted — once | Flow — `crm_convert_lead_wizard` | Screen flow; `update_record` node | Pauses for input, creates records, writes another object |
+
+Rule 6 is the only hook, and it is worth reading in full, because it is exactly the shape the table reserves for hooks — a mutation of the record on its way in, and nothing else:
+
+```ts
+// examples/app-crm/src/hooks/opportunity.hook.ts  (@objectstack/cli@18.2.0)
+export const OpportunityStageHook = defineHook({
+  name: 'opportunity_stage_probability',
+  object: 'crm_opportunity',
+  events: ['beforeInsert', 'beforeUpdate'],
+  priority: 100,
+  handler: async (ctx: HookContext) => {
+    const input = ctx.input as { stage?: string; probability?: number };
+    if (input.stage === 'closed_won') input.probability = 100;
+    if (input.stage === 'closed_lost') input.probability = 0;
+  },
+});
+```
+
+Rule 7 is the only flow, and its last node is the one that writes. Its write set is not code; it is a literal map of field names next to a literal object name, and the two values it computes are CEL value envelopes — still data, not a function body:
+
+```ts
+// examples/app-crm/src/flows/convert-lead.flow.ts  (@objectstack/cli@18.2.0)
+{
+  id: 'update_lead',
+  type: 'update_record',
+  label: 'Mark Lead Converted',
+  config: {
+    objectName: 'crm_lead',
+    filter: { id: { dialect: 'cel', source: 'recordId' } },
+    fields: {
+      status:                'converted',
+      account:               { dialect: 'cel', source: 'account_id' },
+      converted_opportunity: { dialect: 'cel', source: 'opportunity_id' },
+    },
+  },
+},
+```
+
+Hold those two shapes side by side. They are the whole argument.
+
+## Three homes at the API
+
+Boot the example on 18.2.0 (`objectstack dev --compile`), sign in once as the dev admin the server seeds on an empty database — the boot banner prints the account — and drive the generated REST API. Four calls, one per rule shape.
+
+**Home 1, a `script` validation.** Create an opportunity at a 45% discount:
+
+```text
+POST /api/v1/data/crm_opportunity
+{ "name": "Acme — Deep Discount Deal", "account": "<acme id>", "stage": "prospecting",
+  "amount": 50000, "discount_percent": 45 }
+
+400 { "error": "Discount cannot exceed 40% without an approved exception.",
+      "code": "VALIDATION_FAILED",
+      "fields": [ { "field": "_record", "code": "rule_violation",
+                    "message": "Discount cannot exceed 40% without an approved exception." } ],
+      "object": "crm_opportunity" }
+```
+
+The same call at `discount_percent: 40` returns `201` and a record stamped `probability: 50`, the field's declared default. The message is the one authored on `discount_cap`; the anchor is `_record`, because a plain `script` rule attaches to the record as a whole.
+
+**Home 1 again, a `cross_field` validation.** Create one with `close_date` in the past:
+
+```text
+POST /api/v1/data/crm_opportunity
+{ "name": "Acme — Back-dated Deal", "account": "<acme id>", "stage": "prospecting",
+  "amount": 10000, "close_date": "2026-01-15" }
+
+400 { "error": "Close Date must be today or a future date.",
+      "code": "VALIDATION_FAILED",
+      "fields": [ { "field": "close_date", "code": "rule_violation",
+                    "message": "Close Date must be today or a future date." } ],
+      "object": "crm_opportunity" }
+```
+
+Same engine, same envelope, one difference: the error is anchored on `close_date`, because `cross_field` "evaluates identically to `script`" and `fields[0]` is what "labels the field the error attaches to". That is the entire distinction between the two types, and it is a presentation choice, not an enforcement one.
+
+**Home 2, the before hook.** Take the seeded "Acme — Q3 Platform Renewal" — stage `proposal`, probability 70 — and close it:
+
+```text
+PATCH /api/v1/data/crm_opportunity/WQwHS5B2yI9pOTqc
+{ "stage": "closed_won" }
+
+200 { "record": { "name": "Acme — Q3 Platform Renewal", "stage": "closed_won",
+                  "probability": 100, "expected_revenue": 120000, … } }
+
+GET /api/v1/data/crm_opportunity/WQwHS5B2yI9pOTqc
+200 { "record": { "stage": "closed_won", "probability": 100, … } }
+```
+
+Nobody sent `probability`. The hook rewrote the pending record before the engine saved it, and the read-back agrees. This is the row of the table the docs reserve for a before hook — "mutating the pending record in the same write, before it is saved" — because a flow's `update_record` node hands its fields to the engine as an ordinary caller payload, a write of its own, rather than editing the one already on its way in.
+
+**Home 1, a `state_machine` validation.** Take "Initech — Expansion" — stage `prospecting` — and try to close it in one jump:
+
+```text
+PATCH /api/v1/data/crm_opportunity/WsD7hH7IEgUvPhDK
+{ "stage": "closed_won" }
+
+400 { "error": "Invalid stage transition.",
+      "code": "VALIDATION_FAILED",
+      "fields": [ { "field": "stage", "code": "invalid_transition",
+                    "message": "Invalid stage transition.", "label": "Stage",
+                    "constraint": { "from": "prospecting", "to": "closed_won" } } ],
+      "object": "crm_opportunity" }
+```
+
+`prospecting → qualification`, a declared transition, returns `200`. Whether the hook rewrote `probability` before the predicate refused the write is invisible from outside, and it does not matter: the write never landed, and the record stays what it was.
+
+Three homes, three distinguishable envelopes: a rule failure carries `VALIDATION_FAILED` and the authored message; a hook leaves no trace except the value it changed — and when a hook does refuse, the docs say, the API answers `400` with the code `VALIDATION_ERROR`, not a rule's `VALIDATION_FAILED`; a flow — rule 7 — is driven from a screen, so it has no single REST call, which is itself a fact about where it lives.
+
+## The same typo in two homes
+
+Here is the measurement the table's "why" column rests on. Take one mistake — a field name misspelled in a write — and plant it in the flow and in the hook. Then run `os validate` on 18.2.0.
+
+In the flow's `update_record` node, misspell `converted_opportunity`:
+
+```text
+✗ Author-time rules failed (1 issue)
+  • flow "crm_convert_lead_wizard" › node "Mark Lead Converted": update_record
+    writes 'converted_oportunity', but object 'crm_lead' declares no such field,
+    so the write is refused (INVALID_FIELD / 400) and the step fails the run
+      fix: Did you mean 'converted_opportunity'? Fix the field name, or declare
+      'converted_oportunity' on the object
+      rule: flow-node-write-unknown-field  at flows[0].nodes[6].config.fields.converted_oportunity
+      — `os explain flow-node-write-unknown-field` for why an undeclared field write is refused
+exit=1
+```
+
+In the hook body, misspell `probability` in the literal form the write-set lint recognizes — `ctx.input.probabilty = 100`:
+
+```text
+✓ Validation passed (542ms)
+  …
+  ⚠ hook "opportunity_stage_probability" › body: body writes 'probabilty' to its
+    input, but object 'crm_opportunity' declares no such field, so the write is
+    refused (INVALID_FIELD / 400) (judged on the metadata body lowered from the
+    inline handler)
+    fix: Did you mean 'probability'? Fix the field name, or declare 'probabilty'
+    on the object
+    rule: hook-body-write-unknown-field  at hooks[0].handler
+    — `os explain hook-body-write-unknown-field` for why an undeclared field write is refused
+exit=0
+```
+
+Same mistake, same fix, two strengths. Both answers spell the fix out — `Did you mean …?` — and what differs is the strength and the anchor: the flow node is an **error**, pinned to the exact `fields` key, with a non-zero exit; the hook body is a **warning**, pinned to the whole `handler`, and the build is green. The docs say why in one sentence: the node's `fields` "is a literal map next to a literal `objectName`, so nothing could have mis-read it", whereas a hook body's write set is checked "only for the literal patterns a parser can recognise". The existence of a field is a *certainty* when the write is data and a *best effort* when the write is code. (The elided lines in the second transcript are the stack summary; the nine `field-no-consumers` advisories the clean run also prints follow the hook warning.)
+
+![The same misspelled field name planted in three places and what os validate 18.2.0 answers: in a flow update_record node, an error anchored on the fields key, with a did-you-mean and exit 1; in a hook body written as ctx.input.field, a warning anchored on the handler, with the same did-you-mean and exit 0; in the hook body as the CRM ships it, through a local alias of ctx.input, nothing at all and exit 0. All three are refused at run time with INVALID_FIELD 400, the backstop that names the field but not the line that wrote it](./same-typo-three-answers-en.svg)
+
+And there is a third answer, which is the one that should change how you review. The CRM's hook, as shipped, does not write `ctx.input.probability` directly. It writes through a local alias — `const input = ctx.input; … input.probability = 100` — and the docs list aliased input among the shapes the rule "bails *silently* on", because "v1 does no data-flow analysis". Misspell the field in the hook exactly as it is written in the repository and `os validate` says **nothing**: exit 0, no warning, output byte-identical to the clean run. The docs' own line for this is the one to memorize: "**A missing warning is not a clean bill of health.**"
+
+All three land in the same place at run time. The CRM's write path refuses an unknown field on every driver, and it does so for a hand-typed payload too:
+
+```text
+PATCH /api/v1/data/crm_opportunity/emhPM9WKJqqGzaME
+{ "probabilty": 100 }
+
+400 { "error": "Unknown field 'probabilty' on object 'crm_opportunity'",
+      "code": "INVALID_FIELD", "field": "probabilty", "object": "crm_opportunity" }
+```
+
+So the mistake is never persisted. What differs is *when you find out* and *who tells you*: the flow at `validate`, with the fix spelled out; the literal hook at `validate`, advisory; the aliased hook on the first real write, from a refusal that names the field and not the body that wrote it.
+
+## Reviewable as data, reviewable as code
+
+Call the property **reviewable as data**. A rule is reviewable as data when its meaning is carried by structured metadata the gate can resolve against the declared schema — a `fields` map, a `transitions` table, a CEL `condition` — so that the reviewer reads a diff of values and the validator reads the same values with certainty. A rule is **reviewable as code** when its meaning is carried by a function body: the gate can parse the literal shapes and must bail on the rest, and the reviewer reads logic, not values.
+
+Every validation rule in the CRM is reviewable as data. The `state_machine` is the cleanest case — a reviewer can read `closed_won: []` and know, without running anything, that a won deal is terminal. The flow's `update_record` node is reviewable as data; the docs put it directly: "The node graph diffs field-by-field and renders in the Console designer with per-node run history; a hook body reviews as code only." The hook is reviewable as code, and the CRM's hook is a good hook precisely because its code is three lines whose job no data shape can express — rewriting the record on its way in.
+
+This gives the reviewer of an AI-written change a question that is faster than "is this right?": **is this rule in the home where it is reviewable as data?** A threshold inside a hook body, a status transition enforced by an `if` in a handler, an approval implemented by a hook that throws — each parses, builds and runs, and each is a finding, because the same rule has a home where the gate would check it as a value and the reviewer would read it as one. The fix is not to review the code harder. It is to move the rule.
+
+The docs close the one loophole in that argument. Logic that genuinely needs code "still doesn't have to be a hook: a flow `script` node calling a function registered via `defineStack({ functions })` keeps the orchestration in checked metadata and the code in one named, testable unit." Code goes in the smallest box; the shape around it stays data.
+
+## What this does not settle
+
+- **The threshold.** Nothing above says whether 40% is the right cap, whether finance is the right approver, or whether the stage order matches how the business sells. A rule in the right home is still a rule a human has to agree with; this piece only makes the disagreement cheap to find.
+- **`cross_field` is not a stronger check.** It runs the same predicate as `script`. If you reach for it expecting the engine to do something extra across fields, it will not; you are choosing where the error message lands.
+- **The write-set lint is bounded by a parser.** Computed keys, spreads, dynamic object names, aliased input and objects declared by another package are all invisible to it, by design — a false positive would kill an advisory lint. The runtime backstop is the same on every driver, but it is a backstop. The practical rule from the docs holds: treat `hook-body-write-unknown-field` as a build failure by convention, and check by hand what the parser cannot see.
+- **The CRM has no record-triggered flow.** Its one flow is a screen wizard a user launches. The "someone approves the exception" half of the opening sentence is a flow with an `approval` node, and the ObjectStack repository keeps its worked approval flows in the larger showcase example, not here. The decision table covers it; this CRM does not exercise it.
+- **Seven is this CRM's number**, at `@objectstack/cli@18.2.0`, and the three doc passages quoted above are read at that same tag. Re-run the transcript on whatever version you install: between two recent releases the count stayed at seven while the flow node's computed values changed shape, from `'{…}'` templates to CEL value envelopes, which is exactly the kind of drift a re-run catches.
+
+## Point your agent at the table
+
+The cheapest way to get rules into the right home is to tell the agent the table before it writes the first one. Three lines in an `AGENTS.md`, or in whatever rules file your agent reads, are enough:
+
+```text
+A business rule that can be decided from the one record being written, with no I/O,
+is a validation rule on the object (script / cross_field / state_machine). A rule that
+must change the record before it is saved is a before hook. Everything else — side
+effects, approvals, anything that pauses or runs on a clock — is a flow. Flows are
+the default; hooks are the backstop. Validation rules never run on delete.
+```
+
+Then review the diff for one thing: a rule living where it is reviewable as code when a home exists where it is reviewable as data. The gate will have already told you which it is — once as an error, once as a warning, and once, if the hook aliases its input, not at all.
+
+That is the loop the target format is built for. One executable business ontology. AI writes it, the runtime runs it, agents operate it, you own it. The seven rules above are the ontology's verbs, and every one of them is in a file you can read.
+
+```bash
+npm create objectstack@latest crm && cd crm
+pnpm run validate     # the gate, every edit
+pnpm run dev          # the API, with the dev admin printed in the banner
+```
+
+Related: [how one CRM was built with an agent, including what broke](/en/blog/how-to-build-a-crm-with-an-ai-agent/), where rule 3's `state_machine` first appeared; [the four-pass review order](/en/blog/how-to-review-ai-generated-app-changes/), which this piece gives a fifth question; [the trigger model](/en/blog/automation-trigger-model/) for where a flow *starts*; and the glossary entry for [declared vs. enforced](/en/glossary/declared-vs-enforced/), the gap a rule in the wrong home quietly reopens.

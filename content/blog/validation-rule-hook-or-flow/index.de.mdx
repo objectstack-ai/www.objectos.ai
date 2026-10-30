@@ -1,0 +1,285 @@
+---
+title: "Validierungsregel, Hook oder Flow? Wo eine Geschäftsregel in einer AI-geschriebenen App hingehört – ein CRM, sieben Regeln, drei Zuhause"
+description: "Sieben Geschäftsregeln auf einem CRM, drei Orte für jede. Die Wahl ist eine Tabelle: ein Prädikat ist eine Validierungsregel, ein Umschreiben vor dem Speichern ein Hook, alles andere ein Flow, der als Daten reviewt wird."
+author: ObjectStack Team
+date: 2026-10-21
+status: published
+topic: app-building
+audience: developer
+solutions:
+  - crm
+industries: []
+cover: ./cover-en.svg
+tags:
+  - AI-Agents
+  - Geschäftsregeln
+---
+
+**Die Antwort zuerst.** Eine Geschäftsregel in einer ObjectStack-App hat drei mögliche Zuhause, und die Wahl ist eine Tabelle, keine Geschmacksfrage. Eine Regel, die sich allein aus dem einen Datensatz entscheiden lässt, der gerade geschrieben wird, ohne I/O, ist eine **Validierungsregel** auf dem Objekt. Eine Regel, die den ausstehenden Datensatz vor dem Speichern ändern muss, ist ein **Before-Hook**. Alles andere – Seiteneffekte, Genehmigungen, alles, was pausiert, alles, was nach der Uhr läuft – ist ein **Flow**, und die Dokumentation macht den Flow zum Standard: „Ein Flow ist die Standardfläche für Anwendungslogik; ein Hook ist der Rückhalt für das, was ein Knotengraph nicht ausdrücken kann.“ Der Grund ist strukturell, und er ist genau das, was ein Reviewer tatsächlich prüft: **Ein Flow wird als Daten reviewt, ein Hook als Code.** Das im ObjectStack-Repository mitgelieferte CRM deklariert **sieben** solche Regeln – fünf Validierungen, einen Hook, einen Flow – und jede sitzt dort, wo die Tabelle sie hinstellt. Unten: die Tabelle, die sieben Regeln, ein REST-Transkript, in dem jedes Zuhause einen Schreibvorgang ablehnt oder umschreibt, und ein Tippfehler, in zwei Zuhause gepflanzt, um die zwei Review-Stärken zu zeigen. Alles gemessen auf der veröffentlichten `@objectstack/cli` 18.2.0, der Version, die `npm create objectstack@latest` installiert.
+
+## Der Satz, den ein Agent bekommt
+
+Eine Product Ownerin schreibt eine Zeile in ein Planungsdokument: *Rabatte über 40 % brauchen eine Genehmigung.* Ein Agent, der das umsetzen soll, kann diesen Satz an drei Stellen unterbringen, und alle drei parsen, bauen und booten:
+
+- als **Validierungsregel** auf `crm_opportunity` – ein CEL-Prädikat, das den Schreibvorgang ablehnt;
+- als **Hook** – ein `beforeInsert`-/`beforeUpdate`-Handler, der `ctx.input` inspiziert und wirft, oder still ein Feld setzt;
+- als **Flow** – ein Record-Change-Trigger, der eine Genehmigungsanfrage öffnet und den Datensatz parkt, bis jemand entscheidet.
+
+Für jede *Form* von Regel ist nur eines richtig, und „Rabatte über 40 % brauchen eine Genehmigung“ sind in Wahrheit zwei Regeln in einem Satz. „Über 40 % ist ohne Ausnahme nicht erlaubt“ ist ein Prädikat über den Datensatz – eine Validierungsregel. „Jemand muss die Ausnahme genehmigen“ pausiert und wartet auf einen Menschen – ein Flow. Ein Hook kann beides nicht gut: Er läuft inline, kann also nicht pausieren, und wenn er den Schreibvorgang ablehnt, tut er das als Code, den niemand Feld für Feld diffen kann.
+
+Das [CRM-Beispiel](https://github.com/objectstack-ai/objectstack/tree/%40objectstack/cli%4018.2.0/examples/app-crm) im ObjectStack-Monorepo hat diese Entscheidung bereits getroffen. Seine Regel `discount_cap` ist eine Validierung, im Objekt, als Daten:
+
+```ts
+// examples/app-crm/src/objects/opportunity.object.ts  (@objectstack/cli@18.2.0)
+validations: [
+  {
+    type: 'script' as const,
+    name: 'discount_cap',
+    label: 'Discount Cap 40%',
+    description: 'Discounts over 40% require special approval.',
+    condition: P`record.discount_percent != null && record.discount_percent > 40`,
+    message: 'Discount cannot exceed 40% without an approved exception.',
+    severity: 'error' as const,
+  },
+```
+
+Das ist das erste Zuhause. Die beiden anderen liegen auf demselben Objekt, und der Rest dieses Texts handelt davon, sie auseinanderzuhalten.
+
+## Die Entscheidung als Tabelle
+
+Drei Stellen in der Dokumentation klären die Frage, und keine davon sagt „kommt darauf an“.
+
+Die Validierungsdokumentation definiert, was eine Validierungsregel *ist*, und die Definition ist der Test: „Eine Validierungsregel ist ein deterministisches, synchrones, seiteneffektfreies Prädikat über einen einzelnen Datensatz – sie muss sich aus dem eingehenden Schreibvorgang (und beim Update aus dem vorherigen Datensatz) ohne I/O entscheiden lassen.“ Sie „laufen automatisch auf dem Schreibpfad (Insert/Update)“. Drei Dinge, die wie Validierung aussehen, werden ausdrücklich woandershin geschickt: asynchrone oder entfernte Prüfungen in die Formularschicht; ein eigener Handler in einen `beforeInsert`-/`beforeUpdate`-Hook; und Lösch-Schutz in einen `beforeDelete`-Hook, denn „es gibt kein `'delete'`-Validierungsereignis“.
+
+Die Hook-Dokumentation gibt die Arbeitsregel zwischen den beiden anderen Zuhause – „**Ein Flow ist die Standardfläche für Anwendungslogik; ein Hook ist der Rückhalt** für das, was ein Knotengraph nicht ausdrücken kann“ – und eine Tabelle mit sechs Zeilen. Mit der Validierungsdefinition zusammengelegt passt die ganze Entscheidung in eine:
+
+| Die Regel … | Zuhause | Warum |
+| :--- | :--- | :--- |
+| lässt sich allein aus dem einen Datensatz entscheiden, der geschrieben wird, ohne I/O | **Validierungsregel** auf dem Objekt | Sie ist ein Prädikat; die Engine wertet sie bei jedem Insert und Update aus, egal wer schreibt |
+| muss den ausstehenden Datensatz im selben Schreibvorgang ändern, vor dem Speichern | **Before-Hook** | Die Zeile, die die Doku dem Hook vorbehält: Er schreibt die Payload um, die die Engine gleich speichert; ein Flow-Knoten schreibt als gewöhnlicher Aufrufer, in einem eigenen Schreibvorgang |
+| ist eine Invariante über Objekte hinweg, auf jedem Schreibpfad, egal wer schreibt | **Hook** | „Die Rückhalt-Pflicht selbst“ |
+| fängt Lesevorgänge ab (`beforeFind` / `afterFind`) | **Hook** | Flows haben keine Leseereignisse |
+| hat Seiteneffekte nach dem Speichern – Datensätze anlegen, benachrichtigen, HTTP aufrufen, Genehmigung anfordern | **Flow** (`record_change`) | Die Standardfläche |
+| pausiert – Genehmigungen, Screens, Timer, Signale | **Flow** | „Ein Hook läuft inline und kann nicht pausieren“ |
+| läuft nach der Uhr oder relativ zu einem Datum | **Flow** (`schedule` / `timeRelative`) | Deklariert die Organisation, als die er läuft |
+| muss ein Löschen blockieren | **`beforeDelete`-Hook** | Validierungsregeln haben kein Löschereignis |
+
+![Ein Entscheidungsbaum mit drei Zuhause: Ein Prädikat über den einzelnen Datensatz, der geschrieben wird, ist eine Validierungsregel auf dem Objekt, die bei Insert und Update läuft und nie beim Löschen; eine Änderung des ausstehenden Datensatzes vor dem Speichern ist ein Before-Hook, der inline läuft und nicht pausieren kann; Seiteneffekte, Genehmigungen, alles, was pausiert oder nach der Uhr läuft, ist ein Flow, der Standard, der als Daten reviewt wird](./three-homes-en.svg)
+
+Zwei Dinge in dieser Tabelle verdreht man leicht. Validierungsregeln laufen nie beim Löschen – ein Löschen trägt keine Datensatz-Payload, die man validieren könnte –, also ist „eine Opportunity mit offenen Positionen darf nicht gelöscht werden“ ein `beforeDelete`-Hook, keine Regel. Und „Standard“ ist das Wort der Dokumentation, keine weiche Präferenz: Wenn ein Hook und ein Flow beide eine Regel ausdrücken könnten, gewinnt der Flow, es sei denn, die Regel braucht etwas, das nur ein Hook hat – den ausstehenden Datensatz oder ein Leseereignis.
+
+## Sieben Regeln, ein CRM
+
+Das CRM-Beispiel am Tag 18.2.0 deklariert sieben Geschäftsregeln über seine sechs Objekte. Hier sind sie, jede mit dem Zuhause, in dem sie lebt, und der Tabellenzeile, die sie dorthin gestellt hat. Die Zahl ist die Zahl im Titel; zählen Sie selbst nach, anhand der `validations`-Arrays in `src/objects/*.object.ts` plus `src/hooks/` und `src/flows/`.
+
+| # | Die Regel als Satz | Zuhause | Konstrukt | Tabellenzeile |
+| :-- | :--- | :--- | :--- | :--- |
+| 1 | Ein Rabatt über 40 % wird ohne genehmigte Ausnahme abgelehnt | Validierung auf `crm_opportunity` – `discount_cap` | `script`, CEL-Prädikat | Allein aus dem Datensatz entscheidbar |
+| 2 | Eine offene Opportunity kann nicht mit einem Abschlussdatum in der Vergangenheit angelegt werden | Validierung auf `crm_opportunity` – `opp_close_date_not_past` | `cross_field`, `events: ['insert']` | Dieselbe Prädikat-Engine wie `script`; der Fehler hängt an `close_date` |
+| 3 | Phasen bewegen sich in Reihenfolge; `closed_won` ist terminal | Validierung auf `crm_opportunity` – `opp_stage_transitions` | `state_machine` | Vorheriger Zustand plus nächster Zustand, kein I/O |
+| 4 | Lead-Status bewegen sich in Reihenfolge; `converted` und `disqualified` sind terminal | Validierung auf `crm_lead` – `lead_status_transitions` | `state_machine` | Ebenso |
+| 5 | Ein Lead-Score liegt zwischen 0 und 100 | Validierung auf `crm_lead` – `lead_score_range` | `script` | Prädikat |
+| 6 | Die Wahrscheinlichkeit eines gewonnenen Deals ist 100, eines verlorenen 0 | Hook – `opportunity_stage_probability` | `beforeInsert`, `beforeUpdate` | Ändert den ausstehenden Datensatz im selben Schreibvorgang |
+| 7 | Die Konvertierung eines Leads legt einen Kunden und eine Opportunity an und markiert den Lead als konvertiert – einmal | Flow – `crm_convert_lead_wizard` | Screen-Flow; `update_record`-Knoten | Pausiert für Eingaben, legt Datensätze an, schreibt ein anderes Objekt |
+
+Regel 6 ist der einzige Hook, und es lohnt sich, sie ganz zu lesen, denn sie hat genau die Form, die die Tabelle Hooks vorbehält – eine Änderung des Datensatzes auf dem Weg hinein, und sonst nichts:
+
+```ts
+// examples/app-crm/src/hooks/opportunity.hook.ts  (@objectstack/cli@18.2.0)
+export const OpportunityStageHook = defineHook({
+  name: 'opportunity_stage_probability',
+  object: 'crm_opportunity',
+  events: ['beforeInsert', 'beforeUpdate'],
+  priority: 100,
+  handler: async (ctx: HookContext) => {
+    const input = ctx.input as { stage?: string; probability?: number };
+    if (input.stage === 'closed_won') input.probability = 100;
+    if (input.stage === 'closed_lost') input.probability = 0;
+  },
+});
+```
+
+Regel 7 ist der einzige Flow, und sein letzter Knoten ist der, der schreibt. Seine Schreibmenge ist kein Code; sie ist eine literale Map von Feldnamen neben einem literalen Objektnamen, und die beiden Werte, die sie berechnet, sind CEL-Wertumschläge – immer noch Daten, kein Funktionskörper:
+
+```ts
+// examples/app-crm/src/flows/convert-lead.flow.ts  (@objectstack/cli@18.2.0)
+{
+  id: 'update_lead',
+  type: 'update_record',
+  label: 'Mark Lead Converted',
+  config: {
+    objectName: 'crm_lead',
+    filter: { id: { dialect: 'cel', source: 'recordId' } },
+    fields: {
+      status:                'converted',
+      account:               { dialect: 'cel', source: 'account_id' },
+      converted_opportunity: { dialect: 'cel', source: 'opportunity_id' },
+    },
+  },
+},
+```
+
+Halten Sie diese beiden Formen nebeneinander. Sie sind das ganze Argument.
+
+## Drei Zuhause an der API
+
+Starten Sie das Beispiel auf 18.2.0 (`objectstack dev --compile`), melden Sie sich einmal als der Dev-Admin an, den der Server auf einer leeren Datenbank anlegt – das Boot-Banner druckt das Konto –, und bedienen Sie die generierte REST-API. Vier Aufrufe, einer pro Regelform.
+
+**Zuhause 1, eine `script`-Validierung.** Eine Opportunity mit 45 % Rabatt anlegen:
+
+```text
+POST /api/v1/data/crm_opportunity
+{ "name": "Acme — Deep Discount Deal", "account": "<acme id>", "stage": "prospecting",
+  "amount": 50000, "discount_percent": 45 }
+
+400 { "error": "Discount cannot exceed 40% without an approved exception.",
+      "code": "VALIDATION_FAILED",
+      "fields": [ { "field": "_record", "code": "rule_violation",
+                    "message": "Discount cannot exceed 40% without an approved exception." } ],
+      "object": "crm_opportunity" }
+```
+
+Derselbe Aufruf mit `discount_percent: 40` liefert `201` und einen Datensatz mit `probability: 50`, dem deklarierten Standardwert des Felds. Die Nachricht ist die auf `discount_cap` verfasste; der Anker ist `_record`, weil eine einfache `script`-Regel am Datensatz als Ganzem hängt.
+
+**Noch einmal Zuhause 1, eine `cross_field`-Validierung.** Eine mit `close_date` in der Vergangenheit anlegen:
+
+```text
+POST /api/v1/data/crm_opportunity
+{ "name": "Acme — Back-dated Deal", "account": "<acme id>", "stage": "prospecting",
+  "amount": 10000, "close_date": "2026-01-15" }
+
+400 { "error": "Close Date must be today or a future date.",
+      "code": "VALIDATION_FAILED",
+      "fields": [ { "field": "close_date", "code": "rule_violation",
+                    "message": "Close Date must be today or a future date." } ],
+      "object": "crm_opportunity" }
+```
+
+Dieselbe Engine, derselbe Umschlag, ein Unterschied: Der Fehler ist an `close_date` verankert, weil `cross_field` „identisch zu `script` ausgewertet wird“ und `fields[0]` das ist, was „das Feld benennt, an dem der Fehler hängt“. Das ist der gesamte Unterschied zwischen den beiden Typen, und es ist eine Darstellungs-, keine Durchsetzungsentscheidung.
+
+**Zuhause 2, der Before-Hook.** Nehmen Sie die geseedete „Acme — Q3 Platform Renewal“ – Phase `proposal`, Wahrscheinlichkeit 70 – und schließen Sie sie ab:
+
+```text
+PATCH /api/v1/data/crm_opportunity/WQwHS5B2yI9pOTqc
+{ "stage": "closed_won" }
+
+200 { "record": { "name": "Acme — Q3 Platform Renewal", "stage": "closed_won",
+                  "probability": 100, "expected_revenue": 120000, … } }
+
+GET /api/v1/data/crm_opportunity/WQwHS5B2yI9pOTqc
+200 { "record": { "stage": "closed_won", "probability": 100, … } }
+```
+
+Niemand hat `probability` gesendet. Der Hook hat den ausstehenden Datensatz umgeschrieben, bevor die Engine ihn gespeichert hat, und das Zurücklesen stimmt überein. Das ist die Tabellenzeile, die die Dokumentation einem Before-Hook vorbehält – „den ausstehenden Datensatz im selben Schreibvorgang ändern, vor dem Speichern“ –, denn der `update_record`-Knoten eines Flows übergibt seine Felder der Engine als gewöhnliche Aufrufer-Payload, als eigenen Schreibvorgang, statt den bereits unterwegs befindlichen zu bearbeiten.
+
+**Zuhause 1, eine `state_machine`-Validierung.** Nehmen Sie „Initech — Expansion“ – Phase `prospecting` – und versuchen Sie, sie in einem Sprung abzuschließen:
+
+```text
+PATCH /api/v1/data/crm_opportunity/WsD7hH7IEgUvPhDK
+{ "stage": "closed_won" }
+
+400 { "error": "Invalid stage transition.",
+      "code": "VALIDATION_FAILED",
+      "fields": [ { "field": "stage", "code": "invalid_transition",
+                    "message": "Invalid stage transition.", "label": "Stage",
+                    "constraint": { "from": "prospecting", "to": "closed_won" } } ],
+      "object": "crm_opportunity" }
+```
+
+`prospecting → qualification`, ein deklarierter Übergang, liefert `200`. Ob der Hook `probability` umgeschrieben hat, bevor das Prädikat den Schreibvorgang abgelehnt hat, ist von außen unsichtbar, und es spielt keine Rolle: Der Schreibvorgang ist nie gelandet, und der Datensatz bleibt, was er war.
+
+Drei Zuhause, drei unterscheidbare Umschläge: Ein Regelverstoß trägt `VALIDATION_FAILED` und die verfasste Nachricht; ein Hook hinterlässt keine Spur außer dem Wert, den er geändert hat – und wenn ein Hook ablehnt, antwortet die API laut Dokumentation mit `400` und dem Code `VALIDATION_ERROR`, nicht mit dem `VALIDATION_FAILED` einer Regel; ein Flow – Regel 7 – wird von einem Screen aus gesteuert und hat deshalb keinen einzelnen REST-Aufruf, was selbst eine Tatsache darüber ist, wo er lebt.
+
+## Derselbe Tippfehler in zwei Zuhause
+
+Hier ist die Messung, auf der die „Warum“-Spalte der Tabelle ruht. Nehmen Sie einen Fehler – einen falsch geschriebenen Feldnamen in einem Schreibvorgang – und pflanzen Sie ihn in den Flow und in den Hook. Dann führen Sie `os validate` auf 18.2.0 aus.
+
+Im `update_record`-Knoten des Flows `converted_opportunity` falsch schreiben:
+
+```text
+✗ Author-time rules failed (1 issue)
+  • flow "crm_convert_lead_wizard" › node "Mark Lead Converted": update_record
+    writes 'converted_oportunity', but object 'crm_lead' declares no such field,
+    so the write is refused (INVALID_FIELD / 400) and the step fails the run
+      fix: Did you mean 'converted_opportunity'? Fix the field name, or declare
+      'converted_oportunity' on the object
+      rule: flow-node-write-unknown-field  at flows[0].nodes[6].config.fields.converted_oportunity
+      — `os explain flow-node-write-unknown-field` for why an undeclared field write is refused
+exit=1
+```
+
+Im Hook-Body `probability` falsch schreiben, in der literalen Form, die der Schreibmengen-Linter erkennt – `ctx.input.probabilty = 100`:
+
+```text
+✓ Validation passed (542ms)
+  …
+  ⚠ hook "opportunity_stage_probability" › body: body writes 'probabilty' to its
+    input, but object 'crm_opportunity' declares no such field, so the write is
+    refused (INVALID_FIELD / 400) (judged on the metadata body lowered from the
+    inline handler)
+    fix: Did you mean 'probability'? Fix the field name, or declare 'probabilty'
+    on the object
+    rule: hook-body-write-unknown-field  at hooks[0].handler
+    — `os explain hook-body-write-unknown-field` for why an undeclared field write is refused
+exit=0
+```
+
+Derselbe Fehler, dieselbe Korrektur, zwei Stärken. Beide Antworten schreiben die Korrektur aus – `Did you mean …?` –, und was sich unterscheidet, sind Stärke und Anker: Der Flow-Knoten ist ein **Fehler**, am exakten `fields`-Schlüssel verankert, mit einem Exit ungleich null; der Hook-Body ist eine **Warnung**, am ganzen `handler` verankert, und der Build ist grün. Die Dokumentation sagt in einem Satz, warum: Die `fields` des Knotens „sind eine literale Map neben einem literalen `objectName`, sodass nichts sie falsch gelesen haben kann“, während die Schreibmenge eines Hook-Bodys „nur auf die literalen Muster geprüft wird, die ein Parser erkennen kann“. Die Existenz eines Felds ist eine *Gewissheit*, wenn der Schreibvorgang Daten ist, und ein *bestmöglicher Versuch*, wenn er Code ist. (Die ausgelassenen Zeilen im zweiten Transkript sind die Stack-Zusammenfassung; die neun `field-no-consumers`-Hinweise, die auch der saubere Lauf druckt, folgen auf die Hook-Warnung.)
+
+![Derselbe falsch geschriebene Feldname an drei Stellen gepflanzt und was os validate 18.2.0 antwortet: in einem Flow-update_record-Knoten ein am fields-Schlüssel verankerter Fehler mit „Meinten Sie“ und Exit 1; in einem als ctx.input.field geschriebenen Hook-Body eine am handler verankerte Warnung mit demselben „Meinten Sie“ und Exit 0; im Hook-Body, wie das CRM ihn ausliefert, über einen lokalen Alias von ctx.input, gar nichts und Exit 0. Alle drei werden zur Laufzeit mit INVALID_FIELD 400 abgelehnt, dem Rückhalt, der das Feld benennt, aber nicht die Zeile, die es geschrieben hat](./same-typo-three-answers-en.svg)
+
+Und es gibt eine dritte Antwort, und sie ist die, die ändern sollte, wie Sie reviewen. Der Hook des CRM, wie er ausgeliefert wird, schreibt nicht direkt `ctx.input.probability`. Er schreibt über einen lokalen Alias – `const input = ctx.input; … input.probability = 100` –, und die Dokumentation führt aliasierten Input unter den Formen auf, bei denen die Regel „*stillschweigend* aussteigt“, weil „v1 keine Datenflussanalyse macht“. Schreiben Sie das Feld im Hook genau so falsch, wie er im Repository steht, und `os validate` sagt **nichts**: Exit 0, keine Warnung, Ausgabe byteidentisch mit dem sauberen Lauf. Die Zeile der Dokumentation dazu ist die, die man sich merken sollte: „**Eine fehlende Warnung ist kein Gesundheitszeugnis.**“
+
+Alle drei landen zur Laufzeit an derselben Stelle. Der Schreibpfad des CRM lehnt ein unbekanntes Feld auf jedem Treiber ab, auch bei einer von Hand getippten Payload:
+
+```text
+PATCH /api/v1/data/crm_opportunity/emhPM9WKJqqGzaME
+{ "probabilty": 100 }
+
+400 { "error": "Unknown field 'probabilty' on object 'crm_opportunity'",
+      "code": "INVALID_FIELD", "field": "probabilty", "object": "crm_opportunity" }
+```
+
+Der Fehler wird also nie persistiert. Was sich unterscheidet, ist, *wann Sie es erfahren* und *wer es Ihnen sagt*: der Flow bei `validate`, mit ausgeschriebener Korrektur; der literale Hook bei `validate`, als Hinweis; der aliasierte Hook beim ersten echten Schreibvorgang, durch eine Ablehnung, die das Feld benennt, aber nicht den Body, der es geschrieben hat.
+
+## Als Daten reviewbar, als Code reviewbar
+
+Nennen wir die Eigenschaft **als Daten reviewbar** (reviewable as data). Eine Regel ist als Daten reviewbar, wenn ihre Bedeutung von strukturierten Metadaten getragen wird, die das Gate gegen das deklarierte Schema auflösen kann – eine `fields`-Map, eine `transitions`-Tabelle, eine CEL-`condition` –, sodass der Reviewer einen Diff von Werten liest und der Validator dieselben Werte mit Gewissheit liest. Eine Regel ist **als Code reviewbar** (reviewable as code), wenn ihre Bedeutung von einem Funktionskörper getragen wird: Das Gate kann die literalen Formen parsen und muss beim Rest aussteigen, und der Reviewer liest Logik, nicht Werte.
+
+Jede Validierungsregel im CRM ist als Daten reviewbar. Die `state_machine` ist der sauberste Fall – ein Reviewer kann `closed_won: []` lesen und weiß, ohne irgendetwas auszuführen, dass ein gewonnener Deal terminal ist. Der `update_record`-Knoten des Flows ist als Daten reviewbar; die Dokumentation sagt es direkt: „Der Knotengraph difft Feld für Feld und wird im Console-Designer mit Laufhistorie pro Knoten gerendert; ein Hook-Body wird nur als Code reviewt.“ Der Hook ist als Code reviewbar, und der Hook des CRM ist genau deshalb ein guter Hook, weil sein Code drei Zeilen lang ist, deren Aufgabe keine Datenform ausdrücken kann – den Datensatz auf dem Weg hinein umzuschreiben.
+
+Das gibt dem Reviewer einer AI-geschriebenen Änderung eine Frage, die schneller ist als „Ist das richtig?“: **Liegt diese Regel in dem Zuhause, in dem sie als Daten reviewbar ist?** Ein Schwellenwert in einem Hook-Body, ein Statusübergang, der durch ein `if` in einem Handler erzwungen wird, eine Genehmigung, die als werfender Hook implementiert ist – jedes davon parst, baut und läuft, und jedes ist ein Finding, weil dieselbe Regel ein Zuhause hat, in dem das Gate sie als Wert prüfen und der Reviewer sie als Wert lesen würde. Die Korrektur ist nicht, den Code härter zu reviewen. Sie ist, die Regel umzuziehen.
+
+Die Dokumentation schließt das eine Schlupfloch in diesem Argument. Logik, die wirklich Code braucht, „muss trotzdem kein Hook sein: Ein Flow-`script`-Knoten, der eine über `defineStack({ functions })` registrierte Funktion aufruft, hält die Orchestrierung in geprüften Metadaten und den Code in einer benannten, testbaren Einheit.“ Code kommt in die kleinste Box; die Form darum herum bleibt Daten.
+
+## Was das nicht klärt
+
+- **Der Schwellenwert.** Nichts oben sagt, ob 40 % die richtige Grenze ist, ob Finance der richtige Genehmiger ist oder ob die Phasenreihenfolge dem entspricht, wie das Unternehmen verkauft. Eine Regel im richtigen Zuhause ist immer noch eine Regel, der ein Mensch zustimmen muss; dieser Text macht den Widerspruch nur billig zu finden.
+- **`cross_field` ist keine stärkere Prüfung.** Es führt dasselbe Prädikat aus wie `script`. Wer es wählt und erwartet, dass die Engine über Felder hinweg etwas Zusätzliches tut, wird enttäuscht; man wählt nur, wo die Fehlermeldung landet.
+- **Der Schreibmengen-Linter ist durch einen Parser begrenzt.** Berechnete Schlüssel, Spreads, dynamische Objektnamen, aliasierter Input und Objekte, die ein anderes Paket deklariert, sind für ihn alle unsichtbar, absichtlich – ein Falschpositiv würde einen Hinweis-Linter töten. Der Laufzeit-Rückhalt ist auf jedem Treiber derselbe, aber er ist ein Rückhalt. Die praktische Regel der Dokumentation gilt: `hook-body-write-unknown-field` per Konvention als Build-Fehler behandeln und von Hand prüfen, was der Parser nicht sehen kann.
+- **Das CRM hat keinen Record-getriggerten Flow.** Sein einziger Flow ist ein Screen-Wizard, den ein Nutzer startet. Die Hälfte „jemand genehmigt die Ausnahme“ des Eingangssatzes ist ein Flow mit einem `approval`-Knoten, und das ObjectStack-Repository hält seine ausgearbeiteten Genehmigungs-Flows im größeren Showcase-Beispiel, nicht hier. Die Entscheidungstabelle deckt ihn ab; dieses CRM übt ihn nicht.
+- **Sieben ist die Zahl dieses CRM**, bei `@objectstack/cli@18.2.0`, und die drei oben zitierten Dokumentationsstellen sind an demselben Tag gelesen. Führen Sie das Transkript auf der Version erneut aus, die Sie installieren: Zwischen zwei jüngeren Releases blieb die Zahl bei sieben, während die berechneten Werte des Flow-Knotens ihre Form änderten, von `'{…}'`-Templates zu CEL-Wertumschlägen – genau die Art Drift, die ein erneuter Lauf findet.
+
+## Richten Sie Ihren Agent auf die Tabelle
+
+Der billigste Weg, Regeln ins richtige Zuhause zu bekommen, ist, dem Agent die Tabelle zu geben, bevor er die erste schreibt. Drei Zeilen in einer `AGENTS.md`, oder in welcher Regeldatei Ihr Agent auch liest, reichen:
+
+```text
+A business rule that can be decided from the one record being written, with no I/O,
+is a validation rule on the object (script / cross_field / state_machine). A rule that
+must change the record before it is saved is a before hook. Everything else — side
+effects, approvals, anything that pauses or runs on a clock — is a flow. Flows are
+the default; hooks are the backstop. Validation rules never run on delete.
+```
+
+Dann reviewen Sie den Diff auf eine Sache: eine Regel, die dort lebt, wo sie als Code reviewbar ist, obwohl ein Zuhause existiert, in dem sie als Daten reviewbar wäre. Das Gate hat Ihnen bereits gesagt, welche es ist – einmal als Fehler, einmal als Warnung, und einmal, wenn der Hook seinen Input aliasiert, gar nicht.
+
+Das ist die Schleife, für die das Zielformat gebaut ist. Eine ausführbare Geschäftsontologie. AI schreibt sie, die Runtime führt sie aus, Agents bedienen sie, Sie besitzen sie. Die sieben Regeln oben sind die Verben der Ontologie, und jede einzelne steht in einer Datei, die Sie lesen können.
+
+```bash
+npm create objectstack@latest crm && cd crm
+pnpm run validate     # das Gate, nach jeder Änderung
+pnpm run dev          # die API, mit dem Dev-Admin im Banner
+```
+
+Verwandt: [wie ein CRM mit einem Agent gebaut wurde, einschließlich dessen, was kaputtging](/en/blog/how-to-build-a-crm-with-an-ai-agent/) (Englisch), wo die `state_machine` von Regel 3 zuerst auftauchte; [die Review-Reihenfolge in vier Durchgängen](/en/blog/how-to-review-ai-generated-app-changes/) (Englisch), der dieser Text eine fünfte Frage hinzufügt; [das Trigger-Modell](/en/blog/automation-trigger-model/) (Englisch) dafür, wo ein Flow *beginnt*; und der Glossareintrag zu [declared vs. enforced](/en/glossary/declared-vs-enforced/) (Englisch), der Lücke, die eine Regel im falschen Zuhause leise wieder öffnet.
