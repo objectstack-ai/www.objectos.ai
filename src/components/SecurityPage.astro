@@ -1,7 +1,12 @@
 ---
 import { phraseHtml } from '../../scripts/lib/cjk-phrases.mjs';
 import { postPath, type Locale } from '../lib/i18n';
-import { SECURITY_CONTACT, securityEnglishFields, type SecurityCopy } from '../lib/security';
+import {
+  SECURITY_CONTACT,
+  SUBPROCESSORS_TO_CONFIRM,
+  securityEnglishFields,
+  type SecurityCopy,
+} from '../lib/security';
 
 interface Props {
   copy: SecurityCopy;
@@ -51,6 +56,7 @@ const ph = (text: string, field: keyof SecurityCopy): string => phraseHtml(text,
     <a href="#permissions" lang={en('permissionTitle')}>{copy.permissionTitle}</a>
     <a href="#deployment" lang={en('deploymentTitle')}>{copy.deploymentTitle}</a>
     <a href="#faq" lang={en('faqTitle')}>{copy.faqTitle}</a>
+    <a href="#subprocessors" lang={en('subprocessorTitle')}>{copy.subprocessorTitle}</a>
     <a href="#disclosure" lang={en('disclosureTitle')}>{copy.disclosureTitle}</a>
   </nav>
 
@@ -141,6 +147,34 @@ const ph = (text: string, field: keyof SecurityCopy): string => phraseHtml(text,
           <p>{faq.answer}</p>
         </details>
       ))}
+    </div>
+  </section>
+
+  <section class="subprocessors" id="subprocessors">
+    <div class="section-head">
+      <p class="eyebrow" lang={en('subprocessorKicker')}>{copy.subprocessorKicker}</p>
+      <h2 id="subprocessors-title" lang={en('subprocessorTitle')} set:html={ph(copy.subprocessorTitle, 'subprocessorTitle')} />
+      <p lang={en('subprocessorLead')}>{copy.subprocessorLead}</p>
+      <p class="updated" lang={en('subprocessorUpdated')}>{copy.subprocessorUpdated}</p>
+    </div>
+    <div class="table-wrap" tabindex="0" role="group" aria-labelledby="subprocessors-title">
+      <table class="subprocessor-table">
+        <thead lang={en('subprocessorColumns')}>
+          <tr>
+            {copy.subprocessorColumns.map((column) => <th>{column}</th>)}
+          </tr>
+        </thead>
+        <tbody lang={en('subprocessors')}>
+          {copy.subprocessors.map((row) => (
+            <tr data-subprocessor-pending={SUBPROCESSORS_TO_CONFIRM.has(row.name) ? 'cloud#3389' : undefined}>
+              <td>{row.name}</td>
+              <td data-label={copy.subprocessorColumns[1]}>{row.purpose}</td>
+              <td data-label={copy.subprocessorColumns[2]}>{row.data}</td>
+              <td data-label={copy.subprocessorColumns[3]}>{row.region}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   </section>
 
@@ -526,6 +560,82 @@ const ph = (text: string, field: keyof SecurityCopy): string => phraseHtml(text,
     font-size: 0.9rem;
     line-height: 1.75;
   }
+  .subprocessors {
+    padding: 6rem 0;
+    border-top: 1px solid var(--line);
+    scroll-margin-top: 82px;
+  }
+  .subprocessors .updated {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.82rem;
+  }
+  /* Four columns: the wider floor keeps purpose and data readable on a
+     laptop; below 640px the shared table rules take over. */
+  .subprocessor-table {
+    min-width: 760px;
+  }
+  /* On a phone four columns left each about 75px: words broke mid-word and
+     the region column sat off-screen. Each row becomes a card instead: the
+     name as its title, then each value under its column label (data-label,
+     the same translated column names). The header row is hidden from sight
+     only; the cells keep their table semantics for screen readers. */
+  @media (max-width: 640px) {
+    .subprocessors .table-wrap {
+      overflow: visible;
+      border: none;
+      background: none;
+      animation: none;
+      mask-image: none;
+    }
+    .subprocessor-table,
+    .subprocessor-table tbody,
+    .subprocessor-table tr,
+    .subprocessor-table td {
+      display: block;
+      min-width: 0;
+    }
+    .subprocessor-table thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+    .subprocessor-table tr {
+      margin-bottom: 0.75rem;
+      padding: 0.9rem 1rem;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+    }
+    .subprocessor-table td {
+      padding: 0;
+      border: none;
+      overflow-wrap: normal;
+    }
+    .subprocessor-table td:first-child {
+      margin-bottom: 0.4rem;
+      font-size: 1rem;
+    }
+    .subprocessor-table td + td {
+      margin-top: 0.55rem;
+    }
+    .subprocessor-table td[data-label]::before {
+      content: attr(data-label);
+      display: block;
+      margin-bottom: 0.1rem;
+      color: var(--muted);
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .subprocessors {
+      scroll-margin-top: 120px;
+    }
+  }
   .contact-card {
     display: grid;
     gap: 1px;
@@ -677,7 +787,8 @@ const ph = (text: string, field: keyof SecurityCopy): string => phraseHtml(text,
     }
     .split,
     .panel,
-    .faq {
+    .faq,
+    .subprocessors {
       padding: 3.2rem 0;
       scroll-margin-top: 120px;
     }

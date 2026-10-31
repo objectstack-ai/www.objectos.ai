@@ -11,6 +11,28 @@ import { positioning } from './positioning';
  */
 export const SECURITY_CONTACT = 'security@objectstack.ai';
 
+/**
+ * Subprocessor rows not yet confirmed against production, by `name`. Read from
+ * objectstack-ai/cloud (names only): the e-mail provider is a secret
+ * (`OS_EMAIL_PROVIDER`, 'resend' | 'postmark'), so the code cannot say which
+ * one production sends with; the default model is `openai/gpt-5.6-luna` through
+ * the Vercel AI Gateway, and the paid-plan picker catalog (`sys_ai_model`,
+ * `OS_AI_MODEL_PICKER`) adds Anthropic; observability exports OTLP to Grafana
+ * Cloud when `OS_OBS_EXPORTER` is set. The maintainer confirms each on
+ * cloud#3389; then the row is kept (and leaves this set) or deleted.
+ *
+ * Each row named here renders with `data-subprocessor-pending`, and
+ * `pnpm seo:smoke` fails while any built page carries it: the table cannot
+ * ship with a provider nobody has confirmed. Empty this set to land.
+ */
+export const SUBPROCESSORS_TO_CONFIRM = new Set<string>([
+  'Resend',
+  'Postmark',
+  'OpenAI',
+  'Anthropic',
+  'Grafana Labs',
+]);
+
 export interface SecurityCopy {
   title: string;
   description: string;
@@ -44,6 +66,17 @@ export interface SecurityCopy {
   faqKicker: string;
   faqTitle: string;
   faqs: { question: string; answer: string }[];
+  /**
+   * The subprocessor list privacy policy section 11 promises before Cloud is
+   * generally available. `name` is the company or product name and is the
+   * same string in every locale; `SUBPROCESSORS_TO_CONFIRM` is keyed by it.
+   */
+  subprocessorKicker: string;
+  subprocessorTitle: string;
+  subprocessorLead: string;
+  subprocessorUpdated: string;
+  subprocessorColumns: [string, string, string, string];
+  subprocessors: { name: string; purpose: string; data: string; region: string }[];
   /**
    * Vulnerability disclosure: where to report, what to include, what happens
    * next, and the safe-harbour terms. The address itself is not copy — it is
@@ -129,6 +162,23 @@ const zhHans: SecurityCopy = {
     { question: '如何限制 Agent 写入？', answer: '可以使用只读数据源、对象级权限、字段级权限、动作权限和审批队列。Agent 无法绕过运行时权限，也无法静默应用结构性变更。' },
     { question: '谁负责 TLS、数据库加密和密钥管理？', answer: '这些属于你的部署责任。ObjectStack 运行时提供权限执行、审计、API key 哈希存储和设置加密；TLS、数据库静态加密、备份和密钥注入由你的基础设施负责。' },
     { question: '它适合合规行业吗？', answer: 'ObjectOS 提供访问控制、审计、数据驻留和隔离部署这些技术原语。具体认证取决于你的运行中部署，而不是单个二进制。' },
+  ],
+  subprocessorKicker: '谁在处理 Cloud 数据',
+  subprocessorTitle: '子处理者',
+  subprocessorLead: 'ObjectOS Cloud 借助以下第三方运行服务。每一方只处理其用途所需的数据，并受书面义务约束，见隐私政策第 11 条。ObjectOS 企业版和社区版运行在你的基础设施上，除非你自行配置，否则不使用其中任何一方。',
+  subprocessorUpdated: '最后更新：2026 年 10 月 31 日',
+  subprocessorColumns: ['子处理者', '用途', '数据', '地区'],
+  subprocessors: [
+    { name: 'Cloudflare', purpose: '托管、边缘网络、容器、文件存储（R2）和注册机器人校验（Turnstile）', data: '所有传输中的 Cloud 流量；上传的文件和软件包制品；请求日志', region: '全球边缘网络；容器位于北美东部' },
+    { name: 'Neon', purpose: '控制面数据库', data: '账号、组织、成员关系、环境设置和账单记录', region: '美国（AWS us-east-1）' },
+    { name: 'Turso', purpose: '环境数据库', data: '每个环境的业务记录、用户、会话和审计日志', region: '美国（AWS us-east-1）' },
+    { name: 'Paddle', purpose: '记录商户（MoR）：结账、付款、发票和销售税', data: '账单联系人、地址、支付信息和交易记录（我们不会收到卡号）', region: '英国' },
+    { name: 'Resend', purpose: '事务邮件（验证、邀请、账单通知）', data: '收件人地址和姓名、邮件内容', region: '美国' },
+    { name: 'Postmark', purpose: '事务邮件（验证、邀请、账单通知）', data: '收件人地址和姓名、邮件内容', region: '美国' },
+    { name: 'Vercel', purpose: 'AI Gateway：把 AI 请求转发给模型提供方', data: '你使用的 AI 功能的提示词、对话上下文和工具输出；用量计量', region: '美国' },
+    { name: 'OpenAI', purpose: 'AI 模型提供方', data: '经 AI Gateway 发送的提示词、对话上下文和工具输出', region: '美国' },
+    { name: 'Anthropic', purpose: 'AI 模型提供方（付费版可选模型）', data: '经 AI Gateway 发送的提示词、对话上下文和工具输出', region: '美国' },
+    { name: 'Grafana Labs', purpose: '可观测性：链路追踪、指标和日志', data: '请求元数据和错误追踪，可能包含账号和环境标识', region: '美国' },
   ],
   disclosureKicker: '发现漏洞？',
   disclosureTitle: '漏洞披露',
@@ -227,6 +277,23 @@ const en: SecurityCopy = {
     { question: 'Who owns TLS, database encryption, and secrets?', answer: 'Those are deployment responsibilities. The ObjectStack runtime provides authorization, audit, API key hashing, and settings encryption; your infrastructure owns TLS, at-rest database encryption, backups, and secret injection.' },
     { question: 'Is it suitable for regulated environments?', answer: 'ObjectOS provides the technical primitives: access control, audit, data residency, and isolated deployment. Certification depends on your running deployment, not a binary alone.' },
   ],
+  subprocessorKicker: 'Who processes Cloud data',
+  subprocessorTitle: 'Subprocessors',
+  subprocessorLead: 'ObjectOS Cloud uses these third parties to run the service. Each processes only the data its purpose needs, under written obligations, as section 11 of the privacy policy describes. ObjectOS Enterprise and Community run on your infrastructure and use none of them unless you configure them.',
+  subprocessorUpdated: 'Last updated: October 31, 2026',
+  subprocessorColumns: ['Subprocessor', 'Purpose', 'Data', 'Region'],
+  subprocessors: [
+    { name: 'Cloudflare', purpose: 'Hosting, edge network, containers, file storage (R2) and sign-up bot checks (Turnstile)', data: 'All Cloud traffic in transit; uploaded files and package artifacts; request logs', region: 'Global edge network; containers in eastern North America' },
+    { name: 'Neon', purpose: 'Control-plane database', data: 'Accounts, organizations, memberships, environment settings and billing records', region: 'United States (AWS us-east-1)' },
+    { name: 'Turso', purpose: 'Environment databases', data: 'Each environment’s business records, users, sessions and audit logs', region: 'United States (AWS us-east-1)' },
+    { name: 'Paddle', purpose: 'Merchant of record: checkout, payments, invoices and sales tax', data: 'Billing contact, address, payment details and transactions (we never receive card numbers)', region: 'United Kingdom' },
+    { name: 'Resend', purpose: 'Transactional e-mail (verification, invitations, billing notices)', data: 'Recipient address and name, message content', region: 'United States' },
+    { name: 'Postmark', purpose: 'Transactional e-mail (verification, invitations, billing notices)', data: 'Recipient address and name, message content', region: 'United States' },
+    { name: 'Vercel', purpose: 'AI Gateway: routes AI requests to the model provider', data: 'Prompts, conversation context and tool output for the AI features you use; usage metering', region: 'United States' },
+    { name: 'OpenAI', purpose: 'AI model provider', data: 'Prompts, conversation context and tool output, sent through the AI Gateway', region: 'United States' },
+    { name: 'Anthropic', purpose: 'AI model provider (a paid-plan model choice)', data: 'Prompts, conversation context and tool output, sent through the AI Gateway', region: 'United States' },
+    { name: 'Grafana Labs', purpose: 'Observability: traces, metrics and logs', data: 'Request metadata and error traces, which may include account and environment identifiers', region: 'United States' },
+  ],
   disclosureKicker: 'Found a vulnerability?',
   disclosureTitle: 'Vulnerability disclosure',
   disclosureLead: 'Report security problems in ObjectOS Cloud, ObjectOS Enterprise, the open-source ObjectStack runtime and packages, or this website privately by e-mail. Please do not open a public GitHub issue, discussion, or pull request for a security problem.',
@@ -291,6 +358,23 @@ const ja: SecurityCopy = {
   deploymentLead: '基本形は 1 つの Node.js ランタイム、自社データベース、自社シークレット、自社 ingress。より厳しい環境ではファイル制品とオフラインイメージを使えます。',
   faqKicker: 'よくある質問',
   faqTitle: 'セキュリティレビュー FAQ',
+  subprocessorKicker: 'Cloud のデータを処理する事業者',
+  subprocessorTitle: 'サブプロセッサー',
+  subprocessorLead: 'ObjectOS Cloud は、以下の第三者を利用してサービスを運営しています。各事業者は目的に必要なデータだけを、プライバシーポリシー第 11 条のとおり書面上の義務のもとで処理します。ObjectOS Enterprise と Community は自社インフラで動作し、設定しない限りこれらの事業者を利用しません。',
+  subprocessorUpdated: '最終更新日：2026 年 10 月 31 日',
+  subprocessorColumns: ['サブプロセッサー', '目的', 'データ', '地域'],
+  subprocessors: [
+    { name: 'Cloudflare', purpose: 'ホスティング、エッジネットワーク、コンテナ、ファイルストレージ（R2）、サインアップ時のボット判定（Turnstile）', data: '転送中のすべての Cloud 通信、アップロードされたファイルとパッケージ成果物、リクエストログ', region: 'グローバルなエッジネットワーク、コンテナは北米東部' },
+    { name: 'Neon', purpose: 'コントロールプレーンのデータベース', data: 'アカウント、組織、メンバーシップ、環境設定、請求記録', region: '米国（AWS us-east-1）' },
+    { name: 'Turso', purpose: '環境のデータベース', data: '各環境の業務レコード、ユーザー、セッション、監査ログ', region: '米国（AWS us-east-1）' },
+    { name: 'Paddle', purpose: '販売代理人（MoR）：決済画面、支払い、請求書、売上税', data: '請求先の連絡先、住所、支払い情報、取引記録（カード番号は当社に届きません）', region: '英国' },
+    { name: 'Resend', purpose: 'トランザクションメール（確認、招待、請求のお知らせ）', data: '宛先のアドレスと名前、メール本文', region: '米国' },
+    { name: 'Postmark', purpose: 'トランザクションメール（確認、招待、請求のお知らせ）', data: '宛先のアドレスと名前、メール本文', region: '米国' },
+    { name: 'Vercel', purpose: 'AI Gateway：AI リクエストをモデル提供元へ中継', data: '利用する AI 機能のプロンプト、会話の文脈、ツール出力、利用量の計測', region: '米国' },
+    { name: 'OpenAI', purpose: 'AI モデル提供元', data: 'AI Gateway 経由で送られるプロンプト、会話の文脈、ツール出力', region: '米国' },
+    { name: 'Anthropic', purpose: 'AI モデル提供元（有料プランで選べるモデル）', data: 'AI Gateway 経由で送られるプロンプト、会話の文脈、ツール出力', region: '米国' },
+    { name: 'Grafana Labs', purpose: 'オブザーバビリティ：トレース、メトリクス、ログ', data: 'リクエストのメタデータとエラートレース。アカウントや環境の識別子を含む場合があります', region: '米国' },
+  ],
   disclosureKicker: '脆弱性を見つけたら',
   disclosureTitle: '脆弱性の開示',
   disclosureLead: 'ObjectOS Cloud、ObjectOS Enterprise、オープンソースの ObjectStack ランタイムとパッケージ、または本サイトのセキュリティ問題は、メールで非公開に報告してください。セキュリティ問題について、公開の GitHub issue、ディスカッション、プルリクエストを作成しないでください。',
@@ -350,6 +434,23 @@ const de: SecurityCopy = {
   deploymentLead: 'Die Standardform ist netzwerkfreundlich: eine Node.js Runtime, Ihre Datenbank, Ihre Secrets und Ihr Ingress. Strengere Umgebungen können file-backed Artefakte und Offline-Images nutzen.',
   faqKicker: 'Häufige Fragen',
   faqTitle: 'FAQ für Sicherheitsreviews',
+  subprocessorKicker: 'Wer Cloud-Daten verarbeitet',
+  subprocessorTitle: 'Unterauftragsverarbeiter',
+  subprocessorLead: 'ObjectOS Cloud nutzt diese Dritten für den Betrieb des Dienstes. Jeder verarbeitet nur die Daten, die sein Zweck erfordert, und ist schriftlich verpflichtet, wie Abschnitt 11 der Datenschutzerklärung beschreibt. ObjectOS Enterprise und Community laufen in Ihrer Infrastruktur und nutzen keinen davon, solange Sie ihn nicht selbst einrichten.',
+  subprocessorUpdated: 'Zuletzt aktualisiert: 31. Oktober 2026',
+  subprocessorColumns: ['Unterauftragsverarbeiter', 'Zweck', 'Daten', 'Region'],
+  subprocessors: [
+    { name: 'Cloudflare', purpose: 'Hosting, Edge-Netzwerk, Container, Dateispeicher (R2) und Bot-Prüfung bei der Registrierung (Turnstile)', data: 'Gesamter Cloud-Datenverkehr während der Übertragung; hochgeladene Dateien und Paketartefakte; Anfrageprotokolle', region: 'Weltweites Edge-Netzwerk; Container im Osten Nordamerikas' },
+    { name: 'Neon', purpose: 'Datenbank der Steuerungsebene', data: 'Konten, Organisationen, Mitgliedschaften, Umgebungseinstellungen und Abrechnungsdaten', region: 'Vereinigte Staaten (AWS us-east-1)' },
+    { name: 'Turso', purpose: 'Datenbanken der Umgebungen', data: 'Geschäftsdaten, Benutzer, Sitzungen und Audit-Logs jeder Umgebung', region: 'Vereinigte Staaten (AWS us-east-1)' },
+    { name: 'Paddle', purpose: 'Händler im eigenen Namen (Merchant of Record): Checkout, Zahlungen, Rechnungen und Umsatzsteuer', data: 'Rechnungskontakt, Adresse, Zahlungsdaten und Transaktionen (Kartennummern erhalten wir nie)', region: 'Vereinigtes Königreich' },
+    { name: 'Resend', purpose: 'Transaktions-E-Mails (Bestätigung, Einladungen, Abrechnungshinweise)', data: 'Adresse und Name des Empfängers, Inhalt der Nachricht', region: 'Vereinigte Staaten' },
+    { name: 'Postmark', purpose: 'Transaktions-E-Mails (Bestätigung, Einladungen, Abrechnungshinweise)', data: 'Adresse und Name des Empfängers, Inhalt der Nachricht', region: 'Vereinigte Staaten' },
+    { name: 'Vercel', purpose: 'AI Gateway: leitet AI-Anfragen an den Modellanbieter weiter', data: 'Prompts, Gesprächskontext und Tool-Ausgaben der genutzten AI-Funktionen; Nutzungsmessung', region: 'Vereinigte Staaten' },
+    { name: 'OpenAI', purpose: 'AI-Modellanbieter', data: 'Prompts, Gesprächskontext und Tool-Ausgaben, über das AI Gateway gesendet', region: 'Vereinigte Staaten' },
+    { name: 'Anthropic', purpose: 'AI-Modellanbieter (wählbares Modell in bezahlten Tarifen)', data: 'Prompts, Gesprächskontext und Tool-Ausgaben, über das AI Gateway gesendet', region: 'Vereinigte Staaten' },
+    { name: 'Grafana Labs', purpose: 'Beobachtbarkeit: Traces, Metriken und Protokolle', data: 'Anfrage-Metadaten und Fehler-Traces, die Konto- und Umgebungskennungen enthalten können', region: 'Vereinigte Staaten' },
+  ],
   disclosureKicker: 'Schwachstelle gefunden?',
   disclosureTitle: 'Offenlegung von Schwachstellen',
   disclosureLead: 'Melden Sie Sicherheitsprobleme in ObjectOS Cloud, ObjectOS Enterprise, der quelloffenen ObjectStack Runtime und ihren Paketen oder auf dieser Website vertraulich per E-Mail. Bitte eröffnen Sie für ein Sicherheitsproblem kein öffentliches GitHub-Issue, keine Diskussion und keinen Pull Request.',
@@ -409,6 +510,23 @@ const es: SecurityCopy = {
   deploymentLead: 'La forma predeterminada es amigable para redes empresariales: un runtime Node.js, tu base de datos, tus secretos y tu entrada. Entornos más estrictos pueden usar artefactos locales e imágenes offline.',
   faqKicker: 'Preguntas frecuentes',
   faqTitle: 'FAQ de revisión de seguridad',
+  subprocessorKicker: 'Quién trata los datos de Cloud',
+  subprocessorTitle: 'Subencargados del tratamiento',
+  subprocessorLead: 'ObjectOS Cloud usa estos terceros para operar el servicio. Cada uno trata solo los datos que su finalidad requiere, con obligaciones por escrito, como describe la sección 11 de la política de privacidad. ObjectOS Enterprise y Community se ejecutan en tu infraestructura y no usan ninguno de ellos salvo que tú lo configures.',
+  subprocessorUpdated: 'Última actualización: 31 de octubre de 2026',
+  subprocessorColumns: ['Subencargado', 'Finalidad', 'Datos', 'Región'],
+  subprocessors: [
+    { name: 'Cloudflare', purpose: 'Alojamiento, red perimetral, contenedores, almacenamiento de archivos (R2) y verificación antibots en el registro (Turnstile)', data: 'Todo el tráfico de Cloud en tránsito; archivos subidos y artefactos de paquetes; registros de solicitudes', region: 'Red perimetral global; contenedores en el este de Norteamérica' },
+    { name: 'Neon', purpose: 'Base de datos del plano de control', data: 'Cuentas, organizaciones, membresías, ajustes de entornos y registros de facturación', region: 'Estados Unidos (AWS us-east-1)' },
+    { name: 'Turso', purpose: 'Bases de datos de los entornos', data: 'Registros de negocio, usuarios, sesiones y auditoría de cada entorno', region: 'Estados Unidos (AWS us-east-1)' },
+    { name: 'Paddle', purpose: 'Comerciante registrado (merchant of record): pago, cobros, facturas e impuestos sobre ventas', data: 'Contacto y dirección de facturación, datos de pago y transacciones (nunca recibimos números de tarjeta)', region: 'Reino Unido' },
+    { name: 'Resend', purpose: 'Correo transaccional (verificación, invitaciones, avisos de facturación)', data: 'Dirección y nombre del destinatario, contenido del mensaje', region: 'Estados Unidos' },
+    { name: 'Postmark', purpose: 'Correo transaccional (verificación, invitaciones, avisos de facturación)', data: 'Dirección y nombre del destinatario, contenido del mensaje', region: 'Estados Unidos' },
+    { name: 'Vercel', purpose: 'AI Gateway: envía las solicitudes de AI al proveedor del modelo', data: 'Instrucciones, contexto de la conversación y resultados de herramientas de las funciones de AI que usas; medición de uso', region: 'Estados Unidos' },
+    { name: 'OpenAI', purpose: 'Proveedor de modelos de AI', data: 'Instrucciones, contexto de la conversación y resultados de herramientas, enviados a través del AI Gateway', region: 'Estados Unidos' },
+    { name: 'Anthropic', purpose: 'Proveedor de modelos de AI (modelo a elegir en planes de pago)', data: 'Instrucciones, contexto de la conversación y resultados de herramientas, enviados a través del AI Gateway', region: 'Estados Unidos' },
+    { name: 'Grafana Labs', purpose: 'Observabilidad: trazas, métricas y registros', data: 'Metadatos de solicitudes y trazas de errores, que pueden incluir identificadores de cuenta y de entorno', region: 'Estados Unidos' },
+  ],
   disclosureKicker: '¿Encontraste una vulnerabilidad?',
   disclosureTitle: 'Divulgación de vulnerabilidades',
   disclosureLead: 'Informa en privado, por correo electrónico, de los problemas de seguridad en ObjectOS Cloud, ObjectOS Enterprise, el runtime de código abierto ObjectStack y sus paquetes, o en este sitio web. No abras un issue, una discusión ni un pull request públicos en GitHub para un problema de seguridad.',
@@ -468,6 +586,23 @@ const fr: SecurityCopy = {
   deploymentLead: 'La forme par défaut convient au réseau d’entreprise : un runtime Node.js, votre base, vos secrets et votre ingress. Les environnements stricts peuvent utiliser des artefacts locaux et des images offline.',
   faqKicker: 'Questions fréquentes',
   faqTitle: 'FAQ de revue sécurité',
+  subprocessorKicker: 'Qui traite les données Cloud',
+  subprocessorTitle: 'Sous-traitants ultérieurs',
+  subprocessorLead: 'ObjectOS Cloud fait appel à ces tiers pour exploiter le service. Chacun ne traite que les données nécessaires à sa finalité, sous des obligations écrites, comme le décrit la section 11 de la politique de confidentialité. ObjectOS Enterprise et Community tournent sur votre infrastructure et n’utilisent aucun d’eux sauf si vous le configurez.',
+  subprocessorUpdated: 'Dernière mise à jour : 31 octobre 2026',
+  subprocessorColumns: ['Sous-traitant', 'Finalité', 'Données', 'Région'],
+  subprocessors: [
+    { name: 'Cloudflare', purpose: 'Hébergement, réseau périphérique, conteneurs, stockage de fichiers (R2) et vérification anti-robots à l’inscription (Turnstile)', data: 'Tout le trafic Cloud en transit ; fichiers téléversés et artefacts de paquets ; journaux de requêtes', region: 'Réseau périphérique mondial ; conteneurs dans l’est de l’Amérique du Nord' },
+    { name: 'Neon', purpose: 'Base de données du plan de contrôle', data: 'Comptes, organisations, adhésions, paramètres des environnements et données de facturation', region: 'États-Unis (AWS us-east-1)' },
+    { name: 'Turso', purpose: 'Bases de données des environnements', data: 'Enregistrements métier, utilisateurs, sessions et journaux d’audit de chaque environnement', region: 'États-Unis (AWS us-east-1)' },
+    { name: 'Paddle', purpose: 'Revendeur officiel (merchant of record) : paiement, encaissement, factures et taxes sur les ventes', data: 'Contact et adresse de facturation, informations de paiement et transactions (nous ne recevons jamais les numéros de carte)', region: 'Royaume-Uni' },
+    { name: 'Resend', purpose: 'E-mails transactionnels (vérification, invitations, avis de facturation)', data: 'Adresse et nom du destinataire, contenu du message', region: 'États-Unis' },
+    { name: 'Postmark', purpose: 'E-mails transactionnels (vérification, invitations, avis de facturation)', data: 'Adresse et nom du destinataire, contenu du message', region: 'États-Unis' },
+    { name: 'Vercel', purpose: 'AI Gateway : achemine les requêtes AI vers le fournisseur du modèle', data: 'Instructions, contexte de conversation et résultats d’outils des fonctions AI que vous utilisez ; mesure de l’usage', region: 'États-Unis' },
+    { name: 'OpenAI', purpose: 'Fournisseur de modèles AI', data: 'Instructions, contexte de conversation et résultats d’outils, envoyés via l’AI Gateway', region: 'États-Unis' },
+    { name: 'Anthropic', purpose: 'Fournisseur de modèles AI (modèle au choix des offres payantes)', data: 'Instructions, contexte de conversation et résultats d’outils, envoyés via l’AI Gateway', region: 'États-Unis' },
+    { name: 'Grafana Labs', purpose: 'Observabilité : traces, métriques et journaux', data: 'Métadonnées des requêtes et traces d’erreurs, pouvant contenir des identifiants de compte et d’environnement', region: 'États-Unis' },
+  ],
   disclosureKicker: 'Vous avez trouvé une vulnérabilité ?',
   disclosureTitle: 'Divulgation des vulnérabilités',
   disclosureLead: 'Signalez en privé, par e-mail, tout problème de sécurité dans ObjectOS Cloud, ObjectOS Enterprise, le runtime open source ObjectStack et ses paquets, ou sur ce site. N’ouvrez pas d’issue, de discussion ni de pull request publics sur GitHub pour un problème de sécurité.',
@@ -527,6 +662,23 @@ const ko: SecurityCopy = {
   deploymentLead: '기본 형태는 하나의 Node.js 런타임, 사용자의 데이터베이스, 시크릿, ingress입니다. 더 엄격한 환경은 파일 기반 아티팩트와 오프라인 이미지를 사용할 수 있습니다.',
   faqKicker: '자주 묻는 질문',
   faqTitle: '보안 검토 FAQ',
+  subprocessorKicker: 'Cloud 데이터를 처리하는 곳',
+  subprocessorTitle: '하위 처리자',
+  subprocessorLead: 'ObjectOS Cloud는 다음 제3자를 이용해 서비스를 운영합니다. 각 업체는 목적에 필요한 데이터만, 개인정보처리방침 제11조에 설명된 대로 서면 의무에 따라 처리합니다. ObjectOS Enterprise와 Community는 사용자의 인프라에서 실행되며, 직접 설정하지 않는 한 이들 업체를 사용하지 않습니다.',
+  subprocessorUpdated: '최종 업데이트: 2026년 10월 31일',
+  subprocessorColumns: ['하위 처리자', '목적', '데이터', '지역'],
+  subprocessors: [
+    { name: 'Cloudflare', purpose: '호스팅, 엣지 네트워크, 컨테이너, 파일 저장소(R2), 가입 시 봇 확인(Turnstile)', data: '전송 중인 모든 Cloud 트래픽, 업로드된 파일과 패키지 아티팩트, 요청 로그', region: '전 세계 엣지 네트워크, 컨테이너는 북미 동부' },
+    { name: 'Neon', purpose: '컨트롤 플레인 데이터베이스', data: '계정, 조직, 멤버십, 환경 설정, 결제 기록', region: '미국(AWS us-east-1)' },
+    { name: 'Turso', purpose: '환경 데이터베이스', data: '각 환경의 비즈니스 기록, 사용자, 세션, 감사 로그', region: '미국(AWS us-east-1)' },
+    { name: 'Paddle', purpose: '판매 대행사(MoR): 결제 화면, 결제, 청구서, 판매세', data: '청구 연락처, 주소, 결제 정보, 거래 기록(카드 번호는 당사가 받지 않습니다)', region: '영국' },
+    { name: 'Resend', purpose: '트랜잭션 이메일(인증, 초대, 결제 알림)', data: '수신자 주소와 이름, 메시지 내용', region: '미국' },
+    { name: 'Postmark', purpose: '트랜잭션 이메일(인증, 초대, 결제 알림)', data: '수신자 주소와 이름, 메시지 내용', region: '미국' },
+    { name: 'Vercel', purpose: 'AI Gateway: AI 요청을 모델 제공업체로 전달', data: '사용하는 AI 기능의 프롬프트, 대화 맥락, 도구 출력, 사용량 측정', region: '미국' },
+    { name: 'OpenAI', purpose: 'AI 모델 제공업체', data: 'AI Gateway를 통해 전송되는 프롬프트, 대화 맥락, 도구 출력', region: '미국' },
+    { name: 'Anthropic', purpose: 'AI 모델 제공업체(유료 요금제에서 선택 가능한 모델)', data: 'AI Gateway를 통해 전송되는 프롬프트, 대화 맥락, 도구 출력', region: '미국' },
+    { name: 'Grafana Labs', purpose: '관측성: 트레이스, 지표, 로그', data: '요청 메타데이터와 오류 트레이스. 계정 및 환경 식별자가 포함될 수 있습니다', region: '미국' },
+  ],
   disclosureKicker: '취약점을 발견했나요?',
   disclosureTitle: '취약점 공개',
   disclosureLead: 'ObjectOS Cloud, ObjectOS Enterprise, 오픈 소스 ObjectStack 런타임과 패키지, 또는 이 웹사이트의 보안 문제는 이메일로 비공개 신고해 주세요. 보안 문제로 공개 GitHub 이슈, 토론, 풀 리퀘스트를 만들지 마세요.',
