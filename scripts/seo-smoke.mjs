@@ -582,6 +582,28 @@ if (securityTxt) {
   }
 }
 
+// ─── Subprocessor rows awaiting confirmation ────────────────────────────────
+//
+// A row named in SUBPROCESSORS_TO_CONFIRM (src/lib/security.ts) renders with
+// `data-subprocessor-pending="<card>"`. Publishing a provider production does
+// not use, or leaving out one it does, is a false statement in a legal list,
+// so the build refuses to ship while any row is still unconfirmed.
+{
+  const pending = new Map();
+  for (const page of pages.values()) {
+    for (const m of page.html.matchAll(/<tr\b[^>]*\sdata-subprocessor-pending="([^"]*)"[^>]*>\s*<td\b[^>]*>([^<]*)<\/td>/g)) {
+      const key = `${m[2]} (${m[1]})`;
+      pending.set(key, (pending.get(key) ?? 0) + 1);
+    }
+  }
+  for (const [row, count] of pending) {
+    issues.push(
+      `security page: subprocessor ${row} is not confirmed yet (${count} pages) — confirm it on the card, then ` +
+        'remove it from SUBPROCESSORS_TO_CONFIRM in src/lib/security.ts (or delete the row)'
+    );
+  }
+}
+
 // Indexable = no `noindex` and its own canonical: the only pages a sitemap may
 // list or an hreflang / canonical annotation may point at.
 const isIndexable = (page) => Boolean(page) && !page.noindex && page.canonical === page.url;
