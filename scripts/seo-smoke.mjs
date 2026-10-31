@@ -525,6 +525,63 @@ const pageAt = (href) => {
   const rel = decodeURIComponent(url.pathname).replace(/^\//, '');
   return pages.get(rel === '' || rel.endsWith('/') ? `${rel}index.html` : rel);
 };
+
+// ─── /.well-known/security.txt (RFC 9116) ───────────────────────────────────
+//
+// The file is static (public/.well-known/), so nothing regenerates it: an
+// `Expires` that passes turns the file into one RFC 9116 says to ignore, and a
+// mailbox changed on the security page but not here sends reports to two
+// places. Both are checked against the built site: every `Contact:` mailbox is
+// a mailto link on the page `Policy:` names, and that page carries the anchor.
+// Expired (or not a date) fails; RFC 9116 §2.5.5 asks for less than a year
+// ahead, so more than a year fails too; under 60 days left only warns, so a
+// renewal is due before the date fails every build.
+const securityTxt = await readDist('.well-known/security.txt');
+if (securityTxt) {
+  const fieldValues = (name) =>
+    [...securityTxt.matchAll(new RegExp(`^${name}:[ \\t]*(\\S.*?)[ \\t]*$`, 'gmi'))].map((m) => m[1]);
+  const contacts = fieldValues('Contact');
+  const expires = fieldValues('Expires');
+  const policies = fieldValues('Policy');
+  const canonicals = fieldValues('Canonical');
+  const DAY = 24 * 60 * 60 * 1000;
+  if (contacts.length === 0) issues.push('.well-known/security.txt: no Contact field (RFC 9116 requires one)');
+  if (expires.length !== 1) {
+    issues.push(`.well-known/security.txt: needs exactly one Expires field, found ${expires.length}`);
+  } else {
+    const at = Date.parse(expires[0]);
+    const left = at - Date.now();
+    if (Number.isNaN(at)) issues.push(`.well-known/security.txt: Expires "${expires[0]}" is not a date`);
+    else if (left <= 0) issues.push(`.well-known/security.txt: Expires ${expires[0]} has passed; set a new date under a year ahead`);
+    else if (left > 366 * DAY) issues.push(`.well-known/security.txt: Expires ${expires[0]} is more than a year ahead (RFC 9116 §2.5.5)`);
+    else if (left < 60 * DAY) console.warn(`! .well-known/security.txt: Expires ${expires[0]} is ${Math.ceil(left / DAY)} days away; renew it`);
+  }
+  if (!canonicals.includes(`${SITE}/.well-known/security.txt`)) {
+    issues.push(`.well-known/security.txt: Canonical must be ${SITE}/.well-known/security.txt`);
+  }
+  if (policies.length !== 1) {
+    issues.push(`.well-known/security.txt: needs exactly one Policy field, found ${policies.length}`);
+  } else {
+    const policyPage = pageAt(policies[0]);
+    if (!policyPage) {
+      issues.push(`.well-known/security.txt: Policy ${policies[0]} is not a page this build serves`);
+    } else {
+      const anchor = new URL(policies[0]).hash.slice(1);
+      if (anchor && !policyPage.html.includes(`id="${anchor}"`)) {
+        issues.push(`.well-known/security.txt: Policy page ${policyPage.file} has no id="${anchor}"`);
+      }
+      for (const contact of contacts.filter((c) => c.startsWith('mailto:'))) {
+        if (!policyPage.html.includes(`href="${contact}"`)) {
+          issues.push(
+            `.well-known/security.txt: Contact ${contact} is not linked from ${policyPage.file} — ` +
+              'the security page (SECURITY_CONTACT in src/lib/security.ts) and security.txt name different mailboxes'
+          );
+        }
+      }
+    }
+  }
+}
+
 // Indexable = no `noindex` and its own canonical: the only pages a sitemap may
 // list or an hreflang / canonical annotation may point at.
 const isIndexable = (page) => Boolean(page) && !page.noindex && page.canonical === page.url;
