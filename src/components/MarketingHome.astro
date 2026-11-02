@@ -4,6 +4,7 @@ import demoPoster from '../assets/objectos-home-demo-poster.png';
 import demoVideo from '../assets/objectos-home-demo.mp4';
 import demoScript from '../assets/objectos-home-demo.js?url&no-inline';
 import { getPostsInLocale } from '../lib/posts';
+import { darkCover } from '../lib/cover-variant';
 import { blogPath, formatDate, postPath, ui, type Locale } from '../lib/i18n';
 import { s2t } from '../lib/zhconvert';
 import { homeCopy } from '../lib/home';
@@ -65,9 +66,12 @@ const aiCardHrefs = [
   marketingPagePath(locale, 'ai'),
   marketingPagePath(locale, 'mcp'),
 ];
+// `coverDark`: an SVG cover's dark variant (src/lib/cover-variant.ts); the
+// card then draws both images, lazy, one shown per theme.
 const posts = (await getPostsInLocale(locale))
   .filter((post) => post.entry.data.status !== 'archived')
-  .slice(0, 3);
+  .slice(0, 3)
+  .map((post) => ({ ...post, coverDark: darkCover(post.entry.filePath, post.entry.data.cover) }));
 
 const topicLink = (slug: string) => {
   const term = termBySlug(slug);
@@ -450,14 +454,37 @@ const demoCopy = DEMO_COPY[locale];
           <a class="article" href={postPath(locale, post.slug)}>
             {post.entry.data.cover &&
               (post.entry.data.cover.format === 'svg' ? (
-                <img
-                  src={post.entry.data.cover.src}
-                  alt={post.entry.data.title}
-                  width={post.entry.data.cover.width}
-                  height={post.entry.data.cover.height}
-                  loading="lazy"
-                  decoding="async"
-                />
+                post.coverDark ? (
+                  <>
+                    <img
+                      class="cover-light"
+                      src={post.entry.data.cover.src}
+                      alt={post.entry.data.title}
+                      width={post.entry.data.cover.width}
+                      height={post.entry.data.cover.height}
+                      loading="lazy"
+                      decoding="async"
+                    />
+                    <img
+                      class="cover-dark"
+                      src={post.coverDark.src}
+                      alt={post.entry.data.title}
+                      width={post.coverDark.width}
+                      height={post.coverDark.height}
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </>
+                ) : (
+                  <img
+                    src={post.entry.data.cover.src}
+                    alt={post.entry.data.title}
+                    width={post.entry.data.cover.width}
+                    height={post.entry.data.cover.height}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                )
               ) : (
                 <Image
                   src={post.entry.data.cover}
@@ -1339,6 +1366,15 @@ const demoCopy = DEMO_COPY[locale];
     background: var(--surface-sunk);
     box-shadow: 0 18px 42px -34px rgba(var(--shadow), 0.52);
     filter: var(--cover-filter);
+  }
+  /* One cover per theme (src/lib/cover-variant.ts); the dark variant is drawn
+     dark and takes no --cover-filter dimming. */
+  :global(:root:not([data-theme='dark'])) .article .cover-dark,
+  :global(:root[data-theme='dark']) .article .cover-light {
+    display: none;
+  }
+  .article img.cover-dark {
+    filter: none;
   }
   .article time {
     color: var(--muted);

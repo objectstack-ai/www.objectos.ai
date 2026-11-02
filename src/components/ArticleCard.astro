@@ -4,6 +4,7 @@ import type { Locale } from '../lib/i18n';
 import { formatDate, postPath, STATUS_COLOR, ui } from '../lib/i18n';
 import type { LocalePost } from '../lib/posts';
 import { termLabel } from '../lib/terms';
+import { darkCover } from '../lib/cover-variant';
 import { phraseHtml } from '../../scripts/lib/cjk-phrases.mjs';
 
 interface Props {
@@ -32,6 +33,10 @@ const thumbSizes =
     ? '(min-width: 1024px) 640px, calc(100vw - 2rem)'
     : '(max-width: 640px) calc(100vw - 2rem), (max-width: 900px) calc(55vw - 2rem), 400px';
 const thumbLoading = variant === 'feature' ? 'eager' : 'lazy';
+// An SVG cover with a dark variant (src/lib/cover-variant.ts) is drawn twice,
+// one image per theme. Both are lazy, the feature card's too: a display:none
+// image is only skipped when it is lazy, so an eager pair would fetch both.
+const coverDark = darkCover(post.entry.filePath, d.cover);
 ---
 
 <li class:list={['article-item', variant]}>
@@ -39,14 +44,37 @@ const thumbLoading = variant === 'feature' ? 'eager' : 'lazy';
     <div class="thumb">
       {d.cover ? (
         d.cover.format === 'svg' ? (
-          <img
-            src={d.cover.src}
-            alt={d.title}
-            width={d.cover.width}
-            height={d.cover.height}
-            loading={thumbLoading}
-            decoding="async"
-          />
+          coverDark ? (
+            <>
+              <img
+                class="cover-light"
+                src={d.cover.src}
+                alt={d.title}
+                width={d.cover.width}
+                height={d.cover.height}
+                loading="lazy"
+                decoding="async"
+              />
+              <img
+                class="cover-dark"
+                src={coverDark.src}
+                alt={d.title}
+                width={coverDark.width}
+                height={coverDark.height}
+                loading="lazy"
+                decoding="async"
+              />
+            </>
+          ) : (
+            <img
+              src={d.cover.src}
+              alt={d.title}
+              width={d.cover.width}
+              height={d.cover.height}
+              loading={thumbLoading}
+              decoding="async"
+            />
+          )
         ) : (
           <Image
             src={d.cover}
@@ -138,6 +166,16 @@ const thumbLoading = variant === 'feature' ? 'eager' : 'lazy';
   }
   .card:hover .thumb :global(img) {
     transform: scale(1.035);
+  }
+  /* One cover per theme (src/lib/cover-variant.ts). The dark variant is drawn
+     dark, so it takes no --cover-filter dimming; raster covers and SVGs with
+     no variant keep it. */
+  :global(:root:not([data-theme='dark'])) .cover-dark,
+  :global(:root[data-theme='dark']) .cover-light {
+    display: none;
+  }
+  .thumb .cover-dark {
+    filter: none;
   }
   .thumb-fallback {
     display: flex;

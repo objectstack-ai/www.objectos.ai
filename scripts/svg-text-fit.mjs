@@ -132,9 +132,9 @@ const decodeEntities = (s) =>
     return String.fromCodePoint(e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : Number(e.slice(1)));
   });
 
-class Unsupported extends Error {}
+export class Unsupported extends Error {}
 
-function parseXml(src) {
+export function parseXml(src) {
   const lineStarts = [0];
   for (let i = 0; i < src.length; i++) if (src[i] === '\n') lineStarts.push(i + 1);
   const lineAt = (offset) => {
@@ -218,7 +218,7 @@ function parseSelector(sel) {
   return { parts, spec };
 }
 
-function parseCss(css) {
+export function parseCss(css) {
   const rules = [];
   const clean = css.replace(/\/\*[\s\S]*?\*\//g, '');
   if (/@/.test(clean)) throw new Unsupported('CSS at-rules are not modelled');
@@ -257,7 +257,7 @@ function invert(m) {
   if (!det) return null;
   return [m[3] / det, -m[1] / det, -m[2] / det, m[0] / det, (m[2] * m[5] - m[3] * m[4]) / det, (m[1] * m[4] - m[0] * m[5]) / det];
 }
-const numbers = (s) => (s.match(/[-+]?(?:\d*\.\d+|\d+\.?)(?:e[-+]?\d+)?/gi) ?? []).map(Number);
+export const numbers = (s) => (s.match(/[-+]?(?:\d*\.\d+|\d+\.?)(?:e[-+]?\d+)?/gi) ?? []).map(Number);
 
 function parseTransform(text) {
   let m = IDENTITY;
@@ -415,11 +415,11 @@ function shapeGeometry(el, canvas) {
 
 // --- the walk --------------------------------------------------------------
 
-const NOT_RENDERED = new Set(['defs', 'marker', 'clipPath', 'mask', 'pattern', 'symbol', 'linearGradient', 'radialGradient', 'filter', 'title', 'desc', 'metadata', 'style', 'script']);
+export const NOT_RENDERED = new Set(['defs', 'marker', 'clipPath', 'mask', 'pattern', 'symbol', 'linearGradient', 'radialGradient', 'filter', 'title', 'desc', 'metadata', 'style', 'script']);
 const SHAPES = new Set(['rect', 'circle', 'ellipse', 'polygon', 'path']);
 const UNSUPPORTED_ELEMENTS = new Set(['use', 'svg', 'image', 'foreignObject', 'textPath', 'switch']);
 
-function computeStyle(el, rules, parentStyle) {
+export function computeStyle(el, rules, parentStyle) {
   const specified = {};
   for (const prop of PROPS) if (el.attrs[prop] !== undefined) specified[prop] = el.attrs[prop].trim();
   const matching = rules.filter((r) => selectorMatches(el, r.parts)).sort((p, q) => p.spec - q.spec || p.order - q.order);
@@ -688,7 +688,7 @@ export function checkSvg(src) {
     if (el.name === 'text') {
       if (style.visibility === 'hidden') return;
       const laid = layoutText(el, rules, style);
-      if (laid) texts.push({ line: el.line, content: laid.content, box: toRoot(ctm, laid.box), order: order++ });
+      if (laid) texts.push({ line: el.line, content: laid.content, box: toRoot(ctm, laid.box), fill: style.fill, order: order++ });
       return;
     }
     if (SHAPES.has(el.name)) {
@@ -696,7 +696,7 @@ export function checkSvg(src) {
       const geo = shapeGeometry(el, canvas);
       const inverse = invert(ctm);
       if (geo && inverse) {
-        painted.push({ tag: el.name, line: el.line, box: toRoot(ctm, geo.box), contains: geo.contains, inverse, evenOdd: style['fill-rule'] === 'evenodd', order: order++ });
+        painted.push({ tag: el.name, line: el.line, box: toRoot(ctm, geo.box), contains: geo.contains, inverse, evenOdd: style['fill-rule'] === 'evenodd', fill: style.fill, order: order++ });
       }
       return;
     }
@@ -748,12 +748,15 @@ export function checkSvg(src) {
 
 // --- CLI -------------------------------------------------------------------
 
+// `*.dark.svg` files are build output (scripts/cover-dark.mjs): the light
+// cover's geometry with its colours swapped, so measuring them again would
+// only count every box twice.
 async function svgFiles(dir) {
   const out = [];
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     const p = path.join(dir, entry.name);
     if (entry.isDirectory()) out.push(...(await svgFiles(p)));
-    else if (entry.name.endsWith('.svg')) out.push(p);
+    else if (entry.name.endsWith('.svg') && !entry.name.endsWith('.dark.svg')) out.push(p);
   }
   return out.sort();
 }
