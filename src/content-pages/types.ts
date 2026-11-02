@@ -25,6 +25,13 @@ export interface MarketingPageSection {
 }
 
 export interface MarketingPageTable {
+  /**
+   * Heading over the table. Absent, the shared "decision surface" heading in
+   * `ui.ts` renders; a page whose table is not a decision surface (the
+   * side-by-side comparison on /compare/) names its own.
+   */
+  eyebrow?: string;
+  title?: string;
   columns: [string, string, string];
   rows: [string, string, string][];
 }

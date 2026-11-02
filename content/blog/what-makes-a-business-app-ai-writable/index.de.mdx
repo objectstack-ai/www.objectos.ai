@@ -1,0 +1,230 @@
+---
+title: "Was macht eine Business-App von AI schreibbar? Typed, Validated, Reviewed, Governed"
+description: "Von AI schreibbar ist eine Eigenschaft des Ziels, nicht des Modells. Vier Gates, ein echter Lauf: drei absichtliche Fehler, 49 Regeln, drei lokalisierte Fehler, dann ein sauberer Durchlauf."
+author: ObjectStack Team
+date: 2026-10-23
+status: published
+topic: ai-agents
+audience: developer
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - KI-Agenten
+  - Von AI schreibbar
+---
+
+Eine Business-App ist von AI schreibbar, wenn die Fehler, die ein Agent unweigerlich machen wird, irgendwo sterben können, bevor sie einen Benutzer erreichen. Das ist eine Eigenschaft des Zielformats, nicht des Modells. Die ObjectStack-README nennt vier solche Orte und nennt sie Gates: **Typed**, **Validated**, **Reviewed** und **Governed**. Typed-Fehler sterben im Editor. Validated-Fehler sterben bei `os validate`, das Metadaten zurückweist, die den Typcheck bestehen, zur Laufzeit aber still scheitern würden. Reviewed-Fehler sterben in einem Diff, das ein Mensch ganz lesen kann. Governed-Fehler bleiben innerhalb des Berechtigungs- und Audit-Zauns der Runtime, selbst wenn sie ausgeliefert werden. Unten steht ein echter Lauf der ersten beiden Gates auf einem gescaffoldeten Support-Desk mit ObjectStack 17.7.0: drei absichtliche Fehler der drei Arten, die die README aufzählt, das 49-Regeln-Gate, das jeden mit einer lokalisierten, korrigierenden Meldung zurückweist, und ein sauberer Durchlauf nach der Korrektur.
+
+## Zwei Dinge, die bereits wahr sind
+
+Vor den Gates zwei Steelmen, denn das Argument braucht keinen von beiden als falsch.
+
+**Vibe-gecodete Apps funktionieren.** Sie können einem Modell einen Support-Desk beschreiben und haben an einem Nachmittag einen laufenden, mit Masken, einer Datenbank und einer API, in der Sprache, die das Modell am liebsten mag. Für einen Prototyp, ein Einmalwerkzeug oder eine Demo, die weggeworfen wird, ist das der richtige Tausch, und nichts hier unten ist ein Argument dagegen. Das Modell ist nicht mehr der Engpass.
+
+**Handgeschriebener Code ist prüfbar, und das Werkzeug dafür ist ausgereift.** Ein Senior-Engineer, der einen Pull Request liest, ein Typsystem, eine Testsuite und ein Code-Review-Prozess fangen jeden Tag echte Defekte. Für neuartige Logik gibt es keinen Ersatz, und ObjectStack sagt das selbst: <span lang="en">„code does not disappear: it moves into the runtime, as hooks, action bodies, CEL, and constrained JSX“</span> (Code verschwindet nicht: er wandert in die Runtime, als Hooks, Action-Rümpfe, CEL und eingeschränktes JSX), und dieser Code wird weiterhin von einem Menschen gelesen.
+
+Was keiner von beiden beantwortet, ist die Frage, die zählt, sobald ein Agent derjenige ist, der schreibt: *Wohin geht eine falsche Zeile?* In einer freiförmigen Codebasis ist eine falsche Autorisierungsprüfung ein `if` unter Tausenden, die Review-Fläche ist das ganze Repository, und die Runtime erzwingt von sich aus nichts über Befugnisse. Die CI-Datei des gescaffoldeten Projekts bringt es in einem Satz auf den Punkt, über Metadaten, aber er gilt für jedes Format ohne Gate: Ein Fehler <span lang="en">„raises nothing, it just behaves wrongly for whoever hits it first.“</span> (löst nichts aus, er verhält sich nur falsch für den, der ihn zuerst trifft). Von AI schreibbar heißt, dass dieser Satz aufgehört hat, wahr zu sein.
+
+## Die vier Gates, wie die README sie nennt
+
+Der Abschnitt der README heißt <span lang="en">„Why the mistakes don't ship“</span> (Warum die Fehler nicht ausgeliefert werden), und seine Tabelle ist kurz genug, um sie ganz zu zitieren:
+
+| Gate | Fängt |
+| :--- | :--- |
+| **Typed** | Striktes TypeScript + Zod – Formfehler sterben im Editor, Sekunden nachdem der Agent sie geschrieben hat |
+| **Validated** | `os validate` weist Metadaten zurück, die den Typcheck bestehen, zur Laufzeit aber still scheitern würden: hängende Bindings, fehlerhafte CEL-Prädikate, fehlende Sicherheitshaltung |
+| **Reviewed** | Sie genehmigen in der Console ein kleines, lesbares Diff – keinen Haufen generierten Klebecodes |
+| **Governed** | Die Runtime erzwingt Berechtigungen und Audit bei jedem Aufruf, sodass selbst eine falsche App innerhalb des Zauns bleibt |
+
+![Vier Gates zwischen dem Agenten und den Benutzern: Typed stoppt Formfehler im Editor, Validated stoppt hängende Bindings, fehlerhafte Prädikate und fehlende Sicherheitshaltung bei os validate, Reviewed ist ein kleines Diff, das ein Mensch genehmigt, Governed ist die Runtime, die Berechtigungen und Audit bei jedem Aufruf erzwingt; die drei Fehler aus dem Lauf bleiben an den ersten beiden Gates hängen](./four-gates-en.svg)
+
+Drei Dinge an dieser Tabelle entscheiden, ob das Versprechen echt ist, und sie sind es wert, vor dem Transkript genannt zu werden.
+
+Erstens sind die Gates nach Kosten geordnet. Ein Formfehler kostet den Agenten eine Sekunde. Ein Validierungsfehler kostet ihn eine Runde. Ein Review kostet einen Menschen Minuten. Ein Governed-Versagen kostet einen Vorfall, der eingedämmt wurde. Der von der README genannte Grund, warum das Ganze funktioniert, sind die ersten beiden Zeilen: <span lang="en">„an agent's errors become located, corrective text it can read and fix itself“</span> (die Fehler eines Agenten werden zu lokalisiertem, korrigierendem Text, den er selbst lesen und beheben kann).
+
+Zweitens existiert das zweite Gate, weil das erste nicht reicht, und die Docs sagen in einem Satz, warum: <span lang="en">„ObjectStack metadata is data, not code paths — so most mistakes are **not** caught by the TypeScript compiler. They pass `tsc`, load fine, and then fail **silently at runtime**.“</span> (ObjectStack-Metadaten sind Daten, keine Codepfade – die meisten Fehler werden also vom TypeScript-Compiler **nicht** gefangen. Sie bestehen `tsc`, laden problemlos und scheitern dann **still zur Laufzeit**.) Ein Prädikat ist ein String. Eine Zeilenaktion ist ein Name. Ein Sharing-Modell ist ein optionaler Schlüssel. Alle drei bestehen den Typcheck mit dem Fehler darin. Das ist die Fehlerklasse, für die das Validated-Gate gebaut wurde, und es ist die Klasse, auf die der Lauf unten zielt.
+
+Drittens sind die letzten beiden Gates Mensch und Runtime, nicht Tooling, und dieser Beitrag tut nicht so, als wäre es anders. Das Reviewed-Gate in den Docs ist Studios <span lang="en">„Review N changes“</span>-Diff; im Lauf unten ist es ein `git diff`, von einem Menschen gelesen. Das Governed-Gate ist die Autorisierungskette und das Audit-Log der Runtime, die der Lauf nie startet. Was das Transkript beweist, ist, dass die zwei billigen Gates fangen, was die README sagt. Was es nicht beweist, steht am Ende.
+
+## Ein Support-Desk, drei Fehler, ein Lauf
+
+Alles Folgende wurde ausgeführt, nicht rekonstruiert, auf Node 22 mit den veröffentlichten Paketen. Das Scaffold ist der erste Schritt der README selbst:
+
+```bash
+$ npm create objectstack@latest support-desk
+  ╔═══════════════════════════════════╗
+  ║   ◆ Create ObjectStack v17.7.0    ║
+  ╚═══════════════════════════════════╝
+
+◆ New Environment
+────────────────────────────────────────
+  Environment: support-desk
+  Namespace: support_desk
+  Template: blank — Minimal starter — one object, REST API, ready to extend
+
+  ✓ Template files written (20)
+  → Installing dependencies...
+  → Installing AI skills for your coding agent...
+  ✓ Environment created!
+```
+
+Das Scaffold schreibt eine `AGENTS.md`, deren einzige nicht verhandelbare Zeile das Gate ist: <span lang="en">„**Never report a metadata change as done until `npm run validate` passes.**“</span> (Melde eine Metadatenänderung nie als erledigt, bevor `npm run validate` besteht.) Es schreibt außerdem einen CI-Workflow, dessen einziger Job `pnpm validate`, `pnpm lint` und `pnpm typecheck` ausführt. Das Gate ist verdrahtet, bevor ein einziges Geschäftsobjekt existiert.
+
+Dann die Anforderung der README, so geschrieben, wie der Agent sie schreiben würde: ein Objekt `support_desk_ticket` mit Betreff, Beschreibung, einer Prioritäts- und einer Status-Auswahl; eine **Resolve**-Aktion, die nur auf Tickets erscheint, die nicht schon gelöst sind; eine Listenansicht „Open tickets“; eine Navigationsgruppe Support; und ein Berechtigungsset für Support-Mitarbeiter. Die ganze App umfasst **127 hinzugefügte Zeilen in 11 Dateien**. Die beiden Dateien, in denen die Fehler leben werden:
+
+```ts
+// src/actions/resolve-ticket.action.ts
+export const ResolveTicketAction = defineAction({
+  name: 'resolve_ticket',
+  label: 'Resolve',
+  objectName: 'support_desk_ticket',
+  locations: ['record_header', 'list_item'],
+  visible: P`record.status != "resolved"`,   // only on tickets not yet resolved
+  operation: 'update',
+  patch: { status: 'resolved' },
+  confirmText: 'Mark this ticket as resolved?',
+});
+```
+
+```ts
+// src/views/ticket.view.ts
+export const TicketViews = defineView({
+  list: {
+    label: 'All tickets',
+    type: 'grid',
+    data,
+    columns: ['subject', 'priority', 'status'],
+    rowActions: ['resolve_ticket'],
+  },
+  // ... form, and an "Open tickets" list view filtered on status = open
+});
+```
+
+Zuerst der saubere Lauf, damit die Zahl der Regeln aktenkundig ist:
+
+```text
+$ npm run validate
+◆ Validate
+────────────────────────────────────────
+  → Loading configuration...
+  → Validating against ObjectStack Protocol...
+  → Running author-time rules (49)...
+  → Checking that every required capability has a provider installable in this edition...
+  → Checking package docs (ADR-0046)...
+
+  ✓ Validation passed (327ms)
+
+  Support Desk v0.1.0
+
+  Data: 2 Objects  6 Fields
+  UI: 1 Apps  1 Views  1 Actions
+  Logic: 0 Flows
+  Security: 1 Permissions
+  Runtime: 3 plugins
+```
+
+Neunundvierzig Autorzeit-Regeln bei 17.7.0. Als [diese Site dasselbe Gate zuletzt ausführte](/en/blog/how-to-point-your-agent-at-objectstack/), bei 17.2.0, waren es 41; die Regeltabelle wächst, was für ein Gate die richtige Richtung ist. Die Zahl wird vom Werkzeug ausgegeben und entspricht `AUTHORING_RULES.length` im veröffentlichten Paket `@objectstack/lint`, es gibt also keine zweite Zahl zum Abgleichen.
+
+### Die drei Fehler
+
+Jetzt die drei Klassen der README, je ein absichtlicher Fehler. Alle drei sind von der Art, zu der ein auf gewöhnlichem JavaScript trainierter Agent greift, und alle drei bestehen den Typcheck:
+
+```diff
+ // 1 · a bad CEL predicate: the bare identifier most template languages use
+-  visible: P`record.status != "resolved"`,
++  visible: P`status != "resolved"`,
+
+ // 2 · a dangling binding: a row action that names nothing
+-    rowActions: ['resolve_ticket'],
++    rowActions: ['resolve'],
+
+ // 3 · a missing security posture: the org-wide default left unsaid
+-  sharingModel: 'private',
+```
+
+`npm run typecheck` ist bei allen dreien grün; `tsc` hat keine Meinung zum Inhalt eines Strings, dem Namen in einem Array oder einem optionalen Schlüssel. Das Gate schon:
+
+```text
+$ npm run validate
+◆ Validate
+────────────────────────────────────────
+  → Loading configuration...
+  → Validating against ObjectStack Protocol...
+  → Running author-time rules (49)...
+
+  ✗ Author-time rules failed (3 issues)
+  • stack · action 'resolve_ticket' visible: bare reference `status` — a formula/validation expression binds the record as the `record` namespace, not at top level, so `status` resolves to nothing and the expression silently evaluates to null. Write `record.status`.
+      source: `status != "resolved"`
+      rule: expression-invalid  at stack · action 'resolve_ticket' visible
+  • view "#0" · list · rowActions: Row-action menu names action "resolve", which is defined by no action in this stack (neither `stack.actions` nor any object's `actions`). The button renders and does nothing when clicked — a dead affordance the runtime cannot dispatch. Did you mean "resolve_ticket"?
+      Define an action named "resolve" (in `stack.actions` or the object's `actions`) with the location this surface needs, remove the reference, or ignore this if the action is contributed by another installed package. Defined actions: resolve_ticket.
+      rule: action-name-undefined  at views[0].list.rowActions[0]
+  • object "support_desk_ticket": custom object "support_desk_ticket" declares no sharingModel (OWD). The runtime fails CLOSED to 'private' (ADR-0090 D1), but the baseline must be an authored decision, not an accident — this is the exact shape of the leave_request incident, where an object with no sharingModel let an ordinary read/write grant read and edit every other user's records.
+      Declare sharingModel explicitly: 'private' (owner + shares; recommended default), 'public_read', 'public_read_write', or 'controlled_by_parent' (master-detail children).
+      rule: security-owd-unset  at objects[1].sharingModel
+ ELIFECYCLE  Command failed with exit code 1.
+```
+
+Lesen Sie die drei Meldungen als Register statt als Fehler, denn jede nennt, was zur Laufzeit ohne das Gate passiert wäre. Nennen wir es das **Fehlerregister**: für ein Zielformat die Liste der Fehlerklassen, die ein Agent machen kann, das Gate, das jede fängt, und das Laufzeitsymptom, das sie andernfalls gehabt hätte. Ein Format ist genau in dem Maß von AI schreibbar, in dem das Register keine leeren Zeilen hat.
+
+![Das Fehlerregister des Laufs: ein nacktes Prädikat hätte den Resolve-Button auf jedem Ticket verborgen, eine tote Zeilenaktion hätte einen Button gerendert, der nichts tut, ein fehlendes sharingModel hätte die Grundlinie zum Zufall statt zur Entscheidung gemacht, und ein String, wo ein Boolean hingehört, ist ein Typfehler; jede Zeile nennt das Gate, das ihn gefangen hat, und die Regel-ID](./mistake-ledger-en.svg)
+
+| Der Fehler | Wäre ausgeliefert worden als | Gefangen von · Regel |
+| :--- | :--- | :--- |
+| `` visible: P`status != "resolved"` `` | Das Prädikat <span lang="en">„silently evaluates to null“</span> (wird still zu null ausgewertet): der Resolve-Button auf jedem Ticket verborgen | Validated · `expression-invalid` |
+| `rowActions: ['resolve']` | <span lang="en">„The button renders and does nothing when clicked — a dead affordance the runtime cannot dispatch“</span> (Der Button wird gerendert und tut beim Klick nichts – eine tote Affordanz, die die Runtime nicht dispatchen kann) | Validated · `action-name-undefined` |
+| kein `sharingModel` am Objekt | Die Runtime <span lang="en">„fails CLOSED to 'private'“</span> (fällt geschlossen auf `'private'` zurück), aber eine unausgesprochene Grundlinie ist <span lang="en">„the exact shape of the leave_request incident“</span> (genau die Form des leave_request-Vorfalls) | Validated · `security-owd-unset` |
+| `required: 'yes'` an einem Feld | Nichts: `tsc` weist es zurück mit <span lang="en">„Type 'string' is not assignable to type 'boolean \| undefined'“</span> | Typed · `TS2322` |
+
+Die vierte Zeile ist das Typed-Gate, getrennt auf dem sauberen Baum ausgeführt, damit das Validator-Transkript bei der Validierung bleibt: Ändern Sie `required: true` in `required: 'yes'`, und `npm run typecheck` beendet sich mit Code 2 und dieser Meldung, bevor irgendetwas anderes läuft. Es ist das billigste Gate und das am wenigsten interessante, und genau das ist der Sinn seiner Position.
+
+Zwei Eigenschaften der Meldungen tragen das ganze Versprechen. Sie sind **lokalisiert**: eine Aktion und ein Prädikat-Slot, eine View und ein Array-Index, ein Objekt und ein Schlüsselpfad. Und sie sind **korrigierend**: <span lang="en">„Write `record.status`“</span>, <span lang="en">„Did you mean `resolve_ticket`?“</span>, die vier zulässigen Werte von `sharingModel`. Ein Agent, der diese liest, schließt die Schleife in einer Runde. Der Beitrag über das [Konfigurieren eines Agenten für ObjectStack](/en/blog/how-to-point-your-agent-at-objectstack/) nennt das einen *korrigierenden Fehler* und argumentiert, dass Fehlermeldungen, nicht Dokumentation, das Wirksamste sind, was ein Format besitzt; dieser Lauf liefert drei weitere Datenpunkte dafür.
+
+Die drei Zeilen wiederhergestellt, und das Gate ist wieder still:
+
+```text
+$ npm run validate
+  → Running author-time rules (49)...
+
+  ✓ Validation passed (240ms)
+
+  Data: 2 Objects  6 Fields
+  UI: 1 Apps  1 Views  1 Actions
+  Security: 1 Permissions
+  Runtime: 3 plugins
+```
+
+Eine weitere Zeile aus dem Lauf gehört hierher, weil das Gate hier etwas Subtileres tut als zurückweisen. Die erste Version des Berechtigungssets gewährte Lesen, Anlegen und Bearbeiten auf einem privaten Objekt, ohne zu sagen, wie weit ein Lesen reicht, und der saubere Lauf trug einen Hinweis: „`permission set "support_agent": "support_desk_ticket" is private (OWD) and this set grants allowRead without a readScope — holders see ONLY records they own (plus explicit shares).`“ (Berechtigungsset „support_agent“: „support_desk_ticket“ ist privat (OWD), und dieses Set gewährt allowRead ohne readScope – Inhaber sehen NUR Datensätze, die ihnen gehören, plus explizite Freigaben.) Das ist kein Fehler, und das Gate hat recht, keinen daraus zu machen: Ein Support-Desk, in dem Mitarbeiter nur ihre eigenen Tickets sehen, ist ein legitimes Design. Es ist eine halbe Entscheidung, die dem Menschen vorgelegt wird, der sie treffen muss. Die Korrektur war ein Schlüssel, `readScope: 'org'`, und sie war eine Produktentscheidung, keine Berichtigung.
+
+## Was die Gates nicht fangen
+
+Ein Beitrag über Gates muss sagen, wo die Gates aufhören, und die Quellen sind dabei ungewöhnlich direkt.
+
+**Korrektheit der Geschäftslogik.** Die Docs: <span lang="en">„Guardrails 1–3 prove the metadata is *well-formed*. They can't prove it's *what you meant*.“</span> (Die Leitplanken 1–3 beweisen, dass die Metadaten *wohlgeformt* sind. Sie können nicht beweisen, dass sie *das sind, was Sie meinten*.) Das Gate hat bestätigt, dass `record.status` aufgelöst wird. Es hat keine Meinung dazu, ob ein Ticket aus der Liste heraus lösbar sein sollte, ob `resolved` der richtige Endzustand ist oder ob Support-Mitarbeiter jedes Ticket der Organisation sehen sollten. Die Fassung desselben Limits im früheren Beitrag lautet <span lang="en">„the gate checks structure, not intent“</span> (das Gate prüft Struktur, nicht Absicht), und nichts an 49 Regeln ändert das.
+
+**Anforderungen, die der Reviewer übersieht.** Das Reviewed-Gate ist ein Mensch, der ein Diff liest. Es ist konstruktionsbedingt klein – 127 Zeilen für die ganze App, drei Zeilen für die drei Fehler –, aber klein ist nicht dasselbe wie gelesen. Ein Reviewer, der `readScope: 'org'` genehmigt, ohne zu fragen, ob auch Externe das Set `support_agent` halten, hat eine Entscheidung ausgeliefert, und das Gate wird ihn nicht aufhalten, denn die Metadaten sind wohlgeformt. Der Hinweis-Kanal hilft genau so weit, wie jemand ihn liest.
+
+**Neuartige Logik.** Hooks und Action-Rümpfe sind Code. Die Konzeptseite zur Business Ontology sagt, sie <span lang="en">„run inside the runtime's permission and audit fence“</span> (laufen innerhalb des Berechtigungs- und Audit-Zauns der Runtime), und der Zaun begrenzt, was ein falscher Rumpf berühren kann; er macht den Rumpf nicht richtig. Das bleibt Code-Review.
+
+**Was dieser Lauf nicht ausgeübt hat.** Das Transkript sind die ersten beiden Gates auf der Kommandozeile. Das Reviewed-Gate, wie die Docs es beschreiben, das Studio-Diff, das ein Mensch genehmigt, bevor eine Änderung live geht, war hier ein `git diff`. Das Governed-Gate – die Autorisierungskette, die die Docs als sechs fail-closed-Schichten von „anonym verweigern“ bis zur Sicherheit auf Feldebene beschreiben, mit Audit bei jedem Aufruf – wurde nicht gestartet, denn `os validate` ist eine Autorzeit-Prüfung, die kein Artefakt schreibt und keinen Server startet. Die Behauptung der README für dieses Gate lautet <span lang="en">„even a wrong app stays inside the fence“</span> (selbst eine falsche App bleibt innerhalb des Zauns); dieser Beitrag zitiert sie, statt sie vorzuführen.
+
+**Und die Steelmen stehen.** Ein Wegwerf-Prototyp braucht keine vier Gates. Ein handgeschriebener Dienst mit guten Tests und einem sorgfältigen Reviewer hat sein eigenes Register, ausgefüllt von Menschen statt von einem Werkzeug. Die Behauptung hier ist enger als „das ist besser“: Für eine App, die ein Agent schreibt und ein Unternehmen betreibt, sollte das Register vom Format ausgefüllt werden, denn der Agent wird sich nicht erinnern, und der Reviewer kann nicht alles lesen.
+
+## Dasselbe Gate, aus dem Browser
+
+Eine Tatsache, die die Vier-Gates-Geschichte für Leute ehrlich hält, die nie ein Terminal öffnen: `os validate` ist nicht die einzige Tür. Die Docs beschreiben eine vierte: <span lang="en">„Every metadata **write** — Studio's designer, `PUT /api/v1/meta/*`, an MCP/AI author — lands in `saveMetaItem`, and since #4463 a write going **`state: 'active'`** runs that same table before it persists.“</span> (Jedes Metadaten-**Schreiben** – Studios Designer, `PUT /api/v1/meta/*`, ein MCP/KI-Autor – landet in `saveMetaItem`, und seit #4463 lässt ein Schreiben nach **`state: 'active'`** dieselbe Tabelle laufen, bevor es persistiert wird.) Dieselben `AUTHORING_RULES`, die oben 49 ausgaben, weisen ein aus Studio veröffentlichtes Dashboard mit einem hängenden Binding zurück, mit derselben lokalisierten Meldung. Das Validated-Gate ist eine Eigenschaft der Runtime, nicht der CLI.
+
+Und die letzte Zeile der README selbst über die Schleife: „Dieselbe Schleife gehostet, im Browser, ohne Installation? Das ist ObjectOS, die kommerzielle Laufzeitumgebung auf Basis von ObjectStack.“ ObjectOS läuft gehostet im Browser ohne Installation (ObjectOS Cloud) oder selbst verwaltet auf Ihrer eigenen Infrastruktur (ObjectOS Enterprise), und in beiden Editionen können Sie Ihre Ontologie exportieren und auf der quelloffenen ObjectStack Runtime ausführen.
+
+## Füllen Sie Ihr eigenes Register aus
+
+Der Lauf oben hat den Fünf-Minuten-Pfad der README genommen. Die einzige Änderung ist, die Fehler absichtlich zu machen, was der schnellste Weg ist herauszufinden, ob ein Format in dem Sinn, den dieser Beitrag meint, von AI schreibbar ist.
+
+```bash
+npm create objectstack@latest my-app && cd my-app
+# im Coding-Agenten öffnen und beschreiben, was das Unternehmen braucht
+npx os dev --ui
+```
+
+Bitten Sie um den Support-Desk, den die README beschreibt. Dann, bevor Sie in die Console schauen, öffnen Sie das Diff und tun, was der Lauf getan hat: Streichen Sie das `record.` aus einem Prädikat, verschreiben Sie einen Aktionsnamen in einer View, löschen Sie ein `sharingModel` und führen Sie `npm run validate` aus. Zählen Sie die Zeilen, die das Gate ausfüllt, und die Zeilen, die es Ihnen überlässt. Die [Regeldatei, die Sie dem Agenten geben](/de/blog/give-your-agent-rules-for-governable-apps/), entscheidet, wie viele Fehler gemacht werden; die vier Gates entscheiden, wo sie aufhören; Ihr Register ist das ehrliche Maß für beides.

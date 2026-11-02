@@ -12,7 +12,7 @@ const page = {
     eyebrow: '工具与 MCP',
     heroTitle: '你的业务对象，成为任意 AI 的受治理工具。',
     lead:
-      `多数公司用手写的胶水代码把 AI 接到数据上，绕过了自己建立的所有控制。ObjectStack 运行时则直接从元数据生成受治理工具：无论你的模型是 Claude、Cursor 还是完全本地的模型，它都走和员工一样的权限、审批与审计。MCP 服务器随开源框架发布，在每个版本中默认开启；ObjectOS 是${p.descriptor}，跑的是同一个服务器。`,
+      `多数公司用手写的胶水代码把 AI 接到数据上，绕过了自己建立的所有控制。ObjectStack 则直接从本体生成受治理工具——${p.t3[2]}是它的四个承诺之一：你的定义声明的对象、它暴露的动作成为 MCP 工具，以登录用户自己的权限、审批与审计被调用，无论你的模型是 Claude、Cursor 还是完全本地的模型。MCP 服务器随开源框架发布，在每个版本中默认开启；ObjectOS 是${p.descriptor}，跑的是同一个服务器。`,
     primary: { label: '阅读 MCP 文档', href: 'https://docs.objectos.ai/docs/configure/mcp' },
     secondary: { label: '把你的 Agent 指向 ObjectStack', href: '/en/agent-developer/' },
     metrics: [
@@ -46,7 +46,7 @@ claude mcp add --transport http my-app \\
         eyebrow: 'AI 拿到什么',
         title: '天生就懂你业务的工具',
         copy:
-          '因为工具派生自定义应用的同一份元数据，AI 看到的是真实的对象、真实的关系、真实的动作——而不是一堆裸数据库表。',
+          '因为工具派生自定义这个应用的那份本体，AI 看到的是真实的对象、真实的关系、真实的动作——而不是一堆裸数据库表。',
         items: [
           {
             title: '查询业务对象',

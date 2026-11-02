@@ -3,7 +3,7 @@ title: Bestehende Geschäftssysteme AI-native machen, ohne Migration
 description: Auf selbst verwaltetem ObjectOS (Enterprise) die laufende Datenbank nur lesend verbinden, Tabellen per Coding-Agent als Objekte modellieren und AI auf echte Daten setzen – unter Ihren Berechtigungen, Ursprungssystem unangetastet.
 author: ObjectStack Team
 date: 2026-05-30
-updated: 2026-10-15T10:00:00+08:00
+updated: 2026-10-29T10:00:00+08:00
 status: published
 topic: integration-data
 audience: general
@@ -41,27 +41,27 @@ Niemand fasst das CRM an. Die Vertriebsmitarbeiter merken nichts. Sie erhalten e
 
 ### 1. Datenbank als Datasource verbinden
 
-Eine Datasource ist eine benannte Verbindung, etwa Postgres, MySQL, MongoDB oder SQLite. Zugangsdaten kommen aus der Umgebung und werden nicht im Quellcode gespeichert. Wenn Sie zunächst nur analysieren möchten, verwenden Sie eine Read Replica oder einen read-only Datenbankbenutzer.
+Eine Datasource ist eine benannte Verbindung, etwa Postgres, MySQL, MongoDB oder SQLite. Die Verbindungsdaten kommen aus der Umgebung, und das Passwort wird nirgends inline eingetragen – weder im Quellcode noch in `config`. Es liegt verschlüsselt im Secret Store; die Datasource trägt nur das undurchsichtige Handle, das der Store dafür ausgestellt hat: `external.credentialsRef`. Wenn Sie zunächst nur analysieren möchten, verwenden Sie eine Read Replica oder einen read-only Datenbankbenutzer.
 
 ```ts
-import type { Datasource } from '@objectstack/spec';
+import { defineDatasource } from '@objectstack/spec/data';
 
-export const BusinessDb: Datasource = {
+export const BusinessDb = defineDatasource({
   name: 'business_primary',
   label: 'Business System (Postgres)',
   driver: 'postgres',
   config: {
-    connection: {
-      host: process.env.BIZ_DB_HOST,
-      user: process.env.BIZ_DB_USER,
-      password: process.env.BIZ_DB_PASSWORD,
-      database: process.env.BIZ_DB_NAME,
-    },
+    host: process.env.BIZ_DB_HOST,
+    database: process.env.BIZ_DB_NAME,
+    username: process.env.BIZ_DB_USER,
   },
+  external: { credentialsRef: process.env.BIZ_DB_CREDENTIALS_REF },
   pool: { min: 1, max: 10 },
   active: true,
-};
+});
 ```
+
+`defineDatasource` prüft die Deklaration beim Laden der Datei gegen das Config-Schema des Postgres-Treibers. Ein falsch geschriebener Schlüssel (`user` statt `username`) oder ein inline eingetragenes `password` scheitert also sofort, bevor überhaupt eine Verbindung aufgebaut wird.
 
 ### 2. Tabellen mit einem Coding-Agenten als Objekte modellieren
 

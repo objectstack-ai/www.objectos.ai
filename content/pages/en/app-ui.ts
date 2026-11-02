@@ -9,7 +9,7 @@ const page = {
     eyebrow: 'App interfaces',
     heroTitle: 'Screens nobody hand-builds. Views everyone trusts.',
     lead:
-      'Take a support workbench: reps work a grid of open cases, the team lead drags a kanban grouped by status, and everyone checks the due-date calendar. On the open-source ObjectStack runtime that is one view definition — rendered per user, live as records change, and adjustable in the view designer without touching a file. On ObjectOS, the in-app AI Builder registers the same views from a plain-language request.',
+      'Take a support workbench: reps work a grid of open cases, the team lead drags a kanban grouped by status, and everyone checks the due-date calendar. On the open-source ObjectStack runtime that is one view definition — a projection of the ontology, not part of it — rendered per user, live as records change, and adjustable in the view designer without touching a file. On ObjectOS, the in-app AI Builder registers the same views from a plain-language request.',
     primary: { label: 'Read the interface docs', href: 'https://docs.objectos.ai/docs/build/interface' },
     secondary: { label: 'See analytics & reporting', href: '/en/analytics/' },
     metrics: [
@@ -19,7 +19,7 @@ const page = {
     ],
     artifact: {
       eyebrow: 'A screen as metadata',
-      title: 'The view is part of the reviewable definition.',
+      title: 'The view is a projection of the ontology — and still a reviewable diff.',
       body:
         'This is that workbench: a grid with columns, a kanban grouped by status, a calendar on due dates, and a saved “Open Cases” list — one definition. When an agent adds a field, the affected screens are part of the same small diff, not a frontend ticket.',
       code: `import { defineView } from '@objectstack/spec';
@@ -58,10 +58,10 @@ export const CaseViews = defineView({
     sections: [
       {
         id: 'surfaces',
-        eyebrow: 'Rendered from metadata',
+        eyebrow: 'Projections of the ontology',
         title: 'The workbench, surface by surface',
         copy:
-          'Typed fields carry their own widgets and formatting, so generated screens look and behave consistently without a design-system project.',
+          'Views, dashboards, apps, and translations are projections of the ontology, not part of it: change the objects and the screens follow; remove a screen and the business it showed is unchanged. Typed fields carry their own widgets and formatting, so the projections look and behave consistently without a design-system project.',
         items: [
           {
             title: 'Views & lists',

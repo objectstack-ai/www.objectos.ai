@@ -1,0 +1,208 @@
+---
+title: "Ausführbare Ontologie vs. Wissensontologie: Warum „keine Vererbung, keine Axiome, kein Reasoner“ der Punkt ist"
+description: "Eine Wissensontologie wird gebaut, um über sie zu schließen; eine ausführbare Geschäftsontologie, um validiert und ausgeführt zu werden. Der Beweis: ein Schlüssel, abstract, der Vererbung versprach, nichts tat und entfernt wurde."
+author: ObjectStack Team
+date: 2026-10-21
+status: published
+topic: app-building
+audience: developer
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Ontologie
+  - Ausführbare Geschäftsontologie
+  - Wissensgraph
+---
+
+Eine Wissensontologie wird gebaut, damit über sie geschlossen werden kann. Eine ausführbare Geschäftsontologie wird gebaut, damit sie validiert, geprüft und ausgeführt werden kann. Die README von ObjectStack fasst den Unterschied in drei Absagen – „no inheritance, no axioms, no reasoner“ (keine Vererbung, keine Axiome, kein Reasoner) – und diese Absagen sind keine Lücke in einer Roadmap. Sie sind es, was jede Definition prüfbar und jeden Diff reviewbar macht: Ein Schlüssel, den Sie schreiben können, hat entweder einen Leser in der Runtime, oder er wird entfernt. Dieser Beitrag führt das Argument vollständig aus, und der Beweis ist ein einziger Schlüssel.
+
+Hier ist der Schlüssel. Ein Objekt, das als abstract markiert ist, so wie eine Klasse in einer Wissensontologie es sein kann:
+
+```ts
+export const Party = ObjectSchema.create({
+  name: 'crm_party',
+  label: 'Party',
+  abstract: true,
+  sharingModel: 'private',
+  fields: { name: Field.text({ label: 'Name', required: true }) },
+});
+```
+
+Auf `@objectstack/spec@15.1.1`, veröffentlicht am 2026-07-17, wird diese Definition geparst, und `abstract` kommt als `true` zurück. Auf `@objectstack/spec@17.7.0`, dem aktuellen Release, wird sie abgewiesen:
+
+```text
+Unrecognized key(s) on this object: `abstract`.
+  • `abstract` was removed from the spec (ADR-0049) — object inheritance/abstraction is not implemented, so an abstract object still got a table and was instantiable. Remove the key.
+```
+
+Dazwischen wurde nichts gebaut. Keine Vererbung ist gekommen. Geändert hat sich, dass ein Schlüssel, den die Runtime nie gelesen hat, aus der Spec genommen wurde – mit einer Meldung, die sagt, warum. Alles Folgende ist das Argument dafür, warum das für die eine Art Ontologie der richtige Schritt ist und für die andere der falsche wäre – gezogen aus der README, der Konzeptseite [Business Ontology](https://github.com/objectstack-ai/objectstack/blob/8caa131e52717ef35fe71742d758f10b8f2b77ee/content/docs/concepts/ontology.mdx), dem Entscheidungsprotokoll, das die Entfernung regelt, und den veröffentlichten Paketen, gemessen statt beschrieben.
+
+## Zwei Ontologien, zwei Aufgaben
+
+Das Wort *Ontologie* bezeichnet in denselben Gesprächen zwei verschiedene Dinge, und [der Grundsatzbeitrag](/de/blog/what-does-the-ontology-is-the-software-mean/) führte dies als das erste von drei Dingen auf, die eine ausführbare Geschäftsontologie nicht ist. Der Absatz der README dazu ist kurz genug, um ihn ganz zu zitieren:
+
+<blockquote lang="en">
+
+Your app's definition — objects and fields, relations, actions, permissions, flows, and agent and tool definitions — is a **business ontology**: open, versioned, and yours, not code scattered across a framework. It is executable, not a knowledge-representation ontology: no inheritance, no axioms, no reasoner — validated rather than reasoned over — and it is not a semantic layer over your existing systems (federating an external datasource is read-only by default and early).
+
+— objectstack `README.md`, ["What we mean by ontology"](https://github.com/objectstack-ai/objectstack/blob/8caa131e52717ef35fe71742d758f10b8f2b77ee/README.md#L79-L89)
+
+</blockquote>
+
+(Sinngemäß: Die Definition Ihrer App – Objekte und Felder, Relationen, Aktionen, Berechtigungen, Flows sowie Agent- und Tool-Definitionen – ist eine **Geschäftsontologie**: offen, versioniert und Ihre, kein über ein Framework verstreuter Code. Sie ist ausführbar, keine Ontologie der Wissensrepräsentation: keine Vererbung, keine Axiome, kein Reasoner – validiert statt gefolgert – und sie ist kein Semantic Layer über Ihren bestehenden Systemen; das Föderieren einer externen Datenquelle ist standardmäßig nur lesend und noch früh.)
+
+Nehmen wir die beiden Arten nacheinander, und nehmen wir die erste ernst, denn sie ist die ältere und die strengere von beiden.
+
+**Eine Wissensontologie ist für Inferenz gebaut.** In [OWL 2](https://www.w3.org/TR/owl2-primer/) des W3C und dem RDF-Stack darunter schreiben Sie Klassen, Eigenschaften und *Axiome*: Diese Klasse ist eine Unterklasse jener; diese beiden Klassen sind disjunkt; diese Eigenschaft hat höchstens einen Wert; diese Eigenschaftskette impliziert jene andere Eigenschaft. Dann liest ein *Reasoner* das ganze Modell und leitet ab, was daraus folgt. Die Klassenhierarchie wird berechnet, nicht nur deklariert. Ein Individuum wird nach dem klassifiziert, was über es bekannt ist, nicht nach der Klasse, die jemand eingetippt hat. Widersprüche zwischen Axiomen werden gefunden. Und das Ganze läuft unter der Open-World-Annahme: Ein Faktum, das fehlt, ist unbekannt, nicht falsch. Das ist genau das richtige Design, wenn die Daten aus vielen Quellen kommen, das Vokabular über Institutionen hinweg geteilt werden muss und die Frage lautet: „Was folgt aus allem, was wir wissen?“ Der [Vergleich mit Semantic Layern und Knowledge Graphs](/en/blog/ontology-vs-semantic-layer-vs-knowledge-graph/) lässt dieser Tradition Gerechtigkeit widerfahren; dieser Beitrag braucht nur ihren Umriss.
+
+**Eine ausführbare Geschäftsontologie ist so gebaut, dass Software generiert, validiert, geprüft und ausgeführt werden kann.** Die Konzeptseite gibt die Pipeline in einer Zeile:
+
+```text
+objectstack.config.ts -> objectstack.json -> ObjectStack runtime -> database · REST / realtime API · UI · MCP server
+```
+
+und die Regel, die sie beherrscht, in einer weiteren: „Nothing is reasoned over at runtime: what runs is what was validated.“ (Zur Laufzeit wird nichts gefolgert: Was läuft, ist, was validiert wurde.) Die Definition ist die Anwendung eines Unternehmens, als typisierte Metadaten verfasst, von Zod-Schemas und `os validate` geprüft und dann ausgeführt. Es gibt kein zweites Artefakt abgeleiteter Fakten. Die Welt ist per Konstruktion geschlossen: Was die Definition sagt, tut das System, und was sie nicht sagt, tut das System nicht.
+
+| | Wissensontologie | Ausführbare Geschäftsontologie |
+| :--- | :--- | :--- |
+| **Gebaut für** | Inferenz über eine beschriebene Domäne | Generieren, Validieren, Prüfen und Ausführen einer Anwendung |
+| **Einheit der Definition** | Klassen, Eigenschaften, Individuen, Axiome | Objekte und Felder, Relationen, Aktionen, Berechtigungen, Flows, Agent- und Tool-Definitionen |
+| **Was eine Definition liest** | Ein Reasoner, der aus dem ganzen Modell Folgerungen ableitet | Ein benannter Runtime-Leser pro Schlüssel – der Datenbanktreiber, die API, der Berechtigungsevaluator, die Console, der MCP-Server |
+| **Was zur Laufzeit existiert, ohne dass es jemand geschrieben hat** | Inferierte Fakten: die berechnete Hierarchie, Klassifikationen, Konsequenzen | Nichts. „Was läuft, ist, was validiert wurde.“ |
+| **Wie eine falsche Definition scheitert** | Eine Inkonsistenz, die der Reasoner meldet, oder eine Folgerung, die niemand erwartet hat | Ein lokalisierter Fehler beim Verfassen, bevor irgendetwas läuft |
+| **Wo man nachsieht, um zu wissen, was das System tut** | Das Modell *und* das, was es impliziert | Der Diff |
+
+Die beiden Spalten sind keine Rangliste. Sie sind zwei Antworten auf zwei Fragen, und die zweite Frage – kann ein Prüfer erkennen, was diese Änderung tut, und kann eine Runtime eine Definition abweisen, die nicht funktionieren würde – ist die, die eine Anwendung beantworten muss.
+
+![Zwei Pipelines nebeneinander. Eine Wissensontologie schickt Klassen, Eigenschaften und Axiome durch einen Reasoner und erzeugt zur Laufzeit abgeleitete Folgerungen, die nicht im Diff stehen. Eine ausführbare Geschäftsontologie schickt typisierte Metadaten durch die Validierung (striktes TypeScript, Zod, os validate) und führt sie dann in die Datenbank, die API, die UI und den MCP-Server aus; zur Laufzeit wird nichts gefolgert. Darunter die drei Absagen: keine Vererbung, keine Axiome, kein Reasoner.](./two-pipelines-en.svg)
+
+## Die drei Absagen, eine nach der anderen
+
+Jede Absage entfernt etwas, das eine Wissensontologie zu Recht hat. Jede ist da wegen dessen, was es einen Prüfer und ein Gate kosten würde.
+
+### Keine Vererbung
+
+In einer Klassenhierarchie erbt ein Kind die Einschränkungen seines Elternteils, und ein Reasoner ist es, der Ihnen sagt, mit welcher vollständigen Menge eine gegebene Klasse am Ende dasteht. Für ein Vokabular ist das ein Feature: den allgemeinen Fall einmal deklarieren und die Engine ihn propagieren lassen. Für eine Anwendungsdefinition ist es ein Preis, den der Leser zahlt. Eine einzeilige Änderung an einem Elternteil ändert das Verhalten jedes Kindes, von denen keines im Diff erscheint, und die Frage „Was erzwingt dieses Objekt eigentlich?“ lässt sich aus der Datei des Objekts selbst nicht beantworten.
+
+Die Objekte von ObjectStack erben nicht. Die Konzeptseite nennt als einzige Arten von Verbindung zwischen Objekten „Lookups and master-detail links between objects“ (Lookups und Master-Detail-Verknüpfungen zwischen Objekten) – Relationen zwischen Datensätzen, deklariert auf dem Objekt, das sie hält. Tabelle, Felder, Berechtigungen und Sicherheitsstellung jedes Objekts stehen auf diesem Objekt, also ist die Datei die ganze Antwort und der Diff die ganze Änderung.
+
+### Keine Axiome
+
+Ein Axiom ist eine Einschränkung, die der Reasoner zum *Ableiten* nutzt: Aus „jede Bestellung hat genau einen Kunden“ und einer Bestellung mit zweien schließt er, dass die beiden Kunden dasselbe Individuum sind – oder dass das Modell inkonsistent ist. Eine ausführbare Ontologie hat auch Einschränkungen – Pflichtfelder, Auswahloptionen, Lookup-Ziele, CEL-Prädikate, die Sicherheitsstellung, die jedes Objekt deklarieren muss –, aber sie dienen dem *Abweisen*, nicht dem Ableiten. Das zweite Gate der README ist der Satz: `os validate` „rejects metadata that type-checks but would fail silently at runtime: dangling bindings, bad CEL predicates, missing security posture“ (weist Metadaten ab, die den Typcheck bestehen, zur Laufzeit aber stillschweigend scheitern würden: hängende Bindungen, fehlerhafte CEL-Prädikate, fehlende Sicherheitsstellung). Eine Definition, die eine Einschränkung verletzt, erwirbt keine Konsequenz. Sie erwirbt einen Fehler, mit einem Ort.
+
+### Kein Reasoner
+
+Das ist die Absage, der die anderen beiden dienen. Eine Inferenz-Engine ist eine zweite Quelle der Wahrheit: Die Fakten, die sie zur Laufzeit ableitet, wurden nie irgendwo niedergeschrieben, wo ein Prüfer sie lesen könnte. „Nothing is reasoned over at runtime: what runs is what was validated“ ist die Regel der Konzeptseite, und ihre praktische Form ist die, die der Grundsatzbeitrag gab: Steht eine Berechtigung nicht im Diff, ist sie nicht im System. Die Runtime *leitet* Oberflächen aus dem Artefakt *ab* – das Schema, die API, die UI, die MCP-Tools – und *erzwingt* die Definition bei jedem Aufruf. Sie schließt auf nichts, was die Definition nicht gesagt hat.
+
+## Der Beweis: ein Schlüssel, der Vererbung versprach und nichts tat
+
+Einen Reasoner abzulehnen ist billig gesagt und teuer gehalten, denn das Einfachste bei einem Schlüssel, der nach einem Feature klingt, ist, ihn im Schema zu lassen und später irgendetwas ihm eine Bedeutung geben zu lassen. `abstract` ist, wie das aussieht – und wie das Gegenteil aussieht.
+
+### Vorher: deklariert, geparst, ungelesen
+
+In `@objectstack/spec@15.1.1` deklarierte das Objektschema den Schlüssel, mit einer Beschreibung, die eine Lehrbuchdefinition einer abstrakten Klasse ist:
+
+```ts
+abstract: z.boolean().optional().default(false).describe("Is abstract base object (cannot be instantiated)")
+```
+
+Das Objektformular des Studio führte ihn als boolesches Feld, mit dem Hilfetext „Abstract base (cannot be instantiated)“. Und das Liveness-Ledger desselben Pakets – die Datei, die das Projekt führt, um Schlüssel für Schlüssel zu sagen, ob ein Runtime-Leser existiert – sagte dies dazu:
+
+```json
+"abstract": {
+  "status": "dead",
+  "evidence": "no runtime reader",
+  "authorWarn": true,
+  "authorHint": "No runtime reader — an abstract object still gets a table and is instantiable. Object inheritance/abstraction is not implemented."
+}
+```
+
+In 15.1.1 wurde der Schlüssel also geparst, das Formular bot ihn an, die geparste Ausgabe trug `abstract: true`, und – in den Worten des Ledgers – ein abstraktes Objekt „still gets a table and is instantiable“ (bekommt trotzdem eine Tabelle und ist instanziierbar), genau so, als stünde die Zeile nicht da. In einer Wissensontologie ist eine abstrakte Klasse eine Aussage, die der Reasoner einhält. Hier war sie eine Aussage, die nichts einhielt: gültige Syntax, eine plausible Zeile in einem Diff, und kein Leser.
+
+### Die Regel: erzwungen, experimentell oder abwesend
+
+Das Entscheidungsprotokoll, das dies regelt, ist [ADR-0049](https://github.com/objectstack-ai/objectstack/blob/8caa131e52717ef35fe71742d758f10b8f2b77ee/docs/adr/0049-no-unenforced-security-properties.md). Es wurde über Sicherheitseigenschaften geschrieben, nach einem Audit, das <span lang="en">„found that **roughly half of all spec properties are dead**“</span> (feststellte, dass grob die Hälfte aller Spec-Eigenschaften tot ist), und es formuliert die Regel als drei Zustände:
+
+<blockquote lang="en">
+
+1. **Enforced** — a runtime consumer reads it and changes a decision (`file:line`).
+2. **`experimental`** — explicitly marked and documented as *not yet enforced*, so authoring it is a known no-op (roadmapped, not a promise).
+3. **Absent** — removed from the spec.
+
+Shipping a security property in a fourth state — *parsed, unmarked, unenforced* — is prohibited. This is the **enforce-or-remove gate**.
+
+</blockquote>
+
+(Sinngemäß: **Erzwungen** – ein Runtime-Konsument liest die Eigenschaft und ändert eine Entscheidung (`file:line`). **`experimental`** – ausdrücklich als *noch nicht erzwungen* markiert und dokumentiert, sodass das Verfassen ein bekanntes No-op ist (auf der Roadmap, kein Versprechen). **Abwesend** – aus der Spec entfernt. Eine Sicherheitseigenschaft in einem vierten Zustand auszuliefern – *geparst, unmarkiert, unerzwungen* – ist verboten. Das ist das **Enforce-or-remove-Gate**.)
+
+Seine Begründung ist die, die für jeden Schlüssel zählt, nicht nur für einen Sicherheitsschlüssel: <span lang="en">„A security property that parses but does nothing is **worse than absent**: it produces a *false sense of compliance*.“</span> (Eine Sicherheitseigenschaft, die geparst wird, aber nichts tut, ist **schlimmer als abwesend**: Sie erzeugt ein *falsches Gefühl von Compliance*.) Und sein Standard, wo kein Feature zugesagt ist, ist Entfernung: <span lang="en">„Removal is preferred over marking when there is no committed roadmap for the property — a smaller spec surface is the stronger default pre-MVP.“</span> (Entfernen ist dem Markieren vorzuziehen, wenn es für die Eigenschaft keine verbindliche Roadmap gibt – eine kleinere Spec-Oberfläche ist vor dem MVP der stärkere Standard.) `abstract` ist kein Sicherheitsschlüssel; die Scope-Notiz des ADR selbst hält fest, dass das Repository <span lang="en">„cites this ADR as the enforce-or-remove policy for spec-property retirement generally“</span> (dieses ADR als Enforce-or-remove-Richtlinie für die Stilllegung von Spec-Eigenschaften allgemein zitiert), und der Arbeitsauftrag, der ihn stillgelegt hat, [#2377](https://github.com/objectstack-ai/objectstack/issues/2377), sagt, warum diese Verallgemeinerung Absicht ist: <span lang="en">„Authoring them is a false affordance — especially dangerous for AI-authored metadata.“</span> (Sie zu verfassen ist eine falsche Affordanz – besonders gefährlich für AI-verfasste Metadaten.)
+
+### Nachher: ein Grabstein, der sagt, was zu tun ist
+
+Die Entfernung wurde mit 16.0.0 ausgeliefert. Das [Changelog](https://github.com/objectstack-ai/objectstack/blob/8caa131e52717ef35fe71742d758f10b8f2b77ee/packages/spec/CHANGELOG.md#L98572-L98573) des Pakets hält sie in einem Satz fest: <span lang="en">„object `tags`/`active`/`abstract`: `ObjectSchema.create()` now throws a located error naming the removal. None gated anything at runtime — remove them.“</span> (`ObjectSchema.create()` wirft jetzt einen lokalisierten Fehler, der die Entfernung benennt. Keiner davon hat zur Laufzeit irgendetwas bewacht – entfernt sie.) Heute ist der Schlüssel ein Grabstein in der Unknown-Key-Hilfe des Objektschemas, und die Meldung, die jeder Autor sieht, der ihn schreibt, ist die vom Anfang dieses Beitrags, aus [`object.zod.ts`](https://github.com/objectstack-ai/objectstack/blob/8caa131e52717ef35fe71742d758f10b8f2b77ee/packages/spec/src/data/object.zod.ts#L1538-L1541):
+
+```ts
+abstract:
+  '`abstract` was removed from the spec (ADR-0049) — object ' +
+  'inheritance/abstraction is not implemented, so an abstract object still ' +
+  'got a table and was instantiable. Remove the key.',
+```
+
+Die [Objektzeile des Liveness-Ledgers](https://github.com/objectstack-ai/objectstack/blob/8caa131e52717ef35fe71742d758f10b8f2b77ee/packages/spec/liveness/README.md#L958) bewahrt den Eintrag: „tags/active/abstract REMOVED (#2377) — tombstoned in UNKNOWN_KEY_GUIDANCE“. Vorher und Nachher wurden an den veröffentlichten Paketen gemessen, indem das `Party`-Objekt von oben durch jedes davon geparst wurde:
+
+| `@objectstack/spec` | `ObjectSchema.create()` | `ObjectSchema.safeParse()` |
+| :--- | :--- | :--- |
+| **15.1.1** (2026-07-17) | Akzeptiert; `abstract: true` bleibt erhalten | Akzeptiert; `abstract: true` bleibt erhalten |
+| **16.0.0** (2026-07-21) | Wirft, benennt die Entfernung | Akzeptiert; `abstract` stillschweigend entfernt |
+| **17.7.0** (2026-10-06) | Wirft, benennt die Entfernung | Weist ab: `unrecognized_keys`, mit der Anweisung |
+
+Die mittlere Zeile ist einen Satz wert. In 16.0.0 war der Verfassenspfad geschlossen und der Parse-Pfad nicht – `parse()` ließ den Schlüssel weiterhin wortlos fallen, das Verhalten, das die Kommentare des Schemas selbst auf Zods Standard `.strip()` und auf [#1535](https://github.com/objectstack-ai/objectstack/issues/1535) zurückführen, wo ein `workflows: [...]` auf Objektebene „vanished with no error, no warning, and a green `tsc`“ (verschwand – ohne Fehler, ohne Warnung und mit grünem `tsc`). Die Meldung in 17.x sagt es selbst, in ihrem letzten Satz: <span lang="en">„Until this shape was closed these were dropped silently on the PARSE path — `ObjectSchema.create()` has rejected them, but `defineStack({ objects })`, `/api/v1/meta/types/object` and the Studio form all go through `parse()`, which did not.“</span> (Bis diese Form geschlossen wurde, wurden sie auf dem PARSE-Pfad stillschweigend fallen gelassen – `ObjectSchema.create()` hat sie abgewiesen, aber `defineStack({ objects })`, `/api/v1/meta/types/object` und das Studio-Formular gehen alle durch `parse()`, das es nicht tat.) Einen Schlüssel zu schließen ist nicht eine Entscheidung; es ist eine Entscheidung pro Einstiegspunkt, und ein Gate, das an einem vollständig und am anderen stumm ist, ist der vierte Zustand in einem anderen Mantel.
+
+![Eine Zeitleiste eines Schlüssels über drei veröffentlichte Versionen der Spec. In 15.1.1 ist der Schlüssel deklariert, wird geparst, behält seinen Wert und hat keinen Runtime-Leser, sodass ein abstraktes Objekt trotzdem eine Tabelle bekommt. ADR-0049 erzwingt eine Wahl zwischen erzwungen, experimentell und abwesend, und ohne zugesagtes Vererbungs-Feature lautet die Antwort abwesend. In 16.0.0 weist create() den Schlüssel ab, während parse() ihn noch stillschweigend entfernt. In 17.7.0 weisen beide Pfade ihn mit der Anweisung ab: den Schlüssel entfernen.](./abstract-before-after-en.svg)
+
+### Warum das der Punkt ist
+
+In dem Moment, in dem das Ledger „no runtime reader“ sagte, gab es zwei ehrliche Schritte. Objektvererbung bauen, damit `abstract: true` einen Leser und eine Bedeutung hat. Oder den Schlüssel entfernen. Die Gewohnheit der Wissensontologie – und in der Tradition, aus der sie stammt, ist es eine Gewohnheit, kein Fehler – ist, die Deklaration zu behalten, denn in dieser Tradition wohnt Bedeutung im Modell, und die Engine wird sie einhalten. Die ausführbare Gewohnheit ist das Gegenteil: Die Menge der Schlüssel, die Sie schreiben können, *ist* die Menge der Dinge, die die Runtime tut, und ein Schlüssel ohne Leser ist kein wartendes Feature, sondern ein wartender Irrglaube eines Prüfers.
+
+Nennen wir das **ein Leser für jeden Schlüssel**. Es ist die konkrete Form von „validiert statt gefolgert“. Ein Validator kann nur über einem Vokabular vollständig sein, in dem jeder Begriff einen Konsumenten hat; in dem Moment, in dem ein Begriff geparst und ungelesen ist, hört „gültig“ auf, „tut, was es sagt“ zu bedeuten. Die Entfernung von `abstract` hat die Ontologie nicht um ihrer selbst willen kleiner gemacht. Sie hat das Versprechen gehalten, dass eine Definition, die das Gate passiert, eine Definition ist, die die Runtime erzwingen wird.
+
+## Was ein Prüfer bekommt, und was ein Agent bekommt
+
+Für den Menschen, der eine Änderung prüft, ist der Gewinn, dass der Diff das Verhalten ist. Es gibt kein Elternteil zu öffnen, keine Folgerung zu berechnen, keinen Schlüssel, dessen Wirkung von einem Feature abhängt, das existieren mag oder nicht. Steht `sharingModel: 'private'` im Diff, sind die Datensätze privat; steht eine Berechtigung nicht im Diff, hat sie niemand. Die Frage „Was tut diese Zeile?“ beantwortet der Runtime-Leser, den diese Zeile hat, und eine Zeile ohne Leser kann gar nicht im Diff stehen.
+
+Für den Agent, der die Änderung schreibt, ist der Gewinn dieselbe Tatsache von der anderen Seite gesehen. Die Behauptung der README, warum AI-geschriebene Metadaten funktionieren, lautet, dass <span lang="en">„an agent's errors become located, corrective text it can read and fix itself“</span> (die Fehler eines Agents zu lokalisiertem, korrigierendem Text werden, den er selbst lesen und beheben kann). Eine falsche Affordanz macht genau das zunichte: Ein Agent, der ein Format aus seinen Beispielen lernt, kann einen erzwungenen Schlüssel nicht von einem geparsten unterscheiden, denn beide validieren, beide wirken autoritativ, und beide tauchen in Beispielen auf – das Versagen, das der Glossareintrag [Declared vs. Enforced](/en/glossary/declared-vs-enforced/) als gültige, plausible, wirkungslose Deklarationen beschreibt. Den Schlüssel zu entfernen und einen Grabstein zu hinterlassen, der mit „Remove the key.“ endet, verwandelt dieses Versagen in eine einzeilige Korrektur, die der Agent ausführen kann, ohne dass ein Mensch bemerkt, dass es ein Problem gab.
+
+## Zur Verteidigung des Reasoners: was das nicht leistet
+
+Eine ehrliche Fassung dieses Arguments muss sagen, was die ausführbare Ontologie aufgibt, denn sie gibt echte Dinge auf.
+
+**Sie folgert nicht.** Keine Folgerungen, keine Klassifikation per Beschreibung, keine Konsistenzprüfung über ein Modell hinweg. Wenn ein abgeleitetes Faktum das Produkt ist, das Sie brauchen – „Welcher dieser zehntausend Datensätze ist, nach dem, was wir über ihn wissen, eine Instanz einer Hochrisiko-Gegenpartei?“ –, dann beantwortet das ein Reasoner und ein Validator nicht.
+
+**Sie macht keine Open-World-Inferenz.** Die geschlossene Welt ist der ganze Sinn des Designs, und sie ist die falsche Annahme für Daten, die ihrer Natur nach partiell sind: ein über Organisationen hinweg geteiltes Vokabular, ein Datensatz, der wahr ist, obwohl Ihr System das Faktum, das ihn wahr macht, nie gesehen hat. Eine Wissensontologie ist für diesen Fall gebaut, und diese hier nicht.
+
+**Sie macht keine Vererbung auf Schemaebene.** Es gibt kein Basisobjekt. Ein Feld, das sechs Objekte teilen, wird auf sechs Objekten deklariert oder explizit als Lookup auf ein gemeinsames Objekt modelliert. Die Wiederholung ist Absicht – sie ist es, was die Datei jedes Objekts zur ganzen Antwort macht –, und sie bleibt Wiederholung, mit den Wartungskosten, die Wiederholung hat.
+
+**Sie entscheidet nicht, dass zwei Dinge dasselbe Ding sind.** Ob der „Kunde“ in einem System und der „Account“ in einem anderen eine Entität sind, ist eine Deklaration, die jemand treffen muss, keine Inferenz, die die Runtime zieht; der [Beitrag zur Unternehmens-Ontologie](/de/blog/enterprise-ontology-race-open-vs-closed/) handelt davon, warum dieser Abgleich in jedem Modell weiterhin Arbeit ist.
+
+Und eine Grenze gehört zur Disziplin selbst, nicht zum Format: „validiert“ ist nur so wahr wie die Validatoren. Das Audit hinter ADR-0049 fand die Hälfte der Spec-Eigenschaften tot, *bevor* die Regel existierte; das Liveness-Ledger und die Gates, die es lesen, sind es, was die Regel danach wahr hält, und das ist eine fortlaufende Wartungsaufgabe, kein einmal erreichter Zustand. Die `abstract`-Geschichte ist ein Beleg dafür, dass die Disziplin praktiziert wird, nicht dafür, dass sie abgeschlossen ist.
+
+## Gehostet, oder auf Ihrer eigenen Infrastruktur
+
+Die README beschreibt diese Schleife – ein Agent schreibt typisierte Metadaten in Ihr Repository, das Gate weist ab, was nicht laufen würde, die Runtime führt aus, was bestanden hat – und sagt dann: „Dieselbe Schleife gehostet, im Browser, ohne Installation? Das ist ObjectOS, die kommerzielle Laufzeitumgebung auf Basis von ObjectStack.“ ObjectOS läuft gehostet im Browser ohne Installation (ObjectOS Cloud) oder selbst verwaltet auf Ihrer eigenen Infrastruktur (ObjectOS Enterprise), und in beiden Editionen können Sie Ihre Ontologie exportieren und auf der quelloffenen ObjectStack Runtime ausführen. Das Gate ist auf jedem Host dasselbe, und so ist es die Ontologie, die es bewacht.
+
+## Probieren Sie die Abweisung selbst aus
+
+Der Agent-Pfad der README erzeugt das Artefakt, um das es in diesem Beitrag geht, in wenigen Minuten, und die Abweisung ist der Teil, den es zu sehen lohnt.
+
+```bash
+npm create objectstack@latest my-app && cd my-app
+```
+
+Öffnen Sie das Projekt in Ihrem Coding-Agent und beschreiben Sie ein Geschäftsobjekt – einen Kunden, ein Ticket, einen Arbeitsauftrag. Dann verlangen Sie die Zeile, mit der dieser Beitrag begann: Fügen Sie `abstract: true` hinzu, weil es eine Basis für andere Objekte werden soll. Welches Gate es auch zuerst erreicht – das typisierte im Editor oder `ObjectSchema.create()` beim Build –, es weist die Zeile mit der oben zitierten Meldung ab, und die Meldung endet mit der Korrektur. Lassen Sie den Agent die Korrektur übernehmen, und sehen Sie sich dann das Ergebnis an:
+
+```bash
+npx os dev --ui   # → http://localhost:3000/_console/
+```
+
+Was Sie im Diff finden werden, ist ein Objekt ohne Basis, ohne irgendetwas Geerbtes und ohne einen Schlüssel, den die Runtime nicht liest – also eine Definition, die klein genug zum Prüfen und streng genug zum Ausführen ist. Wenn der Agent Lenkung braucht, behandelt [wie Sie ihn auf ObjectStack ausrichten](/en/blog/how-to-point-your-agent-at-objectstack/) die Rule-Datei, das Skills-Bundle und den Tool-Server. Die drei Absagen in der README sind nicht das, was dem Format fehlt. Sie sind das, was es erzwingt.

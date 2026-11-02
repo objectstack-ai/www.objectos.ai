@@ -1,0 +1,230 @@
+---
+title: "비즈니스 앱이 AI가 쓸 수 있으려면? 네 개의 게이트: Typed, Validated, Reviewed, Governed"
+description: "AI가 쓸 수 있다는 것은 모델이 아니라 대상 형식의 성질이다. 네 개의 게이트, 한 번의 실제 실행: 고의적 실수 세 개, 49개 규칙, 위치가 특정된 오류 세 개, 그리고 수정 후 통과."
+author: ObjectStack Team
+date: 2026-10-23
+status: published
+topic: ai-agents
+audience: developer
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - AI 에이전트
+  - AI가 작성
+---
+
+비즈니스 앱이 「AI가 쓸 수 있다」고 말할 수 있는 것은, 에이전트가 반드시 저지르게 될 실수가 사용자에게 닿기 전에 죽을 자리를 갖고 있을 때다. 그것은 모델이 아니라 대상 형식의 성질이다. ObjectStack README는 그런 자리를 네 곳 꼽고 게이트라 부른다: **Typed**(타입), **Validated**(검증), **Reviewed**(검토), **Governed**(거버넌스). 타입 오류는 에디터 안에서 죽는다. 검증 오류는 `os validate`에서 죽는다. 이 명령은 타입 검사는 통과하지만 런타임에서 조용히 실패할 메타데이터를 거부한다. 검토 오류는 사람이 통째로 읽을 수 있는 diff 안에서 죽는다. 거버넌스 오류는 설령 출시되더라도 런타임의 권한과 감사 울타리 안에 머문다. 아래는 ObjectStack 17.7.0에서 스캐폴드한 지원 데스크에 앞의 두 게이트를 실제로 돌린 기록이다. README가 꼽는 세 종류의 실수를 하나씩 고의로 심고, 49개 규칙의 게이트가 각각을 위치가 특정된 교정 메시지와 함께 거부하고, 고친 뒤 깨끗이 통과하기까지.
+
+## 이미 참인 두 가지
+
+게이트에 앞서, 반대편 주장을 가장 강한 형태로 두 가지 세워 둔다. 이 글의 논증은 둘 중 어느 쪽도 틀렸을 필요가 없기 때문이다.
+
+**Vibe coding으로 만든 앱은 동작한다.** 모델에게 지원 데스크를 설명하면 오후 안에 돌아가는 것을 손에 넣는다. 화면과 데이터베이스와 API가 있고, 언어는 모델이 가장 좋아하는 것이다. 프로토타입, 일회용 도구, 버릴 데모라면 그것이 옳은 거래이고, 아래 어떤 문장도 거기에 반대하지 않는다. 모델은 더 이상 병목이 아니다.
+
+**손으로 쓴 코드는 검토할 수 있고, 그 도구는 성숙해 있다.** 풀 리퀘스트를 읽는 시니어 엔지니어, 타입 시스템, 테스트 스위트, 코드 리뷰 절차는 매일 실제 결함을 잡아낸다. 새로운 로직에는 대체물이 없고, ObjectStack 자신도 그렇게 말한다: <span lang="en">"code does not disappear: it moves into the runtime, as hooks, action bodies, CEL, and constrained JSX"</span>(코드는 사라지지 않는다. 훅, 액션 본문, CEL, 제약된 JSX로서 런타임 안으로 옮겨갈 뿐이다). 그리고 그 코드는 여전히 사람이 읽는다.
+
+둘 중 어느 쪽도 답하지 않는 것은, 에이전트가 쓰는 쪽이 되는 순간 중요해지는 질문이다. *잘못된 한 줄은 어디로 가는가?* 자유 형식 코드베이스에서 잘못된 인가 검사는 수천 개의 `if` 가운데 하나이고, 검토 면은 저장소 전체이며, 런타임은 권한에 관해 스스로 아무것도 강제하지 않는다. 스캐폴드된 프로젝트의 CI 파일은 메타데이터에 관해 그것을 한 문장으로 말하는데, 게이트가 없는 형식이라면 무엇에든 참이다. 실수는 <span lang="en">"raises nothing, it just behaves wrongly for whoever hits it first."</span>(아무것도 일으키지 않는다. 그저 처음 밟는 사람에게 잘못 동작할 뿐이다.) AI가 쓸 수 있다는 것은 이 문장이 더는 참이 아니게 되었다는 뜻이다.
+
+## README가 말하는 네 개의 게이트
+
+README의 해당 절은 <span lang="en">"Why the mistakes don't ship"</span>(실수가 출시되지 않는 이유)이라는 제목이고, 표는 통째로 옮길 만큼 짧다:
+
+| 게이트 | 잡아내는 것 |
+| :--- | :--- |
+| **Typed**(타입) | 엄격한 TypeScript + Zod. 형태 오류는 에이전트가 쓴 지 몇 초 만에 에디터 안에서 죽는다 |
+| **Validated**(검증) | `os validate`가 타입 검사는 통과하지만 런타임에서 조용히 실패할 메타데이터를 거부한다: 허공에 뜬 바인딩, 잘못된 CEL 술어, 빠진 보안 태세 |
+| **Reviewed**(검토) | 생성된 접착 코드 더미가 아니라, 작고 읽을 수 있는 diff를 Console에서 승인한다 |
+| **Governed**(거버넌스) | 런타임이 모든 호출에 권한과 감사를 강제하므로, 잘못된 앱조차 울타리 안에 머문다 |
+
+![에이전트와 사용자 사이의 네 개의 게이트: Typed는 에디터에서 형태 오류를 멈추고, Validated는 os validate에서 허공에 뜬 바인딩과 잘못된 술어와 빠진 보안 태세를 멈추며, Reviewed는 사람이 승인하는 작은 diff이고, Governed는 런타임이 모든 호출에 권한과 감사를 강제하는 것이다; 실행의 세 가지 실수가 앞의 두 게이트에서 멈추는 모습](./four-gates-en.svg)
+
+이 표에 관한 세 가지가 약속이 진짜인지를 결정하며, 기록을 보기 전에 말해 둘 가치가 있다.
+
+첫째, 게이트는 비용 순으로 놓여 있다. 형태 오류는 에이전트의 1초를 쓴다. 검증 오류는 한 턴을 쓴다. 검토는 사람의 몇 분을 쓴다. 거버넌스에서 막힌 실패는 봉쇄된 인시던트 하나를 쓴다. README가 이 전체가 작동하는 이유로 드는 것은 앞의 두 행이다: <span lang="en">"an agent's errors become located, corrective text it can read and fix itself"</span>(에이전트의 오류는 위치가 특정된 교정 텍스트가 되어, 에이전트 스스로 읽고 고칠 수 있다).
+
+둘째, 두 번째 게이트가 있는 것은 첫 번째로 충분하지 않기 때문이며, 문서는 그 이유를 한 문장으로 말한다: <span lang="en">"ObjectStack metadata is data, not code paths — so most mistakes are **not** caught by the TypeScript compiler. They pass `tsc`, load fine, and then fail **silently at runtime**."</span>(ObjectStack 메타데이터는 코드 경로가 아니라 데이터다. 그래서 대부분의 실수는 TypeScript 컴파일러에 잡히지 **않는다**. `tsc`를 통과하고, 멀쩡히 로드되고, 그 다음 **런타임에서 조용히** 실패한다.) 술어는 문자열이다. 행 액션은 이름이다. 공유 모델은 선택적 키다. 셋 모두 실수를 품은 채 타입 검사를 통과한다. 검증 게이트가 만들어진 것은 이 부류의 오류를 위해서이고, 아래 실행이 겨냥하는 것도 이 부류다.
+
+셋째, 뒤의 두 게이트는 도구가 아니라 사람과 런타임이며, 이 글은 그렇지 않은 척하지 않는다. 문서가 말하는 검토 게이트는 Studio의 <span lang="en">"Review N changes"</span> diff다. 아래 실행에서 그것은 사람이 읽는 `git diff`다. 거버넌스 게이트는 런타임의 인가 체인과 감사 로그인데, 이 실행은 그것을 한 번도 시작하지 않는다. 기록이 증명하는 것은 값싼 두 게이트가 README가 잡는다고 말하는 것을 잡는다는 사실이다. 증명하지 못하는 것은 끝에서 다룬다.
+
+## 지원 데스크 하나, 실수 세 개, 실행 한 번
+
+아래는 모두 재구성이 아니라 실제로 돌린 것이다. Node 22, 공개된 패키지. 스캐폴드는 README 자신의 첫 단계다:
+
+```bash
+$ npm create objectstack@latest support-desk
+  ╔═══════════════════════════════════╗
+  ║   ◆ Create ObjectStack v17.7.0    ║
+  ╚═══════════════════════════════════╝
+
+◆ New Environment
+────────────────────────────────────────
+  Environment: support-desk
+  Namespace: support_desk
+  Template: blank — Minimal starter — one object, REST API, ready to extend
+
+  ✓ Template files written (20)
+  → Installing dependencies...
+  → Installing AI skills for your coding agent...
+  ✓ Environment created!
+```
+
+스캐폴드는 `AGENTS.md`를 쓰는데, 그 안에서 양보할 수 없는 단 한 줄이 게이트다: <span lang="en">"**Never report a metadata change as done until `npm run validate` passes.**"</span>(`npm run validate`가 통과하기 전에는 메타데이터 변경을 완료라고 보고하지 말 것.) CI 워크플로도 쓰는데, 그 유일한 잡은 `pnpm validate`, `pnpm lint`, `pnpm typecheck`를 돌린다. 비즈니스 객체가 하나라도 존재하기 전에 게이트는 배선되어 있다.
+
+그 다음은 README의 요구사항을 에이전트가 쓸 법한 형태로 쓴 것이다: 제목, 설명, 우선순위 선택, 상태 선택을 가진 `support_desk_ticket` 객체; 아직 해결되지 않은 티켓에만 보이는 **Resolve** 액션; 「Open tickets」 목록 뷰; Support 내비게이션 그룹; 그리고 지원 담당자용 권한 세트 하나. 앱 전체는 **11개 파일에 걸친 127줄 추가**다. 실수가 들어갈 두 파일:
+
+```ts
+// src/actions/resolve-ticket.action.ts
+export const ResolveTicketAction = defineAction({
+  name: 'resolve_ticket',
+  label: 'Resolve',
+  objectName: 'support_desk_ticket',
+  locations: ['record_header', 'list_item'],
+  visible: P`record.status != "resolved"`,   // only on tickets not yet resolved
+  operation: 'update',
+  patch: { status: 'resolved' },
+  confirmText: 'Mark this ticket as resolved?',
+});
+```
+
+```ts
+// src/views/ticket.view.ts
+export const TicketViews = defineView({
+  list: {
+    label: 'All tickets',
+    type: 'grid',
+    data,
+    columns: ['subject', 'priority', 'status'],
+    rowActions: ['resolve_ticket'],
+  },
+  // ... form, and an "Open tickets" list view filtered on status = open
+});
+```
+
+먼저 깨끗한 실행이다. 규칙 수를 기록에 남기기 위해서다:
+
+```text
+$ npm run validate
+◆ Validate
+────────────────────────────────────────
+  → Loading configuration...
+  → Validating against ObjectStack Protocol...
+  → Running author-time rules (49)...
+  → Checking that every required capability has a provider installable in this edition...
+  → Checking package docs (ADR-0046)...
+
+  ✓ Validation passed (327ms)
+
+  Support Desk v0.1.0
+
+  Data: 2 Objects  6 Fields
+  UI: 1 Apps  1 Views  1 Actions
+  Logic: 0 Flows
+  Security: 1 Permissions
+  Runtime: 3 plugins
+```
+
+17.7.0에서 저작 시점 규칙은 49개다. [이 사이트가 지난번 같은 게이트를 돌렸을 때](/en/blog/how-to-point-your-agent-at-objectstack/)는 17.2.0이었고 41개였다. 규칙 표는 자라고 있으며, 게이트로서는 그것이 옳은 방향이다. 이 수는 도구가 직접 출력하고, 공개된 `@objectstack/lint` 패키지의 `AUTHORING_RULES.length`와 같다. 맞춰 볼 두 번째 숫자는 없다.
+
+### 세 개의 실수
+
+이제 README의 세 부류에 고의적 실수를 하나씩. 셋 모두 평범한 JavaScript로 훈련된 에이전트가 손을 뻗기 쉬운 종류이고, 셋 모두 타입 검사를 통과한다:
+
+```diff
+ // 1 · a bad CEL predicate: the bare identifier most template languages use
+-  visible: P`record.status != "resolved"`,
++  visible: P`status != "resolved"`,
+
+ // 2 · a dangling binding: a row action that names nothing
+-    rowActions: ['resolve_ticket'],
++    rowActions: ['resolve'],
+
+ // 3 · a missing security posture: the org-wide default left unsaid
+-  sharingModel: 'private',
+```
+
+셋 모두에서 `npm run typecheck`는 녹색이다. `tsc`는 문자열의 내용, 배열 속 이름, 선택적 키에 관해 아무 의견이 없다. 게이트는 있다:
+
+```text
+$ npm run validate
+◆ Validate
+────────────────────────────────────────
+  → Loading configuration...
+  → Validating against ObjectStack Protocol...
+  → Running author-time rules (49)...
+
+  ✗ Author-time rules failed (3 issues)
+  • stack · action 'resolve_ticket' visible: bare reference `status` — a formula/validation expression binds the record as the `record` namespace, not at top level, so `status` resolves to nothing and the expression silently evaluates to null. Write `record.status`.
+      source: `status != "resolved"`
+      rule: expression-invalid  at stack · action 'resolve_ticket' visible
+  • view "#0" · list · rowActions: Row-action menu names action "resolve", which is defined by no action in this stack (neither `stack.actions` nor any object's `actions`). The button renders and does nothing when clicked — a dead affordance the runtime cannot dispatch. Did you mean "resolve_ticket"?
+      Define an action named "resolve" (in `stack.actions` or the object's `actions`) with the location this surface needs, remove the reference, or ignore this if the action is contributed by another installed package. Defined actions: resolve_ticket.
+      rule: action-name-undefined  at views[0].list.rowActions[0]
+  • object "support_desk_ticket": custom object "support_desk_ticket" declares no sharingModel (OWD). The runtime fails CLOSED to 'private' (ADR-0090 D1), but the baseline must be an authored decision, not an accident — this is the exact shape of the leave_request incident, where an object with no sharingModel let an ordinary read/write grant read and edit every other user's records.
+      Declare sharingModel explicitly: 'private' (owner + shares; recommended default), 'public_read', 'public_read_write', or 'controlled_by_parent' (master-detail children).
+      rule: security-owd-unset  at objects[1].sharingModel
+ ELIFECYCLE  Command failed with exit code 1.
+```
+
+세 메시지를 오류가 아니라 장부로 읽어 보라. 각각이 게이트가 없었다면 런타임에서 무슨 일이 벌어졌을지를 적고 있기 때문이다. 이것을 **실수 장부**라 부르자. 어떤 대상 형식에 대해, 에이전트가 저지를 수 있는 실수의 부류, 각각을 잡는 게이트, 그리고 잡지 못했을 때 런타임에서 나타났을 증상의 목록이다. 형식이 AI가 쓸 수 있는 정도는 정확히 이 장부에 빈 행이 없는 정도까지다.
+
+![이 실행의 실수 장부: record. 없이 쓴 술어는 Resolve 버튼을 모든 티켓에서 숨겼을 것이고, 죽은 행 액션은 눌러도 아무 일도 없는 버튼을 그렸을 것이며, 빠진 sharingModel은 기준선을 결정이 아니라 우연으로 만들었을 것이고, 불리언 자리에 쓴 문자열은 타입 오류다; 각 행은 잡은 게이트와 규칙 id를 적는다](./mistake-ledger-en.svg)
+
+| 실수 | 출시되었다면 | 잡은 게이트 · 규칙 |
+| :--- | :--- | :--- |
+| `` visible: P`status != "resolved"` `` | 술어가 <span lang="en">"silently evaluates to null"</span>(조용히 null로 평가된다): Resolve 버튼이 모든 티켓에서 숨겨진다 | Validated · `expression-invalid` |
+| `rowActions: ['resolve']` | <span lang="en">"The button renders and does nothing when clicked — a dead affordance the runtime cannot dispatch"</span>(버튼은 그려지지만 눌러도 아무 일도 없다. 런타임이 디스패치할 수 없는 죽은 어포던스) | Validated · `action-name-undefined` |
+| 객체에 `sharingModel` 없음 | 런타임은 <span lang="en">"fails CLOSED to 'private'"</span>(`'private'`로 닫힌 채 실패한다)지만, 말하지 않은 기준선은 <span lang="en">"the exact shape of the leave_request incident"</span>(leave_request 인시던트와 정확히 같은 형태)다 | Validated · `security-owd-unset` |
+| 필드의 `required: 'yes'` | 아무것도: `tsc`가 <span lang="en">"Type 'string' is not assignable to type 'boolean \| undefined'"</span>로 거부한다 | Typed · `TS2322` |
+
+네 번째 행은 타입 게이트로, 검증기 기록이 검증 이야기만 담도록 깨끗한 트리에서 따로 돌렸다. `required: true`를 `required: 'yes'`로 바꾸면 `npm run typecheck`는 다른 무엇이 돌기 전에 그 메시지와 함께 종료 코드 2로 끝난다. 가장 싸고 가장 재미없는 게이트이며, 그것이 맨 앞에 놓인 이유다.
+
+메시지의 두 가지 성질이 약속 전부를 떠받친다. 메시지는 **위치가 특정되어 있다**: 액션과 술어 슬롯, 뷰와 배열 인덱스, 객체와 키 경로. 그리고 **교정적이다**: <span lang="en">"Write `record.status`"</span>, <span lang="en">"Did you mean `resolve_ticket`?"</span>, `sharingModel`의 네 가지 적법한 값. 이것을 읽은 에이전트는 한 턴 만에 루프를 닫는다. [에이전트를 ObjectStack에 맞게 설정하는 글](/en/blog/how-to-point-your-agent-at-objectstack/)은 이것을 *교정적 오류*(corrective error)라 부르며, 문서가 아니라 오류 메시지야말로 형식이 가진 가장 지렛대가 큰 것이라고 주장한다. 이 실행은 그 주장을 위한 데이터 포인트 세 개를 더한다.
+
+세 줄을 되돌리면 게이트는 다시 조용해진다:
+
+```text
+$ npm run validate
+  → Running author-time rules (49)...
+
+  ✓ Validation passed (240ms)
+
+  Data: 2 Objects  6 Fields
+  UI: 1 Apps  1 Views  1 Actions
+  Security: 1 Permissions
+  Runtime: 3 plugins
+```
+
+실행에서 한 줄이 더 여기 들어가야 한다. 게이트가 거부보다 미묘한 일을 하는 장면이기 때문이다. 권한 세트의 첫 버전은 private 객체에 읽기·생성·편집을 부여하면서 읽기가 어디까지 닿는지를 말하지 않았고, 깨끗한 실행에는 이런 권고가 붙어 있었다: "`permission set "support_agent": "support_desk_ticket" is private (OWD) and this set grants allowRead without a readScope — holders see ONLY records they own (plus explicit shares).`"(권한 세트 「support_agent」: 「support_desk_ticket」은 private(OWD)이고 이 세트는 readScope 없이 allowRead를 부여한다. 보유자는 자신이 소유한 레코드와 명시적으로 공유된 것만 본다.) 이것은 오류가 아니며, 게이트가 오류로 만들지 않는 것이 옳다. 담당자가 자기 티켓만 보는 지원 데스크는 정당한 설계다. 결정을 내려야 할 사람 앞에 떠오른, 반쯤 내려진 결정이다. 수정은 `readScope: 'org'`라는 키 하나였고, 그것은 교정이 아니라 제품 결정이었다.
+
+## 게이트가 잡지 못하는 것
+
+게이트에 관한 글은 게이트가 어디서 멈추는지를 말해야 하고, 출처들은 이 점에서 보기 드물게 직설적이다.
+
+**비즈니스 로직의 정확성.** 문서: <span lang="en">"Guardrails 1–3 prove the metadata is *well-formed*. They can't prove it's *what you meant*."</span>(가드레일 1–3은 메타데이터가 *올바른 형태*임을 증명한다. 그것이 *당신이 뜻한 것*임은 증명할 수 없다.) 게이트는 `record.status`가 해석된다는 것을 확인했다. 티켓을 목록에서 해결할 수 있어야 하는지, `resolved`가 올바른 종결 상태인지, 지원 담당자가 조직의 모든 티켓을 봐야 하는지에 관해서는 아무 의견이 없다. 앞선 글은 같은 한계를 <span lang="en">"the gate checks structure, not intent"</span>(게이트는 의도가 아니라 구조를 검사한다)라고 표현했고, 49개 규칙 가운데 어느 것도 그 점을 바꾸지 않는다.
+
+**검토자가 놓치는 요구사항.** 검토 게이트는 사람이 diff를 읽는 것이다. 구조상 작다. 앱 전체가 127줄, 실수 세 개가 세 줄이다. 그러나 작다는 것과 읽혔다는 것은 같지 않다. 계약직도 `support_agent` 세트를 갖는지 묻지 않고 `readScope: 'org'`를 승인한 검토자는 결정을 출시한 것이고, 게이트는 막지 않는다. 메타데이터가 올바른 형태이기 때문이다. 권고 채널은 누군가 그것을 읽는 범위까지만 도움이 된다.
+
+**새로운 로직.** 훅과 액션 본문은 코드다. Business Ontology 개념 페이지는 그것들이 <span lang="en">"run inside the runtime's permission and audit fence"</span>(런타임의 권한과 감사 울타리 안에서 실행된다)고 말하고, 울타리는 잘못된 본문이 건드릴 수 있는 범위를 한정한다. 본문을 옳게 만들지는 않는다. 그것은 여전히 코드 리뷰다.
+
+**이 실행이 시험하지 않은 것.** 기록은 커맨드라인 위의 앞의 두 게이트다. 문서가 서술하는 검토 게이트, 즉 변경이 라이브로 가기 전에 사람이 승인하는 Studio diff는 여기서는 `git diff`였다. 거버넌스 게이트, 즉 문서가 익명 거부에서 필드 수준 보안까지 닫힌 채 실패하는 여섯 층으로 서술하는 인가 체인과 모든 호출에 대한 감사는 시작되지 않았다. `os validate`는 아티팩트를 쓰지도 서버를 띄우지도 않는 저작 시점 검사이기 때문이다. 이 게이트에 대한 README의 주장은 <span lang="en">"even a wrong app stays inside the fence"</span>(잘못된 앱조차 울타리 안에 머문다)이고, 이 글은 그것을 실연하는 대신 인용한다.
+
+**그리고 두 반론은 그대로 서 있다.** 버릴 프로토타입에는 네 개의 게이트가 필요 없다. 좋은 테스트와 주의 깊은 검토자를 가진 손으로 쓴 서비스에는, 도구 대신 사람이 채우는 자기 나름의 장부가 있다. 여기서의 주장은 「이쪽이 더 낫다」보다 좁다. 에이전트가 쓰고 비즈니스가 운영하는 앱에 대해서는 장부를 형식이 채워야 한다는 것이다. 에이전트는 기억하지 못하고, 검토자는 모든 것을 읽을 수 없기 때문이다.
+
+## 같은 게이트를, 브라우저에서
+
+터미널을 열지 않는 사람들에게도 네 게이트 이야기를 정직하게 지켜 주는 사실 하나: `os validate`가 유일한 문은 아니다. 문서는 네 번째 문을 서술한다: <span lang="en">"Every metadata **write** — Studio's designer, `PUT /api/v1/meta/*`, an MCP/AI author — lands in `saveMetaItem`, and since #4463 a write going **`state: 'active'`** runs that same table before it persists."</span>(모든 메타데이터 **쓰기**는, Studio의 디자이너든 `PUT /api/v1/meta/*`든 MCP/AI 작성자든, `saveMetaItem`에 도착하고, #4463 이후로 **`state: 'active'`** 상태로 가는 쓰기는 영속화 전에 같은 표를 돌린다.) 위에서 49를 출력한 바로 그 `AUTHORING_RULES`가, Studio에서 게시된 허공에 뜬 바인딩을 가진 대시보드를 같은 위치 특정 메시지로 거부한다. 검증 게이트는 CLI가 아니라 런타임의 성질이다.
+
+그리고 루프에 관한 README 자신의 마지막 한 줄: 「같은 루프를 호스팅으로, 브라우저에서, 아무것도 설치하지 않고 쓰고 싶다면? 그것이 ObjectOS, ObjectStack 위에 구축된 상용 런타임 환경입니다.」 ObjectOS는 설치 없이 브라우저에서 호스팅되는 ObjectOS Cloud로도, 자체 인프라에서 직접 운영하는 ObjectOS Enterprise로도 실행되며, 어느 에디션에서든 온톨로지를 내보내 오픈소스 ObjectStack 런타임에서 실행할 수 있습니다.
+
+## 당신의 장부를 채워라
+
+위의 실행은 README의 5분 경로를 따랐다. 유일한 변경은 실수를 고의로 저지른 것이고, 그것이 어떤 형식이 이 글이 뜻하는 의미에서 AI가 쓸 수 있는지를 알아내는 가장 빠른 방법이다.
+
+```bash
+npm create objectstack@latest my-app && cd my-app
+# 코딩 에이전트에서 열고 비즈니스가 필요로 하는 것을 설명한다
+npx os dev --ui
+```
+
+README가 서술하는 지원 데스크를 요청하라. 그런 다음 Console을 보기 전에 diff를 열고 이 실행이 한 대로 하라: 술어에서 `record.`를 빼고, 뷰에서 액션 이름을 틀리게 쓰고, `sharingModel`을 지우고, `npm run validate`를 돌려라. 게이트가 채우는 행과 당신에게 남겨지는 행을 세어 보라. [에이전트에게 주는 규칙 파일](/ko/blog/give-your-agent-rules-for-governable-apps/)은 실수가 몇 개 생기는지를 결정하고, 네 개의 게이트는 그것이 어디서 멈추는지를 결정한다. 당신의 장부는 그 둘의 정직한 척도다.

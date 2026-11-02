@@ -12,7 +12,7 @@ const page = {
     eyebrow: 'Tools & MCP',
     heroTitle: 'Your business objects, as governed tools for any AI.',
     lead:
-      `Most companies wire AI to their data with handwritten glue that bypasses every control they have. The ObjectStack runtime generates governed tools from metadata instead: whatever your model — Claude, Cursor, or something fully local — it works through the same permissions, approvals, and audit as your people. The MCP server ships in the open framework and is on by default in every edition; ObjectOS is ${p.descriptor}, and runs the same server.`,
+      `Most companies wire AI to their data with handwritten glue that bypasses every control they have. ObjectStack generates governed tools from the ontology instead — ${p.t3[2]} is one of its four promises: the objects your definition declares and the actions it exposes become MCP tools, called under the signed-in user’s own permissions, approvals, and audit, whatever your model — Claude, Cursor, or something fully local. The MCP server ships in the open framework and is on by default in every edition; ObjectOS is ${p.descriptor}, and runs the same server.`,
     primary: { label: 'Read the MCP docs', href: 'https://docs.objectos.ai/docs/configure/mcp' },
     secondary: { label: 'Point your agent at ObjectStack', href: '/en/agent-developer/' },
     metrics: [
@@ -46,7 +46,7 @@ claude mcp add --transport http my-app \\
         eyebrow: 'What the AI gets',
         title: 'Tools that already know your business',
         copy:
-          'Because tools derive from the same metadata that defines the application, the AI sees real objects, real relationships, and real actions — not a raw database dump.',
+          'Because the tools derive from the ontology that defines the application, the AI sees real objects, real relationships, and real actions — not a raw database dump.',
         items: [
           {
             title: 'Query business objects',

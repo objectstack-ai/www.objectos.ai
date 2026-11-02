@@ -9,7 +9,7 @@ const page = {
     eyebrow: '权限与安全',
     heroTitle: '谁能看什么、谁能改什么——在运行时强制执行。',
     lead:
-      '拿一个销售组织来说：代表只能看自己团队的客户，成本价字段对他们脱敏，经理能看整个大区，审计随时要查"这条折扣谁改的"。在 ObjectStack 运行时上，这套边界是一份可审阅的定义——在每一次查询、API 调用和 AI 工具调用上强制执行，无论 Agent 是你自己经 MCP 接入的，还是 ObjectOS 的产品内 AI。',
+      '拿一个销售组织来说：代表只能看自己团队的客户，成本价字段对他们脱敏，经理能看整个大区，审计随时要查"这条折扣谁改的"。在 ObjectStack 运行时上，这套边界就是本体的一部分——权限声明在它所保护的对象旁边，而不是另一套策略系统——也是人和 Agent 共用的同一道围栏：在每一次查询、API 调用和 AI 工具调用上强制执行，无论 Agent 是你自己经 MCP 接入的，还是 ObjectOS 的产品内 AI。',
     primary: { label: '阅读权限文档', href: 'https://docs.objectos.ai/docs/configure/permissions' },
     secondary: { label: '查看信任模型', href: '/en/trust-center/' },
     metrics: [
@@ -108,7 +108,7 @@ const page = {
         eyebrow: 'AI 同规',
         title: 'Agent 拿到的是你的权限模型，不是服务账号',
         copy:
-          '失去 AI 控制最快的方式就是给它超级用户权限。ObjectStack 运行时从不这么做：每个 Agent 动作都以发起它的登录用户身份执行。',
+          '失去 AI 控制最快的方式就是给它超级用户权限。ObjectStack 运行时从不这么做：每个 Agent 动作都以发起它的登录用户身份执行，待在和这个用户同一道围栏里。',
         items: [
           {
             title: '用户级执行',

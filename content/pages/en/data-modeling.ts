@@ -9,7 +9,7 @@ const page = {
     eyebrow: 'Data modeling',
     heroTitle: 'Describe the business objects. The database and APIs follow.',
     lead:
-      'Take a subscription-billing system: customers, plans, seats, MRR, renewal dates, status. On the open-source ObjectStack runtime that is one compact object definition — tables, migrations, the query engine, and REST endpoints are supplied by the runtime. Your agent can write it, your team can fine-tune it field by field in the object designer, and on ObjectOS the in-app AI Builder drafts the same objects and fields from a plain-language request.',
+      'Take a subscription-billing system: customers, plans, seats, MRR, renewal dates, status. Those objects, their fields, and the relations between them are the core of your business ontology, and on the open-source ObjectStack runtime that core is one compact definition — tables, migrations, the query engine, and REST endpoints are supplied by the runtime. Your agent can write it, your team can fine-tune it field by field in the object designer, and on ObjectOS the in-app AI Builder drafts the same objects and fields from a plain-language request.',
     primary: { label: 'Read the data modeling docs', href: 'https://docs.objectos.ai/docs/build/data' },
     secondary: { label: 'See process automation', href: '/en/automation/' },
     metrics: [
@@ -18,7 +18,7 @@ const page = {
       { value: 'Read-only first', label: 'A database you already run federates in place — read-only by default, writes opt-in, and early' },
     ],
     artifact: {
-      eyebrow: 'The model is the source',
+      eyebrow: 'The ontology is the source',
       title: 'One object definition. Schema, rules, and API included.',
       body:
         'This is that subscription object: fields, relationships, validation, and history tracking in one reviewable definition. The runtime turns it into tables and migrations, enforces the rules on every write, and serves the API — the same definition an agent can extend and the designer can open.',
@@ -59,7 +59,7 @@ export const Subscription = ObjectSchema.create({
         eyebrow: 'Model the business',
         title: 'Build the subscription system step by step',
         copy:
-          'Definitions stay close to how the business talks: customers, plans, renewals. No ORM classes, no scattered schema files — every step below stays inside one definition.',
+          'The ontology stays close to how the business talks: customers, plans, renewals. No ORM classes, no scattered schema files — every step below stays inside one definition.',
         items: [
           {
             title: 'Objects & relationships',

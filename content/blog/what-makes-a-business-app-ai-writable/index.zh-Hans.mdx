@@ -1,0 +1,230 @@
+---
+title: 什么样的业务应用是 AI 可编写的？四道门禁：类型、验证、审查、治理
+description: AI 可编写是目标格式的属性，不是模型的属性。四道门禁、一次真实运行：三个故意犯的错、49 条规则、三条定位到位的报错，然后一次干净通过。
+author: ObjectStack Team
+date: 2026-10-23
+status: published
+topic: ai-agents
+audience: developer
+solutions: []
+industries: []
+cover: ./cover.svg
+tags:
+  - AI 智能体
+  - AI 可编写
+---
+
+一个业务应用是「AI 可编写」的，当且仅当 Agent 必然会犯的错误在触达用户之前有地方可死。这是目标格式的属性，不是模型的属性。ObjectStack 的 README 点名了四个这样的地方，称之为门禁：**类型（Typed）**、**验证（Validated）**、**审查（Reviewed）**、**治理（Governed）**。类型错误死在编辑器里。验证错误死在 `os validate` 上——它拒收那些能通过类型检查、却会在运行时静默失败的元数据。审查错误死在一份人能整个读完的 diff 里。治理错误即使上线了，也留在运行时的权限与审计围栏之内。下面是在 ObjectStack 17.7.0 上、用脚手架生成的支持台跑的一次真实运行，覆盖前两道门禁：按 README 列出的三类各故意犯一个错，49 条规则的门禁把每一个都定位到位、附带修正方案地拒收，修好之后一次干净通过。
+
+## 两件本来就成立的事
+
+讲门禁之前，先替对立面把话说足，因为这篇文章的论证不需要它们中的任何一个是错的。
+
+**Vibe coding 做出来的应用是能用的。** 你可以向模型描述一个支持台，一个下午就拿到一个能跑的版本，有界面、有数据库、有 API，用的是模型最拿手的任何语言。做原型、做一次性工具、做用完即弃的演示，这是正确的取舍，下文没有一句是反对它的。模型早已不是瓶颈。
+
+**手写代码是可审查的，而且工具链已经成熟。** 一位资深工程师读 pull request、一套类型系统、一套测试、一个代码评审流程，每天都在抓真实的缺陷。对于新颖的逻辑没有替代品，ObjectStack 自己也这么说：「代码不会消失：它搬进了运行时，成为钩子、动作体、CEL 和受限 JSX」——而那些代码仍然要由人来读。
+
+两者都没有回答的，是一旦由 Agent 来写、真正要紧的那个问题：*写错的那一行去了哪里？* 在一个自由形式的代码库里，一处错误的鉴权检查就是成千上万个 `if` 里的一个，审查面是整个仓库，运行时自身对权限什么也不强制。脚手架生成的项目里，CI 文件用一句话（说的是元数据，但对任何没有门禁的格式都成立）概括了这件事：一个错误「什么都不抛，只是对第一个碰上它的人表现得不对」。AI 可编写，意思就是这句话不再成立。
+
+## 四道门禁，按 README 的表述
+
+README 的那一节叫「Why the mistakes don't ship」（错误为什么上不了线），表格短到可以整个译出来：
+
+| 门禁 | 拦住什么 |
+| :--- | :--- |
+| **类型（Typed）** | 严格的 TypeScript + Zod——形状错误死在编辑器里，Agent 写下它们几秒钟之后 |
+| **验证（Validated）** | `os validate` 拒收那些能通过类型检查、却会在运行时静默失败的元数据：悬空绑定、错误的 CEL 谓词、缺失的安全姿态 |
+| **审查（Reviewed）** | 你在 Console 里批准一份小而可读的 diff——不是一堆生成出来的胶水代码 |
+| **治理（Governed）** | 运行时在每一次调用上强制执行权限与审计，所以哪怕应用写错了，也留在围栏之内 |
+
+![Agent 与用户之间的四道门禁：类型门禁在编辑器里拦住形状错误，验证门禁在 os validate 上拦住悬空绑定、错误谓词和缺失的安全姿态，审查门禁是一份由人批准的小 diff，治理门禁是运行时在每次调用上强制执行权限与审计；本次运行里的三个错误被标在前两道门禁处](./four-gates.svg)
+
+这张表里有三件事决定了这个承诺是不是真的，值得在看记录之前先说清楚。
+
+第一，门禁按代价排序。一个形状错误花 Agent 一秒钟。一个验证错误花它一轮。一次审查花一个人几分钟。一次被治理住的失败，是一起被控制住的事故。README 说整件事成立的原因，就在前两行：「Agent 的错误变成了定位到位、可修正的文字，它自己就能读、自己就能修」。
+
+第二，第二道门禁之所以存在，是因为第一道不够，文档用一句话说明了原因：「ObjectStack 的元数据是数据，不是代码路径——所以大多数错误**不会**被 TypeScript 编译器抓到。它们通过 `tsc`，正常加载，然后**在运行时静默失败**。」一个谓词是字符串。一个行动作是名字。一个共享模型是可选键。三者带着错误都能通过类型检查。这正是验证门禁为之而建的那一类错误，也是下面这次运行瞄准的那一类。
+
+第三，后两道门禁是人和运行时，不是工具，这篇文章不假装不是。文档里的审查门禁是 Studio 的「Review N changes」diff；在下面的运行里，它是一份由人读的 `git diff`。治理门禁是运行时的鉴权链和审计日志，这次运行从未启动它。记录证明的是：两道便宜的门禁抓住了 README 说它们会抓住的东西。它证明不了的，放在文末。
+
+## 一个支持台，三个错误，一次运行
+
+下面的一切都是真跑出来的，不是拼出来的：Node 22，已发布的包。脚手架就是 README 自己的第一步：
+
+```bash
+$ npm create objectstack@latest support-desk
+  ╔═══════════════════════════════════╗
+  ║   ◆ Create ObjectStack v17.7.0    ║
+  ╚═══════════════════════════════════╝
+
+◆ New Environment
+────────────────────────────────────────
+  Environment: support-desk
+  Namespace: support_desk
+  Template: blank — Minimal starter — one object, REST API, ready to extend
+
+  ✓ Template files written (20)
+  → Installing dependencies...
+  → Installing AI skills for your coding agent...
+  ✓ Environment created!
+```
+
+脚手架写下一份 `AGENTS.md`，其中唯一没有商量余地的一行就是门禁：「**Never report a metadata change as done until `npm run validate` passes.**」（在 `npm run validate` 通过之前，永远不要把一次元数据改动报告为已完成。）它还写下一个 CI 工作流，唯一的 job 跑 `pnpm validate`、`pnpm lint` 和 `pnpm typecheck`。在任何业务对象存在之前，门禁已经接好了。
+
+接着是 README 里的需求，按 Agent 会写的方式写出来：一个 `support_desk_ticket` 对象，带主题、描述、一个优先级选择和一个状态选择；一个只在尚未解决的工单上显示的 **Resolve** 动作；一个「未解决工单」列表视图；一个 Support 导航组；再加一个给支持人员的权限集。整个应用是 **11 个文件、新增 127 行**。错误将落在其中两个文件里：
+
+```ts
+// src/actions/resolve-ticket.action.ts
+export const ResolveTicketAction = defineAction({
+  name: 'resolve_ticket',
+  label: 'Resolve',
+  objectName: 'support_desk_ticket',
+  locations: ['record_header', 'list_item'],
+  visible: P`record.status != "resolved"`,   // only on tickets not yet resolved
+  operation: 'update',
+  patch: { status: 'resolved' },
+  confirmText: 'Mark this ticket as resolved?',
+});
+```
+
+```ts
+// src/views/ticket.view.ts
+export const TicketViews = defineView({
+  list: {
+    label: 'All tickets',
+    type: 'grid',
+    data,
+    columns: ['subject', 'priority', 'status'],
+    rowActions: ['resolve_ticket'],
+  },
+  // ... form, and an "Open tickets" list view filtered on status = open
+});
+```
+
+先跑一次干净的，把规则数记在案：
+
+```text
+$ npm run validate
+◆ Validate
+────────────────────────────────────────
+  → Loading configuration...
+  → Validating against ObjectStack Protocol...
+  → Running author-time rules (49)...
+  → Checking that every required capability has a provider installable in this edition...
+  → Checking package docs (ADR-0046)...
+
+  ✓ Validation passed (327ms)
+
+  Support Desk v0.1.0
+
+  Data: 2 Objects  6 Fields
+  UI: 1 Apps  1 Views  1 Actions
+  Logic: 0 Flows
+  Security: 1 Permissions
+  Runtime: 3 plugins
+```
+
+17.7.0 上是 49 条作者期规则。[本站上一次跑同一道门禁](/en/blog/how-to-point-your-agent-at-objectstack/)是在 17.2.0 上，当时是 41 条；规则表在长，对一道门禁来说这是对的方向。这个数字由工具自己打印，等于已发布的 `@objectstack/lint` 包里 `AUTHORING_RULES.length`，没有第二个数字需要对账。
+
+### 三个错误
+
+现在是 README 的三类，每类故意犯一个错。三个都是在普通 JavaScript 上训练出来的 Agent 会顺手写出的那种，三个都能通过类型检查：
+
+```diff
+ // 1 · a bad CEL predicate: the bare identifier most template languages use
+-  visible: P`record.status != "resolved"`,
++  visible: P`status != "resolved"`,
+
+ // 2 · a dangling binding: a row action that names nothing
+-    rowActions: ['resolve_ticket'],
++    rowActions: ['resolve'],
+
+ // 3 · a missing security posture: the org-wide default left unsaid
+-  sharingModel: 'private',
+```
+
+三个错都在，`npm run typecheck` 照样是绿的：`tsc` 对一个字符串的内容、一个数组里的名字、一个可选键，都没有意见。门禁有：
+
+```text
+$ npm run validate
+◆ Validate
+────────────────────────────────────────
+  → Loading configuration...
+  → Validating against ObjectStack Protocol...
+  → Running author-time rules (49)...
+
+  ✗ Author-time rules failed (3 issues)
+  • stack · action 'resolve_ticket' visible: bare reference `status` — a formula/validation expression binds the record as the `record` namespace, not at top level, so `status` resolves to nothing and the expression silently evaluates to null. Write `record.status`.
+      source: `status != "resolved"`
+      rule: expression-invalid  at stack · action 'resolve_ticket' visible
+  • view "#0" · list · rowActions: Row-action menu names action "resolve", which is defined by no action in this stack (neither `stack.actions` nor any object's `actions`). The button renders and does nothing when clicked — a dead affordance the runtime cannot dispatch. Did you mean "resolve_ticket"?
+      Define an action named "resolve" (in `stack.actions` or the object's `actions`) with the location this surface needs, remove the reference, or ignore this if the action is contributed by another installed package. Defined actions: resolve_ticket.
+      rule: action-name-undefined  at views[0].list.rowActions[0]
+  • object "support_desk_ticket": custom object "support_desk_ticket" declares no sharingModel (OWD). The runtime fails CLOSED to 'private' (ADR-0090 D1), but the baseline must be an authored decision, not an accident — this is the exact shape of the leave_request incident, where an object with no sharingModel let an ordinary read/write grant read and edit every other user's records.
+      Declare sharingModel explicitly: 'private' (owner + shares; recommended default), 'public_read', 'public_read_write', or 'controlled_by_parent' (master-detail children).
+      rule: security-owd-unset  at objects[1].sharingModel
+ ELIFECYCLE  Command failed with exit code 1.
+```
+
+把这三条消息当作一本台账来读，而不是当作报错，因为每一条都写明了没有门禁时运行时会发生什么。叫它**错误台账**：对一个目标格式，列出 Agent 可能犯的每一类错误、抓住它的那道门禁，以及否则它会在运行时表现成什么症状。一个格式有多 AI 可编写，恰好等于这本台账有多少行不是空的。
+
+![本次运行的错误台账：裸引用的谓词会把 Resolve 按钮藏在每一张工单上，死掉的行动作会渲染出一个点了什么也不做的按钮，缺失的 sharingModel 会让安全基线成为一次意外而非一个决定，字段上本该是布尔值的地方写了字符串则是一个类型错误；每一行都标出抓住它的门禁和规则 id](./mistake-ledger.svg)
+
+| 错误 | 否则会以什么形态上线 | 被谁拦住 · 规则 |
+| :--- | :--- | :--- |
+| `` visible: P`status != "resolved"` `` | 谓词「静默求值为 null」：Resolve 按钮在每一张工单上都被藏起来 | 验证 · `expression-invalid` |
+| `rowActions: ['resolve']` | 「按钮渲染出来，点击后什么也不做——一个运行时无法分发的死 affordance」 | 验证 · `action-name-undefined` |
+| 对象上没有 `sharingModel` | 运行时「fail closed 到 'private'」，但一个没说出口的基线正是「leave_request 事故的形状」 | 验证 · `security-owd-unset` |
+| 字段上写 `required: 'yes'` | 什么也上不了线：`tsc` 以「Type 'string' is not assignable to type 'boolean \| undefined'」拒收 | 类型 · `TS2322` |
+
+第四行是类型门禁，在干净的树上单独跑，好让验证器的记录只关于验证：把 `required: true` 改成 `required: 'yes'`，`npm run typecheck` 带着那条消息以退出码 2 结束，在任何别的东西运行之前。它是最便宜、也最无趣的一道门禁，而这正是它排在第一位的意义。
+
+消息的两个属性承载了整个承诺。它们**定位到位**：一个动作和一个谓词槽位，一个视图和一个数组下标，一个对象和一条键路径。它们**带修正方案**：「Write `record.status`」、「Did you mean `resolve_ticket`?」、`sharingModel` 的四个合法值。读到这些的 Agent 一轮就能闭环。[给 Agent 配置 ObjectStack 的那篇文章](/en/blog/how-to-point-your-agent-at-objectstack/)把它叫作*修正式报错*（corrective error），并论证一个格式手里杠杆最大的东西不是文档而是报错信息；这次运行是它的又三个数据点。
+
+把那三行改回去，门禁重归安静：
+
+```text
+$ npm run validate
+  → Running author-time rules (49)...
+
+  ✓ Validation passed (240ms)
+
+  Data: 2 Objects  6 Fields
+  UI: 1 Apps  1 Views  1 Actions
+  Security: 1 Permissions
+  Runtime: 3 plugins
+```
+
+运行里还有一行属于这里，因为它是门禁在做一件比拒收更微妙的事。权限集的第一版在一个私有对象上授予了读、建、改，却没说一次读能看多远，于是那次干净的运行带着一条提示：「`permission set "support_agent": "support_desk_ticket" is private (OWD) and this set grants allowRead without a readScope — holders see ONLY records they own (plus explicit shares).`」（权限集「support_agent」：「support_desk_ticket」是私有的（OWD），而这个权限集授予了 allowRead 却没有 readScope——持有者只能看到自己拥有的记录（加上显式共享的）。）这不是报错，门禁不把它当报错也是对的：一个支持人员只看自己工单的支持台，是一种正当的设计。它是一个浮到必须做决定的那个人面前的半个决定。修法是一个键，`readScope: 'org'`，而这是一个产品决定，不是一次纠错。
+
+## 门禁抓不住什么
+
+讲门禁的文章必须说清门禁止于何处，而来源在这一点上异常直白。
+
+**业务逻辑的正确性。** 文档：「护栏 1–3 证明元数据是*良构的*。它们证明不了它是*你想要的*。」门禁确认了 `record.status` 能解析。它对一张工单该不该能从列表里直接解决、`resolved` 是不是正确的终态、支持人员该不该看到组织内的每一张工单，都没有意见。更早那篇文章对同一条边界的说法是「门禁检查的是结构，不是意图」，49 条规则改变不了这一点。
+
+**审查者漏掉的需求。** 审查门禁是一个人读一份 diff。它按构造就是小的——整个应用 127 行，三个错误三行——但小不等于读过。一个没问过承包商是否也持有 `support_agent` 权限集、就批准了 `readScope: 'org'` 的审查者，已经把一个决定放上线了，而门禁不会拦他，因为元数据是良构的。提示通道有用的程度，恰好等于有人去读它的程度。
+
+**新颖的逻辑。** 钩子和动作体是代码。「业务本体」概念页说它们「在运行时的权限与审计围栏之内运行」，围栏限定了一个写错的函数体能碰到什么；它不能让那个函数体变对。那仍然是代码评审。
+
+**这次运行没有演练的部分。** 这份记录是命令行上的前两道门禁。文档所描述的审查门禁——一次改动上线之前由人批准的 Studio diff——在这里是一份 `git diff`。治理门禁——文档描述为从匿名拒绝到字段级安全、六层各自 fail-closed 的鉴权链，加上每次调用的审计——没有启动，因为 `os validate` 是一个作者期检查，不写产物、不起服务。README 对那道门禁的主张是「哪怕应用写错了，也留在围栏之内」；这篇文章引用它，而不是演示它。
+
+**而两位对手仍然站着。** 一个用完即弃的原型不需要四道门禁。一个测试充分、审查者细心的手写服务有它自己的台账，由人而不是工具来填。这里的主张比「这更好」窄：对于一个由 Agent 来写、由企业来跑的应用，台账应该由格式来填，因为 Agent 不会记得，而审查者读不完所有东西。
+
+## 同一道门禁，从浏览器进来
+
+有一个事实让四道门禁的故事对从不打开终端的人也诚实：`os validate` 不是唯一的门。文档描述了第四扇：「每一次元数据**写入**——Studio 的设计器、`PUT /api/v1/meta/*`、一个 MCP/AI 作者——都落在 `saveMetaItem` 上，自 #4463 起，一次进入 **`state: 'active'`** 的写入会在持久化之前跑同一张表。」上面打印出 49 的那张 `AUTHORING_RULES` 表，同样会拒收一个从 Studio 发布、带悬空绑定的仪表盘，附带同样定位到位的消息。验证门禁是运行时的属性，不是 CLI 的属性。
+
+还有 README 自己关于这个循环的最后一句：「想把同一个循环托管起来、在浏览器里用、什么都不用安装？那就是 ObjectOS——建立在 ObjectStack 之上的商业运行环境。」ObjectOS 既可托管在浏览器中、无需安装（ObjectOS Cloud），也可自管部署在你自己的基础设施上（ObjectOS Enterprise）；无论哪个版本，你都可以导出本体，拿到开源的 ObjectStack 运行时上运行。
+
+## 填你自己的台账
+
+上面的运行走的是 README 的五分钟路径。唯一的改动是故意犯错，这是弄清一个格式在本文的意义上是否 AI 可编写的最快办法。
+
+```bash
+npm create objectstack@latest my-app && cd my-app
+# 用你的编码 agent 打开它，说清业务需要什么
+npx os dev --ui
+```
+
+要 README 描述的那个支持台。然后，在你看 Console 之前，打开 diff，照着这次运行做：从一个谓词里删掉 `record.`，在视图里拼错一个动作名，删掉一个 `sharingModel`，跑 `npm run validate`。数一数门禁替你填了几行，又把几行留给了你。[你交给 Agent 的规则文件](/zh-Hans/blog/give-your-agent-rules-for-governable-apps/)决定会犯多少错；四道门禁决定它们止于何处；你的台账是对两者诚实的度量。
