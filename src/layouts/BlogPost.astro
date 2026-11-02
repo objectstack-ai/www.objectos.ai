@@ -7,6 +7,7 @@ import { phraseHtml } from '../../scripts/lib/cjk-phrases.mjs';
 import { formatDate, ui, blogPath, postPath, STATUS_COLOR, type Locale } from '../lib/i18n';
 import { termBySlug, termHref, termLabel } from '../lib/terms';
 import { getPostsInLocale, isPublicPost } from '../lib/posts';
+import { darkCover } from '../lib/cover-variant';
 import { clusterCopy, clusterLabels } from '../lib/cluster-i18n';
 import { CLUSTERS, clusterPath } from '../lib/clusters';
 import { ORGANIZATION_ID } from '../lib/organization';
@@ -54,6 +55,11 @@ const coverFile: string | undefined = entry?.filePath ? postCoverFile(entry.file
 if (data.cover && !coverFile) {
   throw new Error(`BlogPost: ${locale}/${slug} has a cover, but its file could not be resolved`);
 }
+// An SVG cover with a dark variant (src/lib/cover-variant.ts) is drawn twice,
+// one image per theme. Both are lazy: a display:none image is only skipped
+// when it is lazy, so the eager, high-priority pair would fetch both. The
+// visible one sits in the first viewport and is requested at first layout.
+const coverDark = darkCover(entry?.filePath, data.cover);
 const shareImage = coverFile
   ? { url: absoluteUrl(ogImagePath(coverFile)), width: OG_IMAGE.width, height: OG_IMAGE.height, alt: data.title }
   : undefined;
@@ -287,16 +293,41 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
       {
         data.cover &&
           (data.cover.format === 'svg' ? (
-            <img
-              class="cover"
-              src={data.cover.src}
-              alt={data.title}
-              width={data.cover.width}
-              height={data.cover.height}
-              loading="eager"
-              decoding="async"
-              fetchpriority="high"
-            />
+            coverDark ? (
+              <>
+                <img
+                  class="cover cover-light"
+                  src={data.cover.src}
+                  alt={data.title}
+                  width={data.cover.width}
+                  height={data.cover.height}
+                  loading="lazy"
+                  decoding="async"
+                  fetchpriority="high"
+                />
+                <img
+                  class="cover cover-dark"
+                  src={coverDark.src}
+                  alt={data.title}
+                  width={coverDark.width}
+                  height={coverDark.height}
+                  loading="lazy"
+                  decoding="async"
+                  fetchpriority="high"
+                />
+              </>
+            ) : (
+              <img
+                class="cover"
+                src={data.cover.src}
+                alt={data.title}
+                width={data.cover.width}
+                height={data.cover.height}
+                loading="eager"
+                decoding="async"
+                fetchpriority="high"
+              />
+            )
           ) : (
             <Image
               class="cover"
@@ -476,6 +507,15 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
       background: var(--surface-sunk);
       box-shadow: 0 28px 70px -48px rgba(var(--shadow), 0.68);
       filter: var(--cover-filter);
+    }
+    /* One cover per theme (src/lib/cover-variant.ts); the dark variant is
+       drawn dark and takes no --cover-filter dimming. */
+    :global(:root:not([data-theme='dark'])) .cover-dark,
+    :global(:root[data-theme='dark']) .cover-light {
+      display: none;
+    }
+    .cover.cover-dark {
+      filter: none;
     }
     .tags {
       list-style: none;

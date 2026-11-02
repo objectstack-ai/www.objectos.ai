@@ -5,6 +5,7 @@ import type { Cluster } from '../lib/clusters';
 import { clusterCopy, clusterLabels } from '../lib/cluster-i18n';
 import { blogPath, formatDate, postPath, type Locale } from '../lib/i18n';
 import { builtHubLocale } from '../lib/posts';
+import { darkCover } from '../lib/cover-variant';
 import { termBySlug, termHref, termLabel } from '../lib/terms';
 import { phraseHtml } from '../../scripts/lib/cjk-phrases.mjs';
 
@@ -14,7 +15,10 @@ interface Props {
   posts: { slug: string; entry: CollectionEntry<'blog'> }[];
 }
 
-const { cluster, locale, posts } = Astro.props;
+const { cluster, locale } = Astro.props;
+// `coverDark`: an SVG cover's dark variant (src/lib/cover-variant.ts); the
+// card then draws both images, lazy, one shown per theme.
+const posts = Astro.props.posts.map((post) => ({ ...post, coverDark: darkCover(post.entry.filePath, post.entry.data.cover) }));
 // zh and ja headings carry a <wbr> between phrases (scripts/lib/cjk-phrases.mjs).
 const ph = (text: string): string => phraseHtml(text, locale);
 const copy = clusterCopy(cluster, locale);
@@ -101,18 +105,41 @@ const CARD_SIZES = '(max-width: 640px) calc(100vw - 2rem), 400px';
       <a href={blogPath(locale)}>{labels.allArticles} <span>→</span></a>
     </div>
     <div class="article-grid">
-      {posts.map(({ slug, entry }) => (
+      {posts.map(({ slug, entry, coverDark }) => (
         <a class="article-card" href={postPath(locale, slug)}>
           {entry.data.cover &&
             (entry.data.cover.format === 'svg' ? (
-              <img
-                src={entry.data.cover.src}
-                alt={entry.data.title}
-                width="360"
-                height="380"
-                loading="lazy"
-                decoding="async"
-              />
+              coverDark ? (
+                <>
+                  <img
+                    class="cover-light"
+                    src={entry.data.cover.src}
+                    alt={entry.data.title}
+                    width="360"
+                    height="380"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <img
+                    class="cover-dark"
+                    src={coverDark.src}
+                    alt={entry.data.title}
+                    width="360"
+                    height="380"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </>
+              ) : (
+                <img
+                  src={entry.data.cover.src}
+                  alt={entry.data.title}
+                  width="360"
+                  height="380"
+                  loading="lazy"
+                  decoding="async"
+                />
+              )
             ) : (
               <Image
                 src={entry.data.cover}
@@ -348,6 +375,15 @@ const CARD_SIZES = '(max-width: 640px) calc(100vw - 2rem), 400px';
     min-height: 190px;
     object-fit: cover;
     filter: var(--cover-filter);
+  }
+  /* One cover per theme (src/lib/cover-variant.ts); the dark variant is drawn
+     dark and takes no --cover-filter dimming. */
+  :global(:root:not([data-theme='dark'])) .article-card .cover-dark,
+  :global(:root[data-theme='dark']) .article-card .cover-light {
+    display: none;
+  }
+  .article-card img.cover-dark {
+    filter: none;
   }
   .article-card div {
     padding: 1rem;
