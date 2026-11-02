@@ -452,6 +452,12 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
       overflow-wrap: anywhere;
       text-wrap: balance;
     }
+    /* A CJK glyph fills its em box where a Latin letter fills the x-height,
+       so at 1.06 the lines of a zh, ja or ko title touched. The title only;
+       this beats the phone's 1.18 below as well. */
+    h1:is(:lang(zh), :lang(ja), :lang(ko)) {
+      line-height: 1.2;
+    }
     .lead {
       font-size: 1.15rem;
       line-height: 1.55;
@@ -469,6 +475,7 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
       border: 1px solid var(--line);
       background: var(--surface-sunk);
       box-shadow: 0 28px 70px -48px rgba(var(--shadow), 0.68);
+      filter: var(--cover-filter);
     }
     .tags {
       list-style: none;
@@ -591,6 +598,18 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
     .prose > :first-child {
       margin-top: 0;
     }
+    /* Measure. At the article's 860px a line ran about 95 characters in en
+       and 47 in zh; text blocks stop at 44rem. Code blocks, tables and
+       figures keep the full article width (each already has its own scroll
+       container or scales down), and they start on the same left edge as
+       the text, under the title. */
+    .prose > * {
+      max-width: 44rem;
+    }
+    .prose > :is(pre, table),
+    .prose > p:has(> .figure-link, > img) {
+      max-width: 100%;
+    }
     .prose h2 {
       font-family: var(--font-display);
       font-size: 1.75rem;
@@ -621,7 +640,7 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
     }
     .prose strong {
       color: var(--ink);
-      font-weight: 650;
+      font-weight: 700;
     }
     .prose ul,
     .prose ol {
@@ -724,11 +743,13 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
       margin: 1.5rem 0;
       font-size: 0.95rem;
     }
+    /* Tabular figures, so the digits of one column line up row to row. */
     .prose th,
     .prose td {
       border: 1px solid var(--line);
       padding: 0.5rem 0.75rem;
       text-align: left;
+      font-variant-numeric: tabular-nums;
     }
     .prose th {
       background: var(--surface-sunk);
