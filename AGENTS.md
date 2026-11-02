@@ -43,6 +43,17 @@
 - When adding or editing published articles, run `pnpm content:lint`, `pnpm check`, and `pnpm build`.
 - For visual/content changes, verify at least one affected article and the blog list in the in-app browser. Check ordering, cover rendering, body image duplication, and obvious layout issues.
 
+### Cover spec
+
+Ruled on #340 (maintainer, 2026-11-02). A new post's cover SVG is drawn on the 1200 canvas and:
+
+- uses at most 2 font sizes; the title is at least 56px and no text is under 28px;
+- has at most 8 `<text>` runs;
+- uses at most 6 colours, drawn from the palette roles: indigo is identity and interaction, green is emphasis, ink is action, amber and red are status only;
+- shows product screenshots or monochrome line art. No new AI 3D renders; the existing 10 are being phased out.
+
+Draw the light cover only: dark variants are generated at build time. The cover gate in `pnpm build` (#343) enforces this spec for new posts and grandfathers existing covers by date.
+
 ## Publishing cadence
 
 **Target: one post a day, never more than one.** Daily publishing runs only while the
