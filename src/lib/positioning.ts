@@ -59,6 +59,15 @@ export const OBJECTSTACK_URL = 'https://objectstack.ai';
 export const CLOUD_SIGNUP_URL = 'https://cloud.objectos.ai/_console/register';
 export const CLOUD_SIGNIN_URL = 'https://cloud.objectos.ai/_console/login';
 
+/**
+ * The two external destinations the navigation names besides the docs sites:
+ * the source repository (Developers → GitHub, and the footer's Developers and
+ * Company & Legal rows) and the YouTube channel (Resources → Videos, the
+ * footer's Resources column and the home page's video section).
+ */
+export const GITHUB_REPO_URL = 'https://github.com/objectstack-ai/objectstack';
+export const YOUTUBE_CHANNEL_URL = 'https://www.youtube.com/@objectstack';
+
 export const CANONICAL = {
   t1: 'The ontology is the software.',
   t2: 'One executable business ontology. AI writes it, the runtime runs it, agents operate it, you own it.',

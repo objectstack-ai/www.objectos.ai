@@ -21,7 +21,7 @@ import {
   type Locale,
 } from '../lib/i18n';
 import { ORGANIZATION_ID, ORGANIZATION_SAME_AS } from '../lib/organization';
-import { CLOUD_SIGNIN_URL, OBJECTSTACK_URL } from '../lib/positioning';
+import { CLOUD_SIGNIN_URL, GITHUB_REPO_URL, OBJECTSTACK_URL, YOUTUBE_CHANNEL_URL } from '../lib/positioning';
 
 interface Props {
   title: string;
@@ -155,33 +155,30 @@ const jsonLdItems = [
 const jsonLdHtml = (value: Record<string, unknown>) =>
   JSON.stringify(value).replace(/</g, '\\u003c');
 
-// The footer: four columns titled like the header's groups (Product ·
-// Developers · Resources · Company & Legal), each link under the same label
-// the header gives it. Product is the complete map of the product pages. The
-// header's Capabilities list names five entries for eight pages, and the
-// trust center and permissions sit under the security hub; a page folded
-// away like that keeps its URL, is linked from its parent page, and keeps a
-// footer link here under its own name. The five pillar guides are Resources,
-// under a "Topic clusters" sub-label (they have no header entry); each post a
+// The footer: four equal columns titled like the header's four groups
+// (Product · Why ObjectOS · Developers · Resources), each link under the same
+// label the header gives it, and a Company & Legal row beside the brand line.
+// Product is the complete map of the product pages: the header's Capabilities
+// list names five entries for seven pages, and a page folded away like that
+// keeps its URL, is linked from its parent page, and keeps a footer link here
+// under its own name. Why ObjectOS is the evaluation column: the trust center
+// and permissions sit under the security hub in the header, and the FDE page
+// is linked from here only. The five pillar guides are Resources, under the
+// same "Guides" sub-label as the header's second Resources column; each post a
 // pillar lists in its reading path links back to it too
 // (src/layouts/BlogPost.astro).
 type FootLink = { label: string; href: string; external?: boolean; code?: boolean };
-type FootColumn = { title: string; wide?: boolean; lists: { sub?: string; links: FootLink[] }[] };
+type FootColumn = { title: string; lists: { sub?: string; links: FootLink[] }[] };
 const page = (slug: string): string => marketingPagePath(locale, slug);
 const footerColumns: FootColumn[] = [
   {
     title: t.siteNav.product,
-    wide: true,
     lists: [
       {
         links: [
           { label: t.footer.platform, href: page('platform') },
           { label: t.siteNav.productTour, href: page('product-tour') },
           { label: t.siteNav.ontology, href: page('ontology') },
-          { label: t.siteNav.whyObjectOs, href: page('compare') },
-          { label: t.siteNav.security, href: securityPath(locale) },
-          { label: t.siteNav.trustCenter, href: page('trust-center') },
-          { label: t.siteNav.permissionsSecurity, href: page('permissions') },
           { label: t.siteNav.dataModeling, href: page('data-modeling') },
           { label: t.siteNav.appInterfaces, href: page('app-ui') },
           { label: t.siteNav.automation, href: page('automation') },
@@ -189,8 +186,23 @@ const footerColumns: FootColumn[] = [
           { label: t.siteNav.analytics, href: page('analytics') },
           { label: t.siteNav.aiBuildAsk, href: page('ai') },
           { label: t.siteNav.toolsMcp, href: page('mcp') },
-          { label: t.footer.pricing, href: pricingPath(locale) },
           { label: t.signIn, href: CLOUD_SIGNIN_URL },
+        ],
+      },
+    ],
+  },
+  {
+    title: t.siteNav.whyObjectOs,
+    lists: [
+      {
+        links: [
+          { label: t.siteNav.compareFit, href: page('compare') },
+          { label: t.siteNav.security, href: securityPath(locale) },
+          { label: t.siteNav.trustCenter, href: page('trust-center') },
+          { label: t.siteNav.permissionsSecurity, href: page('permissions') },
+          { label: t.siteNav.referenceStories, href: page('customer-stories') },
+          { label: t.footer.pricing, href: pricingPath(locale) },
+          { label: t.siteNav.forFde, href: page('forward-deployed-engineers') },
         ],
       },
     ],
@@ -204,6 +216,7 @@ const footerColumns: FootColumn[] = [
           { label: t.siteNav.productDocs, href: 'https://docs.objectos.ai', external: true },
           { label: t.siteNav.developerDocs, href: OBJECTSTACK_URL, external: true },
           { label: t.siteNav.templates, href: page('templates') },
+          { label: 'GitHub', href: GITHUB_REPO_URL, external: true },
         ],
       },
     ],
@@ -213,13 +226,13 @@ const footerColumns: FootColumn[] = [
     lists: [
       {
         links: [
-          { label: t.backToList, href: blogPath(locale) },
+          { label: t.siteNav.blog, href: blogPath(locale) },
           { label: t.siteNav.glossary, href: glossaryIndexPath(locale) },
-          { label: t.siteNav.referenceStories, href: page('customer-stories') },
+          { label: t.siteNav.videos, href: YOUTUBE_CHANNEL_URL, external: true },
         ],
       },
       {
-        sub: t.siteNav.topicClusters,
+        sub: t.siteNav.guides,
         links: CLUSTERS.map((cluster) => ({
           label: clusterCopy(cluster, locale).shortTitle,
           href: clusterPath(locale, cluster.slug),
@@ -227,21 +240,15 @@ const footerColumns: FootColumn[] = [
       },
     ],
   },
-  {
-    title: t.siteNav.companyLegal,
-    lists: [
-      {
-        links: [
-          { label: t.footer.privacy, href: privacyPath(locale) },
-          { label: t.footer.terms, href: termsPath(locale) },
-          { label: t.footer.refunds, href: refundsPath(locale) },
-          { label: 'llms.txt', href: '/llms.txt', code: true },
-          { label: 'RSS', href: rssPath(locale) },
-          { label: 'GitHub', href: 'https://github.com/objectstack-ai/objectstack', external: true },
-        ],
-      },
-    ],
-  },
+];
+// Company & Legal: one row beside the brand line, not a fifth column.
+const legalLinks: FootLink[] = [
+  { label: t.footer.privacy, href: privacyPath(locale) },
+  { label: t.footer.terms, href: termsPath(locale) },
+  { label: t.footer.refunds, href: refundsPath(locale) },
+  { label: 'llms.txt', href: '/llms.txt', code: true },
+  { label: 'RSS', href: rssPath(locale) },
+  { label: 'GitHub', href: GITHUB_REPO_URL, external: true },
 ];
 ---
 
@@ -306,7 +313,7 @@ const footerColumns: FootColumn[] = [
       <nav class="foot-nav" aria-label={t.siteNav.footerNav}>
         {
           footerColumns.map((column) => (
-            <div class:list={['foot-col', { wide: column.wide }]}>
+            <div class="foot-col">
               <h2 class="foot-title">{column.title}</h2>
               {column.lists.map((list) => (
                 <>
@@ -340,6 +347,23 @@ const footerColumns: FootColumn[] = [
           <Logo size={14} /> ObjectStack AI LLC
           <span class="muted">© {new Date().getFullYear()}</span>
         </span>
+        <nav class="foot-legal" aria-label={t.siteNav.companyLegal}>
+          <ul>
+            {
+              legalLinks.map((link) => (
+                <li>
+                  <a
+                    href={link.href}
+                    target={link.external ? '_blank' : undefined}
+                    rel={link.external ? 'noopener' : undefined}
+                    translate={link.code ? 'no' : undefined}>
+                    <span>{link.label}{link.external && <span class="foot-ext" aria-hidden="true">{' '}↗</span>}</span>
+                  </a>
+                </li>
+              ))
+            }
+          </ul>
+        </nav>
       </div>
     </footer>
 
@@ -536,21 +560,20 @@ const footerColumns: FootColumn[] = [
         font-size: 0.8rem;
         color: var(--ink-soft);
       }
-      /* Four titled columns on a grid. Product is the map of every product
-         page (sixteen links, the header's five Capabilities entries unfolded),
-         so it takes a double track and lays its list out in two columns; the
-         other three are single lists. */
+      /* Four equal columns, one per header group, each a single list. The
+         container is 1072px wide at the desktop maximum, so a track is 238px
+         (214px at 1024), which holds the longest label of the eight locales
+         (es "Documentación para desarrolladores y protocolo", 276px at this
+         size, wraps to two lines; nothing wraps to three). minmax(0, 1fr):
+         a track never grows past its share for a long label, so the four
+         stay equal. */
       .site-footer .foot-nav {
         max-width: var(--maxw);
         margin: 0 auto;
         padding: 2.25rem 1.5rem 0.75rem;
         display: grid;
-        grid-template-columns: 2fr 1fr 1fr 1fr;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 2rem 2.5rem;
-      }
-      .site-footer .foot-col.wide ul {
-        column-count: 2;
-        column-gap: 2rem;
       }
       .site-footer .foot-title {
         margin: 0 0 0.5rem;
@@ -574,9 +597,6 @@ const footerColumns: FootColumn[] = [
         padding: 0;
         list-style: none;
       }
-      .site-footer li {
-        break-inside: avoid;
-      }
       /* Tap targets: 28px rows at every width (WCAG 2.5.8 asks 24; the text
          line alone is 21px), 44px on a phone. */
       .site-footer a {
@@ -594,6 +614,8 @@ const footerColumns: FootColumn[] = [
         font-size: 0.72rem;
         opacity: 0.5;
       }
+      /* The brand line, with the Company & Legal row beside it: one row of
+         six short links, wrapping as the width allows. */
       .site-footer .inner {
         max-width: var(--maxw);
         margin: 0 auto;
@@ -610,27 +632,21 @@ const footerColumns: FootColumn[] = [
         gap: 0.4rem;
         white-space: nowrap;
       }
+      .site-footer .foot-legal ul {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 0 1.25rem;
+      }
       .site-footer .muted {
         color: var(--muted);
       }
-      /* Two tracks below the desktop breakpoint: Product across both, then
-         Developers over Company & Legal on the left and Resources (the
-         tallest of the three) on the right, so no cell is left empty. */
+      /* Two tracks below the desktop breakpoint: four columns make two full
+         rows, so no cell is left empty. */
       @media (max-width: 900px) {
         .site-footer .foot-nav {
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 1.75rem 2rem;
-        }
-        .site-footer .foot-col.wide {
-          grid-column: 1 / -1;
-        }
-        .site-footer .foot-col:nth-child(3) {
-          grid-column: 2;
-          grid-row: 2 / span 2;
-        }
-        .site-footer .foot-col:nth-child(4) {
-          grid-column: 1;
-          grid-row: 3;
         }
       }
       @media (max-width: 640px) {
@@ -649,21 +665,22 @@ const footerColumns: FootColumn[] = [
           flex-direction: column;
           gap: 0.75rem;
         }
+        .site-footer .foot-legal ul {
+          justify-content: flex-start;
+        }
         .site-footer a {
           min-height: 44px;
         }
       }
-      /* A phone keeps the two tracks (a single column of 34 rows at 44px was
-         1470px of footer). A track is 154px at 360px, and the longest single
-         words (Entwicklerdokumentation, Prozessautomatisierung) are about
-         150px at this size, so a label may hyphenate rather than overflow
-         its track; `anywhere` is the last resort where no dictionary applies. */
+      /* A phone keeps the two tracks (a single column of 36 rows at 44px would
+         be over 1500px of footer). A track is 154px at 360px, and the longest
+         single words (Entwicklerdokumentation, Prozessautomatisierung) are
+         about 150px at this size, so a label may hyphenate rather than
+         overflow its track; `anywhere` is the last resort where no dictionary
+         applies. */
       @media (max-width: 480px) {
         .site-footer .foot-nav {
           gap: 1.5rem 1.25rem;
-        }
-        .site-footer .foot-col.wide ul {
-          column-gap: 1.25rem;
         }
         .site-footer a:is(:lang(en), :lang(de), :lang(fr), :lang(es)) {
           -webkit-hyphens: auto;

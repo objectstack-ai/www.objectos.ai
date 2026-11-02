@@ -105,7 +105,14 @@ interface Strings {
     productTour: string;
     platform: string;
     aiBuildAsk: string;
+    /**
+     * The "Why ObjectOS" top-level group (its trigger in the bar and the drawer,
+     * and the footer column of the same name). Its entries are `compareFit`,
+     * `security` and `referenceStories`.
+     */
     whyObjectOs: string;
+    /** /[lang]/compare/ — the first entry under Why ObjectOS, and its footer link. */
+    compareFit: string;
     /** The positioning pillar, /[lang]/ontology/ — first entry under Product → Evaluate. */
     ontology: string;
     dataModeling: string;
@@ -118,7 +125,7 @@ interface Strings {
     groupCapabilities: string;
     /**
      * /[lang]/security/, the trust hub: the one menu entry for trust, under
-     * Product → Evaluate, and the footer's link to the same page.
+     * Why ObjectOS, and the footer's link to the same page.
      */
     security: string;
     /**
@@ -158,16 +165,29 @@ interface Strings {
     mobileNav: string;
     /** Accessible name of the footer's navigation landmark (its four columns). */
     footerNav: string;
-    /** Footer column title: Privacy, Terms, Refunds, llms.txt, RSS and GitHub. */
-    companyLegal: string;
-    /** Sub-label over the five pillar links in the footer's Resources column. */
-    topicClusters: string;
     /**
-     * Accessible name of the home page's own topic-cluster strip. It is not
-     * `topicClusters`: two navigation landmarks with one name cannot be told
-     * apart (axe `landmark-unique`), and the footer is on the home page too.
+     * Accessible name of the footer's Company & Legal row (Privacy, Terms,
+     * Refunds, llms.txt, RSS and GitHub), beside the brand line.
      */
-    featuredClusters: string;
+    companyLegal: string;
+    /** /[lang]/blog/ — the first entry under Resources, and its footer link. */
+    blog: string;
+    /** The YouTube channel — an external entry under Resources, and its footer link. */
+    videos: string;
+    /**
+     * Label over the five pillar guides: the second column of the Resources
+     * panel, the drawer's sub-label and the footer's sub-label. It is a label,
+     * not a link — the guides have no index page.
+     */
+    guides: string;
+    /**
+     * Accessible name of the home page's own guides strip. It is not `guides`:
+     * two navigation landmarks with one name cannot be told apart (axe
+     * `landmark-unique`), and the footer is on the home page too.
+     */
+    featuredGuides: string;
+    /** /[lang]/forward-deployed-engineers/ — footer only, under Why ObjectOS. */
+    forFde: string;
     /**
      * Name and tooltip of a language-switcher option for a locale this article
      * has no translation in; the option opens that locale's blog instead. It
@@ -193,7 +213,6 @@ interface Strings {
     blog: string;
     pricing: string;
   };
-  all: string;
   audience: string;
   articlesTitle: string;
   articlesLead: (n: number) => string;
@@ -221,6 +240,7 @@ const en: Strings = {
     platform: 'Platform overview',
     aiBuildAsk: 'AI Build & Ask',
     whyObjectOs: 'Why ObjectOS',
+    compareFit: 'Comparison & fit',
     ontology: 'Ontology',
     dataModeling: 'Data modeling',
     appInterfaces: 'App interfaces',
@@ -249,8 +269,11 @@ const en: Strings = {
     mobileNav: 'Mobile',
     footerNav: 'Footer',
     companyLegal: 'Company & Legal',
-    topicClusters: 'Topic clusters',
-    featuredClusters: 'Featured topic clusters',
+    blog: 'Blog',
+    videos: 'Videos',
+    guides: 'Guides',
+    featuredGuides: 'Featured guides',
+    forFde: 'For FDE teams',
     langUnavailable: (lang) => `${lang} — this article is not available in this language; opens the blog`,
   },
   getStarted: 'Get started',
@@ -265,7 +288,6 @@ const en: Strings = {
     blog: 'Blog',
     pricing: 'Pricing',
   },
-  all: 'Home',
   audience: 'Audience',
   articlesTitle: 'Articles',
   articlesLead: (n) => `${n} ${n === 1 ? 'article' : 'articles'} on executable business ontologies, runtime governance, and agent-operated applications.`,
@@ -292,6 +314,7 @@ const zhHans: Strings = {
     platform: '平台总览',
     aiBuildAsk: 'AI Build & Ask',
     whyObjectOs: '为什么选 ObjectOS',
+    compareFit: '对比与适用边界',
     ontology: '本体',
     dataModeling: '数据建模',
     appInterfaces: '应用界面',
@@ -320,8 +343,11 @@ const zhHans: Strings = {
     mobileNav: '移动端导航',
     footerNav: '页脚',
     companyLegal: '公司与法律',
-    topicClusters: '专题导航',
-    featuredClusters: '精选专题',
+    blog: '博客',
+    videos: '视频',
+    guides: '专题指南',
+    featuredGuides: '精选专题',
+    forFde: '面向 FDE 团队',
     langUnavailable: (lang) => `${lang}——本文暂无该语言版本，将打开该语言的博客`,
   },
   getStarted: '开始使用',
@@ -336,7 +362,6 @@ const zhHans: Strings = {
     blog: '博客',
     pricing: '定价',
   },
-  all: '首页',
   audience: '受众',
   articlesTitle: '文章',
   articlesLead: (n) => `${n} 篇关于可执行业务本体、运行时治理与 Agent 操作应用的文章。`,
@@ -363,6 +388,7 @@ const ja: Strings = {
     platform: 'プラットフォーム概要',
     aiBuildAsk: 'AI Build & Ask',
     whyObjectOs: 'ObjectOS を選ぶ理由',
+    compareFit: '比較と適合性',
     ontology: 'オントロジー',
     dataModeling: 'データモデリング',
     appInterfaces: 'アプリ画面',
@@ -391,8 +417,11 @@ const ja: Strings = {
     mobileNav: 'モバイルナビゲーション',
     footerNav: 'フッター',
     companyLegal: '会社と法務',
-    topicClusters: 'トピッククラスター',
-    featuredClusters: '注目のトピッククラスター',
+    blog: 'ブログ',
+    videos: '動画',
+    guides: 'ガイド',
+    featuredGuides: '注目のガイド',
+    forFde: 'FDE チーム向け',
     langUnavailable: (lang) => `${lang} — この記事にはこの言語の版がありません。ブログ一覧を開きます`,
   },
   getStarted: 'はじめる',
@@ -407,7 +436,6 @@ const ja: Strings = {
     blog: 'ブログ',
     pricing: '料金',
   },
-  all: 'ホーム',
   audience: '読者',
   articlesTitle: '記事',
   articlesLead: (n) => `実行可能なビジネスオントロジー、ランタイムガバナンス、エージェントが操作するアプリケーションに関する ${n} 本の記事。`,
@@ -434,6 +462,7 @@ const de: Strings = {
     platform: 'Plattform-Überblick',
     aiBuildAsk: 'AI Build & Ask',
     whyObjectOs: 'Warum ObjectOS',
+    compareFit: 'Vergleich & Eignung',
     ontology: 'Ontologie',
     dataModeling: 'Datenmodellierung',
     appInterfaces: 'App-Oberflächen',
@@ -462,8 +491,11 @@ const de: Strings = {
     mobileNav: 'Mobile Navigation',
     footerNav: 'Fußzeile',
     companyLegal: 'Unternehmen & Rechtliches',
-    topicClusters: 'Themencluster',
-    featuredClusters: 'Ausgewählte Themencluster',
+    blog: 'Blog',
+    videos: 'Videos',
+    guides: 'Leitfäden',
+    featuredGuides: 'Ausgewählte Leitfäden',
+    forFde: 'Für FDE-Teams',
     langUnavailable: (lang) => `${lang} – dieser Artikel ist in dieser Sprache nicht verfügbar; öffnet den Blog`,
   },
   getStarted: 'Loslegen',
@@ -478,7 +510,6 @@ const de: Strings = {
     blog: 'Blog',
     pricing: 'Preise',
   },
-  all: 'Start',
   audience: 'Zielgruppe',
   articlesTitle: 'Artikel',
   articlesLead: (n) => `${n} ${n === 1 ? 'Artikel' : 'Artikel'} über ausführbare Geschäftsontologien, Runtime-Governance und von Agents bediente Anwendungen.`,
@@ -505,6 +536,7 @@ const es: Strings = {
     platform: 'Resumen de plataforma',
     aiBuildAsk: 'AI Build & Ask',
     whyObjectOs: 'Por qué ObjectOS',
+    compareFit: 'Comparativa y encaje',
     ontology: 'Ontología',
     dataModeling: 'Modelado de datos',
     appInterfaces: 'Interfaces de la app',
@@ -533,8 +565,11 @@ const es: Strings = {
     mobileNav: 'Navegación móvil',
     footerNav: 'Pie de página',
     companyLegal: 'Empresa y legal',
-    topicClusters: 'Grupos temáticos',
-    featuredClusters: 'Grupos temáticos destacados',
+    blog: 'Blog',
+    videos: 'Vídeos',
+    guides: 'Guías',
+    featuredGuides: 'Guías destacadas',
+    forFde: 'Para equipos FDE',
     langUnavailable: (lang) => `${lang}: este artículo no está disponible en este idioma; abre el blog`,
   },
   getStarted: 'Empezar',
@@ -549,7 +584,6 @@ const es: Strings = {
     blog: 'Blog',
     pricing: 'Precios',
   },
-  all: 'Inicio',
   audience: 'Audiencia',
   articlesTitle: 'Artículos',
   articlesLead: (n) => `${n} ${n === 1 ? 'artículo' : 'artículos'} sobre ontologías de negocio ejecutables, gobernanza del runtime y aplicaciones operadas por agentes.`,
@@ -576,6 +610,7 @@ const fr: Strings = {
     platform: 'Aperçu de la plateforme',
     aiBuildAsk: 'AI Build & Ask',
     whyObjectOs: 'Pourquoi ObjectOS',
+    compareFit: 'Comparatif et adéquation',
     ontology: 'Ontologie',
     dataModeling: 'Modélisation des données',
     appInterfaces: 'Interfaces applicatives',
@@ -604,8 +639,11 @@ const fr: Strings = {
     mobileNav: 'Navigation mobile',
     footerNav: 'Pied de page',
     companyLegal: 'Entreprise et mentions légales',
-    topicClusters: 'Groupes thématiques',
-    featuredClusters: 'Groupes thématiques à la une',
+    blog: 'Blog',
+    videos: 'Vidéos',
+    guides: 'Guides',
+    featuredGuides: 'Guides à la une',
+    forFde: 'Pour les équipes FDE',
     langUnavailable: (lang) => `${lang} : cet article n’est pas disponible dans cette langue ; ouvre le blog`,
   },
   getStarted: 'Commencer',
@@ -620,7 +658,6 @@ const fr: Strings = {
     blog: 'Blog',
     pricing: 'Tarifs',
   },
-  all: 'Accueil',
   audience: 'Audience',
   articlesTitle: 'Articles',
   articlesLead: (n) => `${n} ${n === 1 ? 'article' : 'articles'} sur les ontologies métier exécutables, la gouvernance du runtime et les applications opérées par les agents.`,
@@ -647,6 +684,7 @@ const ko: Strings = {
     platform: '플랫폼 개요',
     aiBuildAsk: 'AI Build & Ask',
     whyObjectOs: 'ObjectOS를 선택하는 이유',
+    compareFit: '비교와 적합성',
     ontology: '온톨로지',
     dataModeling: '데이터 모델링',
     appInterfaces: '앱 화면',
@@ -675,8 +713,11 @@ const ko: Strings = {
     mobileNav: '모바일 메뉴',
     footerNav: '바닥글',
     companyLegal: '회사 및 법적 고지',
-    topicClusters: '주제 클러스터',
-    featuredClusters: '추천 주제 클러스터',
+    blog: '블로그',
+    videos: '동영상',
+    guides: '가이드',
+    featuredGuides: '추천 가이드',
+    forFde: 'FDE 팀용',
     langUnavailable: (lang) => `${lang} — 이 글은 이 언어로 제공되지 않습니다. 블로그 목록으로 이동합니다`,
   },
   getStarted: '시작하기',
@@ -691,7 +732,6 @@ const ko: Strings = {
     blog: '블로그',
     pricing: '가격',
   },
-  all: '홈',
   audience: '대상',
   articlesTitle: '글',
   articlesLead: (n) => `실행 가능한 비즈니스 온톨로지, 런타임 거버넌스, 에이전트가 운영하는 애플리케이션에 관한 글 ${n}개.`,
@@ -719,6 +759,7 @@ const toHant = (s: Strings): Strings => ({
     platform: s2t(s.siteNav.platform),
     aiBuildAsk: s2t(s.siteNav.aiBuildAsk),
     whyObjectOs: s2t(s.siteNav.whyObjectOs),
+    compareFit: s2t(s.siteNav.compareFit),
     ontology: s2t(s.siteNav.ontology),
     dataModeling: s2t(s.siteNav.dataModeling),
     appInterfaces: s2t(s.siteNav.appInterfaces),
@@ -747,8 +788,11 @@ const toHant = (s: Strings): Strings => ({
     mobileNav: s2t(s.siteNav.mobileNav),
     footerNav: s2t(s.siteNav.footerNav),
     companyLegal: s2t(s.siteNav.companyLegal),
-    topicClusters: s2t(s.siteNav.topicClusters),
-    featuredClusters: s2t(s.siteNav.featuredClusters),
+    blog: s2t(s.siteNav.blog),
+    videos: s2t(s.siteNav.videos),
+    guides: s2t(s.siteNav.guides),
+    featuredGuides: s2t(s.siteNav.featuredGuides),
+    forFde: s2t(s.siteNav.forFde),
     // The language name is spliced in after conversion: s2t would rewrite a
     // Simplified-script name such as 简体中文.
     langUnavailable: (lang) => s2t(s.siteNav.langUnavailable('{lang}')).replace('{lang}', lang),
@@ -771,7 +815,6 @@ const toHant = (s: Strings): Strings => ({
     blog: s2t(s.notFound.blog),
     pricing: s2t(s.notFound.pricing),
   },
-  all: s2t(s.all),
   audience: s2t(s.audience),
   articlesTitle: s2t(s.articlesTitle),
   articlesLead: (n) => s2t(s.articlesLead(n)),
