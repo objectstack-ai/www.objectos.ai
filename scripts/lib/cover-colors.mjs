@@ -36,8 +36,8 @@ export const TOKEN_MAP = new Map([
   ['#515b55', '#aab6ad'], // --ink-soft
   ['#626c66', '#8a968d'], // --muted
   ['#dfe7df', '#2a3931'], // --line
-  ['#3d58f0', '#91a3ff'], // --accent / --ring
-  ['#eef2ff', '#202849'], // --accent-soft
+  ['#3d58f0', '#91a3ff'], // --brand (the ring)
+  ['#eef2ff', '#202849'], // --brand-soft
   ['#68625d', '#a8a29e'], // --status-archived
 ]);
 
