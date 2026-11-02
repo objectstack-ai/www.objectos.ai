@@ -8,7 +8,11 @@ import { positioning } from './positioning';
 // read from it. The eyebrow is `descriptor`, the three editions' short name,
 // sentence-cased (the CSS uppercases it anyway). The hero lead is T2 alone and
 // the edition paragraph under the CTA row is E1 verbatim — the check at the
-// bottom of this file holds every locale to that.
+// bottom of this file holds every locale to that. The meta `description` is
+// T2 plus the edition sentence the security lead carries ("ObjectOS comes in
+// three editions, …"), not T4: with T4 it ran 362 characters in en and a
+// search snippet cut it off before the word ObjectOS (seat ruling on #335,
+// the same call docs.objectos.ai made in objectos #299).
 const sentenceCase = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 // The media note under the hero image is titled with T2's first sentence —
 // "One executable business ontology" in each locale — read from positioning
@@ -105,7 +109,7 @@ interface HomeCopy {
 
 const zhHans: HomeCopy = {
   title: `ObjectOS · ${positioning['zh-Hans'].t1}`,
-  description: `${positioning['zh-Hans'].t2}${positioning['zh-Hans'].t4}`,
+  description: `${positioning['zh-Hans'].t2}ObjectOS 有三个版本：${positioning['zh-Hans'].descriptor}。`,
   eyebrow: positioning['zh-Hans'].descriptor,
   hero: positioning['zh-Hans'].t1Lines,
   heroLead: positioning['zh-Hans'].t2,
@@ -195,7 +199,7 @@ const zhHans: HomeCopy = {
 
 const en: HomeCopy = {
   title: `ObjectOS · ${positioning.en.t1}`,
-  description: `${positioning.en.t2} ${positioning.en.t4}`,
+  description: `${positioning.en.t2} ObjectOS comes in three editions, ${positioning.en.descriptor}.`,
   eyebrow: sentenceCase(positioning.en.descriptor),
   hero: positioning.en.t1Lines,
   heroLead: positioning.en.t2,
@@ -286,7 +290,7 @@ const en: HomeCopy = {
 const ja: HomeCopy = {
   ...en,
   title: `ObjectOS · ${positioning.ja.t1}`,
-  description: `${positioning.ja.t2}${positioning.ja.t4}`,
+  description: `${positioning.ja.t2}ObjectOS には ${positioning.ja.descriptor} の 3 つのエディションがあります。`,
   eyebrow: positioning.ja.descriptor,
   hero: positioning.ja.t1Lines,
   heroLead: positioning.ja.t2,
@@ -377,7 +381,7 @@ const ja: HomeCopy = {
 const de: HomeCopy = {
   ...en,
   title: `ObjectOS · ${positioning.de.t1}`,
-  description: `${positioning.de.t2} ${positioning.de.t4}`,
+  description: `${positioning.de.t2} ObjectOS gibt es in drei Editionen, ${positioning.de.descriptor}.`,
   eyebrow: sentenceCase(positioning.de.descriptor),
   hero: positioning.de.t1Lines,
   heroLead: positioning.de.t2,
@@ -468,7 +472,7 @@ const de: HomeCopy = {
 const es: HomeCopy = {
   ...en,
   title: `ObjectOS · ${positioning.es.t1}`,
-  description: `${positioning.es.t2} ${positioning.es.t4}`,
+  description: `${positioning.es.t2} ObjectOS se ofrece en tres ediciones, ${positioning.es.descriptor}.`,
   eyebrow: sentenceCase(positioning.es.descriptor),
   hero: positioning.es.t1Lines,
   heroLead: positioning.es.t2,
@@ -559,7 +563,7 @@ const es: HomeCopy = {
 const fr: HomeCopy = {
   ...en,
   title: `ObjectOS · ${positioning.fr.t1}`,
-  description: `${positioning.fr.t2} ${positioning.fr.t4}`,
+  description: `${positioning.fr.t2} ObjectOS existe en trois éditions, ${positioning.fr.descriptor}.`,
   eyebrow: sentenceCase(positioning.fr.descriptor),
   hero: positioning.fr.t1Lines,
   heroLead: positioning.fr.t2,
@@ -650,7 +654,7 @@ const fr: HomeCopy = {
 const ko: HomeCopy = {
   ...en,
   title: `ObjectOS · ${positioning.ko.t1}`,
-  description: `${positioning.ko.t2} ${positioning.ko.t4}`,
+  description: `${positioning.ko.t2} ObjectOS는 ${positioning.ko.descriptor}의 세 가지 에디션으로 제공됩니다.`,
   eyebrow: positioning.ko.descriptor,
   hero: positioning.ko.t1Lines,
   heroLead: positioning.ko.t2,
