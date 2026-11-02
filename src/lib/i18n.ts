@@ -116,9 +116,31 @@ interface Strings {
     permissionsSecurity: string;
     groupEvaluate: string;
     groupCapabilities: string;
+    /**
+     * /[lang]/security/, the trust hub: the one menu entry for trust, under
+     * Product → Evaluate, and the footer's link to the same page.
+     */
+    security: string;
+    /**
+     * /[lang]/trust-center/. It has no menu entry of its own (it is a
+     * sub-section linked from `security`); the footer still names it.
+     */
     trustCenter: string;
+    /**
+     * The five Capabilities entries. Each names an existing capability page and
+     * stands for the pages folded under it: `capDataApps` opens data modeling
+     * (app interfaces folds under it), `capAutomationApprovals` opens process
+     * automation (approvals folds under it), `capAnalytics` opens analytics;
+     * `aiBuildAsk` and `toolsMcp` keep their page labels, and permissions sits
+     * under `security`. A folded page keeps its own label (`appInterfaces`,
+     * `approvals`, `permissionsSecurity`) for the footer and its parent page.
+     */
+    capDataApps: string;
+    capAutomationApprovals: string;
+    capAnalytics: string;
     toolsMcp: string;
-    agentGuide: string;
+    /** The Developers entry for /[lang]/agent-developer/ (and its footer link). */
+    startWithAgent: string;
     templates: string;
     referenceStories: string;
     glossary: string;
@@ -134,13 +156,16 @@ interface Strings {
     primaryNav: string;
     browseNav: string;
     mobileNav: string;
-    /** Visible label and accessible name of the footer's topic-cluster row. */
+    /** Accessible name of the footer's navigation landmark (its four columns). */
+    footerNav: string;
+    /** Footer column title: Privacy, Terms, Refunds, llms.txt, RSS and GitHub. */
+    companyLegal: string;
+    /** Sub-label over the five pillar links in the footer's Resources column. */
     topicClusters: string;
     /**
-     * Accessible name of the home page's own topic-cluster strip. It differs
-     * from `topicClusters` because the footer row is on the home page too, and
-     * two navigation landmarks with one name cannot be told apart (axe
-     * `landmark-unique`).
+     * Accessible name of the home page's own topic-cluster strip. It is not
+     * `topicClusters`: two navigation landmarks with one name cannot be told
+     * apart (axe `landmark-unique`), and the footer is on the home page too.
      */
     featuredClusters: string;
     /**
@@ -205,9 +230,13 @@ const en: Strings = {
     permissionsSecurity: 'Permissions & security',
     groupEvaluate: 'Evaluate',
     groupCapabilities: 'Capabilities',
+    security: 'Security & trust',
     trustCenter: 'Trust center',
+    capDataApps: 'Data & apps',
+    capAutomationApprovals: 'Automation & approvals',
+    capAnalytics: 'Analytics',
     toolsMcp: 'Tools & MCP',
-    agentGuide: 'Agent guide',
+    startWithAgent: 'Start with your agent',
     templates: 'Templates',
     referenceStories: 'Reference stories',
     glossary: 'Glossary',
@@ -218,6 +247,8 @@ const en: Strings = {
     primaryNav: 'Primary',
     browseNav: 'Browse',
     mobileNav: 'Mobile',
+    footerNav: 'Footer',
+    companyLegal: 'Company & Legal',
     topicClusters: 'Topic clusters',
     featuredClusters: 'Featured topic clusters',
     langUnavailable: (lang) => `${lang} — this article is not available in this language; opens the blog`,
@@ -270,9 +301,13 @@ const zhHans: Strings = {
     permissionsSecurity: '权限与安全',
     groupEvaluate: '评估',
     groupCapabilities: '平台能力',
+    security: '安全与信任',
     trustCenter: '信任中心',
+    capDataApps: '数据与应用',
+    capAutomationApprovals: '自动化与审批',
+    capAnalytics: '报表与分析',
     toolsMcp: '工具与 MCP',
-    agentGuide: 'Agent 开发指南',
+    startWithAgent: '从你的 Agent 开始',
     templates: '模板',
     referenceStories: '参考案例',
     glossary: '术语表',
@@ -283,6 +318,8 @@ const zhHans: Strings = {
     primaryNav: '主导航',
     browseNav: '浏览',
     mobileNav: '移动端导航',
+    footerNav: '页脚',
+    companyLegal: '公司与法律',
     topicClusters: '专题导航',
     featuredClusters: '精选专题',
     langUnavailable: (lang) => `${lang}——本文暂无该语言版本，将打开该语言的博客`,
@@ -335,9 +372,13 @@ const ja: Strings = {
     permissionsSecurity: '権限とセキュリティ',
     groupEvaluate: '検討',
     groupCapabilities: '機能',
+    security: 'セキュリティと信頼',
     trustCenter: 'トラストセンター',
+    capDataApps: 'データとアプリ',
+    capAutomationApprovals: '自動化と承認',
+    capAnalytics: 'レポートと分析',
     toolsMcp: 'ツールと MCP',
-    agentGuide: 'エージェント開発ガイド',
+    startWithAgent: 'エージェントから始める',
     templates: 'テンプレート',
     referenceStories: '導入事例',
     glossary: '用語集',
@@ -348,6 +389,8 @@ const ja: Strings = {
     primaryNav: 'メインナビゲーション',
     browseNav: 'ブラウズ',
     mobileNav: 'モバイルナビゲーション',
+    footerNav: 'フッター',
+    companyLegal: '会社と法務',
     topicClusters: 'トピッククラスター',
     featuredClusters: '注目のトピッククラスター',
     langUnavailable: (lang) => `${lang} — この記事にはこの言語の版がありません。ブログ一覧を開きます`,
@@ -400,9 +443,13 @@ const de: Strings = {
     permissionsSecurity: 'Berechtigungen & Sicherheit',
     groupEvaluate: 'Evaluieren',
     groupCapabilities: 'Funktionen',
+    security: 'Sicherheit & Vertrauen',
     trustCenter: 'Trust Center',
+    capDataApps: 'Daten & Apps',
+    capAutomationApprovals: 'Automatisierung & Freigaben',
+    capAnalytics: 'Analysen',
     toolsMcp: 'Tools & MCP',
-    agentGuide: 'Agent-Leitfaden',
+    startWithAgent: 'Mit Ihrem Agent starten',
     templates: 'Vorlagen',
     referenceStories: 'Referenzberichte',
     glossary: 'Glossar',
@@ -413,6 +460,8 @@ const de: Strings = {
     primaryNav: 'Hauptnavigation',
     browseNav: 'Durchstöbern',
     mobileNav: 'Mobile Navigation',
+    footerNav: 'Fußzeile',
+    companyLegal: 'Unternehmen & Rechtliches',
     topicClusters: 'Themencluster',
     featuredClusters: 'Ausgewählte Themencluster',
     langUnavailable: (lang) => `${lang} – dieser Artikel ist in dieser Sprache nicht verfügbar; öffnet den Blog`,
@@ -465,9 +514,13 @@ const es: Strings = {
     permissionsSecurity: 'Permisos y seguridad',
     groupEvaluate: 'Evaluar',
     groupCapabilities: 'Capacidades',
+    security: 'Seguridad y confianza',
     trustCenter: 'Centro de confianza',
+    capDataApps: 'Datos y apps',
+    capAutomationApprovals: 'Automatización y aprobaciones',
+    capAnalytics: 'Analítica',
     toolsMcp: 'Herramientas y MCP',
-    agentGuide: 'Guía para agentes',
+    startWithAgent: 'Empieza con tu agente',
     templates: 'Plantillas',
     referenceStories: 'Casos de referencia',
     glossary: 'Glosario',
@@ -478,6 +531,8 @@ const es: Strings = {
     primaryNav: 'Navegación principal',
     browseNav: 'Explorar',
     mobileNav: 'Navegación móvil',
+    footerNav: 'Pie de página',
+    companyLegal: 'Empresa y legal',
     topicClusters: 'Grupos temáticos',
     featuredClusters: 'Grupos temáticos destacados',
     langUnavailable: (lang) => `${lang}: este artículo no está disponible en este idioma; abre el blog`,
@@ -530,9 +585,13 @@ const fr: Strings = {
     permissionsSecurity: 'Permissions et sécurité',
     groupEvaluate: 'Évaluer',
     groupCapabilities: 'Capacités',
+    security: 'Sécurité et confiance',
     trustCenter: 'Centre de confiance',
+    capDataApps: 'Données et apps',
+    capAutomationApprovals: 'Automatisation et approbations',
+    capAnalytics: 'Analytique',
     toolsMcp: 'Outils et MCP',
-    agentGuide: 'Guide agent',
+    startWithAgent: 'Commencez avec votre agent',
     templates: 'Modèles',
     referenceStories: 'Cas de référence',
     glossary: 'Glossaire',
@@ -543,6 +602,8 @@ const fr: Strings = {
     primaryNav: 'Navigation principale',
     browseNav: 'Parcourir',
     mobileNav: 'Navigation mobile',
+    footerNav: 'Pied de page',
+    companyLegal: 'Entreprise et mentions légales',
     topicClusters: 'Groupes thématiques',
     featuredClusters: 'Groupes thématiques à la une',
     langUnavailable: (lang) => `${lang} : cet article n’est pas disponible dans cette langue ; ouvre le blog`,
@@ -595,9 +656,13 @@ const ko: Strings = {
     permissionsSecurity: '권한과 보안',
     groupEvaluate: '평가',
     groupCapabilities: '기능',
+    security: '보안과 신뢰',
     trustCenter: '트러스트 센터',
+    capDataApps: '데이터와 앱',
+    capAutomationApprovals: '자동화와 승인',
+    capAnalytics: '분석',
     toolsMcp: '도구 및 MCP',
-    agentGuide: '에이전트 가이드',
+    startWithAgent: '에이전트로 시작하기',
     templates: '템플릿',
     referenceStories: '레퍼런스 사례',
     glossary: '용어집',
@@ -608,6 +673,8 @@ const ko: Strings = {
     primaryNav: '주 메뉴',
     browseNav: '둘러보기',
     mobileNav: '모바일 메뉴',
+    footerNav: '바닥글',
+    companyLegal: '회사 및 법적 고지',
     topicClusters: '주제 클러스터',
     featuredClusters: '추천 주제 클러스터',
     langUnavailable: (lang) => `${lang} — 이 글은 이 언어로 제공되지 않습니다. 블로그 목록으로 이동합니다`,
@@ -661,9 +728,13 @@ const toHant = (s: Strings): Strings => ({
     permissionsSecurity: s2t(s.siteNav.permissionsSecurity),
     groupEvaluate: s2t(s.siteNav.groupEvaluate),
     groupCapabilities: s2t(s.siteNav.groupCapabilities),
+    security: s2t(s.siteNav.security),
     trustCenter: s2t(s.siteNav.trustCenter),
+    capDataApps: s2t(s.siteNav.capDataApps),
+    capAutomationApprovals: s2t(s.siteNav.capAutomationApprovals),
+    capAnalytics: s2t(s.siteNav.capAnalytics),
     toolsMcp: s2t(s.siteNav.toolsMcp),
-    agentGuide: s2t(s.siteNav.agentGuide),
+    startWithAgent: s2t(s.siteNav.startWithAgent),
     templates: s2t(s.siteNav.templates),
     referenceStories: s2t(s.siteNav.referenceStories),
     glossary: s2t(s.siteNav.glossary),
@@ -674,6 +745,8 @@ const toHant = (s: Strings): Strings => ({
     primaryNav: s2t(s.siteNav.primaryNav),
     browseNav: s2t(s.siteNav.browseNav),
     mobileNav: s2t(s.siteNav.mobileNav),
+    footerNav: s2t(s.siteNav.footerNav),
+    companyLegal: s2t(s.siteNav.companyLegal),
     topicClusters: s2t(s.siteNav.topicClusters),
     featuredClusters: s2t(s.siteNav.featuredClusters),
     // The language name is spliced in after conversion: s2t would rewrite a

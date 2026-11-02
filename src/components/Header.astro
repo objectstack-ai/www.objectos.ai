@@ -116,41 +116,42 @@ type NavItem = { label: string; href: string; external?: boolean; active: boolea
 type NavSection = { label?: string; items: NavItem[] };
 type NavGroup = { id: string; label: string; active: boolean; sections: NavSection[] };
 
+// An entry is active on its own page (`aria-current="page"`) and on the pages
+// folded under it (`aria-current="true"`, the section the page sits in): the
+// Capabilities list went from eight entries to five, so app interfaces folds
+// under data & apps and approvals under automation & approvals; permissions,
+// like the trust center, is a sub-section of the security hub. A folded page
+// keeps its URL and is linked from its parent page and from the footer.
+const under = (parent: string, ...folded: string[]) =>
+  pathname === parent || folded.includes(pathname);
+
+const evaluateItems: NavItem[] = [
+  { label: t.siteNav.ontology, href: ontologyHref, active: pathname === ontologyHref },
+  { label: t.siteNav.productTour, href: productTourHref, active: pathname === productTourHref },
+  { label: t.siteNav.platform, href: platformHref, active: pathname === platformHref },
+  // The comparison page, not the home page's `#compare` section: from any
+  // other page that anchor landed a reader seven screens down the home page.
+  { label: t.siteNav.whyObjectOs, href: compareHref, active: pathname === compareHref },
+  // The one trust entry. /security/ is the hub; the trust center and the
+  // permissions page are its sub-sections (SecurityPage.astro links both).
+  { label: t.siteNav.security, href: securityHref, active: under(securityHref, trustCenterHref, permissionsHref) },
+];
+
 const capabilityItems: NavItem[] = [
-  { label: t.siteNav.dataModeling, href: dataModelingHref, active: pathname === dataModelingHref },
-  { label: t.siteNav.appInterfaces, href: appUiHref, active: pathname === appUiHref },
-  { label: t.siteNav.automation, href: automationHref, active: pathname === automationHref },
-  { label: t.siteNav.approvals, href: approvalsHref, active: pathname === approvalsHref },
-  { label: t.siteNav.permissionsSecurity, href: permissionsHref, active: pathname === permissionsHref },
-  { label: t.siteNav.analytics, href: analyticsHref, active: pathname === analyticsHref },
+  { label: t.siteNav.capDataApps, href: dataModelingHref, active: under(dataModelingHref, appUiHref) },
+  { label: t.siteNav.capAutomationApprovals, href: automationHref, active: under(automationHref, approvalsHref) },
   { label: t.siteNav.aiBuildAsk, href: aiHref, active: pathname === aiHref },
   { label: t.siteNav.toolsMcp, href: mcpHref, active: pathname === mcpHref },
+  { label: t.siteNav.capAnalytics, href: analyticsHref, active: pathname === analyticsHref },
 ];
 
 const groups: NavGroup[] = [
   {
     id: 'product',
     label: t.siteNav.product,
-    active:
-      pathname === ontologyHref ||
-      pathname === productTourHref ||
-      pathname === platformHref ||
-      pathname === trustCenterHref ||
-      // Evaluation pages with no menu item of their own.
-      pathname === compareHref ||
-      pathname === securityHref ||
-      capabilityItems.some((it) => it.active),
+    active: evaluateItems.some((it) => it.active) || capabilityItems.some((it) => it.active),
     sections: [
-      {
-        label: t.siteNav.groupEvaluate,
-        items: [
-          { label: t.siteNav.ontology, href: ontologyHref, active: pathname === ontologyHref },
-          { label: t.siteNav.productTour, href: productTourHref, active: pathname === productTourHref },
-          { label: t.siteNav.platform, href: platformHref, active: pathname === platformHref },
-          { label: t.siteNav.whyObjectOs, href: `${homeHref}#compare`, active: false },
-          { label: t.siteNav.trustCenter, href: trustCenterHref, active: pathname === trustCenterHref },
-        ],
-      },
+      { label: t.siteNav.groupEvaluate, items: evaluateItems },
       { label: t.siteNav.groupCapabilities, items: capabilityItems },
     ],
   },
@@ -161,7 +162,7 @@ const groups: NavGroup[] = [
     sections: [
       {
         items: [
-          { label: t.siteNav.agentGuide, href: agentGuideHref, active: pathname === agentGuideHref },
+          { label: t.siteNav.startWithAgent, href: agentGuideHref, active: pathname === agentGuideHref },
           { label: t.siteNav.productDocs, href: DOCS_URL, external: true, active: false },
           { label: t.siteNav.developerDocs, href: DEVELOPERS_URL, external: true, active: false },
           { label: t.siteNav.templates, href: templatesHref, active: pathname === templatesHref },
@@ -1063,11 +1064,13 @@ const menus = (
   .drawer-flat.active {
     color: var(--accent);
   }
+  /* 0.55rem, not 0.9rem: with Product expanded at 390x844 the CTA's bottom
+     edge sat at 848px, 4px under the first screen of the panel. */
   .drawer-cta {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    margin-top: 0.9rem;
+    margin-top: 0.55rem;
     padding: 0.8rem 1rem;
     font-size: 0.92rem;
     font-weight: 680;

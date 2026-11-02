@@ -1,12 +1,25 @@
 ---
 import { getImage } from 'astro:assets';
 import heroImage from '../assets/objectos-home-hero.png';
-import FooterClusters from '../components/FooterClusters.astro';
 import Header from '../components/Header.astro';
 import Logo from '../components/Logo.astro';
 import { marketingPagePath } from '../content-pages/registry';
 import { glossaryIndexPath } from '../glossary/registry';
-import { htmlLang, OG_LOCALE, pricingPath, privacyPath, rssPath, termsPath, ui, type Locale } from '../lib/i18n';
+import { clusterCopy } from '../lib/cluster-i18n';
+import { CLUSTERS, clusterPath } from '../lib/clusters';
+import {
+  blogPath,
+  htmlLang,
+  OG_LOCALE,
+  pricingPath,
+  privacyPath,
+  refundsPath,
+  rssPath,
+  securityPath,
+  termsPath,
+  ui,
+  type Locale,
+} from '../lib/i18n';
 import { ORGANIZATION_ID, ORGANIZATION_SAME_AS } from '../lib/organization';
 import { CLOUD_SIGNIN_URL, OBJECTSTACK_URL } from '../lib/positioning';
 
@@ -141,6 +154,95 @@ const jsonLdItems = [
 ];
 const jsonLdHtml = (value: Record<string, unknown>) =>
   JSON.stringify(value).replace(/</g, '\\u003c');
+
+// The footer: four columns titled like the header's groups (Product ·
+// Developers · Resources · Company & Legal), each link under the same label
+// the header gives it. Product is the complete map of the product pages. The
+// header's Capabilities list names five entries for eight pages, and the
+// trust center and permissions sit under the security hub; a page folded
+// away like that keeps its URL, is linked from its parent page, and keeps a
+// footer link here under its own name. The five pillar guides are Resources,
+// under a "Topic clusters" sub-label (they have no header entry); each post a
+// pillar lists in its reading path links back to it too
+// (src/layouts/BlogPost.astro).
+type FootLink = { label: string; href: string; external?: boolean; code?: boolean };
+type FootColumn = { title: string; wide?: boolean; lists: { sub?: string; links: FootLink[] }[] };
+const page = (slug: string): string => marketingPagePath(locale, slug);
+const footerColumns: FootColumn[] = [
+  {
+    title: t.siteNav.product,
+    wide: true,
+    lists: [
+      {
+        links: [
+          { label: t.footer.platform, href: page('platform') },
+          { label: t.siteNav.productTour, href: page('product-tour') },
+          { label: t.siteNav.ontology, href: page('ontology') },
+          { label: t.siteNav.whyObjectOs, href: page('compare') },
+          { label: t.siteNav.security, href: securityPath(locale) },
+          { label: t.siteNav.trustCenter, href: page('trust-center') },
+          { label: t.siteNav.permissionsSecurity, href: page('permissions') },
+          { label: t.siteNav.dataModeling, href: page('data-modeling') },
+          { label: t.siteNav.appInterfaces, href: page('app-ui') },
+          { label: t.siteNav.automation, href: page('automation') },
+          { label: t.siteNav.approvals, href: page('approvals') },
+          { label: t.siteNav.analytics, href: page('analytics') },
+          { label: t.siteNav.aiBuildAsk, href: page('ai') },
+          { label: t.siteNav.toolsMcp, href: page('mcp') },
+          { label: t.footer.pricing, href: pricingPath(locale) },
+          { label: t.signIn, href: CLOUD_SIGNIN_URL },
+        ],
+      },
+    ],
+  },
+  {
+    title: t.siteNav.developers,
+    lists: [
+      {
+        links: [
+          { label: t.siteNav.startWithAgent, href: page('agent-developer') },
+          { label: t.siteNav.productDocs, href: 'https://docs.objectos.ai', external: true },
+          { label: t.siteNav.developerDocs, href: OBJECTSTACK_URL, external: true },
+          { label: t.siteNav.templates, href: page('templates') },
+        ],
+      },
+    ],
+  },
+  {
+    title: t.siteNav.resources,
+    lists: [
+      {
+        links: [
+          { label: t.backToList, href: blogPath(locale) },
+          { label: t.siteNav.glossary, href: glossaryIndexPath(locale) },
+          { label: t.siteNav.referenceStories, href: page('customer-stories') },
+        ],
+      },
+      {
+        sub: t.siteNav.topicClusters,
+        links: CLUSTERS.map((cluster) => ({
+          label: clusterCopy(cluster, locale).shortTitle,
+          href: clusterPath(locale, cluster.slug),
+        })),
+      },
+    ],
+  },
+  {
+    title: t.siteNav.companyLegal,
+    lists: [
+      {
+        links: [
+          { label: t.footer.privacy, href: privacyPath(locale) },
+          { label: t.footer.terms, href: termsPath(locale) },
+          { label: t.footer.refunds, href: refundsPath(locale) },
+          { label: 'llms.txt', href: '/llms.txt', code: true },
+          { label: 'RSS', href: rssPath(locale) },
+          { label: 'GitHub', href: 'https://github.com/objectstack-ai/objectstack', external: true },
+        ],
+      },
+    ],
+  },
+];
 ---
 
 <!doctype html>
@@ -201,32 +303,43 @@ const jsonLdHtml = (value: Record<string, unknown>) =>
       <slot />
     </main>
     <footer class="site-footer">
-      <FooterClusters {locale} />
+      <nav class="foot-nav" aria-label={t.siteNav.footerNav}>
+        {
+          footerColumns.map((column) => (
+            <div class:list={['foot-col', { wide: column.wide }]}>
+              <h2 class="foot-title">{column.title}</h2>
+              {column.lists.map((list) => (
+                <>
+                  {list.sub && <p class="foot-sub">{list.sub}</p>}
+                  <ul>
+                    {list.links.map((link) => (
+                      <li>
+                        <a
+                          href={link.href}
+                          target={link.external ? '_blank' : undefined}
+                          rel={link.external ? 'noopener' : undefined}
+                          translate={link.code ? 'no' : undefined}>
+                          {/* One text run, so a label that wraps on a phone keeps
+                              the arrow after its last word; the non-breaking
+                              space keeps the arrow on that word's line, and
+                              the two expressions touch, since a line break
+                              between them would render as a breakable space. */}
+                          <span>{link.label}{link.external && <span class="foot-ext" aria-hidden="true">{' '}↗</span>}</span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ))}
+            </div>
+          ))
+        }
+      </nav>
       <div class="inner">
         <span class="foot-brand" translate="no">
           <Logo size={14} /> ObjectStack AI LLC
           <span class="muted">© {new Date().getFullYear()}</span>
         </span>
-        <div class="foot-links">
-          <a href={marketingPagePath(locale, 'product-tour')}>{t.siteNav.productTour}</a>
-          <a href={marketingPagePath(locale, 'platform')}>{t.footer.platform}</a>
-          <a href={marketingPagePath(locale, 'ai')}>{t.siteNav.aiBuildAsk}</a>
-          <a href={marketingPagePath(locale, 'mcp')}>{t.siteNav.toolsMcp}</a>
-          <a href={marketingPagePath(locale, 'templates')}>{t.siteNav.templates}</a>
-          <a href={marketingPagePath(locale, 'agent-developer')}>{t.siteNav.agentGuide}</a>
-          <a href={marketingPagePath(locale, 'trust-center')}>{t.siteNav.trustCenter}</a>
-          <a href={marketingPagePath(locale, 'customer-stories')}>{t.siteNav.referenceStories}</a>
-          <a href={glossaryIndexPath(locale)}>{t.siteNav.glossary}</a>
-          <a href={pricingPath(locale)}>{t.footer.pricing}</a>
-          <a href="https://docs.objectos.ai" target="_blank" rel="noopener">{t.siteNav.productDocs}</a>
-          <a href={OBJECTSTACK_URL} target="_blank" rel="noopener">{t.siteNav.developerDocs}</a>
-          <a href="https://github.com/objectstack-ai/objectstack" target="_blank" rel="noopener">GitHub</a>
-          <a href={CLOUD_SIGNIN_URL}>{t.signIn}</a>
-          <a href="/llms.txt" translate="no">llms.txt</a>
-          <a href={rssPath(locale)}>RSS</a>
-          <a href={privacyPath(locale)}>{t.footer.privacy}</a>
-          <a href={termsPath(locale)}>{t.footer.terms}</a>
-        </div>
       </div>
     </footer>
 
@@ -408,17 +521,75 @@ const jsonLdHtml = (value: Record<string, unknown>) =>
       .site-footer {
         border-top: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
         margin-top: 4rem;
+        font-size: 0.8rem;
+        color: var(--ink-soft);
+      }
+      /* Four titled columns on a grid. Product is the map of every product
+         page (sixteen links, the header's five Capabilities entries unfolded),
+         so it takes a double track and lays its list out in two columns; the
+         other three are single lists. */
+      .site-footer .foot-nav {
+        max-width: var(--maxw);
+        margin: 0 auto;
+        padding: 2.25rem 1.5rem 0.75rem;
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr 1fr;
+        gap: 2rem 2.5rem;
+      }
+      .site-footer .foot-col.wide ul {
+        column-count: 2;
+        column-gap: 2rem;
+      }
+      .site-footer .foot-title {
+        margin: 0 0 0.5rem;
+        font-family: inherit;
+        font-size: 0.8rem;
+        font-weight: 700;
+        line-height: 1.65;
+        letter-spacing: 0;
+        color: var(--ink);
+      }
+      .site-footer .foot-sub {
+        margin: 0.9rem 0 0.2rem;
+        font-size: 0.66rem;
+        font-weight: 760;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .site-footer ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .site-footer li {
+        break-inside: avoid;
+      }
+      /* Tap targets: 28px rows at every width (WCAG 2.5.8 asks 24; the text
+         line alone is 21px), 44px on a phone. */
+      .site-footer a {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        min-height: 28px;
+        color: var(--ink-soft);
+        text-decoration: none;
+      }
+      .site-footer a:hover {
+        color: var(--ink);
+      }
+      .site-footer .foot-ext {
+        font-size: 0.72rem;
+        opacity: 0.5;
       }
       .site-footer .inner {
         max-width: var(--maxw);
         margin: 0 auto;
-        padding: 1.5rem;
+        padding: 1.1rem 1.5rem 1.5rem;
         display: flex;
         justify-content: space-between;
         align-items: center;
         gap: 0.75rem 2rem;
-        font-size: 0.8rem;
-        color: var(--ink-soft);
       }
       .site-footer .foot-brand {
         display: inline-flex;
@@ -427,26 +598,28 @@ const jsonLdHtml = (value: Record<string, unknown>) =>
         gap: 0.4rem;
         white-space: nowrap;
       }
-      .site-footer .foot-links {
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 0.5rem 1rem;
-      }
-      /* Tap targets: 24px tall at every width (WCAG 2.5.8; the text line
-         alone was 21px), 44px on a phone. */
-      .site-footer a {
-        display: inline-flex;
-        align-items: center;
-        min-height: 24px;
-        color: var(--ink-soft);
-        text-decoration: none;
-      }
-      .site-footer a:hover {
-        color: var(--ink);
-      }
       .site-footer .muted {
         color: var(--muted);
+      }
+      /* Two tracks below the desktop breakpoint: Product across both, then
+         Developers over Company & Legal on the left and Resources (the
+         tallest of the three) on the right, so no cell is left empty. */
+      @media (max-width: 900px) {
+        .site-footer .foot-nav {
+          grid-template-columns: 1fr 1fr;
+          gap: 1.75rem 2rem;
+        }
+        .site-footer .foot-col.wide {
+          grid-column: 1 / -1;
+        }
+        .site-footer .foot-col:nth-child(3) {
+          grid-column: 2;
+          grid-row: 2 / span 2;
+        }
+        .site-footer .foot-col:nth-child(4) {
+          grid-column: 1;
+          grid-row: 3;
+        }
       }
       @media (max-width: 640px) {
         main {
@@ -455,17 +628,36 @@ const jsonLdHtml = (value: Record<string, unknown>) =>
         .site-footer {
           margin-top: 2.5rem;
         }
+        .site-footer .foot-nav {
+          padding: 1.75rem 1rem 0.5rem;
+        }
         .site-footer .inner {
-          padding: 1.25rem 1rem;
+          padding: 0.75rem 1rem 1.25rem;
           align-items: flex-start;
           flex-direction: column;
           gap: 0.75rem;
         }
-        .site-footer .foot-links {
-          gap: 0 1.1rem;
-        }
-        .site-footer .foot-links a {
+        .site-footer a {
           min-height: 44px;
+        }
+      }
+      /* A phone keeps the two tracks (a single column of 34 rows at 44px was
+         1470px of footer). A track is 154px at 360px, and the longest single
+         words (Entwicklerdokumentation, Prozessautomatisierung) are about
+         150px at this size, so a label may hyphenate rather than overflow
+         its track; `anywhere` is the last resort where no dictionary applies. */
+      @media (max-width: 480px) {
+        .site-footer .foot-nav {
+          gap: 1.5rem 1.25rem;
+        }
+        .site-footer .foot-col.wide ul {
+          column-gap: 1.25rem;
+        }
+        .site-footer a:is(:lang(en), :lang(de), :lang(fr), :lang(es)) {
+          -webkit-hyphens: auto;
+          hyphens: auto;
+          hyphenate-limit-chars: 12 5 5;
+          overflow-wrap: anywhere;
         }
       }
 

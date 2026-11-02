@@ -11,7 +11,7 @@ const page = {
     lead:
       'Take a subscription-billing system: customers, plans, seats, MRR, renewal dates, status. Those objects, their fields, and the relations between them are the core of your business ontology, and on the open-source ObjectStack runtime that core is one compact definition — tables, migrations, the query engine, and REST endpoints are supplied by the runtime. Your agent can write it, your team can fine-tune it field by field in the object designer, and on ObjectOS the in-app AI Builder drafts the same objects and fields from a plain-language request.',
     primary: { label: 'Read the data modeling docs', href: 'https://docs.objectos.ai/docs/build/data' },
-    secondary: { label: 'See process automation', href: '/en/automation/' },
+    secondary: { label: 'See app interfaces', href: '/en/app-ui/' },
     metrics: [
       { value: '20+', label: 'Field types — text, currency, percent, lookup, formula, file' },
       { value: 'Zero', label: 'Hand-written endpoints — REST APIs come from metadata' },

@@ -11,7 +11,7 @@ const page = {
     lead:
       'Take a sales organization: reps see only their team’s accounts, the cost field is masked for them, managers see the whole region, and audit wants to know who changed that discount. On the ObjectStack runtime that boundary is part of the ontology itself — permissions are declared beside the objects they protect, not in a second policy system — and it is the one fence people and agents share: enforced on every query, API call, and AI tool call, whether the agent is your own over MCP or ObjectOS’s in-app AI.',
     primary: { label: 'Read the permissions docs', href: 'https://docs.objectos.ai/docs/configure/permissions' },
-    secondary: { label: 'Review the trust model', href: '/en/trust-center/' },
+    secondary: { label: 'Review the security model', href: '/en/security/' },
     metrics: [
       { value: '3 layers', label: 'Object, record, and field-level control in one model' },
       { value: 'Per user', label: 'AI agents inherit the signed-in user’s permissions' },
