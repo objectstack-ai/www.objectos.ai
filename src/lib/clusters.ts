@@ -85,7 +85,7 @@ export const CLUSTERS: Cluster[] = [
     shortTitle: 'Legacy modernization',
     description:
       'A practical guide to modernizing legacy business systems with AI by connecting existing databases, modeling business objects, and avoiding risky migrations.',
-    eyebrow: 'Modernization cluster',
+    eyebrow: 'Modernization guide',
     lead:
       'Legacy modernization does not always start with a rebuild. For many teams, the lower-risk path is to connect existing systems read-only first, model the records that matter, and add AI-native workflows on top.',
     definition:
@@ -137,7 +137,7 @@ export const CLUSTERS: Cluster[] = [
     shortTitle: 'Self-hosted AI',
     description:
       'Understand when enterprise AI should be self-hosted, which runtime components matter most, and how permissions, approvals, tools, and audit logs stay under control.',
-    eyebrow: 'Governance cluster',
+    eyebrow: 'Governance guide',
     lead:
       'Self-hosted AI is not only about where the model runs. Once AI reads business data and calls tools, the application runtime that controls objects, permissions, approvals, and audit evidence becomes the critical control point.',
     definition:
@@ -193,7 +193,7 @@ export const CLUSTERS: Cluster[] = [
     shortTitle: 'CRM and case management',
     description:
       'See how AI can understand customers, opportunities, cases, and service workflows when CRM and case management data are modeled as governed business objects.',
-    eyebrow: 'Solution cluster',
+    eyebrow: 'Solution guide',
     lead:
       'CRM and case management are natural starting points for enterprise AI because they are close to revenue, service quality, and customer trust. The useful first step is not autonomous selling; it is governed understanding.',
     definition:
@@ -245,7 +245,7 @@ export const CLUSTERS: Cluster[] = [
     shortTitle: 'Manufacturing AI',
     description:
       'A practical manufacturing AI guide for connecting ERP, MES, work orders, reports, and operational data without replacing the systems that already run production.',
-    eyebrow: 'Industry cluster',
+    eyebrow: 'Industry guide',
     lead:
       'Manufacturing AI becomes practical when it connects to the systems already running production. The first wins usually come from reports, work orders, exception analysis, and governed operational workflows.',
     definition:
