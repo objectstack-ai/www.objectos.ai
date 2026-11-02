@@ -1,0 +1,181 @@
+---
+title: "AI モデルは企業に入ると何が足りないのか？世界と手と柵"
+description: "足りないのは知能ではない。企業に入ったモデルには、推論する世界、動かす手、行動を囲う柵が欠けている。実行可能なビジネスオントロジーひとつがその三つを供給し、出典付きの表が各供給をランタイムの機構に対応づける。"
+author: ObjectStack Team
+date: 2026-11-03
+status: published
+topic: ai-agents
+audience: it
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - AI エージェント
+  - 実行可能なビジネスオントロジー
+  - MCP
+  - エージェントの権限
+---
+
+**世界。** この事業に何が存在し、それぞれがどう型付けされ、互いにどうつながっているか。
+
+**手。** エージェントがその世界に対して行ってよい操作。呼び出せるツールとして差し出されるもの。
+
+**柵。** 誰が何をしてよいかを、一度きりではなく呼び出しのたびに判定し、事後に記録すること。
+
+AI モデルが企業に入ってきたときに欠けているのはこの三つであり、知能はその一覧にない。この一文は ObjectStack のもので、同社のフロントページの「00 · The idea」セクションのために書かれた。<span lang="en">"What the model lacks is not intelligence: a world, hands, and a fence."</span>（モデルに欠けているのは知能ではない。世界と、手と、柵だ。）本稿はその背後にある、より狭く検証可能な主張を扱う。実行可能なビジネスオントロジーは、ひとつの成果物からこの三つをすべて供給し、各供給はソースの中で読める名前付きのランタイム機構に対応する。下の表がその対応表で、すべてのセルにファイルと行番号を付けた。その後に、各供給が何であるか、同梱の CRM サンプルで測ったひとつの数字、最強の代替案を公平に述べたもの、そしてこのどれもが解決しないことを置く。
+
+## この一文はどこから来たか
+
+2026-10-12 から 2026-10-27 まで、objectstack.ai のフロントページはこの考えを三つの文で述べていた。ページのソースにはそれが一字一句そのまま保たれていた（このセクションを追加したコミット `712361b7` の `apps/docs/app/[lang]/page.tsx` 127–131 行目。三文の上のコメントには「verbatim from the maintainer's ruling」、つまりメンテナーの裁定からの逐語引用とある）。
+
+<blockquote lang="en">
+An enterprise is definition plus execution. When execution is nearly free, it is its definition.
+
+What the model lacks is not intelligence: a world, hands, and a fence.
+
+An ontology written clearly enough is software. Models change; the ontology stays.
+</blockquote>
+
+（企業とは定義プラス実行である。実行がほぼ無料になったとき、企業とはその定義である。モデルに欠けているのは知能ではない。世界と、手と、柵だ。十分に明瞭に書かれたオントロジーはソフトウェアである。モデルは変わる。オントロジーは残る。）
+
+出典についてひとつ注記しておく。本稿の他のすべての出典は、タグの付いたひとつのリリースで読んでいるからだ。objectstack.ai を開発者向けサイトに作り替えた書き直し（`61c07986`、2026-10-27）でこのセクションは退役し、タグ `@objectstack/cli@18.2.0` の時点で、三つの文はもうリポジトリにない。本稿の残りが検証する考えはそれでも同じものであり、その検証はこの文がどこに印刷されているかに依存しない。
+
+真ん中の文を診断として読んでほしい。企業の AI パイロットは例外なく、有能なモデルを会社につなぎ、それから一件ずつ事故を通じて気づく。モデルはこの会社で「取引先」が何を指すか知らなかった（世界がない）。実際にはそれを変更できなかった（手がない）。触れてはならないものを変更した（柵がない）。よくある対応は、欠けた部品を別々に買うことだ。世界のための検索レイヤー、手のための関数呼び出しレイヤー、柵のためのポリシーレイヤー。それは妥当な対応であり、本稿の後半はそれに応分の扱いを与える。第一と第三の文は、ObjectStack がなぜ別の道を取るのかを述べている。事業の定義が実行できるほど正確に書かれているなら、その同じ定義が世界であり、手を宣言し、柵を備えており、今四半期にそれを読んでいるのがどのモデルであろうと、それより長く生きる。
+
+## 三つの供給、ひとつの成果物
+
+ObjectStack の README の一行の定義は「実行可能なビジネスオントロジーをひとつ。AI が書き、ランタイムが動かし、エージェントが操作し、あなたが所有する。」である。コンセプトのページはその核を六種のものとして挙げる。オブジェクトとフィールド、リレーション、アクション、権限、フロー、エージェントとツールの定義。本稿の主張は、この六種が三つの供給に振り分けられ、ランタイムがそれぞれを、誰もグルーを書くことなくエージェントが使えるものに変える、ということだ。以下がその対応表である。すべての出典は、タグ `@objectstack/cli@18.2.0`（2026-11-02 読取。その日に `npm create objectstack@latest` がインストールするリリース）における `objectstack-ai/objectstack` のファイルか、同じリポジトリからビルドされるそのドキュメントのページである。
+
+| モデルに欠けているもの | オントロジーの中でそれを供給するもの | ランタイムの機構と、それが書かれている場所 |
+| :--- | :--- | :--- |
+| **世界** — 名詞。どの実体が存在し、それぞれがどう型付けされ、どう関係するか | オブジェクトとフィールド。リレーション（六種のうち二つ） | 型付きの定義ひとつが `objectstack.json` にコンパイルされる。そこからランタイムがデータベーススキーマ、REST とリアルタイムの API、Console の UI、MCP サーバーを導出する（`ontology.mdx:64-70`）。エージェントはその世界を `list_objects` と `describe_object` で読む（`connect-mcp.mdx:224-228`）。 |
+| **手** — 動詞。それらの名詞に対して何をしてよいか | アクション、フロー、そしてレコードそのもの | 稼働中のアプリは `/api/v1/mcp` の MCP サーバーであり、既定でオンになっている。オブジェクトは自動的に公開され、アクションは `ai: { exposed: true }` でオプトインする（`README.md:136-151`）。このオプトインは既定値 `false` のスキーマフィールドで、40 文字以上の LLM 向け説明を要求する（`action.zod.ts:787-794`）。 |
+| **柵** — 誰がどの行とどのフィールドに何をしてよいかを、呼び出しのたびに確認し、記録する | 権限、行レベルとフィールドレベルのセキュリティ、共有、監査 | セキュリティは ObjectQL エンジンに登録されたミドルウェアであり、エンジンのすべての操作がそこを通る（`security-plugin-authz-middleware.ts:255-261`）。MCP ツールは呼び出し側のプリンシパルの下で、<span lang="en">"the SAME permission/RLS-enforcing path the REST API uses"</span>（REST API が使うのと同じ権限／RLS を強制する経路）を通って実行される（`mcp-http-tools.ts:7-11`）。監査行は、すべての挿入・更新・削除でエンジンのフックによって書かれる（`audit-writers.ts:2402-2408`）。 |
+
+出典を開けるように、ファイルの所在を示す。`README.md` はリポジトリのルート。`ontology.mdx` は `content/docs/concepts/`、`connect-mcp.mdx` は `content/docs/ai/`。`action.zod.ts` は `packages/spec/src/ui/`。`security-plugin-authz-middleware.ts` は `packages/plugins/plugin-security/src/`。`mcp-http-tools.ts` は `packages/mcp/src/`。`audit-writers.ts` は `packages/plugins/plugin-audit/src/`。行番号はこのタグのものである。
+
+コンセプトのページは右の列を一文に圧縮しており、丸ごと引用する価値がある。ランタイムは<span lang="en">"enforces the definition on every call. RBAC, row-level and field-level security, sharing, and audit apply to a REST request, a Console click and an agent's tool call alike. Nothing is reasoned over at runtime: what runs is what was validated."</span>（呼び出しのたびに定義を強制する。RBAC、行レベルとフィールドレベルのセキュリティ、共有、監査は、REST リクエストにも、Console のクリックにも、エージェントのツール呼び出しにも等しく適用される。実行時に推論されるものは何もない。動くのは、検証されたものだ。）
+
+![objectstack.config.ts から objectstack.json にコンパイルされた実行可能なビジネスオントロジーひとつが、三つのものを供給する。世界（オブジェクト、フィールド、リレーション。ランタイムはそこからデータベース、API、describe_object ツールを導出する）、手（ai exposed true でオプトインしたアクション、フロー、レコード。/api/v1/mcp で MCP ツールとして提供される）、柵（権限セット、行レベルとフィールドレベルのセキュリティ、共有、監査。すべてのエンジン呼び出しでセキュリティミドルウェアが強制し、監査フックが記録する）](./three-supplies-en.svg)
+
+以下、表の三行を順に歩く。
+
+## 世界：ランタイムも読む定義
+
+モデルの世界は、二人の読者を同時に満足させなければならない。モデルには、丸ごと保持できるほど小さく明示的である必要があり、ランタイムには、実行できるほど正確である必要がある。文書は第一の読者を満足させ、第二の読者を満足させない。検索で取り出した規程 PDF は、商談が何であるかをモデルに教えるが、データベースがそれに同意しているかを確かめるものは何もない。
+
+実行可能なオントロジーの世界は、型付きの定義そのものだ。コンセプトのページによれば、オントロジーとは<span lang="en">"is the definition of your business that the runtime executes: authored as typed metadata in `objectstack.config.ts`, compiled into the `objectstack.json` artifact."</span>（ランタイムが実行する、あなたの事業の定義である。`objectstack.config.ts` に型付きメタデータとして書かれ、`objectstack.json` 成果物にコンパイルされる。）オブジェクトとフィールドは実体とその型付き属性を宣言し、リレーションはルックアップとマスター・ディテールのリンクを宣言する。ランタイムはその定義からテーブルとエンドポイントを導出し、MCP サーバーの `describe_object` ツールも同じ定義から答える。だからエージェントが読む世界は、構成上、動いている世界と同じものだ。ずれていく第二の記述は存在しない。
+
+二つの帰結が続く。どちらもこのブログで既に論じられているので、繰り返さず指し示すにとどめる。第一に、世界には境界がある。ビュー、ダッシュボード、アプリ、翻訳はオントロジーの投影であってその一部ではなく、これこそがエージェントにすべての画面からではなく核から事業を推論させるものだ（[定義の記事](/ja/blog/what-does-the-ontology-is-the-software-mean/)に、両者を見分ける除去テストがある）。第二に、世界は実行前に検証される。`os validate` は、型検査は通るが実行時に黙って失敗する定義を、セキュリティポスチャの欠落も含めて拒否する。だからエージェントに渡される世界は、その中の宙に浮いた参照一つひとつについて、すでに一度拒否を経ている。
+
+## 手：モデルが推測したツールではなく、作者が武装させたツール
+
+手は、ほとんどの企業 AI スタックが関数呼び出しという形で既に持っている部分だ。実行可能なオントロジーがもたらす違いは、どの手が存在するかを誰が決めるかにある。
+
+オブジェクトには既定で手が付いてくる。定義が型付きであるため、ランタイムはそれを MCP サーバーとして提供する。<span lang="en">"Objects are tools, actions are tools, permissions decide what an agent may call, and audit records what it did"</span>（オブジェクトはツールであり、アクションはツールであり、権限がエージェントに何を呼べるかを決め、監査がそれが何をしたかを記録する）（`README.md:138-139`）。connect-mcp のページは、エージェントが得るものを<span lang="en">"Twelve tools, generated from your metadata"</span>（あなたのメタデータから生成された十二のツール）として挙げる。発見（`list_objects`、`describe_object`、`validate_expression`）、読み取り（`query_records`、`get_record`、`aggregate_records`）、書き込み（`create_record`、`update_record`、`delete_record`）、アクション（`list_actions`、`run_action`、`resume_run`）。新しいオブジェクトのためにツール定義を書く人はいない。オブジェクトがツールなのだ。
+
+アクションには既定で手が付いてこない。これが意図された部分だ。アクションは、作者が `ai: { exposed: true }` を設定し、モデルがそれを選ぶ根拠となる説明を書いたときにだけ、エージェントから呼び出せるようになる。`action.zod.ts` のスキーマコメントがその理由を述べている。<span lang="en">"This is a deliberate governance gate: in an AI-authoring world the platform's value is that a human can govern exactly which capabilities the agent fleet is allowed to invoke — a half-finished or unreviewed action must never be silently armed."</span>（これは意図的なガバナンスのゲートである。AI が書く世界でのプラットフォームの価値は、エージェント群にどの能力の呼び出しを許すかを人が正確に統治できることにある。作りかけの、あるいはレビューされていないアクションが、黙って武装されることは決してあってはならない。）最小の同梱サンプルである todo アプリは、こうして一つを武装させている（`examples/app-todo/src/actions/task.actions.ts`、UI 専用のキーは省いた）。
+
+```ts
+export const CompleteTaskAction = defineAction({
+  name: 'complete_task',
+  label: 'Mark Complete',
+  objectName: 'todo_task',
+  type: 'script',
+  target: 'completeTask',
+  ai: {
+    exposed: true,
+    description: 'Mark a todo task as complete. Use when the user says a task is done or finished.',
+  },
+});
+```
+
+対照的に、同梱の CRM は一つも武装させていない。唯一のアクション Convert Lead は `ai` ブロックのない `flow` アクションなので、このアプリにつないだエージェントは六つのオブジェクトに対するすべてのデータツールを持ちながら、`list_actions` からは空の答えを受け取る。これはサンプルの欠落ではなく、ルールが機能している姿だ。ビジネスロジックに対する手は、定義の中のレビュー済みの一行によって与えられるのであって、ボタンが存在するという事実から推定されることはない。
+
+書き込み操作がとりわけ、UI の横にもう一本のツール経路を置くのではなく、この統治された一つの定義を必要とする理由は、[オントロジーのアクションの記事](/en/blog/objectos-action-tools/)の主題であり、ここでは繰り返さない。
+
+## 柵：ランタイムが、呼び出しのたびに判定する
+
+プロンプトの中に住む柵は、お願いである。ツールの前段のポリシーサービスに住む柵は、呼び出しに対するゲートである。実行可能なオントロジーが備える柵はデータ経路そのものの上にあり、この違いが、一つの誤りがどこまで届くかを決める。
+
+機構はミドルウェアだ。`plugin-security` はその強制を ObjectQL エンジンに登録する（`ql.registerMiddleware(...)`、`security-plugin-authz-middleware.ts:261`、プラグインの `start()` から実行される）。エンジンは、リクエストが REST ルートから来ようと、Console のクリックから来ようと、MCP ツールから来ようと、すべての読み書きが通る場所である。MCP ツールのモジュールは自身のヘッダーで、データエンジンに直接触れることはないと述べている。<span lang="en">"all reads/writes go through an injected McpDataBridge that the host wires to the SAME permission/RLS-enforcing path the REST API uses. This module owns the tool shape; the bridge owns execution + security."</span>（すべての読み書きは注入された McpDataBridge を通り、ホストはそれを REST API が使うのと同じ権限／RLS を強制する経路に配線する。このモジュールが所有するのはツールの形であり、ブリッジが所有するのは実行とセキュリティである。）人間用の柵と同期を保つべきエージェント専用の柵は存在しない。柵は一つしかないからだ。各チェックが正確にどこで走るか、そしてモデルの出力をあとから濾すのではなぜ遅すぎるかは、[エージェントの権限はどこで強制されるか](/en/blog/objectos-agent-permission-boundaries/)で論じている。
+
+この柵の三つの性質は名指しする価値がある。代替スタックはたいてい、少なくとも一つを欠いているからだ。
+
+**呼び出しだけでなく、行とフィールドについて判定する。** 権限セットはオブジェクトレベルの作成・読取・編集・削除を付与し、行レベルセキュリティは呼び出し側が見られるレコードを絞り、フィールドレベルセキュリティは見える列をマスクする。セキュリティサービスの契約は、行フィルターの失敗時の姿勢をはっきり書いている。<span lang="en">"Access-narrowing answers fail CLOSED ... a resolution failure returns a DENY filter (zero rows), never `undefined`"</span>（アクセスを狭める回答は失敗時に閉じる……解決の失敗は DENY フィルター（ゼロ行）を返し、決して `undefined` を返さない）（`packages/spec/src/contracts/security-service.ts:28-31`）。すべてを要求するモデルが得るのは、そのユーザーが見てよいものだ。
+
+**ビジネスロジックは別途ゲートする。ロジックには後ろ盾がないからだ。** オブジェクトの CRUD は、すべての行で RLS と FLS に囲まれている。アクションの本体はそうではない。一度呼び出されれば、それは<span lang="en">"executes as TRUSTED app code,"</span>（信頼されたアプリコードとして実行される）ので、ブリッジは<span lang="en">"gates at invoke time: `ai.exposed` (the author's explicit AI opt-in, ADR-0011) + the ADR-0066 D4 capability gate"</span>（呼び出し時にゲートする。`ai.exposed`（作者の明示的な AI オプトイン、ADR-0011）と ADR-0066 D4 の能力ゲートで）（`mcp-http-tools.ts:1128-1133`）。手と柵はまさにここで出会う。アクションを武装させる一行が、柵が確認する一行なのだ。
+
+**記録する。** 監査ライターは `afterInsert`、`afterUpdate`、`afterDelete` のエンジンフックであり（`audit-writers.ts:2402-2408`）、エージェントの `update_record` で変わった行は、Console で変わった行と同じ仕方で、行為者の識別情報とともに監査ログに入る。README の第四のゲートはその帰結を一行にしている。<span lang="en">"The runtime enforces permissions and audit on every call, so even a wrong app stays inside the fence."</span>（ランタイムはすべての呼び出しで権限と監査を強制する。だから間違ったアプリでさえ柵の内側にとどまる。）
+
+## 同梱の CRM で測る
+
+ひとつの数字。タグ `@objectstack/cli@18.2.0` の `examples/app-crm` で、README がこのアプリについて引用している数え方（README は、アプリ全体が TypeScript で 1,873 行、テスト除く、と述べている）で測った。
+
+```bash
+find examples/app-crm/src -name '*.ts' -not -name '*.test.ts' | xargs cat | wc -l
+# 1873
+```
+
+**30 ファイルで 1,873 行**がアプリケーションの全体だ。そのディレクトリを三つの供給に振り分けると：
+
+| 供給 | ディレクトリ | 行数 | 中身 |
+| :--- | :--- | ---: | :--- |
+| 世界 | `src/objects/` | 489 | 六つのオブジェクト（取引先、連絡先、リード、商談、商談明細、活動）と、そのフィールドとルックアップ |
+| 手 | `src/actions/` + `src/flows/` | 240 | アクション一つ、Convert Lead と、それが起動する画面フロー |
+| 柵 | `src/security/` | 99 | うち `sales-positions.ts` が 89 行。権限セット二つ、ポジション三つ。各ポジションは配布する権限セットを名指しする |
+| 配管 | ツール登録、認可ミドルウェア、監査コード | 0 | `src/` 全体を `registerTool`、`middleware`、`authoriz`、`checkPermission`、`audit` で検索すると四件ヒットし、すべてコメントの中 |
+
+残りは投影（ビュー、ダッシュボード一つ、アプリ一つ、ページ一つ、翻訳、分析データセット一つ）とシードデータで、本稿の対象ではない。
+
+見出しの数字を**柵 89 行**と呼ぼう。これが六オブジェクトの CRM の認可宣言のすべてであり、同じ 89 行が REST API と Console と十二の MCP ツールすべてを統治する。三者とも、柵が取り付けられたエンジンを通してデータに到達するからだ。補完する数字はゼロのほうだ。このアプリケーションは自らの世界と手と柵を宣言しているが、それらをモデルにつなぐコードを一行も含んでいない。配線はランタイムの仕事であり、それこそが「ひとつの成果物」という言い回しの中身のすべてである。
+
+測定について二つ、正直な脚注を。89 行はアプリ自身の宣言であり、それが含意する行フィルターとフィールドマスクは、ランタイムが各オブジェクトの `sharingModel` とそれらの権限セットから計算する。だから稼働中のシステムでの「柵」はその宣言より大きく、それはそうあるべきだ。そして上で述べたとおり、この CRM は AI にアクションを一つも公開していないので、作者が一つ武装させるまで、ビジネスロジックに対する手はゼロである。
+
+## 代替案を、公平に
+
+三つのものを供給するありふれた方法はスタックだ。世界のために文書とスキーマに対する検索、手のために関数呼び出し（または自分で書くツールサーバー）、柵のためにツールの前段のポリシーエンジンかゲートウェイ。これは公平に聞かれるべきだ。いくつかの状況では正解だからである。
+
+既に動かしているシステムとともに働く。何も移行しない。リトリーバーは存在するものを索引し、ツールは既にある API を包む。各レイヤーは最良のものを選べて交換可能なので、より良いリトリーバーやより厳しいポリシーエンジンを、他に触れずに差し込める。パターンはよく理解され、ベンダーは多く、既にツールゲートウェイを持つチームは柵の大半を手にしている。十数のレガシーシステムを横断して読み、どこにも書かないことが仕事のエージェントなら、このスタックがおそらく望みのものであり、それらのシステムの上の実行可能なオントロジーは読み取り専用で、まだ初期である。
+
+これが解決しないのは、フロントページの第一の文が言っていることだ。三つの供給は三つの成果物で、三人の所有者がいて、それらが一致しているかを確かめるものは何もない。
+
+| | RAG + 関数呼び出し + ポリシーレイヤー | 実行可能なオントロジーひとつ |
+| :--- | :--- | :--- |
+| **世界** | モデルが読むコーパス。システムはそれを読まない | ランタイムが実行する定義。`describe_object` はそこから答える |
+| **手** | 手書きのツールスキーマ。操作ごとに一つ、システムの横で保守する | オブジェクトは自動的にツール。アクションはレビュー済みの一行でオプトイン |
+| **柵** | ツール呼び出しに対するゲート。たいてい各ツールの背後にサービスアカウントの権限がある | データ経路上のミドルウェア。呼び出したユーザーの権限の下で、行とフィールドまで含めて |
+| **ドリフト** | 事業の三つの記述。それぞれが古くなりうる | ひとつの成果物。実行前に検証される |
+| **監査** | 呼び出しはログされる。行の変更は下流システムの問題 | 行の変更が識別情報とともに、すべての経路でログされる |
+
+インシデントのときにいちばん重要なのは柵の行だ。`get_customer` ツールの前段のポリシーレイヤーは、エージェントがそれを呼んでよいかを判定できる。しかし結果の中のどの行をエージェントのユーザーが見てよいかは、たいてい判定できない。ツールは、統合に与えられたどの資格情報であれ、それで動くからだ。データ経路上の行レベルとフィールドレベルのセキュリティは、すべての呼び出し側についてその問いに答え、人間とエージェントに同じ答えを返す。
+
+## これが解決しないこと
+
+柵についての記事は、柵がどこで終わるかを言うべきだ。
+
+**判断は供給しない。** 柵は誤った呼び出しを拒否可能で追跡可能にするが、呼び出しを正しくはしない。モデルは依然として誤ったツールを選び、フィールドを読み違え、望むべきでないアクションを求めうる。世界と柵は被害を限定する。知能、つまりモデルが実際に持ち込むものが、依然として選択を行う。
+
+**オプトインのゲートが守るのは、ランタイムが所有する扉である。** `ai.exposed` のゲートは、MCP の `run_action` ツールから到達するアクションの扉で強制される。スペック自身の注記は明示的だ。<span lang="en">"REST `/actions` is NOT `ai.exposed`-gated and sits OUTSIDE this gate, so a human in front of that route is still yours to arrange"</span>（REST の `/actions` は `ai.exposed` でゲートされておらず、このゲートの外側にある。だからそのルートの前に人を置くかどうかは、依然としてあなたが手配することだ）（`packages/spec/src/ai/tool.zod.ts:95-98`）。そのルートでも権限は適用される。AI のオプトインは適用されない。
+
+**読み取りの監査は書き込みの監査より狭い。** すべての挿入・更新・削除は記録される。レコード詳細の閲覧を記録するのはオブジェクトごとのオプトインであり、一覧と検索の結果は監査されない（`packages/plugins/plugin-audit/src/audit-plugin.ts:48-67`）。広く読むエージェントは、書くエージェントより小さな痕跡しか残さない。
+
+**世界とは、ランタイムが動かすアプリのことである。** ランタイムが動かしていないシステムについては、外部データソースの連合は既定で読み取り専用で、初期段階と説明されている。三つの供給が覆うのはオントロジーが実行するものであり、残りの資産にはやはり上記のスタックか、移行が必要だ。
+
+**公開されたアクションは信頼されたコードである。** `run_action` ツールは自身の説明の中でモデルにそう告げる。アクションの本体は<span lang="en">"runs as trusted application code with the app's full data authority."</span>（アプリの完全なデータ権限を持つ、信頼されたアプリケーションコードとして実行される。）したがってアクションを武装させることはトグルではなくレビューの決定であり、先に人に尋ねるべきものには `requiresConfirmation: true` がある。
+
+## ホスト型か、自社インフラか
+
+上のすべてはオープンなスタックで、Apache-2.0、ひとつのリポジトリにある。定義はあなたが手にしているファイルだ。「同じループをホスト型で、ブラウザだけで、何もインストールせずに使いたい？それが ObjectOS — ObjectStack の上に構築された商用ランタイム環境です。」ObjectOS には 3 つのエディションがあります。オープンソースで無料でセルフホストできる ObjectOS Community、ブラウザ上でホストされインストール不要の ObjectOS Cloud、自社インフラでセルフマネージドの ObjectOS Enterprise です。どのエディションでも、オントロジーをエクスポートして別のエディションで実行できます。タグ時点の README は同じことを自分の言葉で言っている。このリポジトリは無料でセルフホストの ObjectOS Community を同梱し、<span lang="en">"while ObjectOS Cloud is the hosted edition and ObjectOS Enterprise the self-managed, licensed one."</span>（一方 ObjectOS Cloud はホスト型エディション、ObjectOS Enterprise はセルフマネージドのライセンス版である。）三つの供給は成果物とともに、それが動くどのホストにも旅をする。
+
+## あなたのエージェントをここに向ける
+
+上の対応表は信じて受け取る必要はない。稼働中のアプリが、どの MCP クライアントにもそれを見せてくれる。
+
+1. `npm create objectstack@latest my-app` でプロジェクトを作る。スキャフォルダーは `AGENTS.md` を書き、スキルバンドルをインストールするので、コーディングエージェントはプロトコルのルールを読み込んだ状態で始まる。[エージェントを ObjectStack に向ける方法](/en/blog/how-to-point-your-agent-at-objectstack/)がルールファイルとツールサーバーを扱っている。
+2. エージェントに世界を頼む。フィールドを持ついくつかのオブジェクトと、その間のルックアップ一つ。`npm run validate` を実行させ、Console より先に diff を読む。
+3. `npx os dev --ui` でアプリを起動し、任意の MCP クライアントを `http://localhost:3000/api/v1/mcp` に向ける。エージェントはユーザーとして、デプロイメント自身の OAuth サーバーか API キーを通して接続し、`describe_object` はいま確認したばかりの世界を返す。
+4. 手を一つ武装させる。一つのアクションに説明付きの `ai: { exposed: true }` を与え、もう一度検証し、`list_actions` が空から一つになるのを見る。
+5. 第一のユーザーが持つ権限を欠いた第二のユーザーで柵を試し、拒否と監査行を読む。
+
+[Connect an MCP Client](https://objectstack.ai/docs/ai/connect-mcp) のページにはすべてのクライアントの一行コマンドがあり、[Business Ontology](https://objectstack.ai/docs/concepts/ontology) のページは定義そのものの典拠である。両方をエージェントに渡そう。世界と手と柵は、エージェントがこれから書こうとしている同じファイルの中にある。
