@@ -4,9 +4,11 @@ import { positioning } from './positioning';
 
 // What ObjectStack and ObjectOS are is stated once, in `./positioning` (the
 // objectstack README's canonical lines, T1–T4, and the edition clause E1), and
-// every locale's title, hero, lead and proof chips below read from it. The
-// eyebrow is T4's noun phrase for ObjectOS, sentence-cased (the CSS uppercases
-// it anyway).
+// every locale's title, hero, lead, edition paragraph and proof chips below
+// read from it. The eyebrow is `descriptor`, the three editions' short name,
+// sentence-cased (the CSS uppercases it anyway). The hero lead is T2 alone and
+// the edition paragraph under the CTA row is E1 verbatim — the check at the
+// bottom of this file holds every locale to that.
 const sentenceCase = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 // The media note under the hero image is titled with T2's first sentence —
 // "One executable business ontology" in each locale — read from positioning
@@ -18,7 +20,10 @@ interface HomeCopy {
   description: string;
   eyebrow: string;
   hero: [string, string];
+  /** The first screen's one paragraph: T2, nothing else (the CTA row follows it). */
   heroLead: string;
+  /** The paragraph under the CTA row: E1 verbatim, asserted below for every locale. */
+  heroEditions: string;
   primaryCta: string;
   secondaryCta: string;
   /**
@@ -103,7 +108,8 @@ const zhHans: HomeCopy = {
   description: `${positioning['zh-Hans'].t2}${positioning['zh-Hans'].t4}`,
   eyebrow: positioning['zh-Hans'].descriptor,
   hero: positioning['zh-Hans'].t1Lines,
-  heroLead: `${positioning['zh-Hans'].t2}${positioning['zh-Hans'].t4}${positioning['zh-Hans'].e1}`,
+  heroLead: positioning['zh-Hans'].t2,
+  heroEditions: positioning['zh-Hans'].e1,
   primaryCta: '开始使用',
   secondaryCta: '了解工作原理',
   videoCaption: 'ObjectStack 90 秒总览',
@@ -135,7 +141,7 @@ const zhHans: HomeCopy = {
   ],
   aiKicker: 'AI 构建与 Agent 运行',
   aiTitle: ['让 Agent 生成软件，', '让人保留审阅权。'],
-  aiCopy: `ObjectStack 把对象、字段、流程、权限、动作和界面保留为 Agent 可读写的类型化定义。开源运行时从中派生数据库、API、界面与 MCP 工具，并强制执行权限与审计。Strict TypeScript、Zod schema 和 validation gate 会在发布前捕获 Agent 的结构性错误。整份定义小到 AI 能一次读全，因此编码 Agent 能跨整个系统推理，你只需审阅它的 diff。ObjectOS 是${positioning['zh-Hans'].descriptor}：云端与企业版提供界面内 AI Build & Ask、人机审批、SSO、部署与运营；开源 ObjectStack 则由你自带编码 Agent 和 MCP 客户端。`,
+  aiCopy: `ObjectStack 把对象、字段、流程、权限、动作和界面保留为 Agent 可读写的类型化定义。开源运行时从中派生数据库、API、界面与 MCP 工具，并强制执行权限与审计。Strict TypeScript、Zod schema 和 validation gate 会在发布前捕获 Agent 的结构性错误。整份定义小到 AI 能一次读全，因此编码 Agent 能跨整个系统推理，你只需审阅它的 diff。ObjectOS 有三个版本：${positioning['zh-Hans'].descriptor}。云端与企业版提供界面内 AI Build & Ask、人机审批、SSO、部署与运营；开源 ObjectStack 则由你自带编码 Agent 和 MCP 客户端。`,
   aiItems: [
     { title: 'AI Builder', copy: '云端与企业版：用自然语言描述变更。内置 Builder 生成对象、字段、视图和流程，结构性变更进入审批。在开源 ObjectStack 中，你自己的编码 Agent 编写同样紧凑的元数据 diff，而不是生成整套应用代码。' },
     { title: 'AI Ask', copy: '云端与企业版：在产品内问询数据、分析业务上下文，并在登录用户权限内触发已批准动作。开源 ObjectStack 则通过 MCP 用你自己的 AI 问询同样的对象。' },
@@ -192,7 +198,8 @@ const en: HomeCopy = {
   description: `${positioning.en.t2} ${positioning.en.t4}`,
   eyebrow: sentenceCase(positioning.en.descriptor),
   hero: positioning.en.t1Lines,
-  heroLead: `${positioning.en.t2} ${positioning.en.t4} ${positioning.en.e1}`,
+  heroLead: positioning.en.t2,
+  heroEditions: positioning.en.e1,
   primaryCta: 'Get started',
   secondaryCta: 'See how it works',
   videoCaption: 'ObjectStack in 90 Seconds',
@@ -224,7 +231,7 @@ const en: HomeCopy = {
   ],
   aiKicker: 'AI build and agent operations',
   aiTitle: ['Let agents create the software.', 'Keep people in the review loop.'],
-  aiCopy: `ObjectStack keeps objects, fields, workflows, permissions, actions, and UI as typed definitions agents can read and change. Its open runtime derives the database, APIs, screens, and MCP tools, then enforces permissions and audit on every call. Strict TypeScript, Zod schemas, and a validation gate catch structural mistakes before deployment. The definition stays small enough for AI to hold whole, so a coding agent can reason across the entire system and you can review the diff. ObjectOS is ${positioning.en.descriptor}: in-app AI Build & Ask, human approvals, SSO, deployment, and operations on Cloud and Enterprise; bring your own coding agent and MCP client on open-source ObjectStack.`,
+  aiCopy: `ObjectStack keeps objects, fields, workflows, permissions, actions, and UI as typed definitions agents can read and change. Its open runtime derives the database, APIs, screens, and MCP tools, then enforces permissions and audit on every call. Strict TypeScript, Zod schemas, and a validation gate catch structural mistakes before deployment. The definition stays small enough for AI to hold whole, so a coding agent can reason across the entire system and you can review the diff. ObjectOS comes in three editions, ${positioning.en.descriptor}: in-app AI Build & Ask, human approvals, SSO, deployment, and operations on Cloud and Enterprise; bring your own coding agent and MCP client on open-source ObjectStack.`,
   aiItems: [
     { title: 'AI Builder', copy: 'Cloud & Enterprise: describe a change in natural language. The in-app Builder generates objects, fields, views, and workflows, then routes structural changes for approval. On the open-source ObjectStack, your coding agent writes the same compact metadata diff instead of a full app codebase.' },
     { title: 'AI Ask', copy: 'Cloud & Enterprise: ask questions inside the product, analyze business context, and trigger approved actions within the signed-in user’s permissions. On the open-source ObjectStack, query the same objects through MCP with your own AI.' },
@@ -282,7 +289,8 @@ const ja: HomeCopy = {
   description: `${positioning.ja.t2}${positioning.ja.t4}`,
   eyebrow: positioning.ja.descriptor,
   hero: positioning.ja.t1Lines,
-  heroLead: `${positioning.ja.t2}${positioning.ja.t4}${positioning.ja.e1}`,
+  heroLead: positioning.ja.t2,
+  heroEditions: positioning.ja.e1,
   primaryCta: 'はじめる',
   secondaryCta: '仕組みを見る',
   videoCaption: 'ObjectStack を 90 秒で',
@@ -314,7 +322,7 @@ const ja: HomeCopy = {
   ],
   aiKicker: 'AI 構築とエージェント運用',
   aiTitle: ['エージェントにソフトウェアを作らせる。', '人はレビューの輪に残る。'],
-  aiCopy: `ObjectStack はオブジェクト、項目、ワークフロー、権限、アクション、UI を、エージェントが読み書きできる型付き定義として保持します。オープンなランタイムがデータベース、API、画面、MCP ツールを派生し、すべての呼び出しで権限と監査を強制します。Strict TypeScript、Zod スキーマ、検証ゲートが構造的な誤りをデプロイ前に検出します。定義全体が AI が一度に把握できる小ささに収まるので、コーディングエージェントはシステム全体をまたいで推論でき、人は diff をレビューできます。ObjectOS は ${positioning.ja.descriptor}です。Cloud／Enterprise では製品内 AI Build & Ask、人による承認、SSO、デプロイ、運用を提供し、オープンソース ObjectStack では自分のコーディングエージェントと MCP クライアントを使えます。`,
+  aiCopy: `ObjectStack はオブジェクト、項目、ワークフロー、権限、アクション、UI を、エージェントが読み書きできる型付き定義として保持します。オープンなランタイムがデータベース、API、画面、MCP ツールを派生し、すべての呼び出しで権限と監査を強制します。Strict TypeScript、Zod スキーマ、検証ゲートが構造的な誤りをデプロイ前に検出します。定義全体が AI が一度に把握できる小ささに収まるので、コーディングエージェントはシステム全体をまたいで推論でき、人は diff をレビューできます。ObjectOS には ${positioning.ja.descriptor} の 3 つのエディションがあります。Cloud／Enterprise では製品内 AI Build & Ask、人による承認、SSO、デプロイ、運用を提供し、オープンソース ObjectStack では自分のコーディングエージェントと MCP クライアントを使えます。`,
   aiItems: [
     { title: 'AI Builder', copy: 'Cloud／Enterprise：自然言語で変更を説明します。製品内 Builder がオブジェクト、項目、ビュー、ワークフローを生成し、構造変更を承認へ送ります。オープンソースの ObjectStack では、自分のコーディングエージェントがフルコードではなく同じコンパクトなメタデータ diff を書きます。' },
     { title: 'AI Ask', copy: 'Cloud／Enterprise：製品内で質問し、業務コンテキストを分析し、ログインユーザーの権限内で承認済みアクションを実行します。オープンソースの ObjectStack では、同じオブジェクトを MCP 経由で自分の AI から問い合わせます。' },
@@ -372,7 +380,8 @@ const de: HomeCopy = {
   description: `${positioning.de.t2} ${positioning.de.t4}`,
   eyebrow: sentenceCase(positioning.de.descriptor),
   hero: positioning.de.t1Lines,
-  heroLead: `${positioning.de.t2} ${positioning.de.t4} ${positioning.de.e1}`,
+  heroLead: positioning.de.t2,
+  heroEditions: positioning.de.e1,
   primaryCta: 'Loslegen',
   secondaryCta: 'So funktioniert es',
   videoCaption: 'ObjectStack in 90 Sekunden',
@@ -404,7 +413,7 @@ const de: HomeCopy = {
   ],
   aiKicker: 'AI-Build und Agent-Betrieb',
   aiTitle: ['Agents erstellen die Software.', 'Menschen bleiben in der Prüfung.'],
-  aiCopy: `ObjectStack hält Objekte, Felder, Workflows, Berechtigungen, Aktionen und UI als typisierte Definitionen fest, die Agents lesen und ändern können. Die offene Runtime leitet daraus Datenbank, APIs, Oberflächen und MCP-Tools ab und setzt Rechte sowie Audit durch. Strict TypeScript, Zod-Schemas und ein Validierungs-Gate erkennen strukturelle Fehler vor der Bereitstellung. Die Definition bleibt klein genug, dass AI sie als Ganzes erfassen kann, sodass ein Coding-Agent über das ganze System hinweg denken und ein Mensch den Diff prüfen kann. ObjectOS ist ${positioning.de.descriptor}: In-App AI Build & Ask, menschliche Freigaben, SSO, Bereitstellung und Betrieb auf Cloud und Enterprise; auf dem quelloffenen ObjectStack nutzen Sie Ihren eigenen Coding-Agent und MCP-Client.`,
+  aiCopy: `ObjectStack hält Objekte, Felder, Workflows, Berechtigungen, Aktionen und UI als typisierte Definitionen fest, die Agents lesen und ändern können. Die offene Runtime leitet daraus Datenbank, APIs, Oberflächen und MCP-Tools ab und setzt Rechte sowie Audit durch. Strict TypeScript, Zod-Schemas und ein Validierungs-Gate erkennen strukturelle Fehler vor der Bereitstellung. Die Definition bleibt klein genug, dass AI sie als Ganzes erfassen kann, sodass ein Coding-Agent über das ganze System hinweg denken und ein Mensch den Diff prüfen kann. ObjectOS gibt es in drei Editionen, ${positioning.de.descriptor}: In-App AI Build & Ask, menschliche Freigaben, SSO, Bereitstellung und Betrieb auf Cloud und Enterprise; auf dem quelloffenen ObjectStack nutzen Sie Ihren eigenen Coding-Agent und MCP-Client.`,
   aiItems: [
     { title: 'AI Builder', copy: 'Cloud & Enterprise: Beschreiben Sie eine Änderung in natürlicher Sprache. Der In-App-Builder generiert Objekte, Felder, Views und Workflows und schickt Strukturänderungen zur Freigabe. Auf dem quelloffenen ObjectStack schreibt Ihr Coding-Agent denselben kompakten Metadaten-Diff statt einer vollständigen App-Codebasis.' },
     { title: 'AI Ask', copy: 'Cloud & Enterprise: Stellen Sie Fragen im Produkt, analysieren Sie Geschäftskontext und lösen Sie freigegebene Aktionen innerhalb der Rechte des angemeldeten Nutzers aus. Auf dem quelloffenen ObjectStack fragen Sie dieselben Objekte über MCP mit Ihrer eigenen AI ab.' },
@@ -462,7 +471,8 @@ const es: HomeCopy = {
   description: `${positioning.es.t2} ${positioning.es.t4}`,
   eyebrow: sentenceCase(positioning.es.descriptor),
   hero: positioning.es.t1Lines,
-  heroLead: `${positioning.es.t2} ${positioning.es.t4} ${positioning.es.e1}`,
+  heroLead: positioning.es.t2,
+  heroEditions: positioning.es.e1,
   primaryCta: 'Empezar',
   secondaryCta: 'Cómo funciona',
   videoCaption: 'ObjectStack en 90 segundos',
@@ -494,7 +504,7 @@ const es: HomeCopy = {
   ],
   aiKicker: 'Construcción AI y operación con agentes',
   aiTitle: ['Deja que los agentes creen el software.', 'Mantén a las personas en la revisión.'],
-  aiCopy: `ObjectStack conserva objetos, campos, workflows, permisos, acciones y UI como definiciones tipadas que los agentes pueden leer y cambiar. Su runtime abierto deriva la base de datos, las API, las pantallas y las herramientas MCP, y aplica permisos y auditoría. Strict TypeScript, los esquemas Zod y una puerta de validación detectan errores estructurales antes del despliegue. La definición se mantiene lo bastante pequeña para que la AI la abarque entera, por lo que un agente de código puede razonar sobre todo el sistema y tú puedes revisar el diff. ObjectOS es ${positioning.es.descriptor}: AI Build & Ask integrado, aprobaciones humanas, SSO, despliegue y operaciones en Cloud y Enterprise; en ObjectStack open source usas tu propio agente de código y cliente MCP.`,
+  aiCopy: `ObjectStack conserva objetos, campos, workflows, permisos, acciones y UI como definiciones tipadas que los agentes pueden leer y cambiar. Su runtime abierto deriva la base de datos, las API, las pantallas y las herramientas MCP, y aplica permisos y auditoría. Strict TypeScript, los esquemas Zod y una puerta de validación detectan errores estructurales antes del despliegue. La definición se mantiene lo bastante pequeña para que la AI la abarque entera, por lo que un agente de código puede razonar sobre todo el sistema y tú puedes revisar el diff. ObjectOS se ofrece en tres ediciones, ${positioning.es.descriptor}: AI Build & Ask integrado, aprobaciones humanas, SSO, despliegue y operaciones en Cloud y Enterprise; en ObjectStack open source usas tu propio agente de código y cliente MCP.`,
   aiItems: [
     { title: 'AI Builder', copy: 'Cloud y Enterprise: describe un cambio en lenguaje natural. El Builder integrado genera objetos, campos, vistas y workflows, y envía los cambios estructurales a aprobación. En el ObjectStack open source, tu agente de código escribe el mismo diff compacto de metadatos en lugar de una base de código completa.' },
     { title: 'AI Ask', copy: 'Cloud y Enterprise: haz preguntas dentro del producto, analiza contexto de negocio y ejecuta acciones aprobadas dentro de los permisos del usuario conectado. En el ObjectStack open source, consulta los mismos objetos mediante MCP con tu propia AI.' },
@@ -552,7 +562,8 @@ const fr: HomeCopy = {
   description: `${positioning.fr.t2} ${positioning.fr.t4}`,
   eyebrow: sentenceCase(positioning.fr.descriptor),
   hero: positioning.fr.t1Lines,
-  heroLead: `${positioning.fr.t2} ${positioning.fr.t4} ${positioning.fr.e1}`,
+  heroLead: positioning.fr.t2,
+  heroEditions: positioning.fr.e1,
   primaryCta: 'Commencer',
   secondaryCta: 'Voir comment ça marche',
   videoCaption: 'ObjectStack en 90 secondes',
@@ -584,7 +595,7 @@ const fr: HomeCopy = {
   ],
   aiKicker: 'Construction AI et opérations d’agents',
   aiTitle: ['Laissez les agents créer le logiciel.', 'Gardez les humains dans la boucle de revue.'],
-  aiCopy: `ObjectStack conserve objets, champs, workflows, permissions, actions et UI sous forme de définitions typées que les agents peuvent lire et modifier. Son runtime ouvert en dérive la base de données, les API, les écrans et les outils MCP, puis applique permissions et audit. Strict TypeScript, les schémas Zod et une porte de validation détectent les erreurs structurelles avant le déploiement. La définition reste assez petite pour que l’AI la tienne entière, afin qu’un agent de code puisse raisonner sur tout le système et que vous puissiez relire le diff. ObjectOS est ${positioning.fr.descriptor} : AI Build & Ask intégré, validations humaines, SSO, déploiement et opérations sur Cloud et Enterprise ; sur ObjectStack open source, vous utilisez votre propre agent de code et client MCP.`,
+  aiCopy: `ObjectStack conserve objets, champs, workflows, permissions, actions et UI sous forme de définitions typées que les agents peuvent lire et modifier. Son runtime ouvert en dérive la base de données, les API, les écrans et les outils MCP, puis applique permissions et audit. Strict TypeScript, les schémas Zod et une porte de validation détectent les erreurs structurelles avant le déploiement. La définition reste assez petite pour que l’AI la tienne entière, afin qu’un agent de code puisse raisonner sur tout le système et que vous puissiez relire le diff. ObjectOS existe en trois éditions, ${positioning.fr.descriptor} : AI Build & Ask intégré, validations humaines, SSO, déploiement et opérations sur Cloud et Enterprise ; sur ObjectStack open source, vous utilisez votre propre agent de code et client MCP.`,
   aiItems: [
     { title: 'AI Builder', copy: 'Cloud et Enterprise : décrivez un changement en langage naturel. Le Builder intégré génère objets, champs, vues et workflows, puis envoie les changements structurants en validation. Sur ObjectStack open source, votre agent de code écrit le même diff compact de métadonnées au lieu d’une base de code complète.' },
     { title: 'AI Ask', copy: 'Cloud et Enterprise : posez des questions dans le produit, analysez le contexte métier et déclenchez des actions approuvées dans les permissions de l’utilisateur connecté. Sur ObjectStack open source, interrogez les mêmes objets via MCP avec votre propre AI.' },
@@ -642,7 +653,8 @@ const ko: HomeCopy = {
   description: `${positioning.ko.t2} ${positioning.ko.t4}`,
   eyebrow: positioning.ko.descriptor,
   hero: positioning.ko.t1Lines,
-  heroLead: `${positioning.ko.t2} ${positioning.ko.t4} ${positioning.ko.e1}`,
+  heroLead: positioning.ko.t2,
+  heroEditions: positioning.ko.e1,
   primaryCta: '시작하기',
   secondaryCta: '작동 방식 보기',
   videoCaption: 'ObjectStack 90초 살펴보기',
@@ -674,7 +686,7 @@ const ko: HomeCopy = {
   ],
   aiKicker: 'AI 빌드와 에이전트 운영',
   aiTitle: ['에이전트가 소프트웨어를 만들게 하세요.', '사람은 검토 루프 안에 남습니다.'],
-  aiCopy: `ObjectStack은 객체, 필드, 워크플로, 권한, 작업, UI를 에이전트가 읽고 변경할 수 있는 타입이 지정된 정의로 유지합니다. 오픈 런타임은 데이터베이스, API, 화면, MCP 도구를 파생하고 권한과 감사를 강제합니다. Strict TypeScript, Zod 스키마, validation gate가 구조적 오류를 배포 전에 찾아냅니다. 정의 전체가 AI가 한 번에 담을 수 있을 만큼 작게 유지되므로 코딩 에이전트가 시스템 전체를 추론하고 사람은 diff를 검토할 수 있습니다. ObjectOS는 ${positioning.ko.descriptor}입니다. Cloud와 Enterprise에서는 제품 내 AI Build & Ask, 사람의 승인, SSO, 배포와 운영을 제공하며, 오픈소스 ObjectStack에서는 자체 코딩 에이전트와 MCP 클라이언트를 사용합니다.`,
+  aiCopy: `ObjectStack은 객체, 필드, 워크플로, 권한, 작업, UI를 에이전트가 읽고 변경할 수 있는 타입이 지정된 정의로 유지합니다. 오픈 런타임은 데이터베이스, API, 화면, MCP 도구를 파생하고 권한과 감사를 강제합니다. Strict TypeScript, Zod 스키마, validation gate가 구조적 오류를 배포 전에 찾아냅니다. 정의 전체가 AI가 한 번에 담을 수 있을 만큼 작게 유지되므로 코딩 에이전트가 시스템 전체를 추론하고 사람은 diff를 검토할 수 있습니다. ObjectOS는 ${positioning.ko.descriptor}의 세 가지 에디션으로 제공됩니다. Cloud와 Enterprise에서는 제품 내 AI Build & Ask, 사람의 승인, SSO, 배포와 운영을 제공하며, 오픈소스 ObjectStack에서는 자체 코딩 에이전트와 MCP 클라이언트를 사용합니다.`,
   aiItems: [
     { title: 'AI Builder', copy: 'Cloud · Enterprise: 자연어로 변경을 설명하세요. 제품 내 Builder가 객체, 필드, 뷰, 워크플로를 생성하고 구조 변경을 승인으로 보냅니다. 오픈소스 ObjectStack에서는 코딩 에이전트가 전체 앱 코드베이스 대신 같은 압축 메타데이터 diff를 작성합니다.' },
     { title: 'AI Ask', copy: 'Cloud · Enterprise: 제품 안에서 질문하고 비즈니스 맥락을 분석하며 로그인 사용자 권한 안에서 승인된 작업을 실행합니다. 오픈소스 ObjectStack에서는 같은 객체를 MCP로 당신의 AI에서 조회합니다.' },
@@ -745,3 +757,19 @@ export const homeCopy: Record<Locale, HomeCopy> = {
   fr,
   ko,
 };
+
+// The hero's edition paragraph is E1 verbatim in every locale, and the lead is
+// T2 alone — the first-screen contract the hero split made (www #335). A later
+// hand edit to either, in any locale, fails `astro build` here instead of
+// shipping a paraphrase; zh-Hant is covered too, since both sides derive it
+// from zh-Hans the same way.
+for (const [locale, copy] of Object.entries(homeCopy) as [Locale, HomeCopy][]) {
+  if (copy.heroEditions !== positioning[locale].e1) {
+    throw new Error(
+      `homeCopy[${locale}].heroEditions is not E1 verbatim: "${copy.heroEditions}" vs "${positioning[locale].e1}"`
+    );
+  }
+  if (copy.heroLead !== positioning[locale].t2) {
+    throw new Error(`homeCopy[${locale}].heroLead is not T2: "${copy.heroLead}" vs "${positioning[locale].t2}"`);
+  }
+}

@@ -46,7 +46,7 @@ const COMMUNITY = 'https://objectstack.ai/docs/deployment';
 // the headline is the annual-billed price; monthly is shown as the alt price.
 const pricingEn: PricingCopy = {
   title: 'Pricing',
-  description: `Straightforward pricing for ObjectOS, ${positioning.en.descriptor}. Pay for AI seats only; viewers and non-AI users are free.`,
+  description: `Straightforward pricing for ${positioning.en.descriptor}. Pay for AI seats only; viewers and non-AI users are free.`,
   intro:
     'Start on the free plan and upgrade when you need more. Paid plans are billed per AI seat: you pay for the people who use AI, while viewers and non-AI users stay free. Prefer to run it yourself? ObjectOS Community is the open-source runtime and Console, self-hosted and free under Apache-2.0: bring your own AI through MCP, author metadata as source files, and review changes as diffs. ObjectStack is the open protocol it runs. ObjectOS Cloud and Enterprise add hosting and multi-environment operations, the in-app AI Build and Ask experience, SSO, and commercial support.',
   billingNote:
@@ -124,7 +124,7 @@ const pricingEn: PricingCopy = {
 
 const pricingZhHans: PricingCopy = {
   title: '定价',
-  description: `ObjectOS 是${positioning['zh-Hans'].descriptor}，按 AI 席位定价：只为使用 AI 的人付费，查看者与非 AI 用户免费。`,
+  description: `${positioning['zh-Hans'].descriptor} 的定价：按 AI 席位计费，只为使用 AI 的人付费，查看者与非 AI 用户免费。`,
   intro:
     '从免费版开始，需要更多时再升级。付费套餐按 AI 席位计费——只为真正使用 AI 的人付费；查看者与非 AI 用户免费。想自己运行？ObjectOS 社区版是开源的运行时与 Console，自托管、免费，采用 Apache-2.0：经 MCP 自带 AI，以源码方式编写元数据并审阅 diff。ObjectStack 是它运行的开放协议。ObjectOS 云端版与企业版在此之上增加托管与多环境运维、产品内 AI Build 与 Ask、SSO 和商业支持。',
   billingNote:

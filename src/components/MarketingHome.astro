@@ -32,9 +32,10 @@ interface Props {
 
 const { locale } = Astro.props;
 const copy = homeCopy[locale];
-// The one protocol link on the page: E1 names the three ObjectOS editions, and
-// this link, right under it, says what they are built on and sends the
-// developer to objectstack.ai. Nothing else on the home page links that site.
+// The one protocol link on the page: E1 names the three ObjectOS editions in
+// the paragraph under the CTA row, and this link, right under E1, says what
+// they are built on and sends the developer to objectstack.ai. Nothing else on
+// the home page links that site.
 const protocolLink = positioning[locale].protocol;
 const posterSplit = copy.videoCaption.match(/^(ObjectStack(?: [\u3040-\u309f]+)?) (.+)$/u);
 const posterTitle: [string, string] = posterSplit ? [posterSplit[1], posterSplit[2]] : [copy.videoCaption, ''];
@@ -182,24 +183,29 @@ const demoCopy = DEMO_COPY[locale];
 ---
 
 <div class:list={['home', `lang-${locale}`]}>
-  {/* One flat flex column, deliberately: the video, the lead and the CTA row
-      have to be siblings for the phone layout to reorder them with CSS
-      `order` alone. Duplicating the hero markup per breakpoint would be a
-      worse defect than the one the reorder fixes.
+  {/* One flat flex column, deliberately: the video, the lead, the CTA row and
+      the edition paragraph have to be siblings for the phone layout to reorder
+      them with CSS `order` alone. Duplicating the hero markup per breakpoint
+      would be a worse defect than the one the reorder fixes.
 
-      Source order is the desktop order. On phones and small tablets the media
-      query below reorders to eyebrow, h1, video, lead, CTAs, proof — which is
-      also the more literal reading of "the video plays directly under the
-      headline", since on a phone the lead alone runs about nine lines. */}
+      The first screen is one sentence and one action: eyebrow (the three
+      editions' short name), h1 (T1), lead (T2), the CTA row. E1, the edition
+      paragraph, and the protocol link under it come after the CTAs, then the
+      video, then the proof chips. That is the desktop source order; on phones
+      and small tablets the media query below moves only the video, to
+      directly after the CTA row. Before this split the lead ran T2, T4 and E1
+      together (523 characters in en) and the CTA row started at 619px on a
+      1366×625 laptop and at 1114px on a 390px phone. */}
   <section class="hero">
     <p class="eyebrow"><span></span> <Fragment set:html={ph(copy.eyebrow)} /></p>
     <h1><span class="title-line" set:html={ph(copy.hero[0])} />{lineJoin}<strong set:html={ph(copy.hero[1])} /></h1>
     <p class="hero-lead">{copy.heroLead}</p>
-    <a class="text-link hero-protocol-link" href={OBJECTSTACK_URL}>{protocolLink} <span aria-hidden="true">→</span></a>
     <div class="hero-actions">
       <a class="button primary" href={CLOUD_SIGNUP_URL}>{copy.primaryCta} <span>→</span></a>
       <a class="button secondary" href={productTourHref}>{copy.secondaryCta}</a>
     </div>
+    <p class="hero-editions">{copy.heroEditions}</p>
+    <a class="text-link hero-protocol-link" href={OBJECTSTACK_URL}>{protocolLink} <span aria-hidden="true">→</span></a>
     <figure class="hero-video">
       <VideoEmbed
         videoId={OVERVIEW_VIDEO_ID}
@@ -389,7 +395,10 @@ const demoCopy = DEMO_COPY[locale];
     </div>
   </section>
 
-  {/* id="compare" is a nav contract: the header's "Why ObjectOS" item links here. */}
+  {/* id="compare" is the home page's own comparison section. Nav contract: the
+      header's "Why ObjectOS" item points at /compare/, the full comparison page
+      (five comparisons, the not-for list and the FAQ), not at this anchor; the
+      id stays for in-page links and for the existing /#compare deep links. */}
   <section class="solution-section" id="compare">
     <div class="section-head">
       <div>
@@ -560,8 +569,17 @@ const demoCopy = DEMO_COPY[locale];
   }
   /* No `justify-content` for the eyebrow: it is inline content now (see the
      `.eyebrow` rule below), centred by the hero's own `text-align: center`. */
-  .hero > .hero-lead {
+  .hero > .hero-lead,
+  .hero > .hero-editions {
     margin-inline: auto;
+  }
+  /* `.home p` zeroes every paragraph's top margin at (0,1,1), which beats a
+     bare class. The edition paragraph is the one hero paragraph that needs a
+     gap above it (the CTA row on desktops, the video on phones), so the gap
+     is set here, at the child selector's (0,2,0). Measured without it: the
+     paragraph's top sat exactly on the CTA row's bottom, 440px on 440px. */
+  .hero > .hero-editions {
+    margin-top: 2rem;
   }
   .hero > .hero-actions {
     justify-content: center;
@@ -641,29 +659,34 @@ const demoCopy = DEMO_COPY[locale];
     text-wrap: balance;
     overflow-wrap: anywhere;
   }
+  /* The lead is T2 alone — two lines at this measure in en, three in de — and
+     the CTA row follows it directly, with the 1.8rem clearance the protocol
+     link used to provide when it sat between them. */
   .hero-lead {
     color: var(--ink-soft);
     font-size: 1.08rem;
     line-height: 1.85;
     max-width: 35rem;
-    margin-bottom: 0.9rem;
+    margin-bottom: 1.8rem;
+    /* Balanced like the headline: unbalanced, the zh lead broke after 你拥 at
+       35rem and left 有它。 alone on its second line, in the first screen. */
+    text-wrap: balance;
   }
-  /* The protocol link sits between the lead and the CTA row, as the lead's
-     secondary line, so the row keeps the lead's old 1.8rem clearance. The
-     hero is a centred flex column, so the link centres itself too. */
+  /* E1 under the CTA row: the hero's second paragraph, quieter than the lead
+     (smaller type, the same soft ink) and wide enough that its 286 characters
+     run four lines in en on a desktop. The protocol link is its secondary
+     line, right under it; the hero is a centred flex column, so the link
+     centres itself too. */
+  .hero-editions {
+    color: var(--ink-soft);
+    font-size: 0.95rem;
+    line-height: 1.7;
+    max-width: 40rem;
+    margin-bottom: 0.6rem;
+  }
   .hero-protocol-link {
     align-self: center;
-    margin-bottom: 1.8rem;
-  }
-  /* Desktop measure and leading for the lead, which runs T2, T4 and E1
-     together: at 35rem/1.85 it was seven lines in en and nine in ja, and with
-     the CTA row under it that was 609-664px of a 625px laptop screen. */
-  @media (min-width: 901px) {
-    .hero-lead {
-      max-width: 40rem;
-      line-height: 1.72;
-      margin-bottom: 1.5rem;
-    }
+    margin-bottom: 0;
   }
   .hero-actions {
     display: flex;
@@ -1353,19 +1376,23 @@ const demoCopy = DEMO_COPY[locale];
     color: #172b26;
     background: white;
   }
-  /* The video moves directly under the headline, ahead of the lead and the CTA
-     row, on phones and small tablets (`max-width: 900px`), where the lead alone
-     runs about nine lines and pushed the video off the screen entirely. The
-     markup and the source order are untouched, so this costs no duplicated
-     DOM.
+  /* On phones and small tablets (`max-width: 900px`) the video moves to
+     directly after the CTA row, ahead of the edition paragraph: eyebrow,
+     headline, lead, CTAs, video, editions, protocol link, proof. The markup
+     and the source order are untouched, so this costs no duplicated DOM.
 
-     A wide but short screen keeps the source order: eyebrow, headline, lead,
-     CTA row, then the video. This rule used to fire on `max-height: 1040px`
-     too, to get the video into a laptop's first screen, and that put the
-     primary CTA under a 529px frame: its bottom was at 1207px on a 1366x625
-     laptop and 1256px at 1920x945, with the lead off-screen as well. The CTA
-     is the screen's job; the video starts right under it (43px of it shows at
-     1366x625 in en, 314px at 1920x945) and the header CTA stays sticky. */
+     This rule used to move the video up to directly under the headline, ahead
+     of the lead, when the lead ran T2, T4 and E1 together — about nine lines
+     on a phone — which put the CTA row at 1114px on a 390px phone, 1.3
+     screens down. With the lead one sentence the CTA row is in the first
+     screen, the video follows it, and the eight-line edition paragraph comes
+     after both.
+
+     A wide but short screen keeps the source order. This rule used to fire on
+     `max-height: 1040px` too, to get the video into a laptop's first screen,
+     and that put the primary CTA under a 529px frame: its bottom was at
+     1207px on a 1366x625 laptop and 1256px at 1920x945. The CTA is the
+     screen's job. */
   @media (max-width: 900px) {
     .hero > .eyebrow {
       order: 1;
@@ -1373,23 +1400,26 @@ const demoCopy = DEMO_COPY[locale];
     .hero > h1 {
       order: 2;
     }
-    .hero-video {
+    .hero > .hero-lead {
       order: 3;
-      margin-top: 0.25rem;
-      margin-bottom: 2rem;
-    }
-    .hero > .hero-lead,
-    .hero > .hero-protocol-link {
-      /* Same order value: flex keeps source order within it, so the link
-         stays right under the lead on a phone instead of falling to the top
-         as an unordered child would. */
-      order: 4;
     }
     .hero > .hero-actions {
+      order: 4;
+    }
+    .hero-video {
       order: 5;
+      margin-top: 1.75rem;
+      margin-bottom: 0;
+    }
+    .hero > .hero-editions,
+    .hero > .hero-protocol-link {
+      /* Same order value: flex keeps source order within it, so the link
+         stays right under the edition paragraph instead of falling to the
+         top as an unordered child would. */
+      order: 6;
     }
     .hero > .proof {
-      order: 6;
+      order: 7;
     }
   }
   @media (max-width: 900px) {
