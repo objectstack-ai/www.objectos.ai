@@ -40,6 +40,12 @@ import type { Locale } from './i18n';
  * named once more, as the `protocol` link beside it (→ objectstack.ai), not as
  * a second product. Both sites use it verbatim.
  *
+ * E1's second half follows docs.objectos.ai#334, Q1 (comment 6568804196):
+ * exporting a Cloud or Enterprise tenant's ontology to run it on the open
+ * runtime is planned, not shipped, until objectstack#28914 lands. Until then
+ * that ruling supersedes Q2's "can export today". The two sentences after the
+ * editions are docs.objectos.ai `OBJECTOS_EDITIONS` at 46781141, byte for byte.
+ *
  * Translations keep T1–T4, E1 and the protocol link semantically exact. zh-Hans T1 is the README's
  * own Chinese line, 本体即软件。 zh-Hant is derived from zh-Hans, never hand-kept.
  */
@@ -73,7 +79,7 @@ export const CANONICAL = {
   t2: 'One executable business ontology. AI writes it, the runtime runs it, agents operate it, you own it.',
   t3: ['Executable', 'AI-writable', 'Agent-operable', 'You own it'],
   t4: 'To run it, this repository ships ObjectOS Community — the ghcr.io/objectstack-ai/objectstack image, os start and the Console, free and self-hosted — while ObjectOS Cloud is the hosted edition and ObjectOS Enterprise the self-managed, licensed one.',
-  e1: 'ObjectOS comes in three editions: ObjectOS Community, open source and free to self-host; ObjectOS Cloud, hosted in the browser with nothing to install; and ObjectOS Enterprise, self-managed on your own infrastructure. On every edition you can export your ontology and run it on another.',
+  e1: 'ObjectOS comes in three editions: ObjectOS Community, open source and free to self-host; ObjectOS Cloud, hosted in the browser with nothing to install; and ObjectOS Enterprise, self-managed on your own infrastructure. Your ontology is ordinary ObjectStack metadata. Exporting it from ObjectOS Cloud or ObjectOS Enterprise to run on the open-source ObjectStack runtime is planned.',
   protocol: 'Built on the open ObjectStack protocol',
 } as const;
 
@@ -135,7 +141,7 @@ const zhHans: PositioningStrings = {
   // The same words docs.objectos.ai uses for this sentence (objectos #416).
   t4: '为了运行它，ObjectStack 仓库提供 ObjectOS Community —— ghcr.io/objectstack-ai/objectstack 镜像、os start 和 Console，免费且自托管 —— 而 ObjectOS Cloud 是托管版本，ObjectOS Enterprise 是自管理、需许可的版本。',
   descriptor: 'ObjectOS Community、Cloud 与 Enterprise',
-  e1: 'ObjectOS 有三个版本：ObjectOS Community，开源、可免费自托管；ObjectOS Cloud，托管在浏览器中、无需安装；ObjectOS Enterprise，自管部署在你自己的基础设施上。无论哪个版本，你都可以导出本体，拿到另一个版本上运行。',
+  e1: 'ObjectOS 有三个版本：ObjectOS Community，开源、可免费自托管；ObjectOS Cloud，托管在浏览器中、无需安装；ObjectOS Enterprise，自管部署在你自己的基础设施上。你的本体是普通的 ObjectStack 元数据。从 ObjectOS Cloud 或 ObjectOS Enterprise 导出本体、在开源的 ObjectStack 运行时上运行，目前尚在计划中。',
   protocol: '建立在开放的 ObjectStack 协议之上',
 };
 
@@ -147,7 +153,7 @@ const ja: PositioningStrings = {
   // The same words docs.objectos.ai uses for this sentence (objectos #416).
   t4: 'それを実行するために、ObjectStack リポジトリは ObjectOS Community（ghcr.io/objectstack-ai/objectstack イメージ、os start、Console からなる、無料のセルフホスト版）を提供し、ObjectOS Cloud はホスト型のエディション、ObjectOS Enterprise はセルフマネージドのライセンス制のエディションです。',
   descriptor: 'ObjectOS Community、Cloud、Enterprise',
-  e1: 'ObjectOS には 3 つのエディションがあります。オープンソースで無料でセルフホストできる ObjectOS Community、ブラウザ上でホストされインストール不要の ObjectOS Cloud、自社インフラでセルフマネージドの ObjectOS Enterprise です。どのエディションでも、オントロジーをエクスポートして別のエディションで実行できます。',
+  e1: 'ObjectOS には 3 つのエディションがあります。オープンソースで無料でセルフホストできる ObjectOS Community、ブラウザ上でホストされインストール不要の ObjectOS Cloud、自社インフラでセルフマネージドの ObjectOS Enterprise です。オントロジーは通常の ObjectStack メタデータです。ObjectOS Cloud または ObjectOS Enterprise からエクスポートしてオープンソースの ObjectStack ランタイムで実行する機能は、計画中です。',
   protocol: 'オープンな ObjectStack プロトコルの上に構築',
 };
 
@@ -158,7 +164,7 @@ const de: PositioningStrings = {
   t3: ['Ausführbar', 'Von AI schreibbar', 'Von Agents bedienbar', 'Sie besitzen sie'],
   t4: 'Zum Ausführen liefert das ObjectStack-Repository ObjectOS Community — das Image ghcr.io/objectstack-ai/objectstack, os start und die Console, kostenlos und selbst gehostet — während ObjectOS Cloud die gehostete Edition ist und ObjectOS Enterprise die selbst verwaltete, lizenzierte.',
   descriptor: 'ObjectOS Community, Cloud und Enterprise',
-  e1: 'ObjectOS gibt es in drei Editionen: ObjectOS Community, quelloffen und kostenlos selbst gehostet; ObjectOS Cloud, gehostet im Browser ohne Installation; und ObjectOS Enterprise, selbst verwaltet auf Ihrer eigenen Infrastruktur. In jeder Edition können Sie Ihre Ontologie exportieren und in einer anderen ausführen.',
+  e1: 'ObjectOS gibt es in drei Editionen: ObjectOS Community, quelloffen und kostenlos selbst gehostet; ObjectOS Cloud, gehostet im Browser ohne Installation; und ObjectOS Enterprise, selbst verwaltet auf Ihrer eigenen Infrastruktur. Ihre Ontologie besteht aus gewöhnlichen ObjectStack-Metadaten. Der Export aus ObjectOS Cloud oder ObjectOS Enterprise zur Ausführung auf der quelloffenen ObjectStack Runtime ist geplant.',
   protocol: 'Gebaut auf dem offenen ObjectStack-Protokoll',
 };
 
@@ -169,7 +175,7 @@ const es: PositioningStrings = {
   t3: ['Ejecutable', 'Escribible por AI', 'Operable por agentes', 'Tú la posees'],
   t4: 'Para ejecutarlo, el repositorio de ObjectStack incluye ObjectOS Community — la imagen ghcr.io/objectstack-ai/objectstack, os start y la Console, gratuita y autoalojada — mientras que ObjectOS Cloud es la edición alojada y ObjectOS Enterprise la autogestionada, con licencia.',
   descriptor: 'ObjectOS Community, Cloud y Enterprise',
-  e1: 'ObjectOS se ofrece en tres ediciones: ObjectOS Community, open source y gratuita para autoalojar; ObjectOS Cloud, alojada en el navegador sin instalar nada; y ObjectOS Enterprise, autogestionada en tu propia infraestructura. En cualquier edición puedes exportar tu ontología y ejecutarla en otra.',
+  e1: 'ObjectOS se ofrece en tres ediciones: ObjectOS Community, open source y gratuita para autoalojar; ObjectOS Cloud, alojada en el navegador sin instalar nada; y ObjectOS Enterprise, autogestionada en tu propia infraestructura. Tu ontología son metadatos ordinarios de ObjectStack. La exportación desde ObjectOS Cloud u ObjectOS Enterprise para ejecutarla en el runtime open source de ObjectStack está prevista.',
   protocol: 'Construido sobre el protocolo abierto ObjectStack',
 };
 
@@ -180,7 +186,7 @@ const fr: PositioningStrings = {
   t3: ['Exécutable', 'Rédigeable par l’AI', 'Opérable par les agents', 'Vous la possédez'],
   t4: 'Pour l’exécuter, le dépôt ObjectStack fournit ObjectOS Community — l’image ghcr.io/objectstack-ai/objectstack, os start et la Console, gratuite et auto-hébergée — tandis qu’ObjectOS Cloud est l’édition hébergée et ObjectOS Enterprise l’édition autogérée, sous licence.',
   descriptor: 'ObjectOS Community, Cloud et Enterprise',
-  e1: 'ObjectOS existe en trois éditions : ObjectOS Community, open source et gratuite à auto-héberger ; ObjectOS Cloud, hébergée dans le navigateur, sans rien installer ; et ObjectOS Enterprise, autogérée sur votre propre infrastructure. Quelle que soit l’édition, vous pouvez exporter votre ontologie et l’exécuter sur une autre.',
+  e1: 'ObjectOS existe en trois éditions : ObjectOS Community, open source et gratuite à auto-héberger ; ObjectOS Cloud, hébergée dans le navigateur, sans rien installer ; et ObjectOS Enterprise, autogérée sur votre propre infrastructure. Votre ontologie est faite de métadonnées ObjectStack ordinaires. Son export depuis ObjectOS Cloud ou ObjectOS Enterprise, pour l’exécuter sur le runtime open source ObjectStack, est prévu.',
   protocol: 'Construit sur le protocole ouvert ObjectStack',
 };
 
@@ -191,7 +197,7 @@ const ko: PositioningStrings = {
   t3: ['실행 가능', 'AI가 작성', '에이전트가 운영', '당신이 소유'],
   t4: '이를 실행하기 위해 ObjectStack 저장소는 ObjectOS Community(ghcr.io/objectstack-ai/objectstack 이미지, os start, Console로 이루어진 무료 직접 호스팅 에디션)를 제공하며, ObjectOS Cloud는 호스팅 에디션, ObjectOS Enterprise는 직접 운영하는 라이선스 에디션입니다.',
   descriptor: 'ObjectOS Community, Cloud, Enterprise',
-  e1: 'ObjectOS는 세 가지 에디션으로 제공됩니다. 오픈소스이며 무료로 직접 호스팅하는 ObjectOS Community, 설치 없이 브라우저에서 호스팅되는 ObjectOS Cloud, 자체 인프라에서 직접 운영하는 ObjectOS Enterprise입니다. 어느 에디션에서든 온톨로지를 내보내 다른 에디션에서 실행할 수 있습니다.',
+  e1: 'ObjectOS는 세 가지 에디션으로 제공됩니다. 오픈소스이며 무료로 직접 호스팅하는 ObjectOS Community, 설치 없이 브라우저에서 호스팅되는 ObjectOS Cloud, 자체 인프라에서 직접 운영하는 ObjectOS Enterprise입니다. 온톨로지는 일반적인 ObjectStack 메타데이터입니다. ObjectOS Cloud 또는 ObjectOS Enterprise에서 내보내 오픈소스 ObjectStack 런타임에서 실행하는 기능은 계획 중입니다.',
   protocol: '오픈 ObjectStack 프로토콜 위에 구축',
 };
 
