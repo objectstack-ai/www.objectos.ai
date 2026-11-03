@@ -48,7 +48,7 @@ const pricingEn: PricingCopy = {
   title: 'Pricing',
   description: `Straightforward pricing for ${positioning.en.descriptor}. Pay for AI seats only; viewers and non-AI users are free.`,
   intro:
-    'Start on the free plan and upgrade when you need more. Paid plans are billed per AI seat: you pay for the people who use AI, while viewers and non-AI users stay free. Prefer to run it yourself? ObjectOS Community is the open-source runtime and Console, self-hosted and free under Apache-2.0: bring your own AI through MCP, author metadata as source files, and review changes as diffs. ObjectStack is the open protocol it runs. ObjectOS Cloud and Enterprise add hosting and multi-environment operations, the in-app AI Build and Ask experience, SSO, and commercial support.',
+    'Start on the free plan and upgrade when you need more. Paid plans are billed per AI seat: you pay for the people who use AI, while viewers and non-AI users stay free. Prefer to run it yourself? ObjectOS Community is the open-source runtime and Console, self-hosted and free under Apache-2.0: bring your own AI through MCP, author metadata as source files, and review changes as diffs. ObjectStack is the open protocol it runs. ObjectOS Cloud and Enterprise add hosting, the in-app AI Build and Ask experience, SSO, and commercial support. On Cloud, one organization has one environment and many apps; complex apps use source-level development (os dev + Git) and package install.',
   billingNote:
     'Prices are in USD per AI seat. The headline price is billed annually (about two months free); monthly billing is also available. Cancel anytime. Exact quotas are shown in the app and at checkout. ObjectOS Cloud is Free and Team. Business (SSO and AI governance on Cloud, $45 per AI seat per month billed annually, $54 monthly) and Business Self-Managed (a single-node license for 10–25 AI seats at $540 per AI seat per year, bring your own model or key) are contract options under ObjectOS Enterprise — contact sales. Beyond a single node, Enterprise is priced by volume, with offline and invoice payment.',
   plans: [
@@ -126,7 +126,7 @@ const pricingZhHans: PricingCopy = {
   title: '定价',
   description: `${positioning['zh-Hans'].descriptor} 的定价：按 AI 席位计费，只为使用 AI 的人付费，查看者与非 AI 用户免费。`,
   intro:
-    '从免费版开始，需要更多时再升级。付费套餐按 AI 席位计费——只为真正使用 AI 的人付费；查看者与非 AI 用户免费。想自己运行？ObjectOS 社区版是开源的运行时与 Console，自托管、免费，采用 Apache-2.0：经 MCP 自带 AI，以源码方式编写元数据并审阅 diff。ObjectStack 是它运行的开放协议。ObjectOS 云端版与企业版在此之上增加托管与多环境运维、产品内 AI Build 与 Ask、SSO 和商业支持。',
+    '从免费版开始，需要更多时再升级。付费套餐按 AI 席位计费——只为真正使用 AI 的人付费；查看者与非 AI 用户免费。想自己运行？ObjectOS 社区版是开源的运行时与 Console，自托管、免费，采用 Apache-2.0：经 MCP 自带 AI，以源码方式编写元数据并审阅 diff。ObjectStack 是它运行的开放协议。ObjectOS 云端版与企业版在此之上增加托管、产品内 AI Build 与 Ask、SSO 和商业支持。在云端版上，一个组织对应一个环境、多个应用；复杂应用使用源码级开发（os dev + Git）和包安装。',
   billingNote:
     '价格以美元计，按 AI 席位计费。标价为年付价（约省两个月）；也可选择月付。可随时取消。具体配额在应用内和结账时显示。ObjectOS 云端版包含免费版与团队版。商业版（云端上的 SSO 与 AI 治理，每 AI 席每月 $45 按年付，月付 $54）与商业版自管（Business Self-Managed，单节点许可，10–25 个 AI 席位，每 AI 席每年 $540，自带模型或密钥）是 ObjectOS 企业版下的合同选项——请联系销售。单节点以上的企业版按量定价，支持线下与发票付款。',
   plans: [
