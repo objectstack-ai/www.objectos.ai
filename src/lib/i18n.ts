@@ -199,11 +199,8 @@ interface Strings {
   /** The ObjectOS Cloud sign-in link in the header, drawer and footer. */
   signIn: string;
   skipToContent: string;
-  /**
-   * `platform` is the footer's short label; the header uses the longer
-   * `siteNav.platform`. Every other footer link reuses its `siteNav` label.
-   */
-  footer: { terms: string; privacy: string; pricing: string; refunds: string; platform: string };
+  /** The footer reuses every `siteNav` label (Platform overview included) for its links. */
+  footer: { terms: string; privacy: string; pricing: string; refunds: string };
   /** The 404 page (`src/pages/404.astro`, `src/pages/[lang]/404.astro`). */
   notFound: {
     title: string;
@@ -279,7 +276,7 @@ const en: Strings = {
   getStarted: 'Get started',
   signIn: 'Sign in',
   skipToContent: 'Skip to content',
-  footer: { terms: 'Terms & License', privacy: 'Privacy', pricing: 'Pricing', refunds: 'Refunds', platform: 'Platform' },
+  footer: { terms: 'Terms & License', privacy: 'Privacy', pricing: 'Pricing', refunds: 'Refunds' },
   notFound: {
     title: 'Page not found',
     heading: 'This page does not exist.',
@@ -353,7 +350,7 @@ const zhHans: Strings = {
   getStarted: '开始使用',
   signIn: '登录',
   skipToContent: '跳到正文',
-  footer: { terms: '许可协议', privacy: '隐私政策', pricing: '定价', refunds: '退款政策', platform: '平台' },
+  footer: { terms: '许可协议', privacy: '隐私政策', pricing: '定价', refunds: '退款政策' },
   notFound: {
     title: '页面不存在',
     heading: '这个页面不存在。',
@@ -427,7 +424,7 @@ const ja: Strings = {
   getStarted: 'はじめる',
   signIn: 'ログイン',
   skipToContent: '本文へ移動',
-  footer: { terms: '利用規約・ライセンス', privacy: 'プライバシー', pricing: '料金', refunds: '返金', platform: 'プラットフォーム' },
+  footer: { terms: '利用規約・ライセンス', privacy: 'プライバシー', pricing: '料金', refunds: '返金' },
   notFound: {
     title: 'ページが見つかりません',
     heading: 'このページは存在しません。',
@@ -501,7 +498,7 @@ const de: Strings = {
   getStarted: 'Loslegen',
   signIn: 'Anmelden',
   skipToContent: 'Zum Inhalt springen',
-  footer: { terms: 'Bedingungen & Lizenz', privacy: 'Datenschutz', pricing: 'Preise', refunds: 'Rückerstattung', platform: 'Plattform' },
+  footer: { terms: 'Bedingungen & Lizenz', privacy: 'Datenschutz', pricing: 'Preise', refunds: 'Rückerstattung' },
   notFound: {
     title: 'Seite nicht gefunden',
     heading: 'Diese Seite gibt es nicht.',
@@ -575,7 +572,7 @@ const es: Strings = {
   getStarted: 'Empezar',
   signIn: 'Iniciar sesión',
   skipToContent: 'Saltar al contenido',
-  footer: { terms: 'Términos y licencia', privacy: 'Privacidad', pricing: 'Precios', refunds: 'Reembolsos', platform: 'Plataforma' },
+  footer: { terms: 'Términos y licencia', privacy: 'Privacidad', pricing: 'Precios', refunds: 'Reembolsos' },
   notFound: {
     title: 'Página no encontrada',
     heading: 'Esta página no existe.',
@@ -649,7 +646,7 @@ const fr: Strings = {
   getStarted: 'Commencer',
   signIn: 'Se connecter',
   skipToContent: 'Aller au contenu',
-  footer: { terms: 'Conditions et licence', privacy: 'Confidentialité', pricing: 'Tarifs', refunds: 'Remboursements', platform: 'Plateforme' },
+  footer: { terms: 'Conditions et licence', privacy: 'Confidentialité', pricing: 'Tarifs', refunds: 'Remboursements' },
   notFound: {
     title: 'Page introuvable',
     heading: 'Cette page n’existe pas.',
@@ -723,7 +720,7 @@ const ko: Strings = {
   getStarted: '시작하기',
   signIn: '로그인',
   skipToContent: '본문으로 건너뛰기',
-  footer: { terms: '약관 및 라이선스', privacy: '개인정보 보호', pricing: '가격', refunds: '환불', platform: '플랫폼' },
+  footer: { terms: '약관 및 라이선스', privacy: '개인정보 보호', pricing: '가격', refunds: '환불' },
   notFound: {
     title: '페이지를 찾을 수 없습니다',
     heading: '이 페이지는 존재하지 않습니다.',
@@ -805,7 +802,6 @@ const toHant = (s: Strings): Strings => ({
     privacy: s2t(s.footer.privacy),
     pricing: s2t(s.footer.pricing),
     refunds: s2t(s.footer.refunds),
-    platform: s2t(s.footer.platform),
   },
   notFound: {
     title: s2t(s.notFound.title),
