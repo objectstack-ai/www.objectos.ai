@@ -90,7 +90,6 @@ const pricingEn: PricingCopy = {
       features: [
         'In-app AI Builder and Ask',
         'Bundled AI credits',
-        'Custom domains',
         'Approvals',
         'Scheduled flows',
         '20 GB storage',
@@ -167,7 +166,6 @@ const pricingZhHans: PricingCopy = {
       features: [
         '界面内 AI:搭建应用 + 数据问询',
         'AI 额度',
-        '自定义域名',
         '审批',
         '定时流程',
         '20 GB 存储',
