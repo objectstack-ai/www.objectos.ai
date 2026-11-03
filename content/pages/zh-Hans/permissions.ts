@@ -151,7 +151,7 @@ const page = {
       {
         question: '这里哪些是开源的，ObjectOS 又加了什么？',
         answer:
-          '角色与权限集、行级规则、字段级安全、共享、租户隔离、审计日志，以及 Console 里的权限矩阵编辑器与审计日志查看器，都是开源 ObjectStack，Apache-2.0，并同等适用于 MCP 工具访问。ObjectOS 加的是从商业版起为其产品内 AI 提供的 AI 治理——动作审计、护栏、权限限定——并把“批准 AI Builder 的变更”做成一项独立权限，可以在权限集里按包限定范围。',
+          '角色与权限集、行级规则、字段级安全、共享、租户隔离、审计日志，以及 Console 里的权限矩阵编辑器与审计日志查看器，都是开源 ObjectStack，Apache-2.0，并同等适用于 MCP 工具访问。ObjectOS 加的是企业版为其产品内 AI 提供的 AI 治理——动作审计、护栏、权限限定——并把“批准 AI Builder 的变更”做成一项独立权限，可以在权限集里按包限定范围。',
       },
     ],
   } satisfies MarketingPage;

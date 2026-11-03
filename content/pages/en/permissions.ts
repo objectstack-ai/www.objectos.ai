@@ -151,7 +151,7 @@ const page = {
       {
         question: 'What is open source here, and what does ObjectOS add?',
         answer:
-          'Roles and permission sets, row-level rules, field security, sharing, tenant isolation, the audit log, and the permission matrix editor and audit log viewer in the Console are all open-source ObjectStack, Apache-2.0, and apply equally to MCP tool access. ObjectOS adds AI governance for its in-app AI from Business — action audit, guardrails, and permission scoping — and makes approving the AI Builder’s changes its own permission, one you can scope per package in a permission set.',
+          'Roles and permission sets, row-level rules, field security, sharing, tenant isolation, the audit log, and the permission matrix editor and audit log viewer in the Console are all open-source ObjectStack, Apache-2.0, and apply equally to MCP tool access. ObjectOS adds AI governance for its in-app AI on Enterprise — action audit, guardrails, and permission scoping — and makes approving the AI Builder’s changes its own permission, one you can scope per package in a permission set.',
       },
     ],
   } satisfies MarketingPage;
