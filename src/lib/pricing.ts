@@ -164,7 +164,7 @@ const pricingZhHans: PricingCopy = {
       altPrice: '月付 $24',
       tagline: '面向共同搭建与共享应用的团队。',
       features: [
-        '界面内 AI:搭建应用 + 数据问询',
+        '界面内 AI:搭建应用 + 数据查询',
         'AI 额度',
         '审批',
         '定时流程',
