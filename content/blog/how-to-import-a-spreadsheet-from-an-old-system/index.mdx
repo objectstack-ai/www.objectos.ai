@@ -1,6 +1,6 @@
 ---
 title: "How Do You Import a Spreadsheet From an Old System Into an AI-Built App? Import Mappings, Dry Runs, and the Three Ways a Row Can Fail to Match"
-description: "Measured on ObjectStack 17.7.0: a named import mapping projects foreign headers and codes onto one object, a dry run returns the whole per-row report with nothing stored, and a non-matching row is created, skipped or failed."
+description: "Measured on ObjectStack 18.3.0: a named import mapping projects foreign headers and codes onto one object, a dry run returns the whole per-row report with nothing stored, and a non-matching row is created, skipped or failed."
 author: ObjectStack Team
 date: 2026-10-25
 status: published
@@ -16,9 +16,9 @@ tags:
   - Dry run
 ---
 
-**The short version.** The spreadsheet from the old system has headers that are not your field names and codes that are not your codes. The fix is an **import mapping**: a named, versioned projection from the file's columns onto one object's fields, in which `map` translates the other system's codes and `upsertKey` decides what "the same row" means. The mapping is strict, so a column it does not name never reaches the write path. `dryRun: true` returns the complete per-row report with nothing stored. Measured on the published `@objectstack/cli` 17.7.0: a 3-row CSV came back `created: 3` from the dry run while the table still held 0 rows, held 3 rows after the real run, and answered `updated: 3` when the same file was sent again. **The dry run is the review**: a before-and-after count you sign off before anything lands.
+**The short version.** The spreadsheet from the old system has headers that are not your field names and codes that are not your codes. The fix is an **import mapping**: a named, versioned projection from the file's columns onto one object's fields, in which `map` translates the other system's codes and `upsertKey` decides what "the same row" means. The mapping is strict, so a column it does not name never reaches the write path. `dryRun: true` returns the complete per-row report with nothing stored. Measured on the published `@objectstack/cli` 18.3.0: a 3-row CSV came back `created: 3` from the dry run while the table still held 0 rows, held 3 rows after the real run, and answered `updated: 3` when the same file was sent again. **The dry run is the review**: a before-and-after count you sign off before anything lands.
 
-Everything below was run, not described. The app is a fresh `npm create objectstack@latest` scaffold on 17.7.0 carrying the `Lead` object from the CRM example that ships in the ObjectStack repository, and every count is quoted from the server's own report.
+Everything below was run, not described. The app is a fresh `npm create objectstack@latest` scaffold on 18.3.0 carrying the `Lead` object from the CRM example that ships in the ObjectStack repository, and every count is quoted from the server's own report.
 
 ## The file that arrives every Monday
 
@@ -80,7 +80,7 @@ It is registered on the stack with `mappings: [LeadFeedMapping]`, and `defineSta
 
 ![A five-column legacy CSV passes through the crm_lead_feed mapping: Full Name, E-mail and Company are copied to name, email and company; Channel goes through a map that turns Webform into web and Partner Referral into partner; Legacy ID has no entry and is dropped. Below, a second file that differs only by its Legacy ID column lands 0 of 3 rows through an inline rename because the column reaches the write path and is refused as an unknown field, while the mapping lands 3 of 3](./mapping-is-a-projection-en.svg)
 
-The word that matters in the definition is *projection*. The import endpoint accepts two mapping mechanisms, and they differ on exactly the third problem above. An inline `mapping` on the request is a flat rename, and columns it does not name "pass through to the write path under their own header". A named mapping is the opposite: unmapped columns are "**Dropped.** The artifact is a strict projection: only mapped targets survive."
+The word that matters in the definition is *projection*. The import endpoint accepts two mapping mechanisms, and they differ on exactly the third problem above. An inline `mapping` on the request is a rename: its array form can trim a cell, change its case or fill a blank one, but it has no code table, and columns it does not name "pass through to the write path under their own header". A named mapping is the opposite: unmapped columns are "**Dropped.** The artifact is a strict projection: only mapped targets survive."
 
 That difference is measurable, so it was measured, on a second three-row file built so that the junk column is the only thing the two routes can disagree on: its `Channel` cells hold our own option labels (`Website`, `Partner`), which resolve without any mapping, and it carries the `Legacy ID` column. It was sent with an inline rename of the four known columns, as a dry run and as a real run, and with `mappingName: "crm_lead_feed"` as a dry run:
 
@@ -92,7 +92,7 @@ That difference is measurable, so it was measured, on a second three-row file bu
 
 The inline route is not broken. It did what a rename does: it passed `Legacy ID` through under its own header, and the write path refused a field the object does not declare. The mapping never let the column near the write path. The first file, with its `Webform` and `Partner Referral` codes, fails the inline route one step earlier: every row is refused with `invalid_option` on `source`, "Lead Source: "Webform" is not a known option", because nothing translated the codes. For a file that arrives every week from a system you do not control, those two guarantees are the reason to write the twenty lines.
 
-The mapping can also be saved at runtime instead of shipped in the package: `PUT /api/v1/meta/mapping/crm_lead_feed_saved` with the same shape under a new name answered `Saved mapping 'crm_lead_feed_saved' (env-wide, state=active)`, and a dry run that named it reported `created 3`. Either way the import request resolves a mapping by name; the runtime reads saved mappings first and falls back to the packaged one. The packaged name itself is locked: the same `PUT` to `crm_lead_feed` was refused with `403 NOT_OVERRIDABLE`.
+The mapping can also be saved at runtime instead of shipped in the package: `PUT /api/v1/meta/mapping/crm_lead_feed_saved` with the same shape under a new name answered `Saved mapping 'crm_lead_feed_saved' (env-wide, state=active) [seq=1]`, and a dry run that named it reported `created 3`. Either way the import request resolves a mapping by name; the runtime reads saved mappings first and falls back to the packaged one. The packaged name itself is locked: the same `PUT` to `crm_lead_feed` was refused with `403 NOT_OVERRIDABLE`.
 
 ## The dry run is the review
 
@@ -129,11 +129,13 @@ Then the table was read: `"total": 0`. Nothing was stored. The same body without
 
 Why call this the review rather than a preview? Because it is the artifact a reviewer can actually sign off. The docs put it precisely: `"dryRun": true` returns "the same report with nothing persisted; the verdict comes from the engine's own write-path validation." It is not a guess about what the write would do; for each row it asks the write path for its verdict and stops short of persisting. So the thing a business owner approves before the Monday import runs is two small objects: the mapping (twenty lines of typed metadata, in version control, readable as a diff) and the dry-run report (how many rows will be created, how many updated, which ones will fail and on which column). Nothing has happened yet when they sign, and the second run is the proof that the first one meant what it said.
 
+The preview holds for rows it will update, too. Sent once more after the three rows existed, the dry run answered `created 0 · updated 3`, the same verdict the real run then gave. An update is previewed against the stored record merged with the file's cells, so a rule that reads a field the file does not carry, such as the Lead object's `lead_score_range` check on `lead_score`, judges the record the write would actually store. Before 18.0 the preview judged the incoming cells alone, and could refuse a row the write then accepted. A row the write would admit despite an advisory finding comes back `ok` with a `warnings` list attached, so the complaint is visible in the report rather than silent; none of the runs here produced one.
+
 ## Three ways a row can fail to match
 
 `upsertKey: ['email']` says what "the same row" means. The interesting cases are the rows where that lookup does not find exactly one record. The docs are blunt about this: "a row that does not match" is not one behaviour but three, chosen by `writeMode` and by how many records matched.
 
-![A grid of write mode against how many stored records the match fields found. With zero matches, insert and upsert create and update skips with NO_MATCH; with one match, update and upsert update it while insert creates a second record; with two or more matches, update and upsert fail with AMBIGUOUS_MATCH while insert creates another; a blank match key is created by upsert, skipped by update, and skipped in either mode under skipBlankMatchKey. Cells measured on 17.7.0 are marked](./three-ways-a-row-fails-to-match-en.svg)
+![A grid of write mode against how many stored records the match fields found. With zero matches, insert and upsert create and update skips with NO_MATCH; with one match, update and upsert update it while insert creates a second record; with two or more matches, update and upsert fail with AMBIGUOUS_MATCH while insert creates another; a blank match key is created by upsert, skipped by update, and skipped in either mode under skipBlankMatchKey. Cells measured on 18.3.0 are marked](./three-ways-a-row-fails-to-match-en.svg)
 
 All three were produced against the same table, and each is a different kind of answer:
 
@@ -146,6 +148,14 @@ All three were produced against the same table, and each is a different kind of 
 The measured runs: a two-row file sent with `writeMode: "update"` answered `updated 1, skipped 1`, with the unknown person's row reading `"action": "skipped", "code": "NO_MATCH"`. Then one row was loaded twice with `writeMode: "insert"`, which never looks for a match, so the table held two records with the same email, and the same row sent as an upsert answered `"action": "failed", "code": "AMBIGUOUS_MATCH"`, with the message "matchFields matched more than one crm_lead record". The duplicate is a fact about the table, and the import reports it instead of picking one.
 
 There is a fourth row worth knowing about: the one whose match field is blank. A row with an empty `E-mail` cell was **created** by the upsert, because upsert creates such a row by default; with `"skipBlankMatchKey": true` on the request, the same row came back `"action": "skipped", "code": "BLANK_MATCH_KEY"`. Which of the two you want depends on whether a lead without an email is a lead or a typo, and that is a decision the request carries, not the mapping.
+
+One more case arrived in 18.2: a file that disagrees with itself. When two rows of one upsert or update carry the same match key, neither is written, on the dry run as on the real run. A three-row file listing `frances@example.com` twice answered `ok 1 · errors 2`; the third row was created, and both duplicates came back `"action": "failed", "code": "DUPLICATE_MATCH_KEY"` with this message:
+
+```text
+Rows 1, 2 of this import have the same match key (email), so none of them was written: keep one row per key and import again
+```
+
+The fix belongs in the spreadsheet: keep the row that is right and send the file again.
 
 ## After the mapping, the cell still has to be legal
 
@@ -178,9 +188,7 @@ The ceiling is exact. A 5,001-row file was refused with "Import limit is 5000 ro
 
 ## What this does not solve
 
-**Custom code in the mapping.** `TransformType` declares seven values: `none`, `constant`, `map`, `split`, `join`, `lookup` and `javascript`. The first five run row by row, `lookup` is a deliberate pass-through to the import's own reference resolution, and `javascript` is refused, because "there is no server-side sandbox, and silently skipping a declared transform would corrupt data". Both halves of that refusal were measured on 17.7.0. Changing one entry of the packaged mapping to `transform: 'javascript'` failed `objectstack build` with "Mapping 'crm_lead_feed' uses transform 'javascript', which the import path does not execute (no server-side sandbox). Use none/constant/map/split/join/lookup, or model the logic as a flow." Saving the same thing at runtime through `PUT /api/v1/meta/mapping/...` was accepted, and the first import that named it was refused with `400 UNSUPPORTED_TRANSFORM`. For logic beyond the five transforms, the docs' answer is to transform the data before you post it or to model it as a flow on the target object. That is the right limit for a reviewer, too: a mapping you can read whole is a mapping you can approve.
-
-**A dry run of an update, when a rule reads a field the file does not carry.** One measured result goes against the grain of this post and belongs in it. After the three rows existed, a dry run of the same file, which now resolves every row to an `updated`, failed all three rows with `code: "rule_violation"` on the Lead object's `lead_score_range` validation rule: the rule's predicate reads `record.lead_score`, the file carries no such column, and the preview evaluated the rule against the incoming cells alone. The real run of the same body a moment later answered `updated: 3`, and a direct update of one record with the same four fields succeeded. So on 17.7.0, a preview that reports `rule_violation` on a row the import will **update**, for a rule that reads a field your file does not carry, is a question for the rule rather than a verdict on the row. Previews of rows that will be **created** agreed with the write in every run here.
+**Custom code in the mapping.** `TransformType` declares seven values: `none`, `constant`, `map`, `split`, `join`, `lookup` and `javascript`. The first five run row by row, `lookup` is a deliberate pass-through to the import's own reference resolution, and `javascript` is refused, because "there is no server-side sandbox, and silently skipping a declared transform would corrupt data". Both halves of that refusal were measured on 18.3.0. Changing one entry of the packaged mapping to `transform: 'javascript'` failed `objectstack build` with "Mapping 'crm_lead_feed' uses transform 'javascript', which the import path does not execute (no server-side sandbox). Use none/constant/map/split/join/lookup, or model the logic as a flow." Saving the same thing at runtime through `PUT /api/v1/meta/mapping/...` was accepted, and the first import that named it was refused with `400 UNSUPPORTED_TRANSFORM`. For logic beyond the five transforms, the docs' answer is to transform the data before you post it or to model it as a flow on the target object. That is the right limit for a reviewer, too: a mapping you can read whole is a mapping you can approve.
 
 **Deciding what the old column meant.** The mapping records the decision that `Partner Referral` means `partner`. It does not make it. Someone who knows both systems still has to say which of six source values a `Trade Show` lead is, and whether a lead with no email is a lead.
 
