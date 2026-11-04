@@ -3,7 +3,7 @@
 title: AI 模型進了企業還缺什麼？一個世界、一雙手、一道圍欄
 description: 缺的不是智力。模型進到一家公司，缺一個可以推理的世界、一雙能動手的手、一道圍住動作的圍欄。一份可執行的業務本體同時供給這三樣；文中一張帶出處的表，把每一樣對到執行時裡供給它的機制。
 author: ObjectStack Team
-date: 2026-11-03
+date: 2026-11-04
 status: published
 topic: ai-agents
 audience: it
@@ -37,19 +37,19 @@ tags:
 
 三句話的意思依次是：企業等於定義加執行，當執行幾乎免費時，企業就是它的定義；模型缺的不是智力，而是一個世界、一雙手和一道圍欄；一份寫得足夠清楚的本體就是軟體，模型會換，本體留下。
 
-關於出處還有一條說明，因為本文其餘的出處都讀自同一個帶標籤的釋出版本。把 objectstack.ai 改成開發者站點的那次重寫（`61c07986`，2026-10-27）撤掉了這一節，所以在標籤 `@objectstack/cli@18.2.0` 上，倉庫裡已經沒有這三句話。本文其餘部分核驗的仍然是這同一個想法，而核驗本身並不取決於這句話印在哪裡。
+關於出處還有一條說明，因為本文其餘的出處都讀自同一個帶標籤的釋出版本。把 objectstack.ai 改成開發者站點的那次重寫（`61c07986`，2026-10-27）撤掉了這一節，所以在標籤 `@objectstack/cli@18.3.0` 上，倉庫裡已經沒有這三句話。本文其餘部分核驗的仍然是這同一個想法，而核驗本身並不取決於這句話印在哪裡。
 
 把中間那句當作一份診斷來讀。幾乎每一個企業 AI 試點，都是把一個很能幹的模型接進公司，然後一次事故一次事故地發現：模型不知道「客戶」在這家公司裡到底指什麼（沒有世界）；它其實改不動一個客戶記錄（沒有手）；或者它改了一條不該碰的記錄（沒有圍欄）。常見的應對是把缺的三樣分別買齊：一層檢索供給世界，一層函式呼叫供給雙手，一層策略引擎供給圍欄。這是合理的應對，本文後半會給它應有的篇幅。而第一句和第三句說的，是 ObjectStack 為什麼走另一條路：如果業務的定義寫得精確到可以直接執行，那同一份定義就是世界，就聲明瞭雙手，也自帶圍欄——而且不管這個季度讀它的是哪個模型，它都在。
 
 ## 三樣供給，一個工件
 
-ObjectStack README 的一行定義是「一份可執行的業務本體。AI 編寫它，執行時執行它，Agent 操作它，你擁有它。」概念頁把它的核心列為六類東西：物件與欄位、關係、動作、權限、流程、Agent 與工具定義。本文的主張是：這六類正好歸入三樣供給，而執行時把每一樣都變成 Agent 直接可用的東西，中間不需要任何人寫膠水程式碼。下面是對照表。所有出處都是 `objectstack-ai/objectstack` 倉庫在標籤 `@objectstack/cli@18.2.0`（2026-11-02 讀取，即當天 `npm create objectstack@latest` 安裝的那個版本）上的檔案，或者從同一倉庫構建出來的文件頁。
+ObjectStack README 的一行定義是「一份可執行的業務本體。AI 編寫它，執行時執行它，Agent 操作它，你擁有它。」概念頁把它的核心列為六類東西：物件與欄位、關係、動作、權限、流程、Agent 與工具定義。本文的主張是：這六類正好歸入三樣供給，而執行時把每一樣都變成 Agent 直接可用的東西，中間不需要任何人寫膠水程式碼。下面是對照表。所有出處都是 `objectstack-ai/objectstack` 倉庫在標籤 `@objectstack/cli@18.3.0`（2026-11-04 讀取，即當天 `npm create objectstack@latest` 安裝的那個版本）上的檔案，或者從同一倉庫構建出來的文件頁。
 
 | 模型缺的 | 本體裡供給它的 | 執行時機制，以及寫在哪裡 |
 | :--- | :--- | :--- |
-| **一個世界**——名詞：有哪些實體，每個是什麼型別，彼此什麼關係 | 物件與欄位；關係（六類中的兩類） | 一份型別化定義編譯成 `objectstack.json`；執行時從它推匯出資料庫結構、REST 與即時 API、Console 介面和一個 MCP 伺服器（`ontology.mdx:64-70`）。Agent 用 `list_objects` 和 `describe_object` 讀這個世界（`connect-mcp.mdx:224-228`）。 |
-| **一雙手**——動詞：可以對這些名詞做什麼 | 動作、流程，以及記錄本身 | 執行中的應用就是一個 MCP 伺服器，位於 `/api/v1/mcp`，預設開啟；物件自動暴露，動作要用 `ai: { exposed: true }` 主動開啟（`README.md:136-151`）。這個開關是一個 schema 欄位，預設 `false`，開啟時必須附一段不少於 40 個字元、面向模型的描述（`action.zod.ts:787-794`）。 |
-| **一道圍欄**——誰可以做什麼、對哪些行哪些欄位，每次呼叫都查，查完留痕 | 權限、行級與欄位級安全、共享、審計 | 安全是註冊在 ObjectQL 引擎上的中介軟體，引擎的每一次操作都要經過它（`security-plugin-authz-middleware.ts:255-261`）。MCP 工具以呼叫者的身份執行，走的是「與 REST API 相同的權限/RLS 強制路徑」（`mcp-http-tools.ts:7-11`）。審計行由引擎鉤子在每一次插入、更新、刪除時寫入（`audit-writers.ts:2402-2408`）。 |
+| **一個世界**——名詞：有哪些實體，每個是什麼型別，彼此什麼關係 | 物件與欄位；關係（六類中的兩類） | 一份型別化定義編譯成 `objectstack.json`；執行時從它推匯出資料庫結構、REST 與即時 API、Console 介面和一個 MCP 伺服器（`ontology.mdx:64-70`）。Agent 用 `list_objects` 和 `describe_object` 讀這個世界（`connect-mcp.mdx:225-229`）。 |
+| **一雙手**——動詞：可以對這些名詞做什麼 | 動作、流程，以及記錄本身 | 執行中的應用就是一個 MCP 伺服器，位於 `/api/v1/mcp`，預設開啟；物件自動暴露，動作要用 `ai: { exposed: true }` 主動開啟（`README.md:136-151`）。這個開關是一個 schema 欄位，預設 `false`，開啟時必須附一段不少於 40 個字元、面向模型的描述（`action.zod.ts:815-822`）。 |
+| **一道圍欄**——誰可以做什麼、對哪些行哪些欄位，每次呼叫都查，查完留痕 | 權限、行級與欄位級安全、共享、審計 | 安全是註冊在 ObjectQL 引擎上的中介軟體，引擎的每一次操作都要經過它（`security-plugin-authz-middleware.ts:4-7`）。MCP 工具以呼叫者的身份執行，走的是「與 REST API 相同的權限/RLS 強制路徑」（`mcp-http-tools.ts:7-11`）。審計行由引擎鉤子在每一次插入、更新、刪除時寫入（`audit-writers.ts:2435-2440`）。 |
 
 這些檔案在哪裡，方便按出處翻開：`README.md` 在倉庫根；`ontology.mdx` 在 `content/docs/concepts/`，`connect-mcp.mdx` 在 `content/docs/ai/`；`action.zod.ts` 在 `packages/spec/src/ui/`；`security-plugin-authz-middleware.ts` 在 `packages/plugins/plugin-security/src/`；`mcp-http-tools.ts` 在 `packages/mcp/src/`；`audit-writers.ts` 在 `packages/plugins/plugin-audit/src/`。行號以該標籤為準。
 
@@ -97,30 +97,30 @@ export const CompleteTaskAction = defineAction({
 
 寫在提示詞裡的圍欄，是一個請求。架在工具前面的策略服務裡的圍欄，是一道針對呼叫的閘。可執行本體自帶的圍欄在資料路徑上，這個區別決定了一次錯誤能夠到達多遠。
 
-機制是中介軟體。`plugin-security` 把它的強制執行註冊在 ObjectQL 引擎上（`ql.registerMiddleware(...)`，`security-plugin-authz-middleware.ts:261`，由外掛的 `start()` 呼叫），而引擎是每一次讀寫都必經的地方，不管請求來自 REST 路由、Console 點選還是 MCP 工具。MCP 工具模組在自己的檔案頭裡就宣告它從不直接觸碰資料引擎：「所有讀寫都經過一個注入的 McpDataBridge，由宿主接到與 REST API 相同的權限/RLS 強制路徑上。這個模組只負責工具的形狀；橋負責執行與安全。」沒有一道專給 Agent 的圍欄需要和給人的那道保持同步，因為只有一道圍欄。每一處檢查到底在哪裡執行、為什麼事後過濾模型輸出已經太晚，[Agent 權限在哪裡強制執行](/zh-Hant/blog/objectos-agent-permission-boundaries/)一文有完整論證。
+機制是中介軟體。`plugin-security` 把它的強制執行註冊在 ObjectQL 引擎上（`ql.registerMiddleware(...)`，`security-plugin-authz-middleware.ts:2466`，由外掛的 `start()` 呼叫），而引擎是每一次讀寫都必經的地方，不管請求來自 REST 路由、Console 點選還是 MCP 工具。MCP 工具模組在自己的檔案頭裡就宣告它從不直接觸碰資料引擎：「所有讀寫都經過一個注入的 McpDataBridge，由宿主接到與 REST API 相同的權限/RLS 強制路徑上。這個模組只負責工具的形狀；橋負責執行與安全。」沒有一道專給 Agent 的圍欄需要和給人的那道保持同步，因為只有一道圍欄。每一處檢查到底在哪裡執行、為什麼事後過濾模型輸出已經太晚，[Agent 權限在哪裡強制執行](/zh-Hant/blog/objectos-agent-permission-boundaries/)一文有完整論證。
 
 這道圍欄有三個性質值得點名，因為替代方案通常至少缺其中一個。
 
 **它裁決的是行和欄位，不只是呼叫。** 權限集授予物件級的增、讀、改、刪；行級安全過濾呼叫者能看到哪些記錄；欄位級安全遮住哪些列。安全服務契約把行過濾的失敗姿態寫得很直白：「收窄訪問的回答失敗時關閉……解析失敗返回一個 DENY 過濾器（零行），絕不返回 `undefined`」（`packages/spec/src/contracts/security-service.ts:28-31`）。一個什麼都想要的模型，拿到的是它的使用者被允許看到的。
 
-**它單獨把守業務邏輯，因為邏輯背後沒有兜底。** 物件的增刪改查在每一行上都被 RLS 和 FLS 框住。動作體不是：一旦被呼叫，它「作為受信任的應用程式碼執行」，所以橋「在呼叫時把關：`ai.exposed`（作者明確的 AI 開啟，ADR-0011）加上 ADR-0066 D4 的能力閘」（`mcp-http-tools.ts:1128-1133`）。雙手和圍欄正是在這裡相遇：武裝一個動作的那一行，就是圍欄檢查的那一行。
+**它單獨把守業務邏輯，因為邏輯背後沒有兜底。** 物件的增刪改查在每一行上都被 RLS 和 FLS 框住。動作體不是：一旦被呼叫，它「作為受信任的應用程式碼執行」，所以橋「在呼叫時把關：`ai.exposed`（作者明確的 AI 開啟，ADR-0011）加上 ADR-0066 D4 的能力閘」（`mcp-http-tools.ts:1450-1455`）。雙手和圍欄正是在這裡相遇：武裝一個動作的那一行，就是圍欄檢查的那一行。
 
-**它留記錄。** 審計寫入器是掛在 `afterInsert`、`afterUpdate`、`afterDelete` 上的引擎鉤子（`audit-writers.ts:2402-2408`），所以 Agent 用 `update_record` 改過的一行，和在 Console 裡改過的一行，以同樣的方式、帶著操作者身份落進審計日誌。README 的第四道閘把後果寫成一句：「執行時在每一次呼叫上強制權限和審計，所以哪怕是一個寫錯了的應用，也留在圍欄之內。」（原文：The runtime enforces permissions and audit on every call, so even a wrong app stays inside the fence.）
+**它留記錄。** 審計寫入器是掛在 `afterInsert`、`afterUpdate`、`afterDelete` 上的引擎鉤子（`audit-writers.ts:2435-2440`），所以 Agent 用 `update_record` 改過的一行，和在 Console 裡改過的一行，以同樣的方式、帶著操作者身份落進審計日誌。README 的第四道閘把後果寫成一句：「執行時在每一次呼叫上強制權限和審計，所以哪怕是一個寫錯了的應用，也留在圍欄之內。」（原文：The runtime enforces permissions and audit on every call, so even a wrong app stays inside the fence.）
 
 ## 在自帶的 CRM 上量一個數
 
-一個數字，在標籤 `@objectstack/cli@18.2.0` 的 `examples/app-crm` 上量得，與 README 自己引用的數字一致（README 寫明整個應用是 1,873 行 TypeScript，不含測試）：
+一個數字，在標籤 `@objectstack/cli@18.3.0` 的 `examples/app-crm` 上量得，數法和 README 數這個應用時一樣：`src/` 下的 TypeScript，不含測試。README 自己寫的數字是 1,873 行，標註的是更早的提交（`95294be3`）；此後應用多出的 213 行裡，178 行是翻譯：
 
 ```bash
 find examples/app-crm/src -name '*.ts' -not -name '*.test.ts' | xargs cat | wc -l
-# 1873
+# 2086
 ```
 
-**30 個檔案、1,873 行**，是整個應用。把它的目錄歸入三樣供給：
+**30 個檔案、2,086 行**，是整個應用。把它的目錄歸入三樣供給：
 
 | 供給 | 目錄 | 行數 | 裡面是什麼 |
 | :--- | :--- | ---: | :--- |
-| 世界 | `src/objects/` | 489 | 六個物件（客戶、聯絡人、線索、商機、商機明細、活動）及其欄位和查詢關係 |
+| 世界 | `src/objects/` | 516 | 六個物件（客戶、聯絡人、線索、商機、商機明細、活動）及其欄位和查詢關係 |
 | 雙手 | `src/actions/` + `src/flows/` | 240 | 一個動作「Convert Lead」，以及它啟動的螢幕流程 |
 | 圍欄 | `src/security/` | 99 | 其中 `sales-positions.ts` 佔 89 行：兩個權限集、三個崗位，每個崗位點名它分發的權限集 |
 | 管道 | 工具註冊、鑑權中介軟體、審計程式碼 | 0 | 在 `src/` 下搜尋 `registerTool`、`middleware`、`authoriz`、`checkPermission` 和 `audit`，只有四處命中，都在註釋裡 |
@@ -157,7 +157,7 @@ find examples/app-crm/src -name '*.ts' -not -name '*.test.ts' | xargs cat | wc -
 
 **開啟閘門只把守執行時擁有的那些門。** `ai.exposed` 這道閘在 MCP 的 `run_action` 工具所到達的動作門上強制執行。spec 自己的註釋說得明白：「REST `/actions` 不受 `ai.exposed` 把守，在這道閘之外，所以那條路由前面要不要有個人，仍然由你安排。」（`packages/spec/src/ai/tool.zod.ts:95-98`）那條路由上權限照常生效；AI 開啟不生效。
 
-**讀審計比寫審計窄。** 每一次插入、更新、刪除都有記錄。記錄單條記錄的詳情檢視是按物件逐個開啟的，列表和搜尋結果不審計（`packages/plugins/plugin-audit/src/audit-plugin.ts:48-67`）。一個大量讀取的 Agent，留下的痕跡比一個寫入的少。
+**讀審計比寫審計窄。** 每一次插入、更新、刪除都有記錄。記錄單條記錄的詳情檢視是按物件逐個開啟的，列表和搜尋結果不審計（`packages/plugins/plugin-audit/src/audit-plugin.ts:49-68`）。一個大量讀取的 Agent，留下的痕跡比一個寫入的少。
 
 **世界只到執行時所執行的應用為止。** 對它不執行的系統，聯邦一個外部資料來源預設只讀，並被標明為早期。三樣供給覆蓋的是本體所執行的部分；其餘的 IT 資產仍然需要上面那個技術棧，或者一次遷移。
 
@@ -165,7 +165,7 @@ find examples/app-crm/src -name '*.ts' -not -name '*.test.ts' | xargs cat | wc -
 
 ## 託管，或者放在你自己的基礎設施上
 
-上面的一切都是開放棧，Apache-2.0，在同一個倉庫裡：定義是你手裡的一個檔案。「想把同一個迴圈託管起來、在瀏覽器裡用、什麼都不用安裝？那就是 ObjectOS——建立在 ObjectStack 之上的商業執行環境。」ObjectOS 有三個版本：ObjectOS Community，開源、可免費自託管；ObjectOS Cloud，託管在瀏覽器中、無需安裝；ObjectOS Enterprise，自管部署在你自己的基礎設施上。無論哪個版本，你都可以匯出本體，拿到另一個版本上執行。標籤上的 README 用自己的話說了同一件事：這個倉庫自帶 ObjectOS Community，免費、自託管，「while ObjectOS Cloud is the hosted edition and ObjectOS Enterprise the self-managed, licensed one」（ObjectOS Cloud 是託管版，ObjectOS Enterprise 是自管的授權版）。三樣供給隨著工件一起走，它跑在哪臺主機上都一樣。
+上面的一切都是開放棧，Apache-2.0，在同一個倉庫裡：定義是你手裡的一個檔案。為了執行它，ObjectStack 倉庫提供 ObjectOS Community —— ghcr.io/objectstack-ai/objectstack 映像、os start 和 Console，免費且自託管 —— 而 ObjectOS Cloud 是託管版本，ObjectOS Enterprise 是自管理、需許可的版本。（這句是標籤上 README 那句話的譯文，`README.md:26-31`。）ObjectOS 有三個版本：ObjectOS Community，開源、可免費自託管；ObjectOS Cloud，託管在瀏覽器中、無需安裝；ObjectOS Enterprise，自管部署在你自己的基礎設施上。你的本體是普通的 ObjectStack 後設資料。從 ObjectOS Cloud 或 ObjectOS Enterprise 匯出本體、在開源的 ObjectStack 執行時上執行，目前尚在計劃中。三樣供給就在這份後設資料裡，所以無論哪個版本執行它，它們都成立。
 
 ## 讓你的 Agent 指向它
 
