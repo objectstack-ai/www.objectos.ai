@@ -108,7 +108,7 @@ interface Strings {
     /**
      * The "Why ObjectOS" top-level group (its trigger in the bar and the drawer,
      * and the footer column of the same name). Its entries are `compareFit`,
-     * `security` and `referenceStories`.
+     * `security`, `referenceStories` and `useCases`.
      */
     whyObjectOs: string;
     /** /[lang]/compare/ — the first entry under Why ObjectOS, and its footer link. */
@@ -150,6 +150,8 @@ interface Strings {
     startWithAgent: string;
     templates: string;
     referenceStories: string;
+    /** /[lang]/use-cases/ — the fourth entry under Why ObjectOS, and its footer link. */
+    useCases: string;
     glossary: string;
     /** Accessible name of the mobile drawer's close button. */
     close: string;
@@ -256,6 +258,7 @@ const en: Strings = {
     startWithAgent: 'Start with your agent',
     templates: 'Templates',
     referenceStories: 'Reference stories',
+    useCases: 'Use cases',
     glossary: 'Glossary',
     close: 'Close',
     theme: 'Theme',
@@ -330,6 +333,7 @@ const zhHans: Strings = {
     startWithAgent: '从你的 Agent 开始',
     templates: '模板',
     referenceStories: '参考案例',
+    useCases: '使用场景',
     glossary: '术语表',
     close: '关闭',
     theme: '主题',
@@ -404,6 +408,7 @@ const ja: Strings = {
     startWithAgent: 'エージェントから始める',
     templates: 'テンプレート',
     referenceStories: '導入事例',
+    useCases: 'ユースケース',
     glossary: '用語集',
     close: '閉じる',
     theme: 'テーマ',
@@ -478,6 +483,7 @@ const de: Strings = {
     startWithAgent: 'Mit Ihrem Agent starten',
     templates: 'Vorlagen',
     referenceStories: 'Referenzberichte',
+    useCases: 'Anwendungsfälle',
     glossary: 'Glossar',
     close: 'Schließen',
     theme: 'Darstellung',
@@ -552,6 +558,7 @@ const es: Strings = {
     startWithAgent: 'Empieza con tu agente',
     templates: 'Plantillas',
     referenceStories: 'Casos de referencia',
+    useCases: 'Casos de uso',
     glossary: 'Glosario',
     close: 'Cerrar',
     theme: 'Tema',
@@ -626,6 +633,7 @@ const fr: Strings = {
     startWithAgent: 'Commencez avec votre agent',
     templates: 'Modèles',
     referenceStories: 'Cas de référence',
+    useCases: 'Cas d’usage',
     glossary: 'Glossaire',
     close: 'Fermer',
     theme: 'Thème',
@@ -700,6 +708,7 @@ const ko: Strings = {
     startWithAgent: '에이전트로 시작하기',
     templates: '템플릿',
     referenceStories: '레퍼런스 사례',
+    useCases: '활용 사례',
     glossary: '용어집',
     close: '닫기',
     theme: '테마',
@@ -775,6 +784,7 @@ const toHant = (s: Strings): Strings => ({
     startWithAgent: s2t(s.siteNav.startWithAgent),
     templates: s2t(s.siteNav.templates),
     referenceStories: s2t(s.siteNav.referenceStories),
+    useCases: s2t(s.siteNav.useCases),
     glossary: s2t(s.siteNav.glossary),
     close: s2t(s.siteNav.close),
     theme: s2t(s.siteNav.theme),

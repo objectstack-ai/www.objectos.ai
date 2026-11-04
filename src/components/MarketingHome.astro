@@ -73,7 +73,14 @@ const posts = (await getPostsInLocale(locale))
   .slice(0, 3)
   .map((post) => ({ ...post, coverDark: darkCover(post.entry.filePath, post.entry.data.cover) }));
 
-const templateLinks = [{ href: templatesHref }, { href: templatesHref }, { href: templatesHref }];
+// The three scenario cards, in `homeCopy.useCases` order: service, finance &
+// procurement, sales — the /use-cases/ sections whose scenarios have both a
+// post and a template or guide behind them (#359 ruling).
+const useCasesHref = marketingPagePath(locale, 'use-cases');
+const useCaseHrefs = ['service', 'finance-procurement', 'sales'].map((id) => `${useCasesHref}#${id}`);
+if (useCaseHrefs.length !== copy.useCases.length) {
+  throw new Error(`homeCopy[${locale}].useCases has ${copy.useCases.length} cards; MarketingHome links ${useCaseHrefs.length}`);
+}
 const insightTerms = [
   'app-building',
   'integration-data',
@@ -361,23 +368,30 @@ const demoCopy = DEMO_COPY[locale];
     </div>
   </section>
 
+  {/* "How business teams use it" (#359): the block that held three template
+      cards now holds three scenario cards, each landing on its team's section
+      of /use-cases/; the templates catalog stays one link away, under the
+      cards. The old #templates anchor is kept on the section for existing
+      deep links. */}
   <section class="solution-section" id="templates">
     <div class="section-head">
       <div>
-        <p class="section-kicker">{copy.solutionsKicker}</p>
-        <h2><span class="title-line" set:html={ph(copy.solutionsTitle[0])} />{lineJoin}<span class="title-line" set:html={ph(copy.solutionsTitle[1])} /></h2>
+        <p class="section-kicker">{copy.useCasesKicker}</p>
+        <h2><span class="title-line" set:html={ph(copy.useCasesTitle[0])} />{lineJoin}<span class="title-line" set:html={ph(copy.useCasesTitle[1])} /></h2>
       </div>
+      <a class="btn btn-ghost" href={useCasesHref}>{copy.useCasesLink} <span>→</span></a>
     </div>
     <div class="solution-grid">
-      {copy.solutions.map((solution, index) => (
-        <a class="solution card card-link" href={templateLinks[index].href}>
+      {copy.useCases.map((useCase, index) => (
+        <a class="solution card card-link" href={useCaseHrefs[index]}>
           <span class="solution-mark"></span>
-          <h3>{solution.title}</h3>
-          <p>{solution.copy}</p>
-          <span class="solution-link">{copy.solutionLink}&nbsp;→</span>
+          <h3>{useCase.title}</h3>
+          <p>{useCase.copy}</p>
+          <span class="solution-link">{copy.useCaseCardLink}&nbsp;→</span>
         </a>
       ))}
     </div>
+    <p class="solution-more"><a class="btn btn-ghost" href={templatesHref}>{copy.useCasesTemplatesLink} <span>→</span></a></p>
   </section>
 
   {/* id="compare" is the home page's own comparison section. Nav contract: the
@@ -1153,6 +1167,12 @@ const demoCopy = DEMO_COPY[locale];
     color: var(--green);
     font-size: var(--fs-13);
     font-weight: 700;
+  }
+  /* The templates catalog, one link under the cards: a ghost link at least
+     24px from the cards above it, so its target clears the cards' (axe
+     target-size). Two classes: `.home p` above resets margin-top. */
+  .solution-section > .solution-more {
+    margin: 2rem 0 0;
   }
   .article-grid {
     display: grid;
