@@ -34,6 +34,39 @@ const page = {
     },
     sections: [
       {
+        id: 'gates',
+        eyebrow: 'Four gates',
+        title: 'Four gates every AI action passes',
+        copy:
+          'Leadership asks one question: how do we stop the AI from doing something wrong? This is the answer as a checklist, and each gate links to the page that shows how it works. Undo is not on the list. The audit log shows each change old → new, but we do not claim a one-step revert of an AI action, so it does not count as a gate.',
+        items: [
+          {
+            meta: 'Gate 1 · Permissions',
+            title: 'Same access as the person it works for',
+            body: 'AI can see and do only what the person it is working for is allowed to see and do.',
+            href: '/en/permissions/#ai-safety',
+          },
+          {
+            meta: 'Gate 2 · Data rules',
+            title: 'The same automatic checks',
+            body: 'The rules that stop a person saving bad data stop the AI too. They run on every write, whoever makes it.',
+            href: '/en/data-modeling/#modeling',
+          },
+          {
+            meta: 'Gate 3 · Approvals',
+            title: 'Sensitive changes wait for a person',
+            body: 'A structural change, or an action you mark for sign-off such as a refund or a bulk update, waits for a person to approve it.',
+            href: '/en/approvals/#ai-gate',
+          },
+          {
+            meta: 'Gate 4 · Audit',
+            title: 'Every AI tool call leaves a trail',
+            body: 'AI tool calls land in the same audit log as people’s actions, so reviewing the AI is the same job as reviewing your team.',
+            href: '/en/permissions/#admin',
+          },
+        ],
+      },
+      {
         id: 'boundaries',
         eyebrow: 'Boundaries',
         title: 'Keep sensitive business data inside controlled infrastructure',

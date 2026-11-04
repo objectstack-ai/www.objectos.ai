@@ -34,6 +34,39 @@ const page = {
     },
     sections: [
       {
+        id: 'gates',
+        eyebrow: '四道闸',
+        title: 'AI 的每个动作都要过的四道闸',
+        copy:
+          '管理层只问一个问题：怎么防止 AI 做错事？下面就是答案，写成一张清单，每道闸都链到讲清它如何运作的页面。撤销不在清单上：审计日志会记下每次改动的旧值 → 新值，但我们不声称 AI 的动作可以一键回滚，所以它不算一道闸。',
+        items: [
+          {
+            meta: '第 1 道 · 权限',
+            title: '同岗同权',
+            body: 'AI 能看到、能做的，不超过它所代表的那个人被允许看到、被允许做的。',
+            href: '/en/permissions/#ai-safety',
+          },
+          {
+            meta: '第 2 道 · 数据规则',
+            title: '同样的自动校验',
+            body: '挡住人录入错误数据的那些规则，同样挡住 AI——每一次写入都要过，不管是谁写的。',
+            href: '/en/data-modeling/#modeling',
+          },
+          {
+            meta: '第 3 道 · 审批',
+            title: '敏感改动等人批',
+            body: '结构性变更，以及你标为需要签核的动作（比如退款、批量更新），都要等人批准后才执行。',
+            href: '/en/approvals/#ai-gate',
+          },
+          {
+            meta: '第 4 道 · 审计',
+            title: '每次 AI 工具调用都留痕',
+            body: 'AI 的工具调用和人的操作写进同一份审计日志，审 AI 就和审你的团队是同一件事。',
+            href: '/en/permissions/#admin',
+          },
+        ],
+      },
+      {
         id: 'boundaries',
         eyebrow: '边界',
         title: '敏感业务数据留在受控基础设施内',
