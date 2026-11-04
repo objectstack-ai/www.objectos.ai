@@ -56,7 +56,7 @@ const NAMES: Record<string, NameMap> = {
     ko: { title: '실행 가능한 비즈니스 온톨로지 플랫폼', shortTitle: '실행 가능한 온톨로지' },
   },
   'legacy-system-modernization': {
-    'zh-Hans': { title: '用 AI 做遗留系统现代化', shortTitle: '遗留系统现代化' },
+    'zh-Hans': { title: '用 AI 做老旧系统现代化', shortTitle: '老旧系统现代化' },
     ja: { title: 'AI によるレガシーシステム近代化', shortTitle: 'レガシー近代化' },
     de: { title: 'Legacy-System-Modernisierung mit AI', shortTitle: 'Legacy-Modernisierung' },
     es: { title: 'Modernización de sistemas heredados con AI', shortTitle: 'Modernización legacy' },
@@ -72,7 +72,7 @@ const NAMES: Record<string, NameMap> = {
     ko: { title: '엔터프라이즈 애플리케이션을 위한 셀프 호스팅 AI', shortTitle: '셀프 호스팅 AI' },
   },
   'crm-case-management-ai': {
-    'zh-Hans': { title: 'CRM 与案件管理 AI', shortTitle: 'CRM 与案件管理' },
+    'zh-Hans': { title: 'CRM 与个案管理 AI', shortTitle: 'CRM 与个案管理' },
     ja: { title: 'CRM とケース管理の AI', shortTitle: 'CRM とケース管理' },
     de: { title: 'CRM- und Case-Management-AI', shortTitle: 'CRM und Case Management' },
     es: { title: 'AI para CRM y gestión de casos', shortTitle: 'CRM y casos' },
@@ -116,7 +116,7 @@ const TEMPLATES: Record<TemplateLocale, TextTemplates> = {
       '企业需要在不替换核心系统的前提下，把 AI 放进实际流程。',
     ],
     capabilities: () => [
-      '把客户、订单、案件、设备、合同和审批建模成业务对象。',
+      '把客户、订单、个案、设备、合同和审批建模成业务对象。',
       '从同一份业务规格生成页面、流程、API 和 Agent 工具。',
       '让用户和 AI Agent 在同一套权限、审批和审计边界内执行动作。',
       '把已在运行的 CRM、ERP 数据库联邦接入——默认只读、尚在早期——而不是强制迁移。',
@@ -426,7 +426,7 @@ const EXTRA_FAQ: Partial<Record<string, Partial<Record<TemplateLocale, ClusterFa
       {
         question: '自托管是免费的吗？ObjectOS 又加了什么？',
         answer:
-          '免费自托管指的是开源的 ObjectStack 框架（Apache-2.0）：协议、内核、CLI、生产运行时、Console UI 与 MCP 服务器，开发与生产之间没有功能门槛——经 MCP 自带你的 AI。自管部署的 ObjectOS 即 ObjectOS 企业版，按许可付费：其单节点入门选项 Enterprise 单机版在单个节点上提供产品内 AI Builder 与 Ask、AI 治理与自带模型；单节点以上，企业版再提供集群、离线隔离、SCIM、合规鉴证与 SLA 支持。你的本体是普通的 ObjectStack 元数据。从 ObjectOS Cloud 或 ObjectOS Enterprise 导出本体、在开源的 ObjectStack 运行时上运行，目前尚在计划中。起步：npm create objectstack@latest，把编码 Agent 指向生成的项目及其 AGENTS.md，然后 npx os dev --ui。',
+          '免费自托管指的是开源的 ObjectStack 框架（Apache-2.0）：协议、内核、CLI、生产运行时、Console UI 与 MCP 服务器，开发与生产之间没有功能门槛——经 MCP 自带你的 AI。自管部署的 ObjectOS 即 ObjectOS Enterprise，按许可付费：其单节点入门选项 Enterprise 单机版在单个节点上提供产品内 AI Builder 与 Ask、AI 治理与自带模型；单节点以上，Enterprise 再提供集群、离线隔离、SCIM、合规鉴证与 SLA 支持。你的本体是普通的 ObjectStack 元数据。从 ObjectOS Cloud 或 ObjectOS Enterprise 导出本体、在开源的 ObjectStack 运行时上运行，目前尚在计划中。起步：npm create objectstack@latest，把编码 Agent 指向生成的项目及其 AGENTS.md，然后 npx os dev --ui。',
       },
     ],
   },

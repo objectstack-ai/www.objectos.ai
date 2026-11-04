@@ -24,7 +24,7 @@ const page = {
       eyebrow: '交付物',
       title: '交接才是产品：一份放在客户仓库里的本体',
       body:
-        '前沿部署项目终会结束。留下什么决定它值多少：类型化的对象、权限和流程，客户自己的团队——以及他们的 AI 智能体——不依赖你也能读懂、运行、持续修改。',
+        '前沿部署项目终会结束。留下什么决定它值多少：类型化的对象、权限和流程，客户自己的团队——以及他们的 AI Agent——不依赖你也能读懂、运行、持续修改。',
       code: `client-repo/
 ├── objectstack.config.ts   # 应用清单
 ├── src/objects/            # 客户的名词——类型化、可校验
@@ -47,7 +47,7 @@ const page = {
           },
           {
             title: '2. 建模',
-            body: '用你的编码智能体把发现变成类型化元数据——对象、流程、权限,紧凑且经校验的定义。',
+            body: '用你的编码 Agent 把发现变成类型化元数据——对象、流程、权限,紧凑且经校验的定义。',
             meta: '编写',
           },
           {
@@ -83,7 +83,7 @@ const page = {
           },
           {
             title: '模式可复利',
-            body: '每个项目都沉淀可复用的类型化模式——对象、流程、权限集——你的智能体带着它们服务下一个客户。',
+            body: '每个项目都沉淀可复用的类型化模式——对象、流程、权限集——你的 Agent 带着它们服务下一个客户。',
           },
         ],
       },
@@ -93,7 +93,7 @@ const page = {
       rows: [
         ['本体在哪里', '锁在供应商平台内', '客户仓库里的类型化文件(Apache-2.0)'],
         ['客户为什么付费', '平台席位，无限期', 'ObjectOS 生产运营——或零 license 自托管 ObjectStack'],
-        ['之后谁来维护', '供应商培训的专家', '任意编码智能体 + 人工评审'],
+        ['之后谁来维护', '供应商培训的专家', '任意编码 Agent + 人工评审'],
         ['AI 接入', '由供应商的路线图决定', '开放 MCP，默认开启——Claude、Cursor、本地模型'],
         ['安全评审', '信任平台边界', '直接读 diff——权限与审计就是元数据'],
       ],
@@ -115,7 +115,7 @@ const page = {
       {
         question: '服务客户必须用 ObjectOS 吗?',
         answer:
-          `不必须。ObjectStack 采用 Apache-2.0——协议、内核、CLI、生产运行时、Console UI 与 MCP 服务器——开发与生产之间没有功能门槛，客户可以零 license 成本自托管。ObjectOS 是${p.descriptor}：客户买它是为了产品内 AI Builder 与 Ask、企业版的 AI 治理、托管 Cloud 或自管的 Enterprise 交付（单节点入门选项 Enterprise 单机版；单节点以上提供集群、离线隔离与 SCIM），以及官方支持。`,
+          `不必须。ObjectStack 采用 Apache-2.0——协议、内核、CLI、生产运行时、Console UI 与 MCP 服务器——开发与生产之间没有功能门槛，客户可以零 license 成本自托管。ObjectOS 是${p.descriptor}：客户买它是为了产品内 AI Builder 与 Ask、Enterprise 的 AI 治理、托管 Cloud 或自管的 Enterprise 交付（单节点入门选项 Enterprise 单机版；单节点以上提供集群、离线隔离与 SCIM），以及官方支持。`,
       },
     ],
   } satisfies MarketingPage;

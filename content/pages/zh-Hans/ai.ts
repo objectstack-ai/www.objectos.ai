@@ -9,13 +9,13 @@ const page = {
     eyebrow: 'AI Build & Ask',
     heroTitle: '描述变更，审阅 diff，上线应用。',
     lead:
-      '开发者把 Claude Code 这类编码 Agent 指向源码项目来构建 ObjectStack 应用。ObjectOS 为团队增加第二条路径：业务人员在云端或企业版中通过对话描述变更。两条路径都产出同一种类型化 ObjectStack 元数据，并运行在同一受治理运行时上；ObjectOS AI Ask 则在提问者本人的权限内回答实时数据并执行动作。',
+      '开发者把 Claude Code 这类编码 Agent 指向源码项目来构建 ObjectStack 应用。ObjectOS 为团队增加第二条路径：业务人员在 ObjectOS Cloud（托管版）或 Enterprise（自管版）中通过对话描述变更。两条路径都产出同一种类型化 ObjectStack 元数据，并运行在同一受治理运行时上；ObjectOS AI Ask 则在提问者本人的权限内回答实时数据并执行动作。',
     primary: { label: '对比版本与定价', href: '/en/pricing/' },
     secondary: { label: '看 Agent 如何编写元数据', href: '/en/agent-developer/' },
     metrics: [
       { value: '2 条路径', label: '在源码里用编码 Agent，或在云端用对话' },
       { value: '整体装下', label: '应用小到 AI 能整体装下——README 自带的示例 CRM 可端到端读完' },
-      { value: '企业版', label: 'AI 动作审计、护栏与权限限定属于 ObjectOS 企业版' },
+      { value: 'Enterprise', label: 'AI 动作审计、护栏与权限限定属于 ObjectOS Enterprise' },
     ],
     artifact: {
       eyebrow: '构建闭环',
@@ -44,7 +44,7 @@ const page = {
           },
           {
             title: '在云端，用对话',
-            body: 'ObjectOS 云端与企业版中，业务人员在聊天里描述变更；产品内构建器把它起草成 ObjectStack 元数据并实时预览——Airtable 式的易用，配运行时治理。',
+            body: 'ObjectOS Cloud 与 Enterprise 版中，业务人员在聊天里描述变更；产品内构建器把它起草成 ObjectStack 元数据并实时预览——Airtable 式的易用，配运行时治理。',
           },
           {
             title: '可视化设计器微调',
@@ -73,7 +73,7 @@ const page = {
           },
           {
             title: '一切留痕',
-            body: '在 ObjectOS 企业版中，Ask 的查询与动作和人的操作一样写入审计日志，审查方式完全相同。',
+            body: '在 ObjectOS Enterprise 中，Ask 的查询与动作和人的操作一样写入审计日志，审查方式完全相同。',
           },
         ],
       },
@@ -94,7 +94,7 @@ const page = {
           },
           {
             title: '同一运行时，治理按版本',
-            body: '在开源运行时上，MCP 工具调用在调用者权限内执行并写入审计日志。ObjectOS 按版本提供产品内 AI：免费版可试用，团队版提供产品内 AI Build 与 Ask，AI 治理——动作审计、护栏、权限限定——在企业版提供。',
+            body: '在开源运行时上，MCP 工具调用在调用者权限内执行并写入审计日志。ObjectOS 按版本提供产品内 AI：Free（免费方案）可试用，Team（团队方案）提供产品内 AI Build 与 Ask，AI 治理——动作审计、护栏、权限限定——在 Enterprise 提供。',
           },
         ],
       },
@@ -103,21 +103,21 @@ const page = {
       columns: ['版本', 'AI 如何构建', 'AI 如何回答'],
       rows: [
         ['开源 ObjectStack', '编码 Agent 编辑元数据源码文件，以 git diff 审阅', '任意 MCP 客户端用你自己的模型查询受治理对象'],
-        ['ObjectOS 云端免费版', '产品内 AI Build 试用', '产品内 AI Ask 试用'],
-        ['ObjectOS 云端团队版', '产品内 AI Build 起草变更，审批把守结构', '产品内 AI Ask 回答问题并执行已批准动作'],
-        ['ObjectOS 企业版（自管或按合同）', '同上，另加 AI 治理：动作审计、护栏、权限限定；部署在你自己的基础设施上，另支持自带模型', '同上，Ask 的查询与动作受审计与护栏约束，另支持本地模型与内部身份系统'],
+        ['ObjectOS Cloud Free', '产品内 AI Build 试用', '产品内 AI Ask 试用'],
+        ['ObjectOS Cloud Team', '产品内 AI Build 起草变更，审批把守结构', '产品内 AI Ask 回答问题并执行已批准动作'],
+        ['ObjectOS Enterprise（自管或按合同）', '同上，另加 AI 治理：动作审计、护栏、权限限定；部署在你自己的基础设施上，另支持自带模型', '同上，Ask 的查询与动作受审计与护栏约束，另支持本地模型与内部身份系统'],
       ],
     },
     faqs: [
       {
         question: '怎么防止 AI 弄坏生产环境？',
         answer:
-          'ObjectStack 运行时对任何经 MCP 工作的 Agent 强制两条保证：结构性变更必须经人审批；每次工具调用都在发起用户的权限之内执行并被审计。ObjectOS 企业版为产品内 AI 另加 AI 治理——动作审计、护栏、权限限定——因此 AI 可以快速起草，却无法悄悄上线。',
+          'ObjectStack 运行时对任何经 MCP 工作的 Agent 强制两条保证：结构性变更必须经人审批；每次工具调用都在发起用户的权限之内执行并被审计。ObjectOS Enterprise 为产品内 AI 另加 AI 治理——动作审计、护栏、权限限定——因此 AI 可以快速起草，却无法悄悄上线。',
       },
       {
         question: '用的是什么模型？',
         answer:
-          '云端版本由托管模型驱动 AI Build 与 Ask。开源 ObjectStack 自带模型——任意兼容 MCP 的客户端或本地模型。自管部署的 ObjectOS 企业版（含单节点入门选项 Enterprise 单机版）自带模型或密钥。',
+          'ObjectOS Cloud 由托管模型驱动 AI Build 与 Ask。开源 ObjectStack 自带模型——任意兼容 MCP 的客户端或本地模型。自管部署的 ObjectOS Enterprise（含单节点入门选项 Enterprise 单机版）自带模型或密钥。',
       },
     ],
   } satisfies MarketingPage;

@@ -16,7 +16,7 @@ tags:
   - 可評審的 diff
 ---
 
-**先說答案。** `os validate` 不讀取 `allowDelete` 的*值*，所以 Agent 把某個權限集上的這個鍵從 `false` 改成 `true`，驗證照樣通過，沒有任何發現。這就是[那篇評審清單](/en/blog/how-to-review-ai-generated-app-changes/)說的「沒有規則被觸發」，而且這句話現在依然成立。但有一道門禁會被觸發——前提是應用選擇加入：一份提交進倉庫的**訪問矩陣**，每個（權限集 × 物件）一行，記錄有效的 create、read、edit、delete 位；`os compile` 每次構建都會從後設資料重新推導這張矩陣，再與快照比對。只要有漂移，構建就失敗，並列印一行語義化的說明——`'crm_sales_user' gains delete on 'crm_opportunity'`——直到有人重新生成快照；而快照的 git diff，就是評審人要簽字的東西。全部在已釋出的 `@objectstack/cli` 18.2.0 上實測，也就是 `npm create objectstack@latest` 裝上的那個版本，物件是自帶的 CRM 示例，它的矩陣共有**七條記錄**：一處改動，一行漂移，一行 JSON 變化。
+**先說答案。** `os validate` 不讀取 `allowDelete` 的*值*，所以 Agent 把某個權限集上的這個鍵從 `false` 改成 `true`，驗證照樣通過，沒有任何發現。這就是[那篇評審清單](/en/blog/how-to-review-ai-generated-app-changes/)說的「沒有規則被觸發」，而且這句話現在依然成立。但有一道門禁會被觸發——前提是應用選擇加入：一份提交進倉庫的**訪問矩陣**，每個（權限集 × 物件）一行，記錄有效的 create、read、edit、delete 位；`os compile` 每次構建都會從中繼資料重新推導這張矩陣，再與快照比對。只要有漂移，構建就失敗，並列印一行語義化的說明——`'crm_sales_user' gains delete on 'crm_opportunity'`——直到有人重新生成快照；而快照的 git diff，就是評審人要簽字的東西。全部在已釋出的 `@objectstack/cli` 18.2.0 上實測，也就是 `npm create objectstack@latest` 裝上的那個版本，物件是自帶的 CRM 示例，它的矩陣共有**七條記錄**：一處改動，一行漂移，一行 JSON 變化。
 
 這篇文章值得記住的概念是：**有效能力，不是原始標誌位**。矩陣報告的是把超級使用者位摺疊進去之後，一個權限集到底*能做什麼*，並把物件的記錄基線寫在同一行。改動仍然需要人來判斷，但它再也無法悄無聲息。
 
@@ -55,7 +55,7 @@ $ echo $?
 0
 ```
 
-五十三條作者期規則跑完了。沒有一條對「銷售代表該不該刪除商機」有看法，因為那是關於你公司的事實，不是關於後設資料的事實。評審那篇文章的句子一字不差地成立：兩個值都合法，兩個值都可執行，你合併哪個，執行時就執行哪個。
+五十三條作者期規則跑完了。沒有一條對「銷售代表該不該刪除商機」有看法，因為那是關於你公司的事實，不是關於中繼資料的事實。評審那篇文章的句子一字不差地成立：兩個值都合法，兩個值都可執行，你合併哪個，執行環境就執行哪個。
 
 第二道門，`npx os compile`。同一份配置，同樣的 53 條規則，然後多了一步 `validate` 沒有的：
 
@@ -85,7 +85,7 @@ $ echo $?
   "warnings": [ … ], "conversions": [] }
 ```
 
-![兩條命令，一道門禁：os validate 跑 53 條作者期規則並通過，因為沒有規則讀取 allowDelete 的值；os compile 跑同一批規則，然後從後設資料推匯出訪問矩陣，與已提交的 access-matrix.json 比對，並以一行語義化說明讓構建失敗，直到有人重新生成快照並提交它的 diff](./two-commands-one-gate.svg)
+![兩條命令，一道門禁：os validate 跑 53 條作者期規則並通過，因為沒有規則讀取 allowDelete 的值；os compile 跑同一批規則，然後從中繼資料推匯出訪問矩陣，與已提交的 access-matrix.json 比對，並以一行語義化說明讓構建失敗，直到有人重新生成快照並提交它的 diff](./two-commands-one-gate.svg)
 
 機制就這麼多。文章接下來講這一行是什麼意思、原始碼裡寫的明明是 `allowDelete` 為什麼它說 *delete*，以及這道門禁不做什麼。
 
@@ -97,7 +97,7 @@ ObjectStack 的文件用一段話說清了它，值得原文引用而不是轉�
 AI drafts permission metadata on this platform; the one thing it must never do is *silently* change who can do what. The access-matrix gate makes every capability change a **visible, reviewable build event**: the (permission set × object) matrix is derived purely from metadata on every `os compile`, diffed against a committed snapshot, and any drift **fails the build** with a semantic explanation until a human regenerates the snapshot.
 </blockquote>
 
-（AI 在這個平臺上起草權限後設資料；它唯一絕不能做的事，是*悄悄*改變誰能做什麼。訪問矩陣門禁把每一次能力變化都變成**看得見、可評審的構建事件**：（權限集 × 物件）矩陣在每次 `os compile` 時純粹由後設資料推導，與已提交的快照比對，任何漂移都會**讓構建失敗**並給出語義化解釋，直到有人重新生成快照。）
+（AI 在這個平台上起草權限中繼資料；它唯一絕不能做的事，是*悄悄*改變誰能做什麼。訪問矩陣門禁把每一次能力變化都變成**看得見、可評審的構建事件**：（權限集 × 物件）矩陣在每次 `os compile` 時純粹由中繼資料推導，與已提交的快照比對，任何漂移都會**讓構建失敗**並給出語義化解釋，直到有人重新生成快照。）
 
 關於它的三個事實，每一條都在 18.2.0 上核對過：
 
@@ -147,7 +147,7 @@ AI drafts permission metadata on this platform; the one thing it must never do i
 
 ## 有效能力，不是原始標誌位
 
-再看一眼上面那一行。它有一列 `delete`，而不是 `allowDelete`，這個差別是有意為之：矩陣報告的是**有效**能力。在 18.2.0 的規範裡，由一個函式決定一條物件權限是否授予某個動作，而執行時的執行門在回答 403 之前問的也是同一個函式。它的摺疊規則，出自 `@objectstack/spec` 裡的 `objectPermissionGrants`：
+再看一眼上面那一行。它有一列 `delete`，而不是 `allowDelete`，這個差別是有意為之：矩陣報告的是**有效**能力。在 18.2.0 的規範裡，由一個函式決定一條物件權限是否授予某個動作，而執行環境的執行門在回答 403 之前問的也是同一個函式。它的摺疊規則，出自 `@objectstack/spec` 裡的 `objectPermissionGrants`：
 
 - `read` 為真，當 `allowRead` 為真，**或** `viewAllRecords` 為真，**或** `modifyAllRecords` 為真。
 - `edit`、`delete`、`transfer` 為真，當各自的位為真**或** `modifyAllRecords` 為真。
@@ -167,7 +167,7 @@ $ npx os compile
   • 'crm_sales_user' gains Modify All Data on 'crm_opportunity'
 ```
 
-對這處改動跑 `npx os validate`：`✓ Validation passed (732ms)`。原始碼那一行已經不再提 delete；矩陣說的是 `true`，因為執行時會放這個刪除過去，而矩陣的職責是告訴評審人 403 會怎麼說，不是原始檔怎麼寫。
+對這處改動跑 `npx os validate`：`✓ Validation passed (732ms)`。原始碼那一行已經不再提 delete；矩陣說的是 `true`，因為執行環境會放這個刪除過去，而矩陣的職責是告訴評審人 403 會怎麼說，不是原始檔怎麼寫。
 
 有一種寫法規範已經不再接受，而它恰恰是最先會想到的改法：`allowDelete: false` 原樣不動，在旁邊加上 `modifyAllRecords: true`。18.2.0 之前這個組合能載入，而報告它所授予的那個 delete 的，只有矩陣這一道門。從 18.2.0 起，規範在任何規則或門禁跑起來之前就拒絕它，`validate` 退出碼 1，`compile` 退出碼 2，訊息相同：
 
@@ -179,7 +179,7 @@ $ echo $?
 1
 ```
 
-這就是上面那個摺疊，提前一道門執行：一個執行時本來會忽略的 `false`，現在是 schema 錯誤而不是無聲的謊言；被接受的那種寫法意味著什麼，由矩陣的那一行來說。
+這就是上面那個摺疊，提前一道門執行：一個執行環境本來會忽略的 `false`，現在是 schema 錯誤而不是無聲的謊言；被接受的那種寫法意味著什麼，由矩陣的那一行來說。
 
 最後一列重要的理由也一樣。評審那篇文章的第二遍要求你即使 diff 沒碰到某個物件，也要去讀它的 `sharingModel`，因為一個照抄來的演示物件上的 `public_read_write`，意味著全組織可讀可寫，而所有門禁一路綠燈。在這裡，基線就寫在授權旁邊的同一行上，基線的變化是一條獨立的漂移行，還標著 *affects every principal*（影響每一個主體），因為 OWD 一擺動，該物件的每一行的含義都同時變了。
 
@@ -229,7 +229,7 @@ $ npx os compile
 | :--- | :--- | :--- | :--- |
 | 安全姿態 linter（ADR-0090 D7） | *單獨就危險*的宣告：未設定的 OWD、高權限的錨點建議、已退役的別名 | `validate`、`build`、`lint`，作為登錄檔規則 | 以規則自己的資訊讓構建失敗 |
 | 訪問矩陣快照門禁（ADR-0090 D6） | *看起來合理*、但影響面仍該由人簽字的改動 | `compile` 與 `build`，在應用選擇加入時 | 以語義行讓構建失敗，直到快照被重新生成 |
-| 解釋引擎 | 某個主體的某一次請求為什麼是那個結果 | 執行時，逐次決策 | 回答問題，不新增任何執行 |
+| 解釋引擎 | 某個主體的某一次請求為什麼是那個結果 | 執行環境，逐次決策 | 回答問題，不新增任何執行 |
 
 文件用一句話說明了後兩者的關係：矩陣「is the same evaluation run over representative (permission set × object) pairs; explain is the per-decision zoom lens」——是同一套評估跑在有代表性的（權限集 × 物件）對上；解釋引擎則是逐次決策的放大鏡。三者之所以存在，原因也是同一個：授權是詞彙封閉的結構化資料，所以構建步驟能從中推匯出一張表。把權限模型寫成應用程式碼裡自由形式的謂詞，就沒有表可比。
 
@@ -240,8 +240,8 @@ $ npx os compile
 1. **它是選擇加入的，預設關閉。** 一個新的 18.2.0 腳手架沒有快照，也就沒有門禁。加入只需一條命令和一份提交的檔案，而新增這份檔案的那個 pull request，正是最該仔細評審的：那份快照是之後每一次 diff 的比對基線。
 2. **它跑在 `compile` 和 `build` 裡，從不跑在 `validate` 或 `lint` 裡。** 上面測過了：同一處改動，`validate` exit 0 且完全不提矩陣，`compile` exit 1。一條只跑 `os validate` 就宣佈應用已檢查的 CI 流水線，並沒有跑過這道門禁。
 3. **它讓改動變得可見，而不是變得不可能。** `--update-access-matrix` 只是一個標誌，Agent 自己也能跑它、自己提交新快照。Agent 做不到的是讓能力變化從 pull request 裡消失：不管是人還是模型重新生成的，那一行都在 diff 裡。評審階梯的第三級——*這樣對嗎*——仍然歸評審人，門禁的貢獻在於，這個問題現在帶著答案的形狀，用一行話送到你面前。
-4. **它的範圍是（權限集 × 物件）。** create、read、edit、delete，兩個超級使用者位，讀寫深度，以及物件的基線。不包括欄位級安全，不包括共享規則，不包括行級謂詞，不包括哪些使用者持有這個權限集（那是執行時資料，評審那篇的限制裡已經說過），也不包括一個動作體跑起來之後做了什麼。
-5. **對一個詞的翻轉，原始碼 diff 本來就看得見。** 這是公平的反對意見：任何讀 diff 的人都能在 `sales-positions.ts` 裡看到 `allowDelete: false → true`。矩陣的價值，在於原始碼變化和能力變化形狀不一樣的地方。一個 `modifyAllRecords: true` 是一行原始碼、兩行能力。物件檔案上一處 `sharingModel` 改動是一行原始碼，卻落在每個權限集關於該物件的那一行上。分散在好幾個檔案裡拼出來的權限模型，最終仍然落成一張有序的表，評審人不必開啟任何一個檔案就能讀。門禁的價值不在於它看見了翻轉，而在於它用執行時執行的那套詞彙看見了翻轉。
+4. **它的範圍是（權限集 × 物件）。** create、read、edit、delete，兩個超級使用者位，讀寫深度，以及物件的基線。不包括欄位級安全，不包括共享規則，不包括行級謂詞，不包括哪些使用者持有這個權限集（那是執行環境資料，評審那篇的限制裡已經說過），也不包括一個動作體跑起來之後做了什麼。
+5. **對一個詞的翻轉，原始碼 diff 本來就看得見。** 這是公平的反對意見：任何讀 diff 的人都能在 `sales-positions.ts` 裡看到 `allowDelete: false → true`。矩陣的價值，在於原始碼變化和能力變化形狀不一樣的地方。一個 `modifyAllRecords: true` 是一行原始碼、兩行能力。物件檔案上一處 `sharingModel` 改動是一行原始碼，卻落在每個權限集關於該物件的那一行上。分散在好幾個檔案裡拼出來的權限模型，最終仍然落成一張有序的表，評審人不必開啟任何一個檔案就能讀。門禁的價值不在於它看見了翻轉，而在於它用執行環境執行的那套詞彙看見了翻轉。
 
 ## 加到清單裡的兩行
 
@@ -258,7 +258,7 @@ $ npx os compile
 
 ## 把 Agent 指向一個授權本身就是一張表的目標
 
-Agent 在任何技術棧裡都能生成一套權限模型。它在大多數棧裡做不到的，是交給你一張七行的表，由構建每次重新推導、每次比對——因為在大多數棧裡，權限模型散落在中介軟體、查詢過濾器和一兩個模板之間，根本沒有表可比。上面這道門禁之所以存在，是因為 ObjectStack 裡的授權是詞彙封閉的型別化後設資料，而正是這個性質讓 diff [可評審](/zh-Hant/glossary/reviewable-diff/)，也讓一條宣告出來的權限不至於[只是一句註釋](/zh-Hant/glossary/declared-vs-enforced/)。如果你想看執行本身發生在哪裡的論證，它在[AI Agent 的權限究竟在哪一層被執行](/zh-Hant/blog/objectos-agent-permission-boundaries/)。
+Agent 在任何技術棧裡都能生成一套權限模型。它在大多數棧裡做不到的，是交給你一張七行的表，由構建每次重新推導、每次比對——因為在大多數棧裡，權限模型散落在中介軟體、查詢過濾器和一兩個模板之間，根本沒有表可比。上面這道門禁之所以存在，是因為 ObjectStack 裡的授權是詞彙封閉的型別化中繼資料，而正是這個性質讓 diff [可評審](/zh-Hant/glossary/reviewable-diff/)，也讓一條宣告出來的權限不至於[只是一句註釋](/zh-Hant/glossary/declared-vs-enforced/)。如果你想看執行本身發生在哪裡的論證，它在[AI Agent 的權限究竟在哪一層被執行](/zh-Hant/blog/objectos-agent-permission-boundaries/)。
 
 所以，把你的 Agent 指向這個目標——用[一份規則檔案](/en/blog/how-to-point-your-agent-at-objectstack/)，或直接用規範和 MCP 介面——並把快照作為你提交的第一樣東西：
 
