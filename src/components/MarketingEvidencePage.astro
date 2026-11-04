@@ -4,7 +4,7 @@ import heroImage from '../assets/objectos-home-hero.png';
 import { getMarketingPage, getMarketingPages, marketingPagePath } from '../content-pages/registry';
 import { clusterBySlug, clusterPath } from '../lib/clusters';
 import { clusterCopy } from '../lib/cluster-i18n';
-import type { MarketingPage } from '../content-pages/types';
+import { SCENARIO_READINESS, type MarketingPage } from '../content-pages/types';
 import { marketingPageUi } from '../content-pages/ui';
 import { cardSpans } from '../lib/card-rows';
 import { phraseHtml } from '../../scripts/lib/cjk-phrases.mjs';
@@ -67,8 +67,16 @@ for (const section of page.sections) {
     if (scenario.guide && !clusterBySlug(scenario.guide)) {
       throw new Error(`Scenario card ${where}: no guide (cluster) "${scenario.guide}"`);
     }
+    // Every card states how far it is from running (#370): exactly one of the
+    // closed set, so a scenario cannot ship without a stated tier.
+    if (!(SCENARIO_READINESS as readonly string[]).includes(scenario.readiness)) {
+      throw new Error(
+        `Scenario card ${where}: readiness "${scenario.readiness ?? ''}" is not one of ${SCENARIO_READINESS.join(' | ')}`
+      );
+    }
   }
 }
+const hasScenarios = page.sections.some((section) => section.items.some((item) => item.scenario));
 const guideLink = (slug: string) => {
   const cluster = clusterBySlug(slug)!;
   return { href: clusterPath(locale, slug), label: clusterCopy(cluster, locale).shortTitle };
@@ -138,6 +146,15 @@ const ph = (text: string): string => phraseHtml(text, locale);
     ))}
   </dl>
 
+  {hasScenarios && (
+    <p class="readiness-legend">
+      <span>{ui.scenario.readinessLegend}</span>
+      {SCENARIO_READINESS.map((tier) => (
+        <span class:list={['chip', 'readiness-chip', `readiness-${tier}`]}>{ui.scenario.readiness[tier]}</span>
+      ))}
+    </p>
+  )}
+
   <section class="artifact" aria-labelledby="artifact-title">
     <div>
       <p class="eyebrow">{page.artifact.eyebrow}</p>
@@ -166,6 +183,9 @@ const ph = (text: string): string => phraseHtml(text, locale);
         {section.items.map((item, index) => item.scenario ? (
           <div class:list={['item', 'scenario', `span-${cardSpans(section.items.length)[index]}`]} id={item.id}>
             <h3>{item.title}</h3>
+            <p class="scenario-readiness">
+              <span class:list={['chip', 'readiness-chip', `readiness-${item.scenario.readiness}`]}>{ui.scenario.readiness[item.scenario.readiness]}</span>
+            </p>
             <dl>
               <div>
                 <dt>{ui.scenario.today}</dt>
@@ -613,6 +633,47 @@ const ph = (text: string): string => phraseHtml(text, locale);
     flex-direction: column;
     min-height: 0;
   }
+  /* Readiness (#370): a plain chip with a status dot, on each scenario card
+     and in the legend under the metrics. The label carries the meaning; the
+     dot only helps the eye match a card to the legend: green and amber are
+     status colours, the rule tier a hollow ring (indigo stays interaction). */
+  .metrics:has(+ .readiness-legend) {
+    margin-bottom: 1.25rem;
+  }
+  .readiness-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    margin: 0 0 5rem;
+    color: var(--ink-soft);
+    font-size: var(--fs-14);
+    line-height: var(--lh-ui);
+  }
+  .readiness-chip {
+    white-space: normal;
+  }
+  .readiness-chip::before {
+    content: '';
+    flex: none;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: var(--r-pill);
+    background: var(--muted);
+  }
+  .readiness-today::before {
+    background: var(--green);
+  }
+  .readiness-integration::before {
+    background: var(--amber);
+  }
+  .readiness-rule::before {
+    background: transparent;
+    box-shadow: inset 0 0 0 2px var(--muted);
+  }
+  .scenario .scenario-readiness {
+    margin: 0 0 0.9rem;
+  }
   .scenario dl {
     display: grid;
     gap: 0.7rem;
@@ -874,6 +935,9 @@ const ph = (text: string): string => phraseHtml(text, locale);
       background: var(--line);
     }
     .metrics {
+      margin-bottom: 3rem;
+    }
+    .readiness-legend {
       margin-bottom: 3rem;
     }
     .metrics div {

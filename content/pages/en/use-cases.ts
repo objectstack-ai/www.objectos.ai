@@ -3,6 +3,9 @@ import type { MarketingPage } from '../../../src/content-pages/types';
 // One card per existing scenario post, grouped by business team (ruling on
 // #359, 2026-11-04). Each card summarizes its post and claims nothing the post
 // does not say; the post, template and guide links are checked at build time.
+// `readiness` (#370) is taken from evidence, not optimism: `today` only where
+// the linked template or post shows the scenario running on the shipped
+// platform; in doubt, the more conservative tier. zh-Hans carries the same tiers.
 const page = {
     slug: 'use-cases',
     navLabel: 'Use cases',
@@ -44,6 +47,7 @@ const page = {
             body: 'Reps fill in CRM fields after the selling is done, while the real context sits in meetings, emails, notes and follow-up promises.',
             scenario: {
               post: 'ai-sales-assistant',
+              readiness: 'integration',
               guide: 'crm-case-management-ai',
               withAi: 'Reps update by voice or text. AI summarizes meetings, picks out next steps, surfaces deal risk, suggests stage changes and preps the next account meeting.',
               approves: 'The rep confirms each suggested CRM change, and customer-facing commitments need confirmation. Managers set the risk rules and approval boundaries.',
@@ -62,6 +66,7 @@ const page = {
             body: 'A long email or a frustrated chat becomes a record that waits for someone to read, classify, search, reply and escalate.',
             scenario: {
               post: 'ai-ticket-hub',
+              readiness: 'integration',
               template: 'helpdesk',
               withAi: 'AI classifies each issue, detects urgency and sentiment, matches knowledge articles, drafts replies with citations and ranks cases by SLA.',
               approves: 'Agents confirm drafts, routing and case updates. Refund, compensation and contract-promise replies can be set to wait for a manager’s approval; escalations are created only after permission checks.',
@@ -80,6 +85,7 @@ const page = {
             body: 'OCR fills in the fields, but finance still judges by hand whether a claim is in policy, in budget, project-related and not a duplicate.',
             scenario: {
               post: 'ai-expense-audit',
+              readiness: 'integration',
               withAi: 'AI extracts receipt data, checks policy, budget, project and duplicate invoices, ranks the claims to review first and cites the policy line behind each finding.',
               approves: 'AI recommends; payment approval follows a clear authority chain, high-risk claims route to finance review, and reviewer corrections are recorded.',
             },
@@ -89,6 +95,7 @@ const page = {
             body: 'Supplier risk is spread across systems: expiring certificates, slipping delivery, unusual pricing, contract gaps and quality returns.',
             scenario: {
               post: 'ai-procurement-risk',
+              readiness: 'integration',
               template: 'procurement',
               withAi: 'Before an order is placed, AI checks qualifications and delivery, compares the quote with history, surfaces quality and contract issues and suggests alternatives.',
               approves: 'AI does not make the buying decision: procurement approves with the risk explanation in front of it, and review outcomes feed back into supplier governance.',
@@ -107,6 +114,7 @@ const page = {
             body: 'Employees need a VPN, a laptop, leave or a policy answer, and the portal makes them find the right HR, IT, admin or finance form first.',
             scenario: {
               post: 'ai-employee-service-center',
+              readiness: 'rule',
               template: 'hr',
               withAi: 'AI splits one message into the right service requests, pre-fills the employee’s context, answers policy questions from the knowledge base and routes fulfilment tasks.',
               approves: 'Requests are created only through a governed service catalog; access, devices and reimbursements stay behind permissions and approvals, tracked in the same conversation.',
@@ -125,6 +133,7 @@ const page = {
             body: 'The contract register is managed but the review is not: risk stays in attachments and comments, and approvers see too little context.',
             scenario: {
               post: 'ai-contract-risk',
+              readiness: 'rule',
               template: 'contracts',
               withAi: 'AI extracts parties, amounts, terms and non-standard clauses, compares them with the standard template and turns deviations into risk records.',
               approves: 'Legal confirms or edits every finding and owns the final opinion. High-risk findings go to approval, and signed obligations become follow-up tasks.',
@@ -135,6 +144,7 @@ const page = {
             body: 'Compliance teams align policy text with evidence scattered across IAM, contracts, procurement, logs, workflows and spreadsheets — by hand.',
             scenario: {
               post: 'ai-compliance-control',
+              readiness: 'integration',
               template: 'compliance',
               withAi: 'AI parses policies into controls, matches evidence, explains why a gap is high risk and suggests remediation tasks.',
               approves: 'Responsible owners confirm high-risk findings and evidence requirements; remediation and its confirmation stay in the audit history.',
@@ -153,6 +163,7 @@ const page = {
             body: 'Risk hides in meeting notes, task updates, weekly reports, change requests and resource conversations until a milestone slips.',
             scenario: {
               post: 'ai-project-risk-assistant',
+              readiness: 'rule',
               template: 'project',
               withAi: 'AI links notes to tasks and milestones, detects blockers, dependency and resource conflicts, creates risk records with suggested actions and answers health questions.',
               approves: 'AI detects and explains; commitments stay human decisions. Managers turn accepted risks into action plans; a rule can hold scope changes until their impact is assessed.',
@@ -171,6 +182,7 @@ const page = {
             body: 'AI may speed up one draft, but ideas, sources, review comments, the publishing calendar and retrospectives stay scattered.',
             scenario: {
               post: 'ai-content-workbench',
+              readiness: 'integration',
               template: 'content',
               withAi: 'AI clusters source material into topics, writes briefs with audience and evidence, highlights claims that lack support and summarizes performance after publishing.',
               approves: 'Drafts route to brand, product, legal or customer-success review before publishing, and review comments and approvals are structured records.',
@@ -181,6 +193,7 @@ const page = {
             body: 'An assistant answers the question, then the user still opens the business system to create tasks, start approvals, update records and leave an audit trail.',
             scenario: {
               post: 'ai-agent-workbench',
+              readiness: 'rule',
               withAi: 'The agent turns a goal into a visible plan and calls governed tools: it queries records, creates tasks, starts approvals and generates reports.',
               approves: 'It checks the user’s access before querying data, asks before creating tasks, gates high-risk actions with approval and records each tool call and result.',
             },

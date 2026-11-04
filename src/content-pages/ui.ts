@@ -1,4 +1,5 @@
 import type { Locale } from '../lib/i18n';
+import type { ScenarioReadiness } from './types';
 import { s2t } from '../lib/zhconvert';
 
 interface MarketingPageUi {
@@ -23,6 +24,9 @@ interface MarketingPageUi {
     readPost: string;
     template: string;
     guide: string;
+    /** The readiness tag on each card and the legend's lead-in (#370). */
+    readinessLegend: string;
+    readiness: Record<ScenarioReadiness, string>;
   };
 }
 
@@ -59,6 +63,12 @@ const EN_UI: MarketingPageUi = {
     readPost: 'Read the scenario',
     template: 'Template',
     guide: 'Guide',
+    readinessLegend: 'What each scenario needs before it runs:',
+    readiness: {
+      today: 'Works on the platform today',
+      integration: 'Needs a connection to a system you run',
+      rule: 'Needs the business rule written down first',
+    },
   },
 };
 
@@ -95,6 +105,12 @@ const ZH_HANS_UI: MarketingPageUi = {
     readPost: '阅读完整场景',
     template: '模板',
     guide: '专题',
+    readinessLegend: '每个场景跑起来之前需要什么：',
+    readiness: {
+      today: '平台即可',
+      integration: '需要接现有系统',
+      rule: '需要先写清制度',
+    },
   },
 };
 
@@ -120,6 +136,12 @@ const toHant = (s: MarketingPageUi): MarketingPageUi => ({
     readPost: s2t(s.scenario.readPost),
     template: s2t(s.scenario.template),
     guide: s2t(s.scenario.guide),
+    readinessLegend: s2t(s.scenario.readinessLegend),
+    readiness: {
+      today: s2t(s.scenario.readiness.today),
+      integration: s2t(s.scenario.readiness.integration),
+      rule: s2t(s.scenario.readiness.rule),
+    },
   },
 });
 
