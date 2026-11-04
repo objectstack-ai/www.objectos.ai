@@ -11,7 +11,7 @@ const page = {
     lead:
       '拿一个销售组织来说：代表只能看自己团队的客户，成本价字段对他们脱敏，经理能看整个大区，审计随时要查"这条折扣谁改的"。在 ObjectStack 运行时上，这套边界就是本体的一部分——权限声明在它所保护的对象旁边，而不是另一套策略系统——也是人和 Agent 共用的同一道围栏：在每一次查询、API 调用和 AI 工具调用上强制执行，无论 Agent 是你自己经 MCP 接入的，还是 ObjectOS 的产品内 AI。',
     primary: { label: '阅读权限文档', href: 'https://docs.objectos.ai/docs/configure/permissions' },
-    secondary: { label: '查看信任模型', href: '/en/trust-center/' },
+    secondary: { label: '阅读安全模型', href: '/en/security/' },
     metrics: [
       { value: '3 层', label: '对象、记录、字段三级控制，一个模型' },
       { value: '按用户', label: 'AI Agent 继承登录用户的权限' },
@@ -151,7 +151,7 @@ const page = {
       {
         question: '这里哪些是开源的，ObjectOS 又加了什么？',
         answer:
-          '角色与权限集、行级规则、字段级安全、共享、租户隔离、审计日志，以及 Console 里的权限矩阵编辑器与审计日志查看器，都是开源 ObjectStack，Apache-2.0，并同等适用于 MCP 工具访问。ObjectOS 加的是从商业版起为其产品内 AI 提供的 AI 治理——动作审计、护栏、权限限定——并把“批准 AI Builder 的变更”做成一项独立权限，可以在权限集里按包限定范围。',
+          '角色与权限集、行级规则、字段级安全、共享、租户隔离、审计日志，以及 Console 里的权限矩阵编辑器与审计日志查看器，都是开源 ObjectStack，Apache-2.0，并同等适用于 MCP 工具访问。ObjectOS 加的是企业版为其产品内 AI 提供的 AI 治理——动作审计、护栏、权限限定——并把“批准 AI Builder 的变更”做成一项独立权限，可以在权限集里按包限定范围。',
       },
     ],
   } satisfies MarketingPage;

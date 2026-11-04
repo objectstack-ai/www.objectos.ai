@@ -14,7 +14,14 @@ import { termHref, groupMeta, type TermGroup } from '../lib/terms';
 import { marketingPagePath } from '../content-pages/registry';
 import { glossaryIndexPath } from '../glossary/registry';
 import { CLUSTERS, clusterPath } from '../lib/clusters';
-import { CLOUD_SIGNIN_URL, CLOUD_SIGNUP_URL, OBJECTSTACK_URL } from '../lib/positioning';
+import { clusterCopy } from '../lib/cluster-i18n';
+import {
+  CLOUD_SIGNIN_URL,
+  CLOUD_SIGNUP_URL,
+  GITHUB_REPO_URL,
+  OBJECTSTACK_URL,
+  YOUTUBE_CHANNEL_URL,
+} from '../lib/positioning';
 import Logo from './Logo.astro';
 
 interface Props {
@@ -32,7 +39,7 @@ interface Props {
    */
   navAlternates?: Partial<Record<Locale, string>>;
   /**
-   * A blog article. Its browse row (Home / Topics / Audience / Industry)
+   * A blog article. Its browse row (All articles / Topics / Audience / Industry)
    * scrolls away with the page instead of sticking under the bar: on an
    * article it filters nothing, and sticking cost a 390x844 phone 47px of
    * reading height on top of the bar's 59.
@@ -66,24 +73,17 @@ const storiesHref = marketingPagePath(locale, 'customer-stories');
 const glossaryHref = glossaryIndexPath(locale);
 const compareHref = marketingPagePath(locale, 'compare');
 const securityHref = securityPath(locale);
-const clusterHrefs = CLUSTERS.map((cluster) => clusterPath(locale, cluster.slug));
 
 // Two documentation sites, labelled by role: docs.objectos.ai documents the
 // product, objectstack.ai (`OBJECTSTACK_URL`) is the developer site — the open
 // protocol, SDK, CLI and docs that every ObjectOS edition is built on.
 const DOCS_URL = 'https://docs.objectos.ai';
 const DEVELOPERS_URL = OBJECTSTACK_URL;
-// GitHub is the bar's icon button and a footer link; the menus do not repeat it.
-const GITHUB_URL = 'https://github.com/objectstack-ai/objectstack';
 
 const inBlog = pathname.startsWith(`/${locale}/blog`);
 const onBlogHome = pathname === blogHref;
 const inPricing = pathname === pricingHref;
 const inGlossary = pathname.startsWith(glossaryHref);
-
-// Topic terms feed the Resources menu (only those with content in this locale).
-const topicTerms = (await getUsedTerms('topic', locale)).filter((term) => !term.parent);
-const onTopic = (href: string) => pathname.startsWith(href);
 
 // `aria-current` for an active link: "page" when the link is this very page,
 // "true" when it is the section the page sits in (a glossary term under
@@ -116,43 +116,62 @@ type NavItem = { label: string; href: string; external?: boolean; active: boolea
 type NavSection = { label?: string; items: NavItem[] };
 type NavGroup = { id: string; label: string; active: boolean; sections: NavSection[] };
 
+// An entry is active on its own page (`aria-current="page"`) and on the pages
+// folded under it (`aria-current="true"`, the section the page sits in): the
+// Capabilities list went from eight entries to five, so app interfaces folds
+// under data & apps and approvals under automation & approvals; permissions,
+// like the trust center, is a sub-section of the security hub. A folded page
+// keeps its URL and is linked from its parent page and from the footer.
+const under = (parent: string, ...folded: string[]) =>
+  pathname === parent || folded.includes(pathname);
+
+const evaluateItems: NavItem[] = [
+  { label: t.siteNav.ontology, href: ontologyHref, active: pathname === ontologyHref },
+  { label: t.siteNav.productTour, href: productTourHref, active: pathname === productTourHref },
+  { label: t.siteNav.platform, href: platformHref, active: pathname === platformHref },
+];
+
+// Why ObjectOS: the evaluation pages. The comparison page (not the home
+// page's `#compare` section: from any other page that anchor landed a reader
+// seven screens down the home page); the one trust entry (/security/ is the
+// hub; the trust center and the permissions page are its sub-sections,
+// SecurityPage.astro links both); and the reference stories.
+const whyItems: NavItem[] = [
+  { label: t.siteNav.compareFit, href: compareHref, active: pathname === compareHref },
+  { label: t.siteNav.security, href: securityHref, active: under(securityHref, trustCenterHref, permissionsHref) },
+  { label: t.siteNav.referenceStories, href: storiesHref, active: pathname === storiesHref },
+];
+
+// The five pillar guides: the labelled second column of the Resources panel.
+// They have no index page, so the label is a label, not a link.
+const guideItems: NavItem[] = CLUSTERS.map((cluster) => {
+  const href = clusterPath(locale, cluster.slug);
+  return { label: clusterCopy(cluster, locale).shortTitle, href, active: pathname === href };
+});
+
 const capabilityItems: NavItem[] = [
-  { label: t.siteNav.dataModeling, href: dataModelingHref, active: pathname === dataModelingHref },
-  { label: t.siteNav.appInterfaces, href: appUiHref, active: pathname === appUiHref },
-  { label: t.siteNav.automation, href: automationHref, active: pathname === automationHref },
-  { label: t.siteNav.approvals, href: approvalsHref, active: pathname === approvalsHref },
-  { label: t.siteNav.permissionsSecurity, href: permissionsHref, active: pathname === permissionsHref },
-  { label: t.siteNav.analytics, href: analyticsHref, active: pathname === analyticsHref },
+  { label: t.siteNav.capDataApps, href: dataModelingHref, active: under(dataModelingHref, appUiHref) },
+  { label: t.siteNav.capAutomationApprovals, href: automationHref, active: under(automationHref, approvalsHref) },
   { label: t.siteNav.aiBuildAsk, href: aiHref, active: pathname === aiHref },
   { label: t.siteNav.toolsMcp, href: mcpHref, active: pathname === mcpHref },
+  { label: t.siteNav.capAnalytics, href: analyticsHref, active: pathname === analyticsHref },
 ];
 
 const groups: NavGroup[] = [
   {
     id: 'product',
     label: t.siteNav.product,
-    active:
-      pathname === ontologyHref ||
-      pathname === productTourHref ||
-      pathname === platformHref ||
-      pathname === trustCenterHref ||
-      // Evaluation pages with no menu item of their own.
-      pathname === compareHref ||
-      pathname === securityHref ||
-      capabilityItems.some((it) => it.active),
+    active: evaluateItems.some((it) => it.active) || capabilityItems.some((it) => it.active),
     sections: [
-      {
-        label: t.siteNav.groupEvaluate,
-        items: [
-          { label: t.siteNav.ontology, href: ontologyHref, active: pathname === ontologyHref },
-          { label: t.siteNav.productTour, href: productTourHref, active: pathname === productTourHref },
-          { label: t.siteNav.platform, href: platformHref, active: pathname === platformHref },
-          { label: t.siteNav.whyObjectOs, href: `${homeHref}#compare`, active: false },
-          { label: t.siteNav.trustCenter, href: trustCenterHref, active: pathname === trustCenterHref },
-        ],
-      },
+      { label: t.siteNav.groupEvaluate, items: evaluateItems },
       { label: t.siteNav.groupCapabilities, items: capabilityItems },
     ],
+  },
+  {
+    id: 'why',
+    label: t.siteNav.whyObjectOs,
+    active: whyItems.some((it) => it.active),
+    sections: [{ items: whyItems }],
   },
   {
     id: 'developers',
@@ -161,10 +180,12 @@ const groups: NavGroup[] = [
     sections: [
       {
         items: [
-          { label: t.siteNav.agentGuide, href: agentGuideHref, active: pathname === agentGuideHref },
+          { label: t.siteNav.startWithAgent, href: agentGuideHref, active: pathname === agentGuideHref },
           { label: t.siteNav.productDocs, href: DOCS_URL, external: true, active: false },
           { label: t.siteNav.developerDocs, href: DEVELOPERS_URL, external: true, active: false },
           { label: t.siteNav.templates, href: templatesHref, active: pathname === templatesHref },
+          // The brand name is not translated.
+          { label: 'GitHub', href: GITHUB_REPO_URL, external: true, active: false },
         ],
       },
     ],
@@ -172,21 +193,17 @@ const groups: NavGroup[] = [
   {
     id: 'resources',
     label: t.siteNav.resources,
-    // The topic-cluster (pillar) pages have no menu item; they are reading
-    // guides, so they light up Resources.
-    active: inBlog || inGlossary || pathname === storiesHref || clusterHrefs.includes(pathname),
+    // The blog (its index, hubs and articles), the glossary and the guides.
+    active: inBlog || inGlossary || guideItems.some((it) => it.active),
     sections: [
       {
         items: [
-          { label: t.backToList, href: blogHref, active: onBlogHome },
+          { label: t.siteNav.blog, href: blogHref, active: inBlog },
           { label: t.siteNav.glossary, href: glossaryHref, active: inGlossary },
-          ...topicTerms.map((term) => {
-            const href = termHref(locale, term);
-            return { label: term.label[locale], href, active: onTopic(href) };
-          }),
-          { label: t.siteNav.referenceStories, href: storiesHref, active: pathname === storiesHref },
+          { label: t.siteNav.videos, href: YOUTUBE_CHANNEL_URL, external: true, active: false },
         ],
       },
+      { label: t.siteNav.guides, items: guideItems },
     ],
   },
 ];
@@ -252,18 +269,6 @@ const menus = (
     </nav>
 
     <div class="bar-right">
-      <a
-        class="iconbtn bar-desktop"
-        href={GITHUB_URL}
-        target="_blank"
-        rel="noopener"
-        aria-label="GitHub"
-        title="GitHub">
-        <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="currentColor">
-          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z" />
-        </svg>
-      </a>
-
       <button
         type="button"
         class="iconbtn bar-desktop"
@@ -305,7 +310,7 @@ const menus = (
 
       <a class="signin bar-desktop" href={CLOUD_SIGNIN_URL}>{t.signIn}</a>
 
-      <a class="cta" href={CLOUD_SIGNUP_URL}>{t.getStarted}</a>
+      <a class="cta btn btn-primary btn-sm" href={CLOUD_SIGNUP_URL}>{t.getStarted}</a>
 
       <button
         type="button"
@@ -335,7 +340,7 @@ const menus = (
           class:list={['nav-link', { active: onBlogHome }]}
           href={blogHref}
           aria-current={onBlogHome ? 'page' : undefined}>
-          {t.all}
+          {t.backToList}
         </a>
         {menus.map((m) => (
           <div class="menu" data-menu>
@@ -420,7 +425,7 @@ const menus = (
       </a>
     </nav>
 
-    <a class="drawer-cta" href={CLOUD_SIGNUP_URL}>{t.getStarted}</a>
+    <a class="drawer-cta btn btn-primary" href={CLOUD_SIGNUP_URL}>{t.getStarted}</a>
     <a class="drawer-signin" href={CLOUD_SIGNIN_URL}>{t.signIn}</a>
 
     <div class="drawer-foot">
@@ -581,8 +586,9 @@ const menus = (
     }
   });
   // The drawer only exists below the desktop breakpoint; widening the window
-  // past it must not leave an invisible modal holding the page inert.
-  matchMedia('(min-width: 901px)').addEventListener('change', (e) => {
+  // past it must not leave an invisible modal holding the page inert. Keep
+  // this width in step with the `max-width: 1099px` query in the styles.
+  matchMedia('(min-width: 1100px)').addEventListener('change', (e) => {
     if (e.matches) setDrawer(false, false);
   });
 
@@ -608,7 +614,7 @@ const menus = (
     z-index: 10;
     background: var(--surface-glass);
     border-bottom: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
-    box-shadow: 0 10px 28px -26px rgba(var(--shadow), 0.55);
+    box-shadow: var(--shadow-sm);
     backdrop-filter: saturate(1.35) blur(18px);
   }
   .bar {
@@ -626,7 +632,7 @@ const menus = (
     gap: 0.5rem;
     text-decoration: none;
     color: var(--ink);
-    font-size: 0.95rem;
+    font-size: var(--fs-15);
     transition: transform 0.16s ease;
   }
   .wordmark:hover {
@@ -635,10 +641,9 @@ const menus = (
   .logo {
     display: block;
     flex-shrink: 0;
-    filter: drop-shadow(0 8px 13px rgba(63, 91, 246, 0.22));
   }
   .name {
-    font-weight: 760;
+    font-weight: 700;
     letter-spacing: 0;
   }
 
@@ -648,15 +653,18 @@ const menus = (
     align-items: center;
     gap: 0.15rem;
     margin-right: auto;
-    margin-left: 2rem;
+    margin-left: 1.5rem;
   }
+  /* Bar labels take the 13px step, not the 14px UI step: the bar is
+     measured to fit all eight locales at 1100 (see the breakpoint note
+     below), and 14px left French 6px to spare there. */
   .navlink {
     color: var(--ink-soft);
-    font-size: 0.84rem;
-    font-weight: 650;
+    font-size: var(--fs-13);
+    font-weight: 700;
     text-decoration: none;
-    padding: 0.43rem 0.72rem;
-    border-radius: 6px;
+    padding: 0.43rem 0.6rem;
+    border-radius: var(--r-control);
     white-space: nowrap;
     transition:
       color 0.16s ease,
@@ -673,7 +681,7 @@ const menus = (
   .bar-right {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.4rem;
   }
 
   .iconbtn {
@@ -682,12 +690,12 @@ const menus = (
     justify-content: center;
     width: 34px;
     height: 34px;
-    border-radius: 999px;
+    border-radius: var(--r-pill);
     border: 1px solid var(--line);
     background: color-mix(in srgb, var(--surface) 70%, var(--surface-sunk));
     color: var(--ink-soft);
     cursor: pointer;
-    font-size: 0.95rem;
+    font-size: var(--fs-15);
     line-height: 1;
     text-decoration: none;
     transition:
@@ -713,12 +721,12 @@ const menus = (
     align-items: center;
     gap: 0.4rem;
     font-family: inherit;
-    font-size: 0.82rem;
+    font-size: var(--fs-13);
     color: var(--ink-soft);
     background: color-mix(in srgb, var(--surface) 70%, var(--surface-sunk));
     border: 1px solid var(--line);
-    border-radius: 999px;
-    padding: 0.43rem 0.72rem;
+    border-radius: var(--r-pill);
+    padding: 0.43rem 0.6rem;
     cursor: pointer;
     white-space: nowrap;
     transition:
@@ -732,7 +740,7 @@ const menus = (
     transform: translateY(-1px);
   }
   .lang-trigger .globe {
-    font-size: 0.85rem;
+    font-size: var(--fs-14);
   }
   .lang-panel {
     left: auto;
@@ -742,12 +750,12 @@ const menus = (
   /* ObjectOS Cloud sign-in: a text link beside the CTA, desktop bar only (the
      drawer carries its own under the drawer CTA). */
   .signin {
-    font-size: 0.84rem;
+    font-size: var(--fs-13);
     font-weight: 600;
     color: var(--ink-soft);
     text-decoration: none;
     padding: 0.4rem 0.55rem;
-    border-radius: 8px;
+    border-radius: var(--r-control);
     white-space: nowrap;
   }
   .signin:hover {
@@ -755,29 +763,10 @@ const menus = (
     background: var(--surface-sunk);
   }
 
-  /* Primary CTA — pinned in the bar at every width so it never scrolls away */
+  /* Primary CTA — pinned in the bar at every width so it never scrolls
+     away. The shared primary button (Base.astro .btn) at its bar size. */
   .cta {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.32rem;
-    font-size: 0.82rem;
-    font-weight: 680;
-    color: var(--surface);
-    background: var(--ink);
-    border: 1px solid var(--ink);
-    border-radius: 999px;
-    padding: 0.46rem 0.95rem;
-    text-decoration: none;
     white-space: nowrap;
-    transition:
-      transform 0.15s ease,
-      box-shadow 0.15s ease,
-      opacity 0.15s ease;
-  }
-  .cta:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 12px 24px -14px rgba(var(--shadow), 0.55);
-    opacity: 0.95;
   }
 
   /* Dropdown menus (shared by nav groups, blog axes, language) */
@@ -786,8 +775,8 @@ const menus = (
   }
   .menu-trigger {
     font-family: inherit;
-    font-size: 0.84rem;
-    font-weight: 650;
+    font-size: var(--fs-13);
+    font-weight: 700;
     color: var(--ink-soft);
     background: none;
     border: none;
@@ -796,8 +785,8 @@ const menus = (
     display: inline-flex;
     align-items: center;
     gap: 0.28rem;
-    padding: 0.43rem 0.72rem;
-    border-radius: 6px;
+    padding: 0.43rem 0.6rem;
+    border-radius: var(--r-control);
     transition:
       color 0.15s,
       background 0.15s,
@@ -813,7 +802,7 @@ const menus = (
      0.55 put it at 2.5:1 (WCAG 1.4.11 asks 3:1); 0.7 is 3.16:1 on the
      hovered trigger's --surface-sunk. */
   .caret {
-    font-size: 0.6rem;
+    font-size: var(--fs-12);
     opacity: 0.7;
     transition: transform 0.15s;
   }
@@ -827,8 +816,8 @@ const menus = (
     min-width: 190px;
     background: var(--surface);
     border: 1px solid var(--line);
-    border-radius: 10px;
-    box-shadow: 0 18px 42px -22px rgba(var(--shadow), 0.45);
+    border-radius: var(--r-card);
+    box-shadow: var(--shadow-md);
     padding: 0.45rem;
     display: none;
     flex-direction: column;
@@ -839,11 +828,11 @@ const menus = (
     display: flex;
   }
   .menu-item {
-    font-size: 0.86rem;
+    font-size: var(--fs-14);
     color: var(--ink-soft);
     text-decoration: none;
     padding: 0.48rem 0.68rem;
-    border-radius: 6px;
+    border-radius: var(--r-control);
     white-space: nowrap;
     display: inline-flex;
     align-items: center;
@@ -854,12 +843,12 @@ const menus = (
     color: var(--ink);
   }
   .menu-item.active {
-    color: var(--accent);
-    background: var(--accent-soft);
+    color: var(--brand);
+    background: var(--brand-soft);
     font-weight: 600;
   }
   .ext {
-    font-size: 0.72rem;
+    font-size: var(--fs-12);
     opacity: 0.5;
   }
 
@@ -880,13 +869,21 @@ const menus = (
     padding-left: 1rem;
   }
   .menu-col-label {
-    font-size: 0.66rem;
-    font-weight: 760;
-    letter-spacing: 0.07em;
+    font-size: var(--fs-12);
+    font-weight: 700;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--muted);
     padding: 0.25rem 0.68rem 0.4rem;
     white-space: nowrap;
+    line-height: var(--lh-body);
+  }
+  /* A mega panel whose first column has no label (Resources: Blog · Glossary
+     · Videos beside the labelled Guides column) starts its items level with
+     the labelled column's items, not with its label. The offset is the
+     label's line box, its vertical padding and the column's 1px row gap. */
+  .menu-panel.mega .menu-col:not(:has(> .menu-col-label)) {
+    padding-top: calc(var(--fs-12) * var(--lh-body) + 0.65rem + 1px);
   }
 
   /* Blog browse row (in-page filter). Opaque, unlike the bar's glass: when
@@ -907,7 +904,7 @@ const menus = (
   .blognav.sticky {
     position: sticky;
     top: 64px;
-    box-shadow: 0 10px 28px -26px rgba(var(--shadow), 0.55);
+    box-shadow: var(--shadow-sm);
   }
   .mainnav-inner {
     max-width: var(--maxw);
@@ -925,12 +922,12 @@ const menus = (
     display: inline-flex;
     align-items: center;
     font-family: inherit;
-    font-size: 0.84rem;
-    font-weight: 650;
+    font-size: var(--fs-13);
+    font-weight: 700;
     color: var(--ink-soft);
     text-decoration: none;
     padding: 0.43rem 0.72rem;
-    border-radius: 6px;
+    border-radius: var(--r-control);
     white-space: nowrap;
     transition:
       color 0.15s,
@@ -957,7 +954,7 @@ const menus = (
   .drawer-backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(15, 23, 42, 0.42);
+    background: color-mix(in srgb, var(--panel-ink) 42%, transparent);
     backdrop-filter: blur(2px);
   }
   .drawer-panel {
@@ -968,7 +965,7 @@ const menus = (
     width: min(86vw, 360px);
     background: var(--surface);
     border-left: 1px solid var(--line);
-    box-shadow: -24px 0 60px -30px rgba(var(--shadow), 0.6);
+    box-shadow: var(--shadow-lg);
     padding: 0.9rem 1rem 1.4rem;
     overflow-y: auto;
     display: flex;
@@ -982,9 +979,9 @@ const menus = (
     margin-bottom: 0.35rem;
   }
   .drawer-title {
-    font-size: 0.82rem;
+    font-size: var(--fs-13);
     font-weight: 700;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--ink-soft);
   }
@@ -1002,8 +999,8 @@ const menus = (
     align-items: center;
     justify-content: space-between;
     padding: 0.85rem 0.25rem;
-    font-size: 0.98rem;
-    font-weight: 650;
+    font-size: var(--fs-16);
+    font-weight: 700;
     color: var(--ink);
     min-height: 44px;
   }
@@ -1019,9 +1016,9 @@ const menus = (
     padding: 0 0 0.5rem 0.25rem;
   }
   .drawer-sec-label {
-    font-size: 0.68rem;
-    font-weight: 760;
-    letter-spacing: 0.07em;
+    font-size: var(--fs-12);
+    font-weight: 700;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--muted);
     padding: 0.65rem 0.5rem 0.2rem;
@@ -1035,10 +1032,10 @@ const menus = (
     gap: 0.4rem;
     padding: 0.6rem 0.5rem;
     min-height: 40px;
-    font-size: 0.9rem;
+    font-size: var(--fs-14);
     color: var(--ink-soft);
     text-decoration: none;
-    border-radius: 8px;
+    border-radius: var(--r-control);
   }
   .drawer-link:hover,
   .drawer-link.active {
@@ -1046,7 +1043,7 @@ const menus = (
     color: var(--ink);
   }
   .drawer-link.active {
-    color: var(--accent);
+    color: var(--brand);
     font-weight: 600;
   }
   .drawer-flat {
@@ -1054,27 +1051,20 @@ const menus = (
     align-items: center;
     padding: 0.85rem 0.25rem;
     min-height: 44px;
-    font-size: 0.98rem;
-    font-weight: 650;
+    font-size: var(--fs-16);
+    font-weight: 700;
     color: var(--ink);
     text-decoration: none;
     border-bottom: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
   }
   .drawer-flat.active {
-    color: var(--accent);
+    color: var(--brand);
   }
+  /* 0.55rem, not 0.9rem: with Product expanded at 390x844 the CTA's bottom
+     edge sat at 848px, 4px under the first screen of the panel. The shared
+     primary button (Base.astro .btn), at its 44px. */
   .drawer-cta {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    margin-top: 0.9rem;
-    padding: 0.8rem 1rem;
-    font-size: 0.92rem;
-    font-weight: 680;
-    color: var(--surface);
-    background: var(--ink);
-    border-radius: 999px;
-    text-decoration: none;
+    margin-top: 0.55rem;
   }
   .drawer-signin {
     display: inline-flex;
@@ -1082,8 +1072,8 @@ const menus = (
     justify-content: center;
     min-height: 44px;
     margin-top: 0.35rem;
-    font-size: 0.92rem;
-    font-weight: 650;
+    font-size: var(--fs-15);
+    font-weight: 700;
     color: var(--ink);
     text-decoration: none;
   }
@@ -1104,17 +1094,17 @@ const menus = (
     display: inline-flex;
     align-items: center;
     min-height: 44px;
-    font-size: 0.82rem;
+    font-size: var(--fs-13);
     color: var(--ink-soft);
     text-decoration: none;
     padding: 0.4rem 0.75rem;
     border: 1px solid var(--line);
-    border-radius: 999px;
+    border-radius: var(--r-pill);
   }
   .drawer-lang.active {
-    color: var(--accent);
-    border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
-    background: var(--accent-soft);
+    color: var(--brand);
+    border-color: color-mix(in srgb, var(--brand) 45%, var(--line));
+    background: var(--brand-soft);
     font-weight: 600;
   }
   /* A locale this article has no translation in: the option still works (it
@@ -1143,11 +1133,11 @@ const menus = (
     gap: 0.4rem;
     padding: 0.6rem;
     font-family: inherit;
-    font-size: 0.84rem;
+    font-size: var(--fs-14);
     color: var(--ink-soft);
     background: none;
     border: 1px solid var(--line);
-    border-radius: 8px;
+    border-radius: var(--r-control);
     cursor: pointer;
     text-decoration: none;
   }
@@ -1167,8 +1157,19 @@ const menus = (
     display: inline;
   }
 
-  /* Switch to the hamburger drawer before the desktop bar gets crowded. */
-  @media (max-width: 900px) {
+  /* Switch to the hamburger drawer before the desktop bar gets crowded. The
+     bar is flex + nowrap, so a bar wider than the window never wraps: the
+     logo collapses to zero width first (an svg with max-width: 100% gives
+     up its width to flex shrink), then the CTA runs off the edge. Measured
+     in Chromium (Liberation Sans, Arial metrics) with the four groups, the
+     widest bars need 1070px (fr), 1057px (es) and 1003px (de), so the
+     desktop bar starts at 1100px, the first width of 1024/1100/1200 at
+     which all eight locales fit (fr has 30px to spare there, and 50px from
+     1168px up, where the bar stops growing at --maxw). The triggers' side
+     padding (0.6rem), the nav's left margin (1.5rem) and the right group's
+     gap (0.4rem) are what they are for that margin. Re-measure when a label
+     or a header item changes. */
+  @media (max-width: 1099px) {
     .site-nav,
     .bar-desktop {
       display: none;
@@ -1230,10 +1231,11 @@ const menus = (
 
   @media (max-width: 420px) {
     .cta {
-      padding: 0.46rem 0.8rem;
+      padding-right: 0.8rem;
+      padding-left: 0.8rem;
     }
     .wordmark .name {
-      font-size: 0.9rem;
+      font-size: var(--fs-14);
     }
   }
 </style>

@@ -1,14 +1,27 @@
 ---
 import { getImage } from 'astro:assets';
 import heroImage from '../assets/objectos-home-hero.png';
-import FooterClusters from '../components/FooterClusters.astro';
 import Header from '../components/Header.astro';
 import Logo from '../components/Logo.astro';
 import { marketingPagePath } from '../content-pages/registry';
 import { glossaryIndexPath } from '../glossary/registry';
-import { htmlLang, OG_LOCALE, pricingPath, privacyPath, rssPath, termsPath, ui, type Locale } from '../lib/i18n';
+import { clusterCopy } from '../lib/cluster-i18n';
+import { CLUSTERS, clusterPath } from '../lib/clusters';
+import {
+  blogPath,
+  htmlLang,
+  OG_LOCALE,
+  pricingPath,
+  privacyPath,
+  refundsPath,
+  rssPath,
+  securityPath,
+  termsPath,
+  ui,
+  type Locale,
+} from '../lib/i18n';
 import { ORGANIZATION_ID, ORGANIZATION_SAME_AS } from '../lib/organization';
-import { CLOUD_SIGNIN_URL, OBJECTSTACK_URL } from '../lib/positioning';
+import { CLOUD_SIGNIN_URL, GITHUB_REPO_URL, OBJECTSTACK_URL, YOUTUBE_CHANNEL_URL } from '../lib/positioning';
 
 interface Props {
   title: string;
@@ -141,6 +154,102 @@ const jsonLdItems = [
 ];
 const jsonLdHtml = (value: Record<string, unknown>) =>
   JSON.stringify(value).replace(/</g, '\\u003c');
+
+// The footer: four equal columns titled like the header's four groups
+// (Product · Why ObjectOS · Developers · Resources), each link under the same
+// label the header gives it, and a Company & Legal row beside the brand line.
+// Product is the complete map of the product pages: the header's Capabilities
+// list names five entries for seven pages, and a page folded away like that
+// keeps its URL, is linked from its parent page, and keeps a footer link here
+// under its own name. Why ObjectOS is the evaluation column: the trust center
+// and permissions sit under the security hub in the header, and the FDE page
+// is linked from here only. The five pillar guides are Resources, under the
+// same "Guides" sub-label as the header's second Resources column; each post a
+// pillar lists in its reading path links back to it too
+// (src/layouts/BlogPost.astro).
+type FootLink = { label: string; href: string; external?: boolean; code?: boolean };
+type FootColumn = { title: string; lists: { sub?: string; links: FootLink[] }[] };
+const page = (slug: string): string => marketingPagePath(locale, slug);
+const footerColumns: FootColumn[] = [
+  {
+    title: t.siteNav.product,
+    lists: [
+      {
+        links: [
+          { label: t.siteNav.platform, href: page('platform') },
+          { label: t.siteNav.productTour, href: page('product-tour') },
+          { label: t.siteNav.ontology, href: page('ontology') },
+          { label: t.siteNav.dataModeling, href: page('data-modeling') },
+          { label: t.siteNav.appInterfaces, href: page('app-ui') },
+          { label: t.siteNav.automation, href: page('automation') },
+          { label: t.siteNav.approvals, href: page('approvals') },
+          { label: t.siteNav.analytics, href: page('analytics') },
+          { label: t.siteNav.aiBuildAsk, href: page('ai') },
+          { label: t.siteNav.toolsMcp, href: page('mcp') },
+          { label: t.signIn, href: CLOUD_SIGNIN_URL },
+        ],
+      },
+    ],
+  },
+  {
+    title: t.siteNav.whyObjectOs,
+    lists: [
+      {
+        links: [
+          { label: t.siteNav.compareFit, href: page('compare') },
+          { label: t.siteNav.security, href: securityPath(locale) },
+          { label: t.siteNav.trustCenter, href: page('trust-center') },
+          { label: t.siteNav.permissionsSecurity, href: page('permissions') },
+          { label: t.siteNav.referenceStories, href: page('customer-stories') },
+          { label: t.footer.pricing, href: pricingPath(locale) },
+          { label: t.siteNav.forFde, href: page('forward-deployed-engineers') },
+        ],
+      },
+    ],
+  },
+  {
+    title: t.siteNav.developers,
+    lists: [
+      {
+        links: [
+          { label: t.siteNav.startWithAgent, href: page('agent-developer') },
+          { label: t.siteNav.productDocs, href: 'https://docs.objectos.ai', external: true },
+          { label: t.siteNav.developerDocs, href: OBJECTSTACK_URL, external: true },
+          { label: t.siteNav.templates, href: page('templates') },
+          { label: 'GitHub', href: GITHUB_REPO_URL, external: true },
+        ],
+      },
+    ],
+  },
+  {
+    title: t.siteNav.resources,
+    lists: [
+      {
+        links: [
+          { label: t.siteNav.blog, href: blogPath(locale) },
+          { label: t.siteNav.glossary, href: glossaryIndexPath(locale) },
+          { label: t.siteNav.videos, href: YOUTUBE_CHANNEL_URL, external: true },
+        ],
+      },
+      {
+        sub: t.siteNav.guides,
+        links: CLUSTERS.map((cluster) => ({
+          label: clusterCopy(cluster, locale).shortTitle,
+          href: clusterPath(locale, cluster.slug),
+        })),
+      },
+    ],
+  },
+];
+// Company & Legal: one row beside the brand line, not a fifth column.
+const legalLinks: FootLink[] = [
+  { label: t.footer.privacy, href: privacyPath(locale) },
+  { label: t.footer.terms, href: termsPath(locale) },
+  { label: t.footer.refunds, href: refundsPath(locale) },
+  { label: 'llms.txt', href: '/llms.txt', code: true },
+  { label: 'RSS', href: rssPath(locale) },
+  { label: 'GitHub', href: GITHUB_REPO_URL, external: true },
+];
 ---
 
 <!doctype html>
@@ -201,85 +310,228 @@ const jsonLdHtml = (value: Record<string, unknown>) =>
       <slot />
     </main>
     <footer class="site-footer">
-      <FooterClusters {locale} />
+      <nav class="foot-nav" aria-label={t.siteNav.footerNav}>
+        {
+          footerColumns.map((column) => (
+            <div class="foot-col">
+              <h2 class="foot-title">{column.title}</h2>
+              {column.lists.map((list) => (
+                <>
+                  {list.sub && <p class="foot-sub">{list.sub}</p>}
+                  <ul>
+                    {list.links.map((link) => (
+                      <li>
+                        <a
+                          href={link.href}
+                          target={link.external ? '_blank' : undefined}
+                          rel={link.external ? 'noopener' : undefined}
+                          translate={link.code ? 'no' : undefined}>
+                          {/* One text run, so a label that wraps on a phone keeps
+                              the arrow after its last word; the non-breaking
+                              space keeps the arrow on that word's line, and
+                              the two expressions touch, since a line break
+                              between them would render as a breakable space. */}
+                          <span>{link.label}{link.external && <span class="foot-ext" aria-hidden="true">{' '}↗</span>}</span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ))}
+            </div>
+          ))
+        }
+      </nav>
       <div class="inner">
         <span class="foot-brand" translate="no">
           <Logo size={14} /> ObjectStack AI LLC
           <span class="muted">© {new Date().getFullYear()}</span>
         </span>
-        <div class="foot-links">
-          <a href={marketingPagePath(locale, 'product-tour')}>{t.siteNav.productTour}</a>
-          <a href={marketingPagePath(locale, 'platform')}>{t.footer.platform}</a>
-          <a href={marketingPagePath(locale, 'ai')}>{t.siteNav.aiBuildAsk}</a>
-          <a href={marketingPagePath(locale, 'mcp')}>{t.siteNav.toolsMcp}</a>
-          <a href={marketingPagePath(locale, 'templates')}>{t.siteNav.templates}</a>
-          <a href={marketingPagePath(locale, 'agent-developer')}>{t.siteNav.agentGuide}</a>
-          <a href={marketingPagePath(locale, 'trust-center')}>{t.siteNav.trustCenter}</a>
-          <a href={marketingPagePath(locale, 'customer-stories')}>{t.siteNav.referenceStories}</a>
-          <a href={glossaryIndexPath(locale)}>{t.siteNav.glossary}</a>
-          <a href={pricingPath(locale)}>{t.footer.pricing}</a>
-          <a href="https://docs.objectos.ai" target="_blank" rel="noopener">{t.siteNav.productDocs}</a>
-          <a href={OBJECTSTACK_URL} target="_blank" rel="noopener">{t.siteNav.developerDocs}</a>
-          <a href="https://github.com/objectstack-ai/objectstack" target="_blank" rel="noopener">GitHub</a>
-          <a href={CLOUD_SIGNIN_URL}>{t.signIn}</a>
-          <a href="/llms.txt" translate="no">llms.txt</a>
-          <a href={rssPath(locale)}>RSS</a>
-          <a href={privacyPath(locale)}>{t.footer.privacy}</a>
-          <a href={termsPath(locale)}>{t.footer.terms}</a>
-        </div>
+        <nav class="foot-legal" aria-label={t.siteNav.companyLegal}>
+          <ul>
+            {
+              legalLinks.map((link) => (
+                <li>
+                  <a
+                    href={link.href}
+                    target={link.external ? '_blank' : undefined}
+                    rel={link.external ? 'noopener' : undefined}
+                    translate={link.code ? 'no' : undefined}>
+                    <span>{link.label}{link.external && <span class="foot-ext" aria-hidden="true">{' '}↗</span>}</span>
+                  </a>
+                </li>
+              ))
+            }
+          </ul>
+        </nav>
       </div>
     </footer>
 
     <style is:global>
+      /* The token layer (#345, ruled on #340: direction A "Governed
+         editorial"). Every colour, type size, line height, measure, radius
+         and shadow a component uses is one of these; a component declares
+         layout and picks tokens, never a literal. The one exception is the
+         alpha mask `#000` in the scroll-edge fades, which is an alpha, not a
+         colour.
+
+         Colour roles. Four grounds, three inks, and five accents:
+           --brand (indigo)  identity and interaction: logo, links, focus,
+                             selected state, topic chips, card hover.
+           --green           semantic emphasis: eyebrows, the hero's second
+                             line, "enforced / passed", card indexes.
+           --ink             action: every primary button.
+           --amber, --red    status only, never decoration.
+         The dark panel (closing, security CTA, terminal frames) is
+         --panel-ink with its own three text tokens, the same in both themes.
+         Text tokens clear WCAG AA (4.5:1) on all three light grounds; the
+         tightest pair is named. --muted 5.43 on --surface, 4.66 on
+         --surface-sunk; --brand 5.44 on --surface, 4.67 on --surface-sunk;
+         --green 4.99 on --surface, 4.62 on --bg; --amber 5.34, --red 4.90 on
+         --surface. The focus ring is --brand, solid (WCAG 1.4.11 asks 3:1 of
+         a focus indicator against what it sits on): 5.44 on --surface, 5.03
+         on --bg. */
       :root {
         color-scheme: light;
         --bg: #f3f7f2;
         --surface: #fffffb;
-        --surface-glass: rgba(255, 255, 251, 0.78);
         --surface-sunk: #e9efe9;
+        --line: #dfe7df;
         --ink: #151a17;
         --ink-soft: #515b55;
-        /* Text tokens clear WCAG AA (4.5:1) on all three light grounds; the
-           tightest pair is named. --muted 5.43 on --surface, 4.66 on
-           --surface-sunk; --accent 5.44 on --surface, 4.67 on --surface-sunk.
-           The focus ring is solid (WCAG 1.4.11 asks 3:1 of a focus indicator
-           against what it sits on): 5.44 on --surface, 5.03 on --bg. */
         --muted: #626c66;
-        --line: #dfe7df;
-        --accent: #3d58f0;
-        --accent-soft: #eef2ff;
-        --ring: #3d58f0;
+        --brand: #3d58f0;
+        --brand-soft: #eef2ff;
+        --green: #087f5b;
+        --amber: #93600f;
+        --red: #bd4b4b;
+        --panel-ink: #172b26;
+        --on-panel: #f4f7f2;
+        --on-panel-soft: #bdc9c5;
+        --on-panel-accent: #8ee3c2;
         /* The post status pill (src/lib/i18n.ts STATUS_COLOR) on its own 9%
            tint of --surface: archived 5.31. */
         --status-archived: #68625d;
         --shadow: 21, 26, 23;
+        /* Derived, not tokens of their own: the header glass and the ring. */
+        --surface-glass: color-mix(in srgb, var(--surface) 78%, transparent);
+        --ring: var(--brand);
+        /* Post covers (the hero and every card thumbnail). 86 of the 88 SVG
+           covers are drawn on a near-white ground, which reads 17:1 against
+           the dark page; the dark value dims them so a list of cards is not
+           a row of lit panels. The SVG files are untouched. */
+        --cover-filter: none;
+
+        /* Type scale: twelve fixed steps, 12-44px, plus three fluid display
+           steps. Roles: 12 eyebrows, chips and mono indexes; 13 meta and the
+           footer; 14 UI (nav, buttons, card body); 15 secondary body; 16
+           body; 17 prose and leads; 18 card titles; 20 h3 and the article
+           lead; 24 pull quotes; 30 article h2 and metric figures; 36 and 44
+           the phone floors of the display steps. */
+        --fs-12: 0.75rem;
+        --fs-13: 0.8125rem;
+        --fs-14: 0.875rem;
+        --fs-15: 0.9375rem;
+        --fs-16: 1rem;
+        --fs-17: 1.0625rem;
+        --fs-18: 1.125rem;
+        --fs-20: 1.25rem;
+        --fs-24: 1.5rem;
+        --fs-30: 1.875rem;
+        --fs-36: 2.25rem;
+        --fs-44: 2.75rem;
+        /* Marketing section h2, 28-40px; page h1, 36-56px; the hero h1 of the
+           home and security pages, 40-64px. The h1 steps are also sized by
+           the viewport's height, so a 1366x625 laptop keeps the primary CTA
+           in its first screen (measured on the evidence pages: off width
+           alone the CTA sat below the fold on 14 of 15); the vh term stops
+           binding on a tall desktop. H1:H2 is at least 1.4 at every width. */
+        --fs-h2: clamp(1.75rem, 3vw, 2.5rem);
+        --fs-h1: clamp(2.25rem, min(4vw, 7.4vh), 3.5rem);
+        --fs-hero: clamp(2.5rem, min(5vw, 8vh), 4rem);
+
+        /* Line heights, five steps: display (h1), heading, UI, body, prose.
+           A CJK glyph fills its em box where a Latin letter fills the
+           x-height, so the CJK page roots raise the display step. */
+        --lh-display: 1.05;
+        --lh-heading: 1.25;
+        --lh-ui: 1.45;
+        --lh-body: 1.65;
+        --lh-prose: 1.8;
+
+        /* Spacing, on a 4px base, and the one section rhythm every template
+           shares. */
+        --sp-1: 0.25rem;
+        --sp-2: 0.5rem;
+        --sp-3: 0.75rem;
+        --sp-4: 1rem;
+        --sp-5: 1.5rem;
+        --sp-6: 2rem;
+        --sp-7: 3rem;
+        --sp-8: 4rem;
+        --sp-9: 6rem;
+        --sp-10: 8rem;
+        --space-section: clamp(3.5rem, 8vw, 7rem);
+
+        /* Measures: the hero lead, a prose column (44rem is about 72
+           characters in en and 38 in zh), a wide text container (the
+           article, the cluster hero) and a media column. --maxw is the
+           page. */
+        --measure-lead: 36rem;
+        --measure-prose: 44rem;
+        --measure-wide: 54rem;
+        --measure-media: 60rem;
         --maxw: 1120px;
+
+        /* Three radii: controls, cards and panels, pills (a pill radius on a
+           square makes the status dots round). Three shadows: a resting
+           card, a lifted card or an open menu, a hero media frame. */
+        --r-control: 6px;
+        --r-card: 8px;
+        --r-pill: 999px;
+        --shadow-sm: 0 18px 42px -34px rgba(var(--shadow), 0.52);
+        --shadow-md: 0 28px 58px -40px rgba(var(--shadow), 0.72);
+        --shadow-lg: 0 34px 86px -48px rgba(var(--shadow), 0.78);
+
         --font-display:
           'Iowan Old Style', 'Palatino Linotype', Palatino, 'Songti SC',
           'Noto Serif CJK SC', serif;
+        /* No face precedes a platform's own UI face: 'Trebuchet MS' sat
+           before 'Segoe UI' and rendered the whole site in Trebuchet on
+           Windows, so it is dropped. Weights on this stack are 400, 600 and
+           700, the steps its system faces ship; a declared 650-800 rendered
+           as 700, or as the next heavier face (Avenir Next Heavy, Segoe UI
+           Black) where one is installed. */
         --font-sans:
-          'Avenir Next', Avenir, 'Trebuchet MS', -apple-system, BlinkMacSystemFont,
-          'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+          'Avenir Next', Avenir, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+          'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
         --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
       }
 
+      /* The dark theme's accents are the light inks' pale counterparts, each
+         AA on the dark --surface: --muted 5.42 (4.76 on --surface-sunk),
+         --brand 7.03, --green 7.20, --amber 7.74, --red 6.92. Ring 7.06 on
+         --surface. Status pill on its tint: archived 5.69. */
       :root[data-theme='dark'] {
         color-scheme: dark;
         --bg: #101713;
         --surface: #17201b;
-        --surface-glass: rgba(23, 32, 27, 0.78);
         --surface-sunk: #202b25;
+        --line: #2a3931;
         --ink: #f4f7f2;
         --ink-soft: #aab6ad;
-        /* --muted 5.42 on --surface, 4.76 on --surface-sunk. Ring 7.06 on
-           --surface. Status pill on its tint: archived 5.69. */
         --muted: #8a968d;
-        --line: #2a3931;
-        --accent: #91a3ff;
-        --accent-soft: #202849;
-        --ring: #91a3ff;
+        --brand: #91a3ff;
+        --brand-soft: #202849;
+        --green: #3fbf8f;
+        --amber: #e3a54a;
+        --red: #f08a8a;
         --status-archived: #a8a29e;
         --shadow: 0, 0, 0;
+        --cover-filter: brightness(0.85);
+      }
+      :root:is(:lang(zh), :lang(ja), :lang(ko)) {
+        --lh-display: 1.2;
       }
 
       /* Dark-mode toggle icon swap (button markup lives in the header). */
@@ -306,13 +558,22 @@ const jsonLdHtml = (value: Record<string, unknown>) =>
       body {
         margin: 0;
         min-height: 100vh;
+        /* The paper wash: the surface, a green-tinted paper and the brand
+           tint, over the vertical rule grid. Every stop is a mix of the
+           grounds and the accents, so the dark theme's own values fall out
+           of the same declaration. */
         background:
-          linear-gradient(135deg, rgba(255, 255, 251, 0.58), rgba(228, 242, 235, 0.28) 42%, rgba(238, 242, 255, 0.2)),
-          repeating-linear-gradient(90deg, rgba(21, 26, 23, 0.025) 0 1px, transparent 1px 72px),
+          linear-gradient(
+            135deg,
+            color-mix(in srgb, var(--surface) 58%, transparent),
+            color-mix(in srgb, color-mix(in srgb, var(--green) 10%, var(--surface)) 28%, transparent) 42%,
+            color-mix(in srgb, var(--brand-soft) 20%, transparent)
+          ),
+          repeating-linear-gradient(90deg, color-mix(in srgb, var(--ink) 2.5%, transparent) 0 1px, transparent 1px 72px),
           var(--bg);
         color: var(--ink);
         font-family: var(--font-sans);
-        line-height: 1.65;
+        line-height: var(--lh-body);
         -webkit-font-smoothing: antialiased;
         text-rendering: optimizeLegibility;
       }
@@ -341,8 +602,13 @@ const jsonLdHtml = (value: Record<string, unknown>) =>
       }
       :root[data-theme='dark'] body {
         background:
-          linear-gradient(135deg, rgba(20, 30, 24, 0.76), rgba(25, 39, 35, 0.5) 46%, rgba(32, 40, 73, 0.22)),
-          repeating-linear-gradient(90deg, rgba(244, 247, 242, 0.026) 0 1px, transparent 1px 72px),
+          linear-gradient(
+            135deg,
+            color-mix(in srgb, color-mix(in srgb, var(--surface) 60%, var(--bg)) 76%, transparent),
+            color-mix(in srgb, color-mix(in srgb, var(--green) 6%, var(--surface)) 50%, transparent) 46%,
+            color-mix(in srgb, var(--brand-soft) 22%, transparent)
+          ),
+          repeating-linear-gradient(90deg, color-mix(in srgb, var(--ink) 2.6%, transparent) 0 1px, transparent 1px 72px),
           var(--bg);
       }
       main {
@@ -354,7 +620,7 @@ const jsonLdHtml = (value: Record<string, unknown>) =>
         outline: none;
       }
       a {
-        color: var(--accent);
+        color: var(--brand);
       }
       a,
       button {
@@ -379,12 +645,12 @@ const jsonLdHtml = (value: Record<string, unknown>) =>
         color: var(--surface);
         background: var(--ink);
         border: 1px solid var(--ink);
-        border-radius: 8px;
+        border-radius: var(--r-card);
         padding: 0.55rem 0.75rem;
-        font-size: 0.86rem;
+        font-size: var(--fs-14);
         font-weight: 700;
         text-decoration: none;
-        box-shadow: 0 18px 42px -24px rgba(var(--shadow), 0.6);
+        box-shadow: var(--shadow-md);
         transition: transform 0.16s ease;
       }
       .skip-link:focus-visible {
@@ -392,7 +658,7 @@ const jsonLdHtml = (value: Record<string, unknown>) =>
       }
       ::selection {
         color: var(--ink);
-        background: color-mix(in srgb, var(--accent) 20%, transparent);
+        background: color-mix(in srgb, var(--brand) 20%, transparent);
       }
       @media (prefers-reduced-motion: reduce) {
         *,
@@ -407,18 +673,74 @@ const jsonLdHtml = (value: Record<string, unknown>) =>
 
       .site-footer {
         border-top: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
-        margin-top: 4rem;
+        margin-top: var(--sp-8);
+        font-size: var(--fs-13);
+        color: var(--ink-soft);
       }
+      /* Four equal columns, one per header group, each a single list. The
+         container is 1072px wide at the desktop maximum, so a track is 238px
+         (214px at 1024), which holds the longest label of the eight locales
+         (es "Documentación para desarrolladores y protocolo", 276px at this
+         size, wraps to two lines; nothing wraps to three). minmax(0, 1fr):
+         a track never grows past its share for a long label, so the four
+         stay equal. */
+      .site-footer .foot-nav {
+        max-width: var(--maxw);
+        margin: 0 auto;
+        padding: 2.25rem 1.5rem 0.75rem;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 2rem 2.5rem;
+      }
+      .site-footer .foot-title {
+        margin: 0 0 0.5rem;
+        font-family: inherit;
+        font-size: var(--fs-13);
+        font-weight: 700;
+        line-height: var(--lh-body);
+        letter-spacing: 0;
+        color: var(--ink);
+      }
+      .site-footer .foot-sub {
+        margin: 0.9rem 0 0.2rem;
+        font-size: var(--fs-12);
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .site-footer ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      /* Tap targets: 28px rows at every width (WCAG 2.5.8 asks 24; the text
+         line alone is 21px), 44px on a phone. */
+      .site-footer a {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        min-height: 28px;
+        color: var(--ink-soft);
+        text-decoration: none;
+      }
+      .site-footer a:hover {
+        color: var(--ink);
+      }
+      .site-footer .foot-ext {
+        font-size: var(--fs-12);
+        opacity: 0.5;
+      }
+      /* The brand line, with the Company & Legal row beside it: one row of
+         six short links, wrapping as the width allows. */
       .site-footer .inner {
         max-width: var(--maxw);
         margin: 0 auto;
-        padding: 1.5rem;
+        padding: 1.1rem 1.5rem 1.5rem;
         display: flex;
         justify-content: space-between;
         align-items: center;
         gap: 0.75rem 2rem;
-        font-size: 0.8rem;
-        color: var(--ink-soft);
       }
       .site-footer .foot-brand {
         display: inline-flex;
@@ -427,26 +749,22 @@ const jsonLdHtml = (value: Record<string, unknown>) =>
         gap: 0.4rem;
         white-space: nowrap;
       }
-      .site-footer .foot-links {
+      .site-footer .foot-legal ul {
         display: flex;
-        align-items: center;
         flex-wrap: wrap;
-        gap: 0.5rem 1rem;
-      }
-      /* Tap targets: 24px tall at every width (WCAG 2.5.8; the text line
-         alone was 21px), 44px on a phone. */
-      .site-footer a {
-        display: inline-flex;
-        align-items: center;
-        min-height: 24px;
-        color: var(--ink-soft);
-        text-decoration: none;
-      }
-      .site-footer a:hover {
-        color: var(--ink);
+        justify-content: flex-end;
+        gap: 0 1.25rem;
       }
       .site-footer .muted {
         color: var(--muted);
+      }
+      /* Two tracks below the desktop breakpoint: four columns make two full
+         rows, so no cell is left empty. */
+      @media (max-width: 900px) {
+        .site-footer .foot-nav {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 1.75rem 2rem;
+        }
       }
       @media (max-width: 640px) {
         main {
@@ -455,17 +773,37 @@ const jsonLdHtml = (value: Record<string, unknown>) =>
         .site-footer {
           margin-top: 2.5rem;
         }
+        .site-footer .foot-nav {
+          padding: 1.75rem 1rem 0.5rem;
+        }
         .site-footer .inner {
-          padding: 1.25rem 1rem;
+          padding: 0.75rem 1rem 1.25rem;
           align-items: flex-start;
           flex-direction: column;
           gap: 0.75rem;
         }
-        .site-footer .foot-links {
-          gap: 0 1.1rem;
+        .site-footer .foot-legal ul {
+          justify-content: flex-start;
         }
-        .site-footer .foot-links a {
+        .site-footer a {
           min-height: 44px;
+        }
+      }
+      /* A phone keeps the two tracks (a single column of 36 rows at 44px would
+         be over 1500px of footer). A track is 154px at 360px, and the longest
+         single words (Entwicklerdokumentation, Prozessautomatisierung) are
+         about 150px at this size, so a label may hyphenate rather than
+         overflow its track; `anywhere` is the last resort where no dictionary
+         applies. */
+      @media (max-width: 480px) {
+        .site-footer .foot-nav {
+          gap: 1.5rem 1.25rem;
+        }
+        .site-footer a:is(:lang(en), :lang(de), :lang(fr), :lang(es)) {
+          -webkit-hyphens: auto;
+          hyphens: auto;
+          hyphenate-limit-chars: 12 5 5;
+          overflow-wrap: anywhere;
         }
       }
 
@@ -474,9 +812,9 @@ const jsonLdHtml = (value: Record<string, unknown>) =>
         display: inline-flex;
         align-items: center;
         gap: 0.35rem;
-        font-size: 0.7rem;
+        font-size: var(--fs-12);
         font-weight: 600;
-        letter-spacing: 0.03em;
+        letter-spacing: 0.08em;
         text-transform: uppercase;
         color: var(--c, var(--muted));
         white-space: nowrap;
@@ -485,8 +823,212 @@ const jsonLdHtml = (value: Record<string, unknown>) =>
         content: '';
         width: 6px;
         height: 6px;
-        border-radius: 50%;
+        border-radius: var(--r-pill);
         background: currentColor;
+      }
+
+      /* Shared components (#345). Five templates used to draw their own
+         primary button, chips and cards; these are the only ones now.
+
+         Eyebrow: the small green label over a heading, the same on every
+         template. The hero's 26px lead-in rule is the home page's own. */
+      .eyebrow,
+      .section-kicker {
+        color: var(--green);
+        font-size: var(--fs-12);
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      /* Uppercasing the Latin product names inside a CJK eyebrow widened the
+         line and mixed cases (it wrapped at 390); CJK has no case. */
+      .eyebrow:is(:lang(zh), :lang(ja), :lang(ko)) {
+        text-transform: none;
+        letter-spacing: 0.04em;
+      }
+      .eyebrow:is(:lang(zh), :lang(ja), :lang(ko)),
+      .section-kicker:is(:lang(zh), :lang(ja), :lang(ko)) {
+        word-break: keep-all;
+        overflow-wrap: anywhere;
+      }
+
+      /* Buttons: one capsule (ruled on #340), 44px tall, in three variants.
+         Primary is ink on the page and inverts on a dark panel (`.on-dark`)
+         and in the dark theme, where the ink gradient it replaces measured
+         1.03-1.79:1 against the page: --ink on --bg is 16.8:1 there, and
+         the --surface label 15.4:1. Secondary is the surface with a line.
+         Ghost is the underlined text link with an arrow. */
+      .btn {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.6rem 1.1rem;
+        border: 1px solid transparent;
+        border-radius: var(--r-pill);
+        color: var(--ink);
+        font-family: inherit;
+        font-size: var(--fs-14);
+        font-weight: 700;
+        line-height: var(--lh-ui);
+        text-align: center;
+        text-decoration: none;
+        cursor: pointer;
+        transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, color 0.16s ease;
+      }
+      .btn:hover {
+        transform: translateY(-1px);
+      }
+      .btn-primary {
+        color: var(--surface);
+        background: var(--ink);
+        border-color: var(--ink);
+      }
+      .btn-primary:hover {
+        box-shadow: var(--shadow-sm);
+      }
+      .btn-secondary {
+        color: var(--ink);
+        background: var(--surface);
+        border-color: var(--line);
+      }
+      .btn-secondary:hover {
+        border-color: color-mix(in srgb, var(--brand) 40%, var(--line));
+      }
+      .on-dark .btn-primary {
+        color: var(--panel-ink);
+        background: var(--on-panel);
+        border-color: var(--on-panel);
+      }
+      .on-dark .btn-secondary {
+        color: var(--on-panel);
+        background: transparent;
+        border-color: color-mix(in srgb, var(--on-panel) 25%, transparent);
+      }
+      .on-dark .btn-secondary:hover {
+        border-color: color-mix(in srgb, var(--on-panel) 60%, transparent);
+      }
+      .btn-ghost {
+        min-height: 0;
+        padding: 0 0 0.3rem;
+        border: 0;
+        border-bottom: 1px solid var(--ink);
+        border-radius: 0;
+        font-size: var(--fs-13);
+        line-height: var(--lh-ui);
+      }
+      .btn-ghost:hover {
+        color: var(--green);
+        border-color: var(--green);
+        transform: none;
+      }
+      /* The header's bar buttons sit in a 64px bar: 36px tall, 44 on a
+         phone (Header.astro). */
+      .btn-sm {
+        min-height: 36px;
+        padding: 0.4rem 0.95rem;
+        font-size: var(--fs-13);
+      }
+
+      /* Chips: two. A plain chip is --ink-soft on the sunk ground; a brand
+         chip (a topic, a selected facet) is --brand on its soft tint. A
+         chip that is a link keeps the same box. */
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        min-height: 24px;
+        padding: 0.125rem 0.625rem;
+        border: 0;
+        border-radius: var(--r-pill);
+        color: var(--ink-soft);
+        background: var(--surface-sunk);
+        font-size: var(--fs-12);
+        font-weight: 600;
+        line-height: var(--lh-ui);
+        text-decoration: none;
+        white-space: nowrap;
+      }
+      .chip-brand {
+        color: var(--brand);
+        background: var(--brand-soft);
+      }
+      a.chip:hover {
+        color: var(--ink);
+        background: color-mix(in srgb, var(--ink) 10%, var(--surface-sunk));
+      }
+      a.chip-brand:hover {
+        color: var(--brand);
+        background: color-mix(in srgb, var(--brand) 16%, var(--surface));
+      }
+      /* In-page anchor navigation (the security page's section row, the
+         home page's topic row): a row of surface pills, not chips. */
+      .pill-nav {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 32px;
+        padding: 0.3rem 0.75rem;
+        border: 1px solid var(--line);
+        border-radius: var(--r-pill);
+        color: var(--ink);
+        background: var(--surface);
+        font-size: var(--fs-13);
+        font-weight: 700;
+        line-height: var(--lh-ui);
+        text-decoration: none;
+        white-space: nowrap;
+        transition: color 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+      }
+      .pill-nav:hover {
+        color: var(--brand);
+        border-color: color-mix(in srgb, var(--brand) 40%, var(--line));
+        transform: translateY(-1px);
+      }
+
+      /* Cards: two. A card is a free-standing surface with a resting shadow;
+         a card that is a link (or holds one) lifts 2px and takes a brand
+         edge on hover. A card-grid is a matrix of cells divided by 1px
+         lines, for comparisons and lists, with no shadow. */
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--r-card);
+        box-shadow: var(--shadow-sm);
+      }
+      .card-link {
+        transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+      }
+      .card-link:hover {
+        border-color: color-mix(in srgb, var(--brand) 40%, var(--line));
+        box-shadow: var(--shadow-md);
+        transform: translateY(-2px);
+      }
+      .card-grid {
+        display: grid;
+        gap: 1px;
+        overflow: hidden;
+        background: var(--line);
+        border: 1px solid var(--line);
+        border-radius: var(--r-card);
+      }
+      .card-grid > * {
+        min-width: 0;
+        background: var(--surface);
+      }
+      /* The dark panel (the home closing, the security CTA): --panel-ink
+         with a green edge and the large shadow; its text tokens are the
+         --on-panel trio, the same in both themes. */
+      .panel-dark {
+        color: var(--on-panel);
+        background: var(--panel-ink);
+        border: 1px solid color-mix(in srgb, var(--green) 30%, transparent);
+        border-radius: var(--r-card);
+        box-shadow: var(--shadow-lg);
+      }
+      .panel-dark :is(.eyebrow, .section-kicker) {
+        color: var(--on-panel-accent);
       }
     </style>
   </body>

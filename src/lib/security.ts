@@ -37,6 +37,16 @@ export interface SecurityCopy {
   permissionTitle: string;
   permissionLead: string;
   permissionLayers: { title: string; copy: string }[];
+  /**
+   * The hub's sub-sections. /security/ is the one menu entry for trust; the
+   * trust center and the permissions page keep their URLs and are reached
+   * from these two cards (and from the footer). `slug` is the marketing page
+   * the card opens; SecurityPage.astro localizes the href.
+   */
+  hubKicker: string;
+  hubTitle: string;
+  hubLead: string;
+  hubPages: { slug: 'trust-center' | 'permissions'; title: string; copy: string; cta: string }[];
   deploymentKicker: string;
   deploymentTitle: string;
   deploymentLead: string;
@@ -75,7 +85,7 @@ const zhHans: SecurityCopy = {
   description: '了解 ObjectOS 如何让 AI Agent 安全接触业务数据，并在 ObjectOS 企业版自管部署中保护权限边界、审批和审计证据。',
   eyebrow: '安全与治理',
   hero: ['让 AI Agent 安全接触', '真实业务数据'],
-  lead: `ObjectOS 是${positioning['zh-Hans'].descriptor}。它不把 AI 挡在业务系统外面，而是让 Agent 在明确的身份、权限、工具、审批和审计边界内工作。在 ObjectOS 企业版中，数据仍在你的基础设施里；在每个版本中，AI 的每一步都受 ObjectStack 运行时约束。`,
+  lead: `ObjectOS 有三个版本：${positioning['zh-Hans'].descriptor}。它不把 AI 挡在业务系统外面，而是让 Agent 在明确的身份、权限、工具、审批和审计边界内工作。在 ObjectOS 企业版中，数据仍在你的基础设施里；在每个版本中，AI 的每一步都受 ObjectStack 运行时约束。`,
   metrics: [
     { value: 'Agent', label: '继承用户身份' },
     { value: 'Tool', label: '受控工具访问' },
@@ -111,6 +121,13 @@ const zhHans: SecurityCopy = {
     { title: '记录访问', copy: '通过所有权、组织作用域、共享规则或显式共享决定用户能触达哪些行。' },
     { title: '字段安全', copy: '即使用户能看到记录，敏感字段也可以隐藏或设为只读，并在 API、ObjectQL 和 Console 中统一生效。' },
     { title: '审计日志', copy: '记录 CRUD、权限授予、会话撤销、AI 工具调用和审批结果；审计行不可变，只能归档。' },
+  ],
+  hubKicker: '继续深入',
+  hubTitle: '这一页背后的两张页面',
+  hubLead: '本页是安全评审的入口。还有两张页面讲得更细：信任中心汇集评审材料；权限页把访问模型写成评审者能直接阅读的元数据。',
+  hubPages: [
+    { slug: 'trust-center', title: '信任中心', copy: '数据驻留、部署路径、身份、审批、审计，以及评审者签字前应当收到的安全评审材料包。', cta: '打开信任中心' },
+    { slug: 'permissions', title: '权限与安全', copy: '角色、行级和字段级控制与它保护的对象一起声明，评审者以 diff 的形式阅读权限集；对人和 Agent 同样生效。', cta: '打开权限页' },
   ],
   deploymentKicker: '跑在哪里',
   deploymentTitle: '部署边界',
@@ -172,7 +189,7 @@ const en: SecurityCopy = {
   description: 'Learn how ObjectOS gives AI agents governed access to business data while protecting permissions, approvals, and audit evidence, including on ObjectOS Enterprise self-managed deployments.',
   eyebrow: 'Security and governance',
   hero: ['Give AI agents governed access', 'to real business data.'],
-  lead: `ObjectOS is ${positioning.en.descriptor}. It lets agents read, analyze, and move work forward inside explicit boundaries for identity, permissions, tools, approvals, and audit. On ObjectOS Enterprise, data stays on your infrastructure; on every edition, every AI action is constrained by the ObjectStack runtime.`,
+  lead: `ObjectOS comes in three editions, ${positioning.en.descriptor}. It lets agents read, analyze, and move work forward inside explicit boundaries for identity, permissions, tools, approvals, and audit. On ObjectOS Enterprise, data stays on your infrastructure; on every edition, every AI action is constrained by the ObjectStack runtime.`,
   metrics: [
     { value: 'Agent', label: 'inherits user identity' },
     { value: 'Tool', label: 'governed access path' },
@@ -208,6 +225,13 @@ const en: SecurityCopy = {
     { title: 'Record access', copy: 'Ownership, organization scope, sharing rules, and explicit shares decide which rows a user can touch.' },
     { title: 'Field security', copy: 'Sensitive fields can be hidden or read-only even when the record is visible, consistently across API, ObjectQL, and Console.' },
     { title: 'Audit logs', copy: 'Record CRUD, permission grants, session revocation, AI tool calls, and approval decisions; audit rows are immutable and can only be archived.' },
+  ],
+  hubKicker: 'Go deeper',
+  hubTitle: 'The two pages behind this one',
+  hubLead: 'This page is the entry point for a security review. Two pages go further: the trust center collects the review materials, and the permissions page shows the access model as metadata a reviewer can read.',
+  hubPages: [
+    { slug: 'trust-center', title: 'Trust center', copy: 'Data residency, deployment paths, identity, approvals, audit, and the security review packet a reviewer should receive before sign-off.', cta: 'Open the trust center' },
+    { slug: 'permissions', title: 'Permissions & security', copy: 'Role, row, and field-level control declared beside the objects it protects, with the permission set a reviewer reads as a diff, enforced on people and agents alike.', cta: 'Open the permissions page' },
   ],
   deploymentKicker: 'Where it runs',
   deploymentTitle: 'Deployment boundary',
@@ -270,7 +294,7 @@ const ja: SecurityCopy = {
   description: 'ObjectOS Enterprise のセルフマネージド環境で、ObjectOS がデータ所在地、権限、AI エージェント操作、監査証跡をどう守るか。',
   eyebrow: 'セキュリティとガバナンス',
   hero: ['データは自社ネットワーク内に。', 'AI は権限の内側で動く。'],
-  lead: `ObjectOS は ${positioning.ja.descriptor}です。ObjectOS Enterprise では ObjectStack ランタイムを自社インフラに展開でき、業務データ、ID、監査ログ、ファイル、シークレットは自社管理のままです。`,
+  lead: `ObjectOS には ${positioning.ja.descriptor} の 3 つのエディションがあります。ObjectOS Enterprise では ObjectStack ランタイムを自社インフラに展開でき、業務データ、ID、監査ログ、ファイル、シークレットは自社管理のままです。`,
   metrics: [
     { value: 'Agent', label: 'ユーザーの ID を継承' },
     { value: '5 層', label: 'ID からフィールドまでの権限モデル' },
@@ -286,6 +310,13 @@ const ja: SecurityCopy = {
   permissionKicker: '誰が何をできるか',
   permissionTitle: '権限と監査',
   permissionLead: 'ID、ロール、権限セット、レコードアクセス、フィールドセキュリティという企業ソフトウェアの語彙でアクセスを管理します。',
+  hubKicker: 'さらに詳しく',
+  hubTitle: 'このページの先にある 2 つのページ',
+  hubLead: 'このページはセキュリティレビューの入口です。トラストセンターはレビュー資料をまとめ、権限ページはアクセスモデルをレビュー担当者が読めるメタデータとして示します。',
+  hubPages: [
+    { slug: 'trust-center', title: 'トラストセンター', copy: 'データ所在地、デプロイ経路、ID、承認、監査、そしてサインオフ前にレビュー担当者が受け取るべきセキュリティレビュー資料。', cta: 'トラストセンターを開く' },
+    { slug: 'permissions', title: '権限とセキュリティ', copy: 'ロール、行、フィールド単位の制御を、保護する対象の隣で宣言します。権限セットは diff として読め、人とエージェントに同じく適用されます。', cta: '権限ページを開く' },
+  ],
   deploymentKicker: '動作場所',
   deploymentTitle: 'デプロイ境界',
   deploymentLead: '基本形は 1 つの Node.js ランタイム、自社データベース、自社シークレット、自社 ingress。より厳しい環境ではファイル制品とオフラインイメージを使えます。',
@@ -334,7 +365,7 @@ const de: SecurityCopy = {
   description: 'Wie ObjectOS Datenresidenz, Berechtigungen, AI-Agent-Aktionen und Audit-Nachweise in selbst verwalteten ObjectOS-Enterprise-Umgebungen schützt.',
   eyebrow: 'Sicherheit und Governance',
   hero: ['Daten bleiben in Ihrem Netzwerk.', 'AI arbeitet innerhalb von Berechtigungen.'],
-  lead: `ObjectOS ist ${positioning.de.descriptor}. ObjectOS Enterprise betreibt die ObjectStack Runtime in Ihrer Infrastruktur; Geschäftsdaten, Identitäten, Audit-Logs, Dateien und Secrets bleiben unter Ihrer Kontrolle.`,
+  lead: `ObjectOS gibt es in drei Editionen, ${positioning.de.descriptor}. ObjectOS Enterprise betreibt die ObjectStack Runtime in Ihrer Infrastruktur; Geschäftsdaten, Identitäten, Audit-Logs, Dateien und Secrets bleiben unter Ihrer Kontrolle.`,
   residencyKicker: 'Wo Daten liegen',
   residencyTitle: 'Datenresidenz',
   residencyLead: 'ObjectOS Enterprise verlangt nicht, Geschäftsdaten in unsere Cloud zu verschieben. Die ObjectStack Runtime verbindet sich mit Ihren Datenbanken, Speichern und Identitätssystemen.',
@@ -345,6 +376,13 @@ const de: SecurityCopy = {
   permissionKicker: 'Wer was darf',
   permissionTitle: 'Berechtigungen und Audit',
   permissionLead: 'Das Modell nutzt die vertraute Sprache von Unternehmenssoftware: Identität, Rollen, Berechtigungssätze, Datensatz-Zugriff und Feldsicherheit.',
+  hubKicker: 'Weiter im Detail',
+  hubTitle: 'Die zwei Seiten hinter dieser',
+  hubLead: 'Diese Seite ist der Einstieg in eine Sicherheitsprüfung. Zwei Seiten gehen tiefer: Das Trust Center sammelt die Prüfunterlagen, die Berechtigungsseite zeigt das Zugriffsmodell als Metadaten, die ein Prüfer lesen kann.',
+  hubPages: [
+    { slug: 'trust-center', title: 'Trust Center', copy: 'Datenresidenz, Bereitstellungswege, Identität, Freigaben, Audit und das Prüfpaket, das ein Prüfer vor der Abnahme erhalten sollte.', cta: 'Trust Center öffnen' },
+    { slug: 'permissions', title: 'Berechtigungen & Sicherheit', copy: 'Rollen-, Zeilen- und Feldsteuerung, deklariert neben den Objekten, die sie schützt; das Berechtigungsset liest ein Prüfer als Diff – durchgesetzt für Menschen und Agents gleichermaßen.', cta: 'Berechtigungsseite öffnen' },
+  ],
   deploymentKicker: 'Wo es läuft',
   deploymentTitle: 'Deployment-Grenze',
   deploymentLead: 'Die Standardform ist netzwerkfreundlich: eine Node.js Runtime, Ihre Datenbank, Ihre Secrets und Ihr Ingress. Strengere Umgebungen können file-backed Artefakte und Offline-Images nutzen.',
@@ -393,7 +431,7 @@ const es: SecurityCopy = {
   description: 'Cómo ObjectOS protege residencia de datos, permisos, acciones de agentes de AI y evidencia de auditoría en despliegues autogestionados de ObjectOS Enterprise.',
   eyebrow: 'Seguridad y gobierno',
   hero: ['Los datos permanecen en tu red.', 'La AI trabaja dentro de permisos.'],
-  lead: `ObjectOS es ${positioning.es.descriptor}. ObjectOS Enterprise opera el runtime de ObjectStack en tu infraestructura; registros de negocio, identidades, auditoría, archivos y secretos siguen bajo tu control.`,
+  lead: `ObjectOS se ofrece en tres ediciones, ${positioning.es.descriptor}. ObjectOS Enterprise opera el runtime de ObjectStack en tu infraestructura; registros de negocio, identidades, auditoría, archivos y secretos siguen bajo tu control.`,
   residencyKicker: 'Dónde viven los datos',
   residencyTitle: 'Residencia de datos',
   residencyLead: 'ObjectOS Enterprise no exige mover datos de negocio a nuestra nube. El runtime de ObjectStack se conecta a tus bases de datos, almacenamiento e identidad.',
@@ -404,6 +442,13 @@ const es: SecurityCopy = {
   permissionKicker: 'Quién puede hacer qué',
   permissionTitle: 'Permisos y auditoría',
   permissionLead: 'El modelo usa vocabulario de software empresarial: identidad, roles, conjuntos de permisos, acceso a registros y seguridad de campos.',
+  hubKicker: 'Profundizar',
+  hubTitle: 'Las dos páginas detrás de esta',
+  hubLead: 'Esta página es el punto de entrada de una revisión de seguridad. Dos páginas van más allá: el centro de confianza reúne los materiales de revisión y la página de permisos muestra el modelo de acceso como metadatos que un revisor puede leer.',
+  hubPages: [
+    { slug: 'trust-center', title: 'Centro de confianza', copy: 'Residencia de datos, rutas de despliegue, identidad, aprobaciones, auditoría y el paquete de revisión de seguridad que un revisor debería recibir antes de aprobar.', cta: 'Abrir el centro de confianza' },
+    { slug: 'permissions', title: 'Permisos y seguridad', copy: 'Control por rol, fila y campo declarado junto a los objetos que protege; el revisor lee el conjunto de permisos como un diff, aplicado por igual a personas y agentes.', cta: 'Abrir la página de permisos' },
+  ],
   deploymentKicker: 'Dónde se ejecuta',
   deploymentTitle: 'Límite de despliegue',
   deploymentLead: 'La forma predeterminada es amigable para redes empresariales: un runtime Node.js, tu base de datos, tus secretos y tu entrada. Entornos más estrictos pueden usar artefactos locales e imágenes offline.',
@@ -452,7 +497,7 @@ const fr: SecurityCopy = {
   description: 'Comment ObjectOS protège résidence des données, permissions, actions des agents AI et preuves d’audit dans les déploiements autogérés ObjectOS Enterprise.',
   eyebrow: 'Sécurité et gouvernance',
   hero: ['Les données restent dans votre réseau.', 'L’AI agit dans les permissions.'],
-  lead: `ObjectOS est ${positioning.fr.descriptor}. ObjectOS Enterprise exploite le runtime ObjectStack dans votre infrastructure ; données métier, identités, journaux d’audit, fichiers et secrets restent sous votre contrôle.`,
+  lead: `ObjectOS existe en trois éditions, ${positioning.fr.descriptor}. ObjectOS Enterprise exploite le runtime ObjectStack dans votre infrastructure ; données métier, identités, journaux d’audit, fichiers et secrets restent sous votre contrôle.`,
   residencyKicker: 'Où vivent les données',
   residencyTitle: 'Résidence des données',
   residencyLead: 'ObjectOS Enterprise n’exige pas de déplacer vos données métier dans notre cloud. Le runtime ObjectStack se connecte à vos bases de données, stockages et systèmes d’identité.',
@@ -463,6 +508,13 @@ const fr: SecurityCopy = {
   permissionKicker: 'Qui peut faire quoi',
   permissionTitle: 'Permissions et audit',
   permissionLead: 'Le modèle utilise le vocabulaire du logiciel d’entreprise : identité, rôles, ensembles de permissions, accès aux enregistrements et sécurité des champs.',
+  hubKicker: 'Aller plus loin',
+  hubTitle: 'Les deux pages derrière celle-ci',
+  hubLead: 'Cette page est le point d’entrée d’une revue de sécurité. Deux pages vont plus loin : le centre de confiance rassemble les éléments de revue, et la page des permissions montre le modèle d’accès sous forme de métadonnées qu’un relecteur peut lire.',
+  hubPages: [
+    { slug: 'trust-center', title: 'Centre de confiance', copy: 'Résidence des données, modes de déploiement, identité, approbations, audit et le dossier de revue de sécurité qu’un relecteur devrait recevoir avant validation.', cta: 'Ouvrir le centre de confiance' },
+    { slug: 'permissions', title: 'Permissions et sécurité', copy: 'Contrôle par rôle, par ligne et par champ, déclaré à côté des objets qu’il protège ; le relecteur lit le jeu de permissions comme un diff, appliqué aux personnes comme aux agents.', cta: 'Ouvrir la page des permissions' },
+  ],
   deploymentKicker: 'Où ça tourne',
   deploymentTitle: 'Frontière de déploiement',
   deploymentLead: 'La forme par défaut convient au réseau d’entreprise : un runtime Node.js, votre base, vos secrets et votre ingress. Les environnements stricts peuvent utiliser des artefacts locaux et des images offline.',
@@ -511,7 +563,7 @@ const ko: SecurityCopy = {
   description: 'ObjectOS Enterprise 자체 운영 환경에서 ObjectOS가 데이터 레지던시, 권한, AI 에이전트 작업, 감사 증거를 보호하는 방식.',
   eyebrow: '보안 및 거버넌스',
   hero: ['데이터는 네트워크 안에 유지하고,', 'AI는 권한 경계 안에서 작동합니다'],
-  lead: `ObjectOS는 ${positioning.ko.descriptor}입니다. ObjectOS Enterprise는 ObjectStack 런타임을 사용자의 인프라에서 운영하며, 비즈니스 기록, ID, 감사 로그, 파일과 시크릿은 사용자가 통제합니다.`,
+  lead: `ObjectOS는 ${positioning.ko.descriptor}의 세 가지 에디션으로 제공됩니다. ObjectOS Enterprise는 ObjectStack 런타임을 사용자의 인프라에서 운영하며, 비즈니스 기록, ID, 감사 로그, 파일과 시크릿은 사용자가 통제합니다.`,
   residencyKicker: '데이터가 있는 곳',
   residencyTitle: '데이터 레지던시',
   residencyLead: 'ObjectOS Enterprise는 비즈니스 데이터를 당사 클라우드로 옮기라고 요구하지 않습니다. ObjectStack 런타임은 사용자의 데이터베이스, 스토리지, ID 시스템에 연결됩니다.',
@@ -522,6 +574,13 @@ const ko: SecurityCopy = {
   permissionKicker: '누가 무엇을 할 수 있는가',
   permissionTitle: '권한 및 감사',
   permissionLead: '접근 모델은 엔터프라이즈 소프트웨어의 언어인 ID, 역할, 권한 세트, 레코드 접근, 필드 보안을 사용합니다.',
+  hubKicker: '더 깊이 보기',
+  hubTitle: '이 페이지 뒤의 두 페이지',
+  hubLead: '이 페이지는 보안 검토의 입구입니다. 두 페이지가 더 깊이 다룹니다. 트러스트 센터는 검토 자료를 모으고, 권한 페이지는 접근 모델을 검토자가 읽을 수 있는 메타데이터로 보여 줍니다.',
+  hubPages: [
+    { slug: 'trust-center', title: '트러스트 센터', copy: '데이터 소재지, 배포 경로, 신원, 승인, 감사, 그리고 검토자가 승인 전에 받아야 할 보안 검토 자료.', cta: '트러스트 센터 열기' },
+    { slug: 'permissions', title: '권한과 보안', copy: '역할, 행, 필드 수준의 제어를 보호 대상 객체 옆에 선언하고, 검토자는 권한 집합을 diff로 읽습니다. 사람과 에이전트에 똑같이 적용됩니다.', cta: '권한 페이지 열기' },
+  ],
   deploymentKicker: '실행 위치',
   deploymentTitle: '배포 경계',
   deploymentLead: '기본 형태는 하나의 Node.js 런타임, 사용자의 데이터베이스, 시크릿, ingress입니다. 더 엄격한 환경은 파일 기반 아티팩트와 오프라인 이미지를 사용할 수 있습니다.',
