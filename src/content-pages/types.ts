@@ -8,12 +8,34 @@ export interface MarketingPageAction {
   href: string;
 }
 
+/**
+ * A scenario card on /use-cases/: the item's `body` is the "today" line, and
+ * these two lines finish the shape "today → with AI → what a person approves,
+ * and how permissions and audit hold". Every card is a summary of one existing
+ * scenario post, never a new claim; the links are checked at build time
+ * (MarketingEvidencePage.astro): the post must exist, the template must be a
+ * catalog entry on /templates/, the guide must be a cluster.
+ */
+export interface MarketingPageScenario {
+  /** Blog post slug the card summarizes; linked in the reader's locale. */
+  post: string;
+  /** Template name in the /templates/ catalog, where the scenario has one. */
+  template?: string;
+  /** Cluster slug of a pillar guide that goes deeper, where one exists. */
+  guide?: string;
+  withAi: string;
+  approves: string;
+}
+
 export interface MarketingPageItem {
   title: string;
   body: string;
   meta?: string;
   /** Optional link target; written as /en/<slug>/ and localized at render time. */
   href?: string;
+  /** Optional anchor id, for items other pages link to (the template catalog). */
+  id?: string;
+  scenario?: MarketingPageScenario;
 }
 
 export interface MarketingPageSection {

@@ -20,6 +20,7 @@ const PAGE_ORDER = [
   'agent-developer',
   'forward-deployed-engineers',
   'customer-stories',
+  'use-cases',
 ];
 
 const FALLBACK_LOCALE: Locale = 'en';

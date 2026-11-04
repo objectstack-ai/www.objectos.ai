@@ -85,10 +85,21 @@ interface HomeCopy {
   secureExecution: string;
   outcomes: string;
   outcomeLabels: [string, string, string];
-  solutionsKicker: string;
-  solutionsTitle: [string, string];
-  solutionLink: string;
-  solutions: { title: string; copy: string }[];
+  /**
+   * "How business teams use it" (#359): three scenario cards that link into
+   * /[lang]/use-cases/, in the order service, finance & procurement, sales
+   * (MarketingHome.astro pairs them with the page's section ids by index).
+   * Each card summarizes that section's scenario posts; nothing else.
+   */
+  useCasesKicker: string;
+  useCasesTitle: [string, string];
+  /** The section's link to the whole /use-cases/ page. */
+  useCasesLink: string;
+  /** The link line at the foot of each card. */
+  useCaseCardLink: string;
+  /** The secondary link under the cards, to the /templates/ catalog. */
+  useCasesTemplatesLink: string;
+  useCases: { title: string; copy: string }[];
   securityKicker: string;
   securityTitle: [string, string];
   securityCopy: string;
@@ -162,13 +173,15 @@ const zhHans: HomeCopy = {
   secureExecution: '安全执行',
   outcomes: '持续产生价值',
   outcomeLabels: ['业务应用', 'AI Agent', '自动化'],
-  solutionsKicker: '应用模板',
-  solutionsTitle: ['从可运行模板开始，', '而不是从空白系统开始'],
-  solutionLink: '查看模板源码',
-  solutions: [
-    { title: '服务台（Helpdesk）模板', copy: '面向客户支持的 AI-first 模板，覆盖工单、SLA、摘要、建议回复和知识库召回。' },
-    { title: '合同（Contracts）模板', copy: '覆盖合同生命周期管理，支持元数据提取、审批、续约提醒和审计追踪。' },
-    { title: '采购（Procurement）模板', copy: '覆盖采购请求、供应商、PO、收货和三单匹配，把审批流变成可运行应用。' },
+  useCasesKicker: '业务团队怎么用',
+  useCasesTitle: ['AI 为每个团队接手什么，', '哪些仍由人来确认'],
+  useCasesLink: '查看全部使用场景',
+  useCaseCardLink: '查看场景',
+  useCasesTemplatesLink: '或者从应用模板开始',
+  useCases: [
+    { title: '客服', copy: 'AI 给工单分类、匹配知识库、起草带引用的回复；发出什么由客服确认，敏感回复可设为须主管审批。' },
+    { title: '财务与采购', copy: 'AI 按政策和预算核对报销，在下单前核对供应商风险；财务与采购看着证据审批。' },
+    { title: '销售', copy: '销售用语音或文字更新 CRM，AI 为下一次客户会议做准备；每条记录变更建议都等销售本人确认。' },
   ],
   securityKicker: '安全与治理',
   securityTitle: ['数据留在你的网络里，', 'AI 在权限边界内工作'],
@@ -252,13 +265,15 @@ const en: HomeCopy = {
   secureExecution: 'Govern execution',
   outcomes: 'What runs on top',
   outcomeLabels: ['Business apps', 'AI agents', 'Automation'],
-  solutionsKicker: 'Application templates',
-  solutionsTitle: ['Start with working templates,', 'not a blank canvas'],
-  solutionLink: 'View template source',
-  solutions: [
-    { title: 'Helpdesk template', copy: 'An AI-first customer support template for tickets, SLA, summaries, suggested replies, and knowledge retrieval.' },
-    { title: 'Contracts template', copy: 'Manage the contract lifecycle with metadata extraction, approval, renewal reminders, and audit trails.' },
-    { title: 'Procurement template', copy: 'Run purchase requests, suppliers, POs, receiving, and three-way matching as a governed application.' },
+  useCasesKicker: 'How business teams use it',
+  useCasesTitle: ['What AI takes on for each team,', 'and what a person still approves'],
+  useCasesLink: 'All use cases',
+  useCaseCardLink: 'See the scenario',
+  useCasesTemplatesLink: 'Or start from an app template',
+  useCases: [
+    { title: 'Customer service', copy: 'AI classifies each ticket, matches knowledge articles and drafts replies with citations; agents confirm what is sent, and sensitive replies can require a manager’s approval.' },
+    { title: 'Finance & procurement', copy: 'AI checks expense claims against policy and budget, and supplier risk before an order is placed; finance and procurement approve with the evidence in front of them.' },
+    { title: 'Sales', copy: 'Reps update the CRM by voice or text and AI preps the next account meeting; every suggested record change waits for the rep to confirm it.' },
   ],
   securityKicker: 'Security and governance',
   securityTitle: ['Keep data in your network.', 'Let AI work inside permissions.'],
@@ -343,13 +358,15 @@ const ja: HomeCopy = {
   secureExecution: '安全に実行',
   outcomes: '継続的な価値',
   outcomeLabels: ['業務アプリ', 'AI エージェント', '自動化'],
-  solutionsKicker: 'アプリテンプレート',
-  solutionsTitle: ['動くテンプレートから始め、', '白紙のシステムから始めない'],
-  solutionLink: 'テンプレートのソースを見る',
-  solutions: [
-    { title: 'Helpdesk テンプレート', copy: 'チケット、SLA、要約、返信提案、ナレッジ検索を備えた AI-first の顧客サポートテンプレートです。' },
-    { title: 'Contracts テンプレート', copy: '契約ライフサイクルを管理し、メタデータ抽出、承認、更新リマインダー、監査に対応します。' },
-    { title: 'Procurement テンプレート', copy: '購買依頼、サプライヤー、PO、受領、三点照合を管理されたアプリとして実行します。' },
+  useCasesKicker: 'ビジネスチームでの使い方',
+  useCasesTitle: ['チームごとに AI が担うこと、', 'そして人が承認すること'],
+  useCasesLink: 'すべてのユースケース',
+  useCaseCardLink: 'シナリオを見る',
+  useCasesTemplatesLink: 'アプリテンプレートから始める',
+  useCases: [
+    { title: 'カスタマーサービス', copy: 'AI がチケットを分類し、ナレッジ記事を照合し、引用付きの返信案を作成します。送信内容は担当者が確認し、機微な返信にはマネージャーの承認を必須にできます。' },
+    { title: '財務・購買', copy: 'AI が経費精算をポリシーと予算に照らして確認し、発注前にサプライヤーのリスクを洗い出します。財務と購買は根拠を見たうえで承認します。' },
+    { title: '営業', copy: '営業担当は音声やテキストで CRM を更新し、AI が次の商談を準備します。レコード変更の提案は、すべて本人の確認を待ちます。' },
   ],
   securityKicker: 'セキュリティとガバナンス',
   securityTitle: ['データは自社ネットワーク内に。', 'AI は権限の内側で動く。'],
@@ -434,13 +451,15 @@ const de: HomeCopy = {
   secureExecution: 'Sicher ausführen',
   outcomes: 'Kontinuierlicher Nutzen',
   outcomeLabels: ['Geschäftsanwendungen', 'AI Agents', 'Automatisierung'],
-  solutionsKicker: 'Anwendungsvorlagen',
-  solutionsTitle: ['Mit lauffähigen Vorlagen starten,', 'nicht mit einem leeren System'],
-  solutionLink: 'Quellcode ansehen',
-  solutions: [
-    { title: 'Helpdesk-Vorlage', copy: 'AI-first Kundenservice mit Tickets, SLA, Zusammenfassungen, Antwortvorschlägen und Wissensabruf.' },
-    { title: 'Contracts-Vorlage', copy: 'Vertragslebenszyklus mit Metadatenextraktion, Freigabe, Verlängerungserinnerungen und Audit-Trails.' },
-    { title: 'Procurement-Vorlage', copy: 'Einkaufsanfragen, Lieferanten, Bestellungen, Wareneingang und Three-way Matching als kontrollierte Anwendung.' },
+  useCasesKicker: 'So nutzen es Fachteams',
+  useCasesTitle: ['Was AI für jedes Team übernimmt,', 'und was ein Mensch weiterhin freigibt'],
+  useCasesLink: 'Alle Anwendungsfälle',
+  useCaseCardLink: 'Szenario ansehen',
+  useCasesTemplatesLink: 'Oder mit einer Anwendungsvorlage starten',
+  useCases: [
+    { title: 'Kundenservice', copy: 'AI klassifiziert jedes Ticket, findet passende Wissensartikel und entwirft Antworten mit Quellen; das Team bestätigt, was verschickt wird, und heikle Antworten lassen sich an die Freigabe der Leitung binden.' },
+    { title: 'Finanzen & Einkauf', copy: 'AI prüft Spesenabrechnungen gegen Richtlinie und Budget und das Lieferantenrisiko vor der Bestellung; Finanzen und Einkauf geben mit den Belegen vor Augen frei.' },
+    { title: 'Vertrieb', copy: 'Der Vertrieb pflegt das CRM per Sprache oder Text, und AI bereitet den nächsten Kundentermin vor; jede vorgeschlagene Änderung wartet auf die Bestätigung des Verkäufers.' },
   ],
   securityKicker: 'Sicherheit und Governance',
   securityTitle: ['Daten bleiben in Ihrem Netzwerk.', 'AI arbeitet innerhalb von Berechtigungen.'],
@@ -525,13 +544,15 @@ const es: HomeCopy = {
   secureExecution: 'Ejecución segura',
   outcomes: 'Valor continuo',
   outcomeLabels: ['Apps de negocio', 'Agentes de AI', 'Automatización'],
-  solutionsKicker: 'Plantillas de aplicaciones',
-  solutionsTitle: ['Empieza con plantillas operativas,', 'no con un sistema en blanco'],
-  solutionLink: 'Ver código fuente',
-  solutions: [
-    { title: 'Plantilla Helpdesk', copy: 'Soporte al cliente AI-first con tickets, SLA, resúmenes, respuestas sugeridas y recuperación de conocimiento.' },
-    { title: 'Plantilla Contracts', copy: 'Ciclo de vida contractual con extracción de metadatos, aprobación, recordatorios de renovación y auditoría.' },
-    { title: 'Plantilla Procurement', copy: 'Solicitudes de compra, proveedores, PO, recepción y conciliación de tres vías como aplicación gobernada.' },
+  useCasesKicker: 'Cómo lo usan los equipos de negocio',
+  useCasesTitle: ['Qué asume la AI en cada equipo,', 'y qué sigue aprobando una persona'],
+  useCasesLink: 'Todos los casos de uso',
+  useCaseCardLink: 'Ver el escenario',
+  useCasesTemplatesLink: 'O empieza con una plantilla de aplicación',
+  useCases: [
+    { title: 'Atención al cliente', copy: 'La AI clasifica cada ticket, busca artículos de conocimiento y redacta respuestas con citas; el agente confirma qué se envía, y las respuestas sensibles pueden exigir la aprobación de un responsable.' },
+    { title: 'Finanzas y compras', copy: 'La AI revisa los gastos frente a la política y el presupuesto, y el riesgo del proveedor antes de cada pedido; finanzas y compras aprueban con la evidencia delante.' },
+    { title: 'Ventas', copy: 'Los comerciales actualizan el CRM por voz o texto y la AI prepara la próxima reunión con el cliente; cada cambio sugerido espera la confirmación del comercial.' },
   ],
   securityKicker: 'Seguridad y gobierno',
   securityTitle: ['Los datos permanecen en tu red.', 'La AI trabaja dentro de permisos.'],
@@ -616,13 +637,15 @@ const fr: HomeCopy = {
   secureExecution: 'Exécuter en sécurité',
   outcomes: 'Valeur continue',
   outcomeLabels: ['Applications métier', 'Agents AI', 'Automatisation'],
-  solutionsKicker: 'Modèles d’applications',
-  solutionsTitle: ['Partez de modèles opérationnels,', 'pas d’un système vide'],
-  solutionLink: 'Voir le code source',
-  solutions: [
-    { title: 'Modèle Helpdesk', copy: 'Support client AI-first avec tickets, SLA, résumés, réponses suggérées et recherche dans la base de connaissances.' },
-    { title: 'Modèle Contracts', copy: 'Cycle de vie contractuel avec extraction de métadonnées, validation, rappels de renouvellement et audit.' },
-    { title: 'Modèle Procurement', copy: 'Demandes d’achat, fournisseurs, PO, réception et rapprochement à trois pièces dans une application gouvernée.' },
+  useCasesKicker: 'Comment les équipes métier l’utilisent',
+  useCasesTitle: ['Ce que l’AI prend en charge pour chaque équipe,', 'et ce qu’une personne approuve encore'],
+  useCasesLink: 'Tous les cas d’usage',
+  useCaseCardLink: 'Voir le scénario',
+  useCasesTemplatesLink: 'Ou partir d’un modèle d’application',
+  useCases: [
+    { title: 'Service client', copy: 'L’AI classe chaque ticket, retrouve les articles de connaissance et rédige des réponses sourcées ; l’agent confirme ce qui part, et les réponses sensibles peuvent exiger l’accord d’un responsable.' },
+    { title: 'Finance et achats', copy: 'L’AI vérifie les notes de frais au regard de la politique et du budget, et le risque fournisseur avant chaque commande ; finance et achats approuvent avec les preuves sous les yeux.' },
+    { title: 'Ventes', copy: 'Les commerciaux mettent à jour le CRM à la voix ou par écrit, et l’AI prépare le prochain rendez-vous client ; chaque modification proposée attend leur confirmation.' },
   ],
   securityKicker: 'Sécurité et gouvernance',
   securityTitle: ['Les données restent dans votre réseau.', 'L’AI agit dans les permissions.'],
@@ -707,13 +730,15 @@ const ko: HomeCopy = {
   secureExecution: '안전한 실행',
   outcomes: '지속적인 가치',
   outcomeLabels: ['업무 앱', 'AI 에이전트', '자동화'],
-  solutionsKicker: '애플리케이션 템플릿',
-  solutionsTitle: ['빈 시스템이 아니라,', '실행 가능한 템플릿에서 시작하세요'],
-  solutionLink: '템플릿 소스 보기',
-  solutions: [
-    { title: 'Helpdesk 템플릿', copy: '티켓, SLA, 요약, 추천 답변과 지식 검색을 포함한 AI-first 고객 지원 템플릿입니다.' },
-    { title: 'Contracts 템플릿', copy: '메타데이터 추출, 승인, 갱신 알림과 감사 추적을 포함한 계약 라이프사이클 템플릿입니다.' },
-    { title: 'Procurement 템플릿', copy: '구매 요청, 공급업체, PO, 입고와 3-way match를 관리되는 애플리케이션으로 실행합니다.' },
+  useCasesKicker: '비즈니스 팀의 활용 방식',
+  useCasesTitle: ['팀마다 AI가 맡는 일,', '그리고 사람이 승인하는 일'],
+  useCasesLink: '모든 활용 사례',
+  useCaseCardLink: '시나리오 보기',
+  useCasesTemplatesLink: '또는 애플리케이션 템플릿에서 시작하기',
+  useCases: [
+    { title: '고객 서비스', copy: 'AI가 티켓을 분류하고 지식 문서를 찾아 출처가 달린 답변 초안을 씁니다. 무엇을 보낼지는 상담원이 확인하고, 민감한 답변은 관리자 승인을 거치도록 할 수 있습니다.' },
+    { title: '재무·구매', copy: 'AI가 경비 청구를 정책과 예산에 비추어 확인하고, 발주 전에 공급업체 리스크를 점검합니다. 재무와 구매는 근거를 보고 승인합니다.' },
+    { title: '영업', copy: '영업 담당자는 음성이나 텍스트로 CRM을 업데이트하고 AI가 다음 고객 미팅을 준비합니다. 제안된 레코드 변경은 모두 담당자의 확인을 기다립니다.' },
   ],
   securityKicker: '보안 및 거버넌스',
   securityTitle: ['데이터는 네트워크 안에 유지하고,', 'AI는 권한 경계 안에서 작동합니다'],

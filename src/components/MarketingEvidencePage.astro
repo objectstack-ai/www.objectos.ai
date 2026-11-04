@@ -1,7 +1,9 @@
 ---
 import { Image } from 'astro:assets';
 import heroImage from '../assets/objectos-home-hero.png';
-import { getMarketingPages, marketingPagePath } from '../content-pages/registry';
+import { getMarketingPage, getMarketingPages, marketingPagePath } from '../content-pages/registry';
+import { clusterBySlug, clusterPath } from '../lib/clusters';
+import { clusterCopy } from '../lib/cluster-i18n';
 import type { MarketingPage } from '../content-pages/types';
 import { marketingPageUi } from '../content-pages/ui';
 import { cardSpans } from '../lib/card-rows';
@@ -37,6 +39,39 @@ const localizeHref = (href: string): string => {
   if (slug === 'security') return securityPath(locale);
   if (slug === 'pricing') return pricingPath(locale);
   return href;
+};
+// Scenario cards (/use-cases/) summarize existing posts and point at existing
+// templates and guides; a card whose post, template or guide does not exist
+// fails `astro build` here rather than shipping a dead or invented link. The
+// post is checked against English, where every post has its source; the
+// template against this locale's /templates/ catalog ids.
+const englishPostSlugs = new Set((await getPostsInLocale('en')).map((post) => post.slug));
+const templateIds = new Set(
+  (getMarketingPage(locale, 'templates')?.sections ?? [])
+    .flatMap((section) => section.items)
+    .map((item) => item.id)
+    .filter(Boolean)
+);
+const templateAnchor = (name: string): string => `template-${name}`;
+for (const section of page.sections) {
+  for (const item of section.items) {
+    const scenario = item.scenario;
+    if (!scenario) continue;
+    const where = `${locale}/${page.slug} #${section.id} "${item.title}"`;
+    if (!englishPostSlugs.has(scenario.post)) {
+      throw new Error(`Scenario card ${where}: no post "${scenario.post}" in content/blog`);
+    }
+    if (scenario.template && !templateIds.has(templateAnchor(scenario.template))) {
+      throw new Error(`Scenario card ${where}: no template "${scenario.template}" in the /templates/ catalog`);
+    }
+    if (scenario.guide && !clusterBySlug(scenario.guide)) {
+      throw new Error(`Scenario card ${where}: no guide (cluster) "${scenario.guide}"`);
+    }
+  }
+}
+const guideLink = (slug: string) => {
+  const cluster = clusterBySlug(slug)!;
+  return { href: clusterPath(locale, slug), label: clusterCopy(cluster, locale).shortTitle };
 };
 // The hero is served as WebP at the width its box needs instead of the 1.7 MB
 // PNG. The box crops the 1.6:1 image with object-fit: cover, so the image is
@@ -128,8 +163,35 @@ const ph = (text: string): string => phraseHtml(text, locale);
         <p>{section.copy}</p>
       </div>
       <div class="item-grid">
-        {section.items.map((item, index) => (
-          <div class:list={['item', `span-${cardSpans(section.items.length)[index]}`]}>
+        {section.items.map((item, index) => item.scenario ? (
+          <div class:list={['item', 'scenario', `span-${cardSpans(section.items.length)[index]}`]} id={item.id}>
+            <h3>{item.title}</h3>
+            <dl>
+              <div>
+                <dt>{ui.scenario.today}</dt>
+                <dd>{item.body}</dd>
+              </div>
+              <div>
+                <dt>{ui.scenario.withAi}</dt>
+                <dd>{item.scenario.withAi}</dd>
+              </div>
+              <div>
+                <dt>{ui.scenario.approves}</dt>
+                <dd>{item.scenario.approves}</dd>
+              </div>
+            </dl>
+            <div class="scenario-links">
+              <a class="btn btn-ghost" href={localizeHref(`/en/blog/${item.scenario.post}/`)}>{ui.scenario.readPost}&nbsp;<span aria-hidden="true">→</span></a>
+              {item.scenario.template && (
+                <a class="chip" href={`${marketingPagePath(locale, 'templates')}#${templateAnchor(item.scenario.template)}`}>{ui.scenario.template} · {item.scenario.template}</a>
+              )}
+              {item.scenario.guide && (
+                <a class="chip" href={guideLink(item.scenario.guide).href}>{ui.scenario.guide} · {guideLink(item.scenario.guide).label}</a>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div class:list={['item', `span-${cardSpans(section.items.length)[index]}`]} id={item.id}>
             {/* An item without a meta label still takes the meta row when a
                 sibling has one, so every title in the grid starts at the same
                 height. */}
@@ -539,6 +601,51 @@ const ph = (text: string): string => phraseHtml(text, locale);
     color: var(--ink-soft);
     font-size: var(--fs-14);
     line-height: var(--lh-prose);
+  }
+  /* Anchored items (the template catalog) land below the sticky header. */
+  .item[id] {
+    scroll-margin-top: 104px;
+  }
+  /* Scenario cards: three labelled rows and a link row at the bottom. The
+     card holds two or three links, so the title is not stretched over it. */
+  .scenario {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .scenario dl {
+    display: grid;
+    gap: 0.7rem;
+    margin: 0 0 1.1rem;
+  }
+  .scenario dt {
+    margin-bottom: 0.2rem;
+    color: var(--green);
+    font: 700 var(--fs-12)/1.3 var(--font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .scenario dd {
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: var(--fs-14);
+    line-height: var(--lh-prose);
+  }
+  .scenario-links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    margin-top: auto;
+  }
+  .scenario-links .chip {
+    white-space: normal;
+  }
+  /* Not the hero's full-width phone button (the .btn rule at 640px below). */
+  .scenario-links .btn {
+    width: auto;
+    padding-right: 0;
+    padding-left: 0;
   }
   .table-wrap {
     overflow-x: auto;
