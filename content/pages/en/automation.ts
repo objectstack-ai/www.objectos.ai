@@ -187,7 +187,7 @@ export const EscalateBreachedCases = defineFlow({
       {
         question: 'What is open source here, and what does ObjectOS add?',
         answer:
-          'Flows, all three trigger types, background queues, webhook delivery, and the flow canvas with its node palette, validation, simulation, run history, and schedule previews ship in the open-source ObjectStack Console, Apache-2.0. ObjectOS adds the in-app AI Builder, which drafts flows and actions from a plain-language request and queues every metadata change for human approval, plus AI governance — action audit, guardrails, permission scoping — from Business.',
+          'Flows, all three trigger types, background queues, webhook delivery, and the flow canvas with its node palette, validation, simulation, run history, and schedule previews ship in the open-source ObjectStack Console, Apache-2.0. ObjectOS adds the in-app AI Builder, which drafts flows and actions from a plain-language request and queues every metadata change for human approval, plus AI governance — action audit, guardrails, permission scoping — on Enterprise.',
       },
     ],
   } satisfies MarketingPage;

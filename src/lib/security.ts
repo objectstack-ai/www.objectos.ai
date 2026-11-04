@@ -2,6 +2,15 @@ import { s2t } from './zhconvert';
 import type { Locale } from './i18n';
 import { positioning } from './positioning';
 
+/**
+ * Where security reports go. This is the address docs.objectos.ai already
+ * publishes (reference/security "Vulnerability disclosure" and
+ * resources/support, which also sets the one-business-day reply), so the site
+ * and the docs name one mailbox. `public/.well-known/security.txt` carries the
+ * same address as its `Contact:`; `pnpm seo:smoke` checks that they agree.
+ */
+export const SECURITY_CONTACT = 'security@objectstack.ai';
+
 export interface SecurityCopy {
   title: string;
   description: string;
@@ -28,6 +37,16 @@ export interface SecurityCopy {
   permissionTitle: string;
   permissionLead: string;
   permissionLayers: { title: string; copy: string }[];
+  /**
+   * The hub's sub-sections. /security/ is the one menu entry for trust; the
+   * trust center and the permissions page keep their URLs and are reached
+   * from these two cards (and from the footer). `slug` is the marketing page
+   * the card opens; SecurityPage.astro localizes the href.
+   */
+  hubKicker: string;
+  hubTitle: string;
+  hubLead: string;
+  hubPages: { slug: 'trust-center' | 'permissions'; title: string; copy: string; cta: string }[];
   deploymentKicker: string;
   deploymentTitle: string;
   deploymentLead: string;
@@ -35,6 +54,25 @@ export interface SecurityCopy {
   faqKicker: string;
   faqTitle: string;
   faqs: { question: string; answer: string }[];
+  /**
+   * Vulnerability disclosure: where to report, what to include, what happens
+   * next, and the safe-harbour terms. The address itself is not copy — it is
+   * `SECURITY_CONTACT`, the one value this section, the docs' support page and
+   * `public/.well-known/security.txt` all name. `pnpm seo:smoke` fails when
+   * security.txt and the built page name different addresses.
+   */
+  disclosureKicker: string;
+  disclosureTitle: string;
+  disclosureLead: string;
+  disclosureContactLabel: string;
+  disclosureFacts: { label: string; value: string }[];
+  disclosureIncludeTitle: string;
+  disclosureInclude: string[];
+  disclosureProcessTitle: string;
+  disclosureProcess: string[];
+  disclosureSafeHarbourTitle: string;
+  disclosureSafeHarbour: string;
+  disclosureSafeHarbourRules: string[];
   ctaKicker: string;
   ctaTitle: string;
   ctaCopy: string;
@@ -47,7 +85,7 @@ const zhHans: SecurityCopy = {
   description: '了解 ObjectOS 如何让 AI Agent 安全接触业务数据，并在 ObjectOS 企业版自管部署中保护权限边界、审批和审计证据。',
   eyebrow: '安全与治理',
   hero: ['让 AI Agent 安全接触', '真实业务数据'],
-  lead: `ObjectOS 是${positioning['zh-Hans'].descriptor}。它不把 AI 挡在业务系统外面，而是让 Agent 在明确的身份、权限、工具、审批和审计边界内工作。在 ObjectOS 企业版中，数据仍在你的基础设施里；在每个版本中，AI 的每一步都受 ObjectStack 运行时约束。`,
+  lead: `ObjectOS 有三个版本：${positioning['zh-Hans'].descriptor}。它不把 AI 挡在业务系统外面，而是让 Agent 在明确的身份、权限、工具、审批和审计边界内工作。在 ObjectOS 企业版中，数据仍在你的基础设施里；在每个版本中，AI 的每一步都受 ObjectStack 运行时约束。`,
   metrics: [
     { value: 'Agent', label: '继承用户身份' },
     { value: 'Tool', label: '受控工具访问' },
@@ -84,6 +122,13 @@ const zhHans: SecurityCopy = {
     { title: '字段安全', copy: '即使用户能看到记录，敏感字段也可以隐藏或设为只读，并在 API、ObjectQL 和 Console 中统一生效。' },
     { title: '审计日志', copy: '记录 CRUD、权限授予、会话撤销、AI 工具调用和审批结果；审计行不可变，只能归档。' },
   ],
+  hubKicker: '继续深入',
+  hubTitle: '这一页背后的两张页面',
+  hubLead: '本页是安全评审的入口。还有两张页面讲得更细：信任中心汇集评审材料；权限页把访问模型写成评审者能直接阅读的元数据。',
+  hubPages: [
+    { slug: 'trust-center', title: '信任中心', copy: '数据驻留、部署路径、身份、审批、审计，以及评审者签字前应当收到的安全评审材料包。', cta: '打开信任中心' },
+    { slug: 'permissions', title: '权限与安全', copy: '角色、行级和字段级控制与它保护的对象一起声明，评审者以 diff 的形式阅读权限集；对人和 Agent 同样生效。', cta: '打开权限页' },
+  ],
   deploymentKicker: '跑在哪里',
   deploymentTitle: '部署边界',
   deploymentLead: 'ObjectOS 企业版可在企业内网中运营 ObjectStack：一个 Node.js 运行时、你的数据库、你的密钥和你的入口层。需要更严格边界时，也可以使用文件制品和离线镜像。',
@@ -102,6 +147,36 @@ const zhHans: SecurityCopy = {
     { question: '谁负责 TLS、数据库加密和密钥管理？', answer: '这些属于你的部署责任。ObjectStack 运行时提供权限执行、审计、API key 哈希存储和设置加密；TLS、数据库静态加密、备份和密钥注入由你的基础设施负责。' },
     { question: '它适合合规行业吗？', answer: 'ObjectOS 提供访问控制、审计、数据驻留和隔离部署这些技术原语。具体认证取决于你的运行中部署，而不是单个二进制。' },
   ],
+  disclosureKicker: '发现漏洞？',
+  disclosureTitle: '漏洞披露',
+  disclosureLead: '如发现 ObjectOS Cloud、ObjectOS 企业版、开源 ObjectStack 运行时及其软件包或本网站的安全问题，请通过邮件私下报告。请不要为安全问题创建公开的 GitHub issue、讨论或 pull request。',
+  disclosureContactLabel: '报告邮箱',
+  disclosureFacts: [
+    { label: '确认收到', value: '1 个工作日内' },
+    { label: '语言', value: '中文或英文' },
+  ],
+  disclosureIncludeTitle: '报告里请写明',
+  disclosureInclude: [
+    '受影响的产品和版本：Cloud 请注明测试的日期和时间，自管部署请注明镜像或软件包版本。',
+    '复现步骤；如有概念验证（PoC），请一并附上。',
+    '你观察到的影响：攻击者能读取、修改或执行什么。',
+    '是否已告知他人，以及你计划公开的时间。',
+    '联系方式，以及希望致谢时使用的署名（如需要）。',
+  ],
+  disclosureProcessTitle: '之后会发生什么',
+  disclosureProcess: [
+    '我们会在 1 个工作日内确认收到你的报告。',
+    '我们会确认或排除该问题，并在修复期间持续同步进展。',
+    '修复发布后，我们与你商定公开披露的日期；如你愿意，会署名致谢。',
+  ],
+  disclosureSafeHarbourTitle: '安全港',
+  disclosureSafeHarbour: '我们视依照本政策进行的善意安全研究为已获授权，不会因此对你提起或支持任何法律行动。善意是指你：',
+  disclosureSafeHarbourRules: [
+    '只在你拥有或获准使用的账号和环境中测试，一旦触及不属于你的数据立即停止。',
+    '除证明问题所需的最小范围外，不查看、留存、修改或删除他人的数据。',
+    '不进行拒绝服务、垃圾信息、社会工程或物理攻击。',
+    '在公开披露前，给我们合理的修复时间。',
+  ],
   ctaKicker: '下一步',
   ctaTitle: '让 AI 接近业务，但不要让它越过边界。',
   ctaCopy: '先确认 Agent 如何识别用户、访问对象、触发动作、进入审批和留下审计，再把它接到真实业务数据上。',
@@ -114,7 +189,7 @@ const en: SecurityCopy = {
   description: 'Learn how ObjectOS gives AI agents governed access to business data while protecting permissions, approvals, and audit evidence, including on ObjectOS Enterprise self-managed deployments.',
   eyebrow: 'Security and governance',
   hero: ['Give AI agents governed access', 'to real business data.'],
-  lead: `ObjectOS is ${positioning.en.descriptor}. It lets agents read, analyze, and move work forward inside explicit boundaries for identity, permissions, tools, approvals, and audit. On ObjectOS Enterprise, data stays on your infrastructure; on every edition, every AI action is constrained by the ObjectStack runtime.`,
+  lead: `ObjectOS comes in three editions, ${positioning.en.descriptor}. It lets agents read, analyze, and move work forward inside explicit boundaries for identity, permissions, tools, approvals, and audit. On ObjectOS Enterprise, data stays on your infrastructure; on every edition, every AI action is constrained by the ObjectStack runtime.`,
   metrics: [
     { value: 'Agent', label: 'inherits user identity' },
     { value: 'Tool', label: 'governed access path' },
@@ -151,6 +226,13 @@ const en: SecurityCopy = {
     { title: 'Field security', copy: 'Sensitive fields can be hidden or read-only even when the record is visible, consistently across API, ObjectQL, and Console.' },
     { title: 'Audit logs', copy: 'Record CRUD, permission grants, session revocation, AI tool calls, and approval decisions; audit rows are immutable and can only be archived.' },
   ],
+  hubKicker: 'Go deeper',
+  hubTitle: 'The two pages behind this one',
+  hubLead: 'This page is the entry point for a security review. Two pages go further: the trust center collects the review materials, and the permissions page shows the access model as metadata a reviewer can read.',
+  hubPages: [
+    { slug: 'trust-center', title: 'Trust center', copy: 'Data residency, deployment paths, identity, approvals, audit, and the security review packet a reviewer should receive before sign-off.', cta: 'Open the trust center' },
+    { slug: 'permissions', title: 'Permissions & security', copy: 'Role, row, and field-level control declared beside the objects it protects, with the permission set a reviewer reads as a diff, enforced on people and agents alike.', cta: 'Open the permissions page' },
+  ],
   deploymentKicker: 'Where it runs',
   deploymentTitle: 'Deployment boundary',
   deploymentLead: 'ObjectOS Enterprise can operate ObjectStack inside your network: one Node.js runtime, your database, your secrets, and your ingress. Stricter environments can use file-backed artifacts and offline images.',
@@ -169,6 +251,36 @@ const en: SecurityCopy = {
     { question: 'Who owns TLS, database encryption, and secrets?', answer: 'Those are deployment responsibilities. The ObjectStack runtime provides authorization, audit, API key hashing, and settings encryption; your infrastructure owns TLS, at-rest database encryption, backups, and secret injection.' },
     { question: 'Is it suitable for regulated environments?', answer: 'ObjectOS provides the technical primitives: access control, audit, data residency, and isolated deployment. Certification depends on your running deployment, not a binary alone.' },
   ],
+  disclosureKicker: 'Found a vulnerability?',
+  disclosureTitle: 'Vulnerability disclosure',
+  disclosureLead: 'Report security problems in ObjectOS Cloud, ObjectOS Enterprise, the open-source ObjectStack runtime and packages, or this website privately by e-mail. Please do not open a public GitHub issue, discussion, or pull request for a security problem.',
+  disclosureContactLabel: 'Report to',
+  disclosureFacts: [
+    { label: 'Acknowledgement', value: 'Within one business day' },
+    { label: 'Languages', value: 'English or Chinese' },
+  ],
+  disclosureIncludeTitle: 'What to include',
+  disclosureInclude: [
+    'The product and version affected: for Cloud, the date and time you tested; for a self-managed deployment, the image or package version.',
+    'Steps to reproduce, with a proof of concept if you have one.',
+    'The impact you observed: what an attacker could read, change, or run.',
+    'Whether you have shared the finding with anyone else, and when you plan to publish it.',
+    'How to reach you, and the name you want credited, if any.',
+  ],
+  disclosureProcessTitle: 'What happens next',
+  disclosureProcess: [
+    'We acknowledge your report within one business day.',
+    'We confirm or rule out the issue and keep you updated while we fix it.',
+    'Once a fix is available, we agree a public disclosure date with you and credit you if you want.',
+  ],
+  disclosureSafeHarbourTitle: 'Safe harbour',
+  disclosureSafeHarbour: 'We consider good-faith security research under this policy authorized, and we will not bring or support legal action against you for it. Good faith means you:',
+  disclosureSafeHarbourRules: [
+    'Test only accounts and environments you own or have permission to use, and stop as soon as you reach data that is not yours.',
+    'Do not view, keep, change, or delete other people’s data beyond the minimum needed to show the issue.',
+    'Do not run denial-of-service, spam, social-engineering, or physical attacks.',
+    'Give us reasonable time to fix the issue before you disclose it publicly.',
+  ],
   ctaKicker: 'Next step',
   ctaTitle: 'Let agents work with business data without crossing the boundary.',
   ctaCopy: 'Confirm how agents identify users, access objects, trigger actions, enter approval, and leave audit evidence before connecting them to production data.',
@@ -182,7 +294,7 @@ const ja: SecurityCopy = {
   description: 'ObjectOS Enterprise のセルフマネージド環境で、ObjectOS がデータ所在地、権限、AI エージェント操作、監査証跡をどう守るか。',
   eyebrow: 'セキュリティとガバナンス',
   hero: ['データは自社ネットワーク内に。', 'AI は権限の内側で動く。'],
-  lead: `ObjectOS は ${positioning.ja.descriptor}です。ObjectOS Enterprise では ObjectStack ランタイムを自社インフラに展開でき、業務データ、ID、監査ログ、ファイル、シークレットは自社管理のままです。`,
+  lead: `ObjectOS には ${positioning.ja.descriptor} の 3 つのエディションがあります。ObjectOS Enterprise では ObjectStack ランタイムを自社インフラに展開でき、業務データ、ID、監査ログ、ファイル、シークレットは自社管理のままです。`,
   metrics: [
     { value: 'Agent', label: 'ユーザーの ID を継承' },
     { value: '5 層', label: 'ID からフィールドまでの権限モデル' },
@@ -198,11 +310,48 @@ const ja: SecurityCopy = {
   permissionKicker: '誰が何をできるか',
   permissionTitle: '権限と監査',
   permissionLead: 'ID、ロール、権限セット、レコードアクセス、フィールドセキュリティという企業ソフトウェアの語彙でアクセスを管理します。',
+  hubKicker: 'さらに詳しく',
+  hubTitle: 'このページの先にある 2 つのページ',
+  hubLead: 'このページはセキュリティレビューの入口です。トラストセンターはレビュー資料をまとめ、権限ページはアクセスモデルをレビュー担当者が読めるメタデータとして示します。',
+  hubPages: [
+    { slug: 'trust-center', title: 'トラストセンター', copy: 'データ所在地、デプロイ経路、ID、承認、監査、そしてサインオフ前にレビュー担当者が受け取るべきセキュリティレビュー資料。', cta: 'トラストセンターを開く' },
+    { slug: 'permissions', title: '権限とセキュリティ', copy: 'ロール、行、フィールド単位の制御を、保護する対象の隣で宣言します。権限セットは diff として読め、人とエージェントに同じく適用されます。', cta: '権限ページを開く' },
+  ],
   deploymentKicker: '動作場所',
   deploymentTitle: 'デプロイ境界',
   deploymentLead: '基本形は 1 つの Node.js ランタイム、自社データベース、自社シークレット、自社 ingress。より厳しい環境ではファイル制品とオフラインイメージを使えます。',
   faqKicker: 'よくある質問',
   faqTitle: 'セキュリティレビュー FAQ',
+  disclosureKicker: '脆弱性を見つけたら',
+  disclosureTitle: '脆弱性の開示',
+  disclosureLead: 'ObjectOS Cloud、ObjectOS Enterprise、オープンソースの ObjectStack ランタイムとパッケージ、または本サイトのセキュリティ問題は、メールで非公開に報告してください。セキュリティ問題について、公開の GitHub issue、ディスカッション、プルリクエストを作成しないでください。',
+  disclosureContactLabel: '報告先',
+  disclosureFacts: [
+    { label: '受領確認', value: '1 営業日以内' },
+    { label: '言語', value: '英語または中国語' },
+  ],
+  disclosureIncludeTitle: '報告に含めてほしいこと',
+  disclosureInclude: [
+    '影響を受ける製品とバージョン。Cloud ではテストした日時、セルフマネージド環境ではイメージまたはパッケージのバージョンを記載してください。',
+    '再現手順。概念実証（PoC）があれば添付してください。',
+    '確認した影響。攻撃者が何を読み取り、変更し、実行できるか。',
+    'ほかの誰かに共有したかどうかと、公開を予定している時期。',
+    '連絡先と、クレジットへの記載を希望する名前（希望する場合）。',
+  ],
+  disclosureProcessTitle: 'その後の流れ',
+  disclosureProcess: [
+    '1 営業日以内に報告の受領を確認します。',
+    '問題の有無を確認し、修正の間も進捗をお知らせします。',
+    '修正が用意できたら公開日をご相談のうえ決め、ご希望があればクレジットを記載します。',
+  ],
+  disclosureSafeHarbourTitle: 'セーフハーバー',
+  disclosureSafeHarbour: '本ポリシーに沿った善意のセキュリティ調査は許可されたものとみなし、それを理由に法的措置を取ったり支援したりすることはありません。善意とは、次のことを守っていただくことです。',
+  disclosureSafeHarbourRules: [
+    '自分が所有する、または利用を許可されたアカウントと環境だけでテストし、自分のものではないデータに触れた時点で中止する。',
+    '問題を示すのに必要な最小限を超えて、他人のデータを閲覧、保持、変更、削除しない。',
+    'サービス妨害、スパム、ソーシャルエンジニアリング、物理的な攻撃を行わない。',
+    '公開する前に、修正のための妥当な時間を設ける。',
+  ],
   ctaKicker: '次のステップ',
   ctaTitle: '試験導入の後ではなく、最初にセキュリティレビューを置く。',
   ctaCopy: 'AI エージェントを実データへ接続する前に、データ所在地、権限、監査証跡、デプロイ境界を確認します。',
@@ -216,7 +365,7 @@ const de: SecurityCopy = {
   description: 'Wie ObjectOS Datenresidenz, Berechtigungen, AI-Agent-Aktionen und Audit-Nachweise in selbst verwalteten ObjectOS-Enterprise-Umgebungen schützt.',
   eyebrow: 'Sicherheit und Governance',
   hero: ['Daten bleiben in Ihrem Netzwerk.', 'AI arbeitet innerhalb von Berechtigungen.'],
-  lead: `ObjectOS ist ${positioning.de.descriptor}. ObjectOS Enterprise betreibt die ObjectStack Runtime in Ihrer Infrastruktur; Geschäftsdaten, Identitäten, Audit-Logs, Dateien und Secrets bleiben unter Ihrer Kontrolle.`,
+  lead: `ObjectOS gibt es in drei Editionen, ${positioning.de.descriptor}. ObjectOS Enterprise betreibt die ObjectStack Runtime in Ihrer Infrastruktur; Geschäftsdaten, Identitäten, Audit-Logs, Dateien und Secrets bleiben unter Ihrer Kontrolle.`,
   residencyKicker: 'Wo Daten liegen',
   residencyTitle: 'Datenresidenz',
   residencyLead: 'ObjectOS Enterprise verlangt nicht, Geschäftsdaten in unsere Cloud zu verschieben. Die ObjectStack Runtime verbindet sich mit Ihren Datenbanken, Speichern und Identitätssystemen.',
@@ -227,11 +376,48 @@ const de: SecurityCopy = {
   permissionKicker: 'Wer was darf',
   permissionTitle: 'Berechtigungen und Audit',
   permissionLead: 'Das Modell nutzt die vertraute Sprache von Unternehmenssoftware: Identität, Rollen, Berechtigungssätze, Datensatz-Zugriff und Feldsicherheit.',
+  hubKicker: 'Weiter im Detail',
+  hubTitle: 'Die zwei Seiten hinter dieser',
+  hubLead: 'Diese Seite ist der Einstieg in eine Sicherheitsprüfung. Zwei Seiten gehen tiefer: Das Trust Center sammelt die Prüfunterlagen, die Berechtigungsseite zeigt das Zugriffsmodell als Metadaten, die ein Prüfer lesen kann.',
+  hubPages: [
+    { slug: 'trust-center', title: 'Trust Center', copy: 'Datenresidenz, Bereitstellungswege, Identität, Freigaben, Audit und das Prüfpaket, das ein Prüfer vor der Abnahme erhalten sollte.', cta: 'Trust Center öffnen' },
+    { slug: 'permissions', title: 'Berechtigungen & Sicherheit', copy: 'Rollen-, Zeilen- und Feldsteuerung, deklariert neben den Objekten, die sie schützt; das Berechtigungsset liest ein Prüfer als Diff – durchgesetzt für Menschen und Agents gleichermaßen.', cta: 'Berechtigungsseite öffnen' },
+  ],
   deploymentKicker: 'Wo es läuft',
   deploymentTitle: 'Deployment-Grenze',
   deploymentLead: 'Die Standardform ist netzwerkfreundlich: eine Node.js Runtime, Ihre Datenbank, Ihre Secrets und Ihr Ingress. Strengere Umgebungen können file-backed Artefakte und Offline-Images nutzen.',
   faqKicker: 'Häufige Fragen',
   faqTitle: 'FAQ für Sicherheitsreviews',
+  disclosureKicker: 'Schwachstelle gefunden?',
+  disclosureTitle: 'Offenlegung von Schwachstellen',
+  disclosureLead: 'Melden Sie Sicherheitsprobleme in ObjectOS Cloud, ObjectOS Enterprise, der quelloffenen ObjectStack Runtime und ihren Paketen oder auf dieser Website vertraulich per E-Mail. Bitte eröffnen Sie für ein Sicherheitsproblem kein öffentliches GitHub-Issue, keine Diskussion und keinen Pull Request.',
+  disclosureContactLabel: 'Meldung an',
+  disclosureFacts: [
+    { label: 'Eingangsbestätigung', value: 'Innerhalb eines Werktags' },
+    { label: 'Sprachen', value: 'Englisch oder Chinesisch' },
+  ],
+  disclosureIncludeTitle: 'Was die Meldung enthalten sollte',
+  disclosureInclude: [
+    'Betroffenes Produkt und Version: bei Cloud Datum und Uhrzeit des Tests, bei selbst betriebenen Installationen die Image- oder Paketversion.',
+    'Schritte zur Reproduktion, mit einem Proof of Concept, falls vorhanden.',
+    'Die beobachtete Auswirkung: was ein Angreifer lesen, ändern oder ausführen könnte.',
+    'Ob Sie den Fund mit anderen geteilt haben und wann Sie ihn veröffentlichen möchten.',
+    'Wie wir Sie erreichen und unter welchem Namen Sie genannt werden möchten, falls gewünscht.',
+  ],
+  disclosureProcessTitle: 'Wie es weitergeht',
+  disclosureProcess: [
+    'Wir bestätigen den Eingang Ihrer Meldung innerhalb eines Werktags.',
+    'Wir bestätigen oder verwerfen das Problem und halten Sie während der Behebung auf dem Laufenden.',
+    'Sobald eine Korrektur verfügbar ist, vereinbaren wir mit Ihnen einen Termin für die Veröffentlichung und nennen Sie auf Wunsch namentlich.',
+  ],
+  disclosureSafeHarbourTitle: 'Rechtlicher Schutz',
+  disclosureSafeHarbour: 'Sicherheitsforschung in gutem Glauben nach dieser Richtlinie betrachten wir als autorisiert; wir leiten deswegen keine rechtlichen Schritte gegen Sie ein und unterstützen auch keine. Guter Glaube heißt, dass Sie:',
+  disclosureSafeHarbourRules: [
+    'nur mit Konten und Umgebungen testen, die Ihnen gehören oder für die Sie eine Erlaubnis haben, und sofort aufhören, sobald Sie auf fremde Daten stoßen;',
+    'fremde Daten nicht über das zum Nachweis nötige Minimum hinaus ansehen, speichern, ändern oder löschen;',
+    'keine Denial-of-Service-, Spam-, Social-Engineering- oder physischen Angriffe durchführen;',
+    'uns vor einer Veröffentlichung angemessen Zeit für die Behebung geben.',
+  ],
   ctaKicker: 'Nächster Schritt',
   ctaTitle: 'Sicherheitsreview zuerst, nicht nach dem Pilot.',
   ctaCopy: 'Bestätigen Sie Datenresidenz, Berechtigungen, Audit-Nachweise und Deployment-Form, bevor AI Agents echte Geschäftsdaten berühren.',
@@ -245,7 +431,7 @@ const es: SecurityCopy = {
   description: 'Cómo ObjectOS protege residencia de datos, permisos, acciones de agentes de AI y evidencia de auditoría en despliegues autogestionados de ObjectOS Enterprise.',
   eyebrow: 'Seguridad y gobierno',
   hero: ['Los datos permanecen en tu red.', 'La AI trabaja dentro de permisos.'],
-  lead: `ObjectOS es ${positioning.es.descriptor}. ObjectOS Enterprise opera el runtime de ObjectStack en tu infraestructura; registros de negocio, identidades, auditoría, archivos y secretos siguen bajo tu control.`,
+  lead: `ObjectOS se ofrece en tres ediciones, ${positioning.es.descriptor}. ObjectOS Enterprise opera el runtime de ObjectStack en tu infraestructura; registros de negocio, identidades, auditoría, archivos y secretos siguen bajo tu control.`,
   residencyKicker: 'Dónde viven los datos',
   residencyTitle: 'Residencia de datos',
   residencyLead: 'ObjectOS Enterprise no exige mover datos de negocio a nuestra nube. El runtime de ObjectStack se conecta a tus bases de datos, almacenamiento e identidad.',
@@ -256,11 +442,48 @@ const es: SecurityCopy = {
   permissionKicker: 'Quién puede hacer qué',
   permissionTitle: 'Permisos y auditoría',
   permissionLead: 'El modelo usa vocabulario de software empresarial: identidad, roles, conjuntos de permisos, acceso a registros y seguridad de campos.',
+  hubKicker: 'Profundizar',
+  hubTitle: 'Las dos páginas detrás de esta',
+  hubLead: 'Esta página es el punto de entrada de una revisión de seguridad. Dos páginas van más allá: el centro de confianza reúne los materiales de revisión y la página de permisos muestra el modelo de acceso como metadatos que un revisor puede leer.',
+  hubPages: [
+    { slug: 'trust-center', title: 'Centro de confianza', copy: 'Residencia de datos, rutas de despliegue, identidad, aprobaciones, auditoría y el paquete de revisión de seguridad que un revisor debería recibir antes de aprobar.', cta: 'Abrir el centro de confianza' },
+    { slug: 'permissions', title: 'Permisos y seguridad', copy: 'Control por rol, fila y campo declarado junto a los objetos que protege; el revisor lee el conjunto de permisos como un diff, aplicado por igual a personas y agentes.', cta: 'Abrir la página de permisos' },
+  ],
   deploymentKicker: 'Dónde se ejecuta',
   deploymentTitle: 'Límite de despliegue',
   deploymentLead: 'La forma predeterminada es amigable para redes empresariales: un runtime Node.js, tu base de datos, tus secretos y tu entrada. Entornos más estrictos pueden usar artefactos locales e imágenes offline.',
   faqKicker: 'Preguntas frecuentes',
   faqTitle: 'FAQ de revisión de seguridad',
+  disclosureKicker: '¿Encontraste una vulnerabilidad?',
+  disclosureTitle: 'Divulgación de vulnerabilidades',
+  disclosureLead: 'Informa en privado, por correo electrónico, de los problemas de seguridad en ObjectOS Cloud, ObjectOS Enterprise, el runtime de código abierto ObjectStack y sus paquetes, o en este sitio web. No abras un issue, una discusión ni un pull request públicos en GitHub para un problema de seguridad.',
+  disclosureContactLabel: 'Escribe a',
+  disclosureFacts: [
+    { label: 'Acuse de recibo', value: 'En un día hábil' },
+    { label: 'Idiomas', value: 'Inglés o chino' },
+  ],
+  disclosureIncludeTitle: 'Qué incluir',
+  disclosureInclude: [
+    'El producto y la versión afectados: en Cloud, la fecha y la hora de la prueba; en un despliegue autogestionado, la versión de la imagen o del paquete.',
+    'Los pasos para reproducirlo, con una prueba de concepto si la tienes.',
+    'El impacto observado: qué podría leer, cambiar o ejecutar un atacante.',
+    'Si has compartido el hallazgo con alguien más y cuándo piensas publicarlo.',
+    'Cómo contactarte y el nombre con el que quieres aparecer en los créditos, si lo deseas.',
+  ],
+  disclosureProcessTitle: 'Qué pasa después',
+  disclosureProcess: [
+    'Confirmamos la recepción de tu informe en un día hábil.',
+    'Confirmamos o descartamos el problema y te mantenemos al tanto mientras lo corregimos.',
+    'Cuando haya una corrección, acordamos contigo la fecha de divulgación pública y te damos crédito si lo deseas.',
+  ],
+  disclosureSafeHarbourTitle: 'Puerto seguro',
+  disclosureSafeHarbour: 'Consideramos autorizada la investigación de seguridad de buena fe realizada conforme a esta política, y no emprenderemos ni apoyaremos acciones legales contra ti por ella. Buena fe significa que:',
+  disclosureSafeHarbourRules: [
+    'Pruebas solo con cuentas y entornos que son tuyos o que tienes permiso para usar, y te detienes en cuanto llegas a datos que no son tuyos.',
+    'No ves, conservas, cambias ni borras datos de otras personas más allá del mínimo necesario para demostrar el problema.',
+    'No realizas ataques de denegación de servicio, spam, ingeniería social ni ataques físicos.',
+    'Nos das un tiempo razonable para corregirlo antes de divulgarlo públicamente.',
+  ],
   ctaKicker: 'Siguiente paso',
   ctaTitle: 'Pon la revisión de seguridad primero, no después del piloto.',
   ctaCopy: 'Confirma residencia de datos, permisos, auditoría y despliegue antes de conectar agentes de AI a datos reales.',
@@ -274,7 +497,7 @@ const fr: SecurityCopy = {
   description: 'Comment ObjectOS protège résidence des données, permissions, actions des agents AI et preuves d’audit dans les déploiements autogérés ObjectOS Enterprise.',
   eyebrow: 'Sécurité et gouvernance',
   hero: ['Les données restent dans votre réseau.', 'L’AI agit dans les permissions.'],
-  lead: `ObjectOS est ${positioning.fr.descriptor}. ObjectOS Enterprise exploite le runtime ObjectStack dans votre infrastructure ; données métier, identités, journaux d’audit, fichiers et secrets restent sous votre contrôle.`,
+  lead: `ObjectOS existe en trois éditions, ${positioning.fr.descriptor}. ObjectOS Enterprise exploite le runtime ObjectStack dans votre infrastructure ; données métier, identités, journaux d’audit, fichiers et secrets restent sous votre contrôle.`,
   residencyKicker: 'Où vivent les données',
   residencyTitle: 'Résidence des données',
   residencyLead: 'ObjectOS Enterprise n’exige pas de déplacer vos données métier dans notre cloud. Le runtime ObjectStack se connecte à vos bases de données, stockages et systèmes d’identité.',
@@ -285,11 +508,48 @@ const fr: SecurityCopy = {
   permissionKicker: 'Qui peut faire quoi',
   permissionTitle: 'Permissions et audit',
   permissionLead: 'Le modèle utilise le vocabulaire du logiciel d’entreprise : identité, rôles, ensembles de permissions, accès aux enregistrements et sécurité des champs.',
+  hubKicker: 'Aller plus loin',
+  hubTitle: 'Les deux pages derrière celle-ci',
+  hubLead: 'Cette page est le point d’entrée d’une revue de sécurité. Deux pages vont plus loin : le centre de confiance rassemble les éléments de revue, et la page des permissions montre le modèle d’accès sous forme de métadonnées qu’un relecteur peut lire.',
+  hubPages: [
+    { slug: 'trust-center', title: 'Centre de confiance', copy: 'Résidence des données, modes de déploiement, identité, approbations, audit et le dossier de revue de sécurité qu’un relecteur devrait recevoir avant validation.', cta: 'Ouvrir le centre de confiance' },
+    { slug: 'permissions', title: 'Permissions et sécurité', copy: 'Contrôle par rôle, par ligne et par champ, déclaré à côté des objets qu’il protège ; le relecteur lit le jeu de permissions comme un diff, appliqué aux personnes comme aux agents.', cta: 'Ouvrir la page des permissions' },
+  ],
   deploymentKicker: 'Où ça tourne',
   deploymentTitle: 'Frontière de déploiement',
   deploymentLead: 'La forme par défaut convient au réseau d’entreprise : un runtime Node.js, votre base, vos secrets et votre ingress. Les environnements stricts peuvent utiliser des artefacts locaux et des images offline.',
   faqKicker: 'Questions fréquentes',
   faqTitle: 'FAQ de revue sécurité',
+  disclosureKicker: 'Vous avez trouvé une vulnérabilité ?',
+  disclosureTitle: 'Divulgation des vulnérabilités',
+  disclosureLead: 'Signalez en privé, par e-mail, tout problème de sécurité dans ObjectOS Cloud, ObjectOS Enterprise, le runtime open source ObjectStack et ses paquets, ou sur ce site. N’ouvrez pas d’issue, de discussion ni de pull request publics sur GitHub pour un problème de sécurité.',
+  disclosureContactLabel: 'Écrire à',
+  disclosureFacts: [
+    { label: 'Accusé de réception', value: 'Sous un jour ouvré' },
+    { label: 'Langues', value: 'Anglais ou chinois' },
+  ],
+  disclosureIncludeTitle: 'Que mettre dans le signalement',
+  disclosureInclude: [
+    'Le produit et la version concernés : pour Cloud, la date et l’heure du test ; pour un déploiement autogéré, la version de l’image ou du paquet.',
+    'Les étapes de reproduction, avec une preuve de concept si vous en avez une.',
+    'L’impact constaté : ce qu’un attaquant pourrait lire, modifier ou exécuter.',
+    'Si vous avez partagé la découverte avec d’autres personnes, et quand vous comptez la publier.',
+    'Comment vous joindre, et le nom sous lequel vous souhaitez être crédité, le cas échéant.',
+  ],
+  disclosureProcessTitle: 'Et ensuite',
+  disclosureProcess: [
+    'Nous accusons réception de votre signalement sous un jour ouvré.',
+    'Nous confirmons ou écartons le problème et vous tenons informé pendant la correction.',
+    'Une fois le correctif disponible, nous convenons avec vous d’une date de divulgation publique et vous créditons si vous le souhaitez.',
+  ],
+  disclosureSafeHarbourTitle: 'Protection des chercheurs',
+  disclosureSafeHarbour: 'Nous considérons comme autorisée la recherche en sécurité menée de bonne foi dans le cadre de cette politique, et nous n’engagerons ni ne soutiendrons aucune action en justice contre vous à ce titre. De bonne foi signifie que vous :',
+  disclosureSafeHarbourRules: [
+    'testez uniquement des comptes et des environnements qui vous appartiennent ou que vous êtes autorisé à utiliser, et vous arrêtez dès que vous atteignez des données qui ne sont pas les vôtres ;',
+    'ne consultez, ne conservez, ne modifiez ni ne supprimez les données d’autrui au-delà du minimum nécessaire pour démontrer le problème ;',
+    'ne menez ni déni de service, ni spam, ni ingénierie sociale, ni attaque physique ;',
+    'nous laissez un délai raisonnable pour corriger le problème avant toute divulgation publique.',
+  ],
   ctaKicker: 'Étape suivante',
   ctaTitle: 'Placez la revue sécurité avant le pilote.',
   ctaCopy: 'Validez résidence des données, permissions, preuves d’audit et déploiement avant de connecter des agents AI aux données réelles.',
@@ -303,7 +563,7 @@ const ko: SecurityCopy = {
   description: 'ObjectOS Enterprise 자체 운영 환경에서 ObjectOS가 데이터 레지던시, 권한, AI 에이전트 작업, 감사 증거를 보호하는 방식.',
   eyebrow: '보안 및 거버넌스',
   hero: ['데이터는 네트워크 안에 유지하고,', 'AI는 권한 경계 안에서 작동합니다'],
-  lead: `ObjectOS는 ${positioning.ko.descriptor}입니다. ObjectOS Enterprise는 ObjectStack 런타임을 사용자의 인프라에서 운영하며, 비즈니스 기록, ID, 감사 로그, 파일과 시크릿은 사용자가 통제합니다.`,
+  lead: `ObjectOS는 ${positioning.ko.descriptor}의 세 가지 에디션으로 제공됩니다. ObjectOS Enterprise는 ObjectStack 런타임을 사용자의 인프라에서 운영하며, 비즈니스 기록, ID, 감사 로그, 파일과 시크릿은 사용자가 통제합니다.`,
   residencyKicker: '데이터가 있는 곳',
   residencyTitle: '데이터 레지던시',
   residencyLead: 'ObjectOS Enterprise는 비즈니스 데이터를 당사 클라우드로 옮기라고 요구하지 않습니다. ObjectStack 런타임은 사용자의 데이터베이스, 스토리지, ID 시스템에 연결됩니다.',
@@ -314,11 +574,48 @@ const ko: SecurityCopy = {
   permissionKicker: '누가 무엇을 할 수 있는가',
   permissionTitle: '권한 및 감사',
   permissionLead: '접근 모델은 엔터프라이즈 소프트웨어의 언어인 ID, 역할, 권한 세트, 레코드 접근, 필드 보안을 사용합니다.',
+  hubKicker: '더 깊이 보기',
+  hubTitle: '이 페이지 뒤의 두 페이지',
+  hubLead: '이 페이지는 보안 검토의 입구입니다. 두 페이지가 더 깊이 다룹니다. 트러스트 센터는 검토 자료를 모으고, 권한 페이지는 접근 모델을 검토자가 읽을 수 있는 메타데이터로 보여 줍니다.',
+  hubPages: [
+    { slug: 'trust-center', title: '트러스트 센터', copy: '데이터 소재지, 배포 경로, 신원, 승인, 감사, 그리고 검토자가 승인 전에 받아야 할 보안 검토 자료.', cta: '트러스트 센터 열기' },
+    { slug: 'permissions', title: '권한과 보안', copy: '역할, 행, 필드 수준의 제어를 보호 대상 객체 옆에 선언하고, 검토자는 권한 집합을 diff로 읽습니다. 사람과 에이전트에 똑같이 적용됩니다.', cta: '권한 페이지 열기' },
+  ],
   deploymentKicker: '실행 위치',
   deploymentTitle: '배포 경계',
   deploymentLead: '기본 형태는 하나의 Node.js 런타임, 사용자의 데이터베이스, 시크릿, ingress입니다. 더 엄격한 환경은 파일 기반 아티팩트와 오프라인 이미지를 사용할 수 있습니다.',
   faqKicker: '자주 묻는 질문',
   faqTitle: '보안 검토 FAQ',
+  disclosureKicker: '취약점을 발견했나요?',
+  disclosureTitle: '취약점 공개',
+  disclosureLead: 'ObjectOS Cloud, ObjectOS Enterprise, 오픈 소스 ObjectStack 런타임과 패키지, 또는 이 웹사이트의 보안 문제는 이메일로 비공개 신고해 주세요. 보안 문제로 공개 GitHub 이슈, 토론, 풀 리퀘스트를 만들지 마세요.',
+  disclosureContactLabel: '신고 주소',
+  disclosureFacts: [
+    { label: '접수 확인', value: '영업일 기준 1일 이내' },
+    { label: '언어', value: '영어 또는 중국어' },
+  ],
+  disclosureIncludeTitle: '신고에 포함할 내용',
+  disclosureInclude: [
+    '영향을 받는 제품과 버전: Cloud는 테스트한 날짜와 시간, 자체 운영 배포는 이미지 또는 패키지 버전.',
+    '재현 단계와, 있다면 개념 증명(PoC).',
+    '확인한 영향: 공격자가 무엇을 읽고, 바꾸고, 실행할 수 있는지.',
+    '다른 사람과 공유했는지 여부와 공개할 계획인 시점.',
+    '연락 방법과, 원한다면 감사 표기에 쓸 이름.',
+  ],
+  disclosureProcessTitle: '이후 절차',
+  disclosureProcess: [
+    '영업일 기준 1일 이내에 신고 접수를 확인합니다.',
+    '문제를 확인하거나 배제하고, 수정하는 동안 진행 상황을 알려 드립니다.',
+    '수정이 준비되면 공개 일정을 함께 정하고, 원하시면 이름을 밝혀 감사를 표합니다.',
+  ],
+  disclosureSafeHarbourTitle: '세이프 하버',
+  disclosureSafeHarbour: '이 정책에 따른 선의의 보안 연구는 허가된 것으로 보며, 이를 이유로 법적 조치를 취하거나 지원하지 않습니다. 선의란 다음을 지키는 것을 뜻합니다.',
+  disclosureSafeHarbourRules: [
+    '본인이 소유하거나 사용 허가를 받은 계정과 환경에서만 테스트하고, 본인 것이 아닌 데이터에 닿으면 즉시 멈춥니다.',
+    '문제를 보여 주는 데 필요한 최소한을 넘어 다른 사람의 데이터를 보거나, 보관하거나, 바꾸거나, 삭제하지 않습니다.',
+    '서비스 거부, 스팸, 사회공학, 물리적 공격을 하지 않습니다.',
+    '공개하기 전에 수정할 합리적인 시간을 줍니다.',
+  ],
   ctaKicker: '다음 단계',
   ctaTitle: '파일럿 이후가 아니라 처음부터 보안 검토를 시작하세요.',
   ctaCopy: 'AI 에이전트를 실제 비즈니스 데이터에 연결하기 전에 데이터 레지던시, 권한, 감사 증거, 배포 형태를 확인하세요.',

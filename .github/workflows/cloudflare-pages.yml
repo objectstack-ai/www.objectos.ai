@@ -5,6 +5,7 @@ on:
     branches:
       - main
   pull_request:
+  merge_group:
   workflow_dispatch:
 
 permissions:
@@ -47,15 +48,54 @@ jobs:
         run: pnpm seo:smoke
 
       - name: Create Pages project
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: pnpm dlx wrangler@3.90.0 pages project create blog-objectos-ai --production-branch=main || true
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: Deploy
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: pnpm dlx wrangler@3.90.0 pages deploy dist --project-name=blog-objectos-ai --branch=main --commit-dirty=true
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+  # Read-only check of the live site after a production deploy (#336, ruled on
+  # #267): fetches the home, locale homes, sitemaps and the newest post, and on
+  # failure fails this job and opens an issue labelled `site`. No rollback.
+  # A separate job on purpose: the required check `Build and deploy` and the
+  # pull_request / merge_group paths are untouched, so a probe failure never
+  # blocks a merge. Logic and the newest-post derivation live in
+  # scripts/post-deploy-probe.mjs, runnable locally with --base-url.
+  probe:
+    name: Post-deploy probe
+    needs: deploy
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Probe the live site
+        run: node scripts/post-deploy-probe.mjs --open-issue
+        env:
+          GH_TOKEN: ${{ github.token }}

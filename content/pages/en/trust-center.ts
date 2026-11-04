@@ -38,7 +38,7 @@ const page = {
         eyebrow: 'Boundaries',
         title: 'Keep sensitive business data inside controlled infrastructure',
         copy:
-          'On ObjectOS Enterprise — from its single-node entry option, Business Self-Managed, up — the runtime, your business data, user identities, audit log, files, and secrets all live in your own infrastructure; unless you configure external providers, they stay inside that boundary. ObjectOS Cloud is operated by us.',
+          'On ObjectOS Enterprise — from its Enterprise Single-Node entry option up — the runtime, your business data, user identities, audit log, files, and secrets all live in your own infrastructure; unless you configure external providers, they stay inside that boundary. ObjectOS Cloud is operated by us.',
         items: [
           {
             title: 'Data residency',
@@ -80,7 +80,7 @@ const page = {
       columns: ['Review area', 'Available now', 'Enterprise packet'],
       rows: [
         ['Deployment', 'Self-hosted open-source ObjectStack runtime', 'VPC, private network, air-gapped deployment notes'],
-        ['Identity', 'Project identity and permission metadata; SSO / SAML from ObjectOS Business', 'SCIM and identity lifecycle, admin roles, session policy mapping'],
+        ['Identity', 'Project identity and permission metadata; SSO / SAML on ObjectOS Enterprise', 'SCIM and identity lifecycle, admin roles, session policy mapping'],
         ['AI governance', 'MCP tools, object permissions, approvals', 'Model routing policy and prompt/data boundary report'],
         ['Audit', 'Runtime audit design and metadata review', 'Exportable audit retention and investigation workflow'],
       ],

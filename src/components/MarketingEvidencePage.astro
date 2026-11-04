@@ -58,8 +58,8 @@ const ph = (text: string): string => phraseHtml(text, locale);
       <h1 set:html={ph(page.heroTitle)} />
       <p class="lead">{page.lead}</p>
       <div class="actions">
-        <a class="button primary" href={localizeHref(page.primary.href)}>{page.primary.label}</a>
-        <a class="button secondary" href={localizeHref(page.secondary.href)}>{page.secondary.label}</a>
+        <a class="btn btn-primary" href={localizeHref(page.primary.href)}>{page.primary.label}</a>
+        <a class="btn btn-secondary" href={localizeHref(page.secondary.href)}>{page.secondary.label}</a>
       </div>
     </div>
     <div class="hero-panel" aria-label={ui.loopLabel}>
@@ -94,7 +94,7 @@ const ph = (text: string): string => phraseHtml(text, locale);
     </div>
   </section>
 
-  <dl class="metrics">
+  <dl class="metrics card-grid">
     {page.metrics.map((metric) => (
       <div>
         <dt>{metric.value}</dt>
@@ -225,22 +225,9 @@ const ph = (text: string): string => phraseHtml(text, locale);
 </article>
 
 <style>
-  /* Text accents ("Guide" / "Embed" / "Human" labels, arrows, links): each
-     clears 4.5:1 on --surface and --bg in its theme. Light on --surface:
-     green 4.99, blue 6.01, amber 5.34, red 5.09. Dark on --surface: green
-     7.20, blue 7.03, amber 7.74, red 6.92. Same dark values as the home page. */
-  .evidence-page {
-    --proof-green: #087f5b;
-    --proof-blue: #3157d8;
-    --proof-amber: #93600f;
-    --proof-red: #b94949;
-  }
-  :global(:root[data-theme='dark']) .evidence-page {
-    --proof-green: #3fbf8f;
-    --proof-blue: #8fa3ff;
-    --proof-amber: #e3a54a;
-    --proof-red: #f08a8a;
-  }
+  /* Colours, type and boxes are the Base.astro tokens: --green is the
+     emphasis (eyebrows, step and card labels, list marks), --brand the
+     interaction (arrows, card hover), --ink the action (buttons). */
   .evidence-page :global(h1),
   .evidence-page :global(h2),
   .evidence-page :global(h3),
@@ -262,13 +249,6 @@ const ph = (text: string): string => phraseHtml(text, locale);
   .next > * {
     min-width: 0;
   }
-  .eyebrow {
-    color: var(--proof-green);
-    font-size: 0.75rem;
-    font-weight: 760;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
   /* Balanced: "What changes, who reviews it, what runs" left "runs" alone at
      every desktop width on all 15 pages. */
   h1,
@@ -279,11 +259,14 @@ const ph = (text: string): string => phraseHtml(text, locale);
   }
   /* zh and ja headings break only at the <wbr> between phrases, so a word
      such as 可投入 or 環境 is never split across lines; a phrase wider than
-     the line still breaks, as a last resort. */
+     the line still breaks, as a last resort. ko breaks at its own spaces;
+     it needs no <wbr>. */
   h1:lang(zh),
   h1:lang(ja),
+  h1:lang(ko),
   h2:lang(zh),
-  h2:lang(ja) {
+  h2:lang(ja),
+  h2:lang(ko) {
     word-break: keep-all;
     overflow-wrap: anywhere;
   }
@@ -294,16 +277,17 @@ const ph = (text: string): string => phraseHtml(text, locale);
      binding at 962px of viewport height, so a tall desktop is unchanged.
      Tablets keep the 2.9rem floor; phones take the fixed size below. */
   h1 {
-    max-width: 780px;
+    max-width: var(--measure-wide);
     margin: 0 0 1.35rem;
-    font-size: clamp(2.9rem, min(5.1vw, 7.4vh), 4.45rem);
-    line-height: 1.04;
+    font-size: var(--fs-h1);
+    line-height: var(--lh-display);
+    letter-spacing: -0.01em;
   }
   .lead {
-    max-width: 720px;
+    max-width: var(--measure-prose);
     color: var(--ink-soft);
-    font-size: 1.08rem;
-    line-height: 1.85;
+    font-size: var(--fs-17);
+    line-height: var(--lh-prose);
   }
   .actions {
     display: flex;
@@ -318,34 +302,11 @@ const ph = (text: string): string => phraseHtml(text, locale);
       padding-top: 0.25rem;
     }
     .lead {
-      line-height: 1.72;
+      line-height: var(--lh-body);
     }
     .actions {
       margin-top: 1.4rem;
     }
-  }
-  .button {
-    min-height: 44px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 999px;
-    padding: 0.68rem 1rem;
-    border: 1px solid transparent;
-    font-size: 0.9rem;
-    font-weight: 720;
-    text-decoration: none;
-    text-align: center;
-  }
-  .button.primary {
-    color: var(--surface);
-    background: var(--ink);
-    border-color: var(--ink);
-  }
-  .button.secondary {
-    color: var(--ink);
-    background: var(--surface);
-    border-color: var(--line);
   }
   .hero-panel {
     position: relative;
@@ -354,11 +315,11 @@ const ph = (text: string): string => phraseHtml(text, locale);
     gap: 0.8rem;
     padding: 1.1rem;
     border: 1px solid var(--line);
-    border-radius: 8px;
+    border-radius: var(--r-card);
     background:
-      linear-gradient(135deg, color-mix(in srgb, var(--surface) 88%, transparent), color-mix(in srgb, var(--accent-soft) 32%, transparent)),
+      linear-gradient(135deg, color-mix(in srgb, var(--surface) 88%, transparent), color-mix(in srgb, var(--brand-soft) 32%, transparent)),
       var(--surface);
-    box-shadow: 0 30px 70px -54px rgba(var(--shadow), 0.72);
+    box-shadow: var(--shadow-lg);
   }
   .hero-snapshot {
     display: block;
@@ -369,7 +330,7 @@ const ph = (text: string): string => phraseHtml(text, locale);
     object-fit: cover;
     object-position: center;
     border: 1px solid var(--line);
-    border-radius: 7px;
+    border-radius: var(--r-control);
     background: var(--surface-sunk);
   }
   /* Dark theme: the hero is a white product render, which stayed a glaring
@@ -383,65 +344,55 @@ const ph = (text: string): string => phraseHtml(text, locale);
     min-height: 124px;
     padding: 0.85rem;
     border: 1px solid var(--line);
-    border-radius: 7px;
+    border-radius: var(--r-control);
     background: var(--surface);
   }
+  /* The three step labels are one colour: the blue and amber they used to
+     take were decoration, and amber is a status colour. */
   .loop-step span {
     display: inline-flex;
     margin-bottom: 0.42rem;
-    color: var(--proof-green);
-    font: 760 0.68rem/1 var(--font-mono);
+    color: var(--green);
+    font: 700 var(--fs-12)/1 var(--font-mono);
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
   .loop-step strong {
     display: block;
     color: var(--ink);
-    font-size: 1rem;
-    line-height: 1.3;
+    font-size: var(--fs-16);
+    line-height: var(--lh-heading);
   }
   .loop-step small {
     display: block;
     margin-top: 0.24rem;
     color: var(--muted);
-    font-size: 0.78rem;
-    line-height: 1.5;
-  }
-  .loop-step.review span {
-    color: var(--proof-blue);
-  }
-  .loop-step.runtime span {
-    color: var(--proof-amber);
+    font-size: var(--fs-13);
+    line-height: var(--lh-ui);
   }
   .loop-line {
     display: none;
   }
   .metrics {
-    display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 1px;
     margin: 0 0 5rem;
-    overflow: hidden;
-    background: var(--line);
-    border: 1px solid var(--line);
-    border-radius: 8px;
   }
   .metrics div {
     min-height: 150px;
     padding: 1.2rem;
-    background: var(--surface);
   }
   .metrics dt {
     color: var(--ink);
-    font-size: 2rem;
-    font-weight: 780;
-    line-height: 1.05;
+    font-size: var(--fs-30);
+    font-weight: 700;
+    line-height: var(--lh-display);
+    font-variant-numeric: tabular-nums;
   }
   .metrics dd {
     margin: 0.55rem 0 0;
     color: var(--ink-soft);
-    font-size: 0.86rem;
-    line-height: 1.55;
+    font-size: var(--fs-14);
+    line-height: var(--lh-ui);
   }
   .artifact,
   .section,
@@ -449,7 +400,7 @@ const ph = (text: string): string => phraseHtml(text, locale);
   .checklist,
   .faq,
   .next {
-    padding: 5rem 0;
+    padding: var(--space-section) 0;
     border-top: 1px solid var(--line);
     scroll-margin-top: 104px;
   }
@@ -464,27 +415,27 @@ const ph = (text: string): string => phraseHtml(text, locale);
   .checklist h2,
   .next h2 {
     margin: 0 0 0.9rem;
-    font-size: clamp(2rem, 4vw, 3.2rem);
-    line-height: 1.12;
+    font-size: var(--fs-h2);
+    line-height: var(--lh-heading);
   }
   .artifact p,
   .section-head p,
   .checklist p {
     color: var(--ink-soft);
-    line-height: 1.8;
+    line-height: var(--lh-prose);
   }
   pre {
     margin: 0;
     overflow-x: auto;
     border: 1px solid color-mix(in srgb, var(--line) 84%, transparent);
-    border-radius: 8px;
-    background: #111713;
-    color: #edf7ef;
+    border-radius: var(--r-card);
+    background: var(--panel-ink);
+    color: var(--on-panel);
     padding: 1.15rem;
-    box-shadow: 0 28px 70px -56px rgba(0, 0, 0, 0.82);
+    box-shadow: var(--shadow-md);
   }
   code {
-    font: 0.82rem/1.7 var(--font-mono);
+    font: var(--fs-13)/var(--lh-body) var(--font-mono);
   }
   .artifact ol,
   .checklist ul {
@@ -499,7 +450,7 @@ const ph = (text: string): string => phraseHtml(text, locale);
     position: relative;
     padding: 0.85rem 0.95rem 0.85rem 2.45rem;
     border: 1px solid var(--line);
-    border-radius: 8px;
+    border-radius: var(--r-card);
     background: var(--surface);
     color: var(--ink-soft);
   }
@@ -511,15 +462,15 @@ const ph = (text: string): string => phraseHtml(text, locale);
     left: 1rem;
     width: 0.55rem;
     height: 0.55rem;
-    border-radius: 50%;
-    background: var(--proof-green);
+    border-radius: var(--r-pill);
+    background: var(--green);
   }
   .section-head {
-    max-width: 760px;
+    max-width: var(--measure-prose);
     margin-bottom: 1.45rem;
   }
   .section-head.compact {
-    max-width: 820px;
+    max-width: var(--measure-wide);
   }
   /* Six tracks, so a row holds three cards (span 2) or two (span 3): the
      count decides the rows (src/lib/card-rows.ts), and no section ends on a
@@ -545,7 +496,7 @@ const ph = (text: string): string => phraseHtml(text, locale);
     min-height: 210px;
     padding: 1.2rem;
     border: 1px solid var(--line);
-    border-radius: 8px;
+    border-radius: var(--r-card);
     background: var(--surface);
   }
   /* Child combinator: a descendant selector also caught the arrow inside a
@@ -553,15 +504,15 @@ const ph = (text: string): string => phraseHtml(text, locale);
   .item > span {
     display: inline-flex;
     margin-bottom: 1.2rem;
-    color: var(--proof-blue);
-    font: 760 0.68rem/1 var(--font-mono);
+    color: var(--green);
+    font: 700 var(--fs-12)/1 var(--font-mono);
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
   .item h3 {
     margin-bottom: 0.55rem;
-    font-size: 1.05rem;
-    line-height: 1.32;
+    font-size: var(--fs-18);
+    line-height: var(--lh-heading);
   }
   .item h3 a {
     color: inherit;
@@ -581,18 +532,18 @@ const ph = (text: string): string => phraseHtml(text, locale);
     text-decoration: underline;
   }
   .item-arrow {
-    color: var(--proof-blue);
+    color: var(--brand);
   }
   .item p {
     margin: 0;
     color: var(--ink-soft);
-    font-size: 0.9rem;
-    line-height: 1.72;
+    font-size: var(--fs-14);
+    line-height: var(--lh-prose);
   }
   .table-wrap {
     overflow-x: auto;
     border: 1px solid var(--line);
-    border-radius: 8px;
+    border-radius: var(--r-card);
     background: var(--surface);
   }
   table {
@@ -606,12 +557,13 @@ const ph = (text: string): string => phraseHtml(text, locale);
     border-bottom: 1px solid var(--line);
     text-align: left;
     vertical-align: top;
-    font-size: 0.88rem;
+    font-size: var(--fs-14);
+    font-variant-numeric: tabular-nums;
   }
   th {
     color: var(--muted);
-    font-size: 0.72rem;
-    letter-spacing: 0.06em;
+    font-size: var(--fs-12);
+    letter-spacing: 0.08em;
     text-transform: uppercase;
   }
   td {
@@ -640,11 +592,11 @@ const ph = (text: string): string => phraseHtml(text, locale);
     }
     .table-wrap::-webkit-scrollbar-track {
       background: color-mix(in srgb, var(--surface-sunk) 70%, transparent);
-      border-radius: 999px;
+      border-radius: var(--r-pill);
     }
     .table-wrap::-webkit-scrollbar-thumb {
       background: color-mix(in srgb, var(--ink) 32%, transparent);
-      border-radius: 999px;
+      border-radius: var(--r-pill);
     }
     @supports (animation-timeline: scroll(self inline)) {
       .table-wrap {
@@ -679,7 +631,7 @@ const ph = (text: string): string => phraseHtml(text, locale);
       letter-spacing: 0.02em;
     }
     td {
-      font-size: 0.82rem;
+      font-size: var(--fs-13);
     }
   }
   .checklist {
@@ -694,20 +646,20 @@ const ph = (text: string): string => phraseHtml(text, locale);
   }
   details {
     border: 1px solid var(--line);
-    border-radius: 8px;
+    border-radius: var(--r-card);
     background: var(--surface);
   }
   summary {
     cursor: pointer;
     padding: 1rem 1.1rem;
     color: var(--ink);
-    font-weight: 720;
+    font-weight: 700;
   }
   details p {
     margin: 0;
     padding: 0 1.1rem 1.1rem;
     color: var(--ink-soft);
-    line-height: 1.75;
+    line-height: var(--lh-prose);
   }
   .next {
     display: grid;
@@ -726,18 +678,22 @@ const ph = (text: string): string => phraseHtml(text, locale);
     min-height: 132px;
     padding: 1rem;
     border: 1px solid var(--line);
-    border-radius: 8px;
+    border-radius: var(--r-card);
     background: var(--surface);
     text-decoration: none;
+    transition: border-color 0.18s ease;
+  }
+  .next-links a:hover {
+    border-color: color-mix(in srgb, var(--brand) 40%, var(--line));
   }
   .next-links strong {
     color: var(--ink);
-    line-height: 1.3;
+    line-height: var(--lh-heading);
   }
   .next-links span {
     color: var(--ink-soft);
-    font-size: 0.84rem;
-    line-height: 1.55;
+    font-size: var(--fs-14);
+    line-height: var(--lh-ui);
   }
   @media (max-width: 860px) {
     .hero,
@@ -773,13 +729,11 @@ const ph = (text: string): string => phraseHtml(text, locale);
     }
     h1 {
       max-width: min(100%, 20rem);
-      font-size: 2.32rem;
-      line-height: 1.07;
       overflow-wrap: anywhere;
     }
     .lead {
       max-width: min(100%, 21rem);
-      font-size: 0.98rem;
+      font-size: var(--fs-16);
       overflow-wrap: break-word;
     }
     .actions {
@@ -787,7 +741,7 @@ const ph = (text: string): string => phraseHtml(text, locale);
       grid-template-columns: minmax(0, 1fr);
       width: min(100%, 21rem);
     }
-    .button {
+    .btn {
       width: 100%;
       padding-right: 0.85rem;
       padding-left: 0.85rem;
@@ -824,13 +778,7 @@ const ph = (text: string): string => phraseHtml(text, locale);
     .checklist,
     .faq,
     .next {
-      padding: 3rem 0;
-    }
-    .artifact h2,
-    .section-head h2,
-    .checklist h2,
-    .next h2 {
-      font-size: 2rem;
+      padding: var(--sp-7) 0;
     }
     .item-grid,
     .next-links {
@@ -843,7 +791,7 @@ const ph = (text: string): string => phraseHtml(text, locale);
       padding: 0.95rem;
     }
     code {
-      font-size: 0.76rem;
+      font-size: var(--fs-12);
     }
   }
 </style>

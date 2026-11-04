@@ -187,7 +187,7 @@ export const EscalateBreachedCases = defineFlow({
       {
         question: '这里哪些是开源的，ObjectOS 又加了什么？',
         answer:
-          '流程、全部三类触发器、后台队列、Webhook 投递，以及流程画布连同节点面板、校验、模拟、运行历史和调度预览，都随开源 ObjectStack Console 发布，Apache-2.0。ObjectOS 加的是产品内 AI Builder——从一句描述起草流程与动作，并把每一次元数据变更排队等人审批——以及从商业版起的 AI 治理：动作审计、护栏、权限限定。',
+          '流程、全部三类触发器、后台队列、Webhook 投递，以及流程画布连同节点面板、校验、模拟、运行历史和调度预览，都随开源 ObjectStack Console 发布，Apache-2.0。ObjectOS 加的是产品内 AI Builder——从一句描述起草流程与动作，并把每一次元数据变更排队等人审批——以及企业版的 AI 治理：动作审计、护栏、权限限定。',
       },
     ],
   } satisfies MarketingPage;
