@@ -80,7 +80,7 @@ const page = {
       columns: ['Review area', 'Available now', 'Enterprise packet'],
       rows: [
         ['Deployment', 'Self-hosted open-source ObjectStack runtime', 'VPC, private network, air-gapped deployment notes'],
-        ['Identity', 'Project identity and permission metadata; SSO / SAML on ObjectOS Enterprise', 'SCIM and identity lifecycle, admin roles, session policy mapping'],
+        ['Identity', 'Project identity and permission metadata; SSO / SAML / OIDC included free in the open-source framework', 'SCIM and identity lifecycle, admin roles, session policy mapping'],
         ['AI governance', 'MCP tools, object permissions, approvals', 'Model routing policy and prompt/data boundary report'],
         ['Audit', 'Runtime audit design and metadata review', 'Exportable audit retention and investigation workflow'],
       ],
