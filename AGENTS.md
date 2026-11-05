@@ -181,15 +181,13 @@ nothing here is implemented by that ruling, and part 1 still lands before part 2
   post's `date` is rewritten only by an explicit maintainer ruling recorded on the card;
   a queued post's `date` is its planned slot and moves only onto a slot claimed on the
   shared calendar on #267.
-- **Model tiers** (maintainer, 2026-11-03/04). The fable tier is only for (a) evaluating a
-  decision before it reaches the maintainer, including decision cards the seat files itself,
-  and (b) evaluations the maintainer explicitly asks fable to do. Implementation developers
-  use the default model (opus per the os-dev definition); mechanical work with an exact spec
-  (a publish-day re-date, a small CSS or copy fix) uses sonnet.
-- **Decisions reach the maintainer evaluated** (maintainer, 2026-11-02/04). A question that
-  needs the maintainer's ruling is first evaluated by fable on the four axes (the pm-dispatch
-  decision framework), then presented with a recommendation; never present an unevaluated
-  draft as a choice.
+- **Model tiers** (maintainer, 2026-11-04: 「后续不要用 fable」「已经没有fable了」). No fable
+  tier. Implementation developers use the default model (opus per the os-dev definition);
+  mechanical work with an exact spec (a publish-day re-date, a small CSS or copy fix) uses sonnet.
+- **Decisions reach the maintainer evaluated** (maintainer, 2026-11-02/04; amended 2026-11-05
+  「同意」). A question that needs the maintainer's ruling is first evaluated on the four axes (the
+  pm-dispatch decision framework) by the seat or a default-model evaluator, then presented with a
+  recommendation; never present an unevaluated draft as a choice.
 
 ## Localization
 
