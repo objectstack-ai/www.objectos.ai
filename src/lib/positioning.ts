@@ -67,8 +67,22 @@ export const OBJECTSTACK_URL = 'https://objectstack.ai';
  * page's Free and Team buttons and the footer all link these two constants,
  * so the hosted product is named in one place. `cloud.objectos.ai/` itself
  * redirects to this site, so the links name the console's own pages.
+ *
+ * The sign-up link carries `src`, which cloud reads from the register page's
+ * Referer and records as `signed_up.source`. Cloud clamps it to a closed list,
+ * mirrored by `SIGNUP_SOURCES`; any other value is sent as `other`. The link
+ * must open `/_console/register` itself: a detour through another console page
+ * drops the query from the Referer and the sign-up records as `direct`. The
+ * sign-in link carries no source.
  */
-export const CLOUD_SIGNUP_URL = 'https://cloud.objectos.ai/_console/register';
+export const SIGNUP_SOURCES = ['site', 'docs', 'hn', 'blog', 'cn_demo', 'direct', 'other'] as const;
+
+export function signupUrl(src: string): string {
+  const source = (SIGNUP_SOURCES as readonly string[]).includes(src) ? src : 'other';
+  return `https://cloud.objectos.ai/_console/register?src=${source}`;
+}
+
+export const CLOUD_SIGNUP_URL = signupUrl('site');
 export const CLOUD_SIGNIN_URL = 'https://cloud.objectos.ai/_console/login';
 
 /**
