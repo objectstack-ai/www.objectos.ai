@@ -21,6 +21,7 @@ const PAGE_ORDER = [
   'forward-deployed-engineers',
   'customer-stories',
   'use-cases',
+  'enterprise-ai-adoption',
 ];
 
 const FALLBACK_LOCALE: Locale = 'en';
