@@ -108,7 +108,7 @@ interface Strings {
     /**
      * The "Why ObjectOS" top-level group (its trigger in the bar and the drawer,
      * and the footer column of the same name). Its entries are `compareFit`,
-     * `security`, `referenceStories` and `useCases`.
+     * `security`, `referenceStories`, `useCases` and `aiAdoption`.
      */
     whyObjectOs: string;
     /** /[lang]/compare/ — the first entry under Why ObjectOS, and its footer link. */
@@ -152,6 +152,8 @@ interface Strings {
     referenceStories: string;
     /** /[lang]/use-cases/ — the fourth entry under Why ObjectOS, and its footer link. */
     useCases: string;
+    /** /[lang]/enterprise-ai-adoption/ — the fifth entry under Why ObjectOS, and its footer link. */
+    aiAdoption: string;
     glossary: string;
     /** Accessible name of the mobile drawer's close button. */
     close: string;
@@ -259,6 +261,7 @@ const en: Strings = {
     templates: 'Templates',
     referenceStories: 'Reference stories',
     useCases: 'Use cases',
+    aiAdoption: 'AI adoption',
     glossary: 'Glossary',
     close: 'Close',
     theme: 'Theme',
@@ -334,6 +337,7 @@ const zhHans: Strings = {
     templates: '模板',
     referenceStories: '参考案例',
     useCases: '使用场景',
+    aiAdoption: '企业 AI 落地',
     glossary: '术语表',
     close: '关闭',
     theme: '主题',
@@ -409,6 +413,7 @@ const ja: Strings = {
     templates: 'テンプレート',
     referenceStories: '導入事例',
     useCases: 'ユースケース',
+    aiAdoption: 'AI の導入',
     glossary: '用語集',
     close: '閉じる',
     theme: 'テーマ',
@@ -484,6 +489,7 @@ const de: Strings = {
     templates: 'Vorlagen',
     referenceStories: 'Referenzberichte',
     useCases: 'Anwendungsfälle',
+    aiAdoption: 'AI-Einführung',
     glossary: 'Glossar',
     close: 'Schließen',
     theme: 'Darstellung',
@@ -559,6 +565,7 @@ const es: Strings = {
     templates: 'Plantillas',
     referenceStories: 'Casos de referencia',
     useCases: 'Casos de uso',
+    aiAdoption: 'Adopción de AI',
     glossary: 'Glosario',
     close: 'Cerrar',
     theme: 'Tema',
@@ -634,6 +641,7 @@ const fr: Strings = {
     templates: 'Modèles',
     referenceStories: 'Cas de référence',
     useCases: 'Cas d’usage',
+    aiAdoption: 'Adoption de l’AI',
     glossary: 'Glossaire',
     close: 'Fermer',
     theme: 'Thème',
@@ -709,6 +717,7 @@ const ko: Strings = {
     templates: '템플릿',
     referenceStories: '레퍼런스 사례',
     useCases: '활용 사례',
+    aiAdoption: 'AI 도입',
     glossary: '용어집',
     close: '닫기',
     theme: '테마',
@@ -785,6 +794,7 @@ const toHant = (s: Strings): Strings => ({
     templates: s2t(s.siteNav.templates),
     referenceStories: s2t(s.siteNav.referenceStories),
     useCases: s2t(s.siteNav.useCases),
+    aiAdoption: s2t(s.siteNav.aiAdoption),
     glossary: s2t(s.siteNav.glossary),
     close: s2t(s.siteNav.close),
     theme: s2t(s.siteNav.theme),
