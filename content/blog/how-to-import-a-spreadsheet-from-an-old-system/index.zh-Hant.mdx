@@ -3,7 +3,7 @@
 title: 怎樣把舊系統的電子表格匯入 AI 生成的應用？匯入對映、試執行，以及一行資料匹配不上的三種結局
 description: 在 ObjectStack 18.3.0 上實測：一份命名的匯入對映把陌生的表頭和程式碼投影到一個物件的欄位上，試執行返回完整的逐行報告而什麼都不寫入，匹配不上的一行要麼建立、要麼跳過、要麼失敗。
 author: ObjectStack Team
-date: 2026-10-25
+date: 2026-11-06
 status: published
 topic: integration-data
 audience: business
@@ -44,7 +44,7 @@ Grace Hopper,grace@example.com,Eckert-Mauchly,Webform,L-1003
 
 ## 匯入對映是一次投影，不是一次重新命名
 
-ObjectStack 文件用一句話定義了這個工件：「**匯入對映**是從原始檔的列到一個物件的欄位之間，一份有名字、可複用的投影。」它是一等公民的後設資料型別，所以既可以隨包釋出，也可以在執行時儲存，而 `POST /api/v1/data/:object/import` 按名字應用它。下面測量用的就是這一份，和物件並排宣告在應用原始碼裡：
+ObjectStack 文件用一句話定義了這個工件：「**匯入對映**是從原始檔的列到一個物件的欄位之間，一份有名字、可複用的投影。」它是一等公民的中繼資料型別，所以既可以隨包釋出，也可以在執行時儲存，而 `POST /api/v1/data/:object/import` 按名字應用它。下面測量用的就是這一份，和物件並排宣告在應用原始碼裡：
 
 ```ts
 import { defineMapping } from '@objectstack/spec/data';
@@ -70,7 +70,7 @@ export const LeadFeedMapping = defineMapping({
 });
 ```
 
-它用 `mappings: [LeadFeedMapping]` 註冊到 stack 上，`defineStack()` 在構建時就校驗它，而不是等到第一次使用：`targetObject` 指向 stack 沒有定義的物件會讓構建失敗，`javascript` 轉換也會（下文再說）。因為 `defineMapping()` 在匯入時就解析配置，一個拼錯的鍵會在你寫下它的地方被拒絕，錯誤資訊裡直接給出規範拼寫。這就是對映之所以是[型別化後設資料](/zh-Hant/glossary/typed-metadata/)而不是配置檔案的原因：評審者讀完二十行，就知道這份投影在任何一行被讀取之前是結構正確的。
+它用 `mappings: [LeadFeedMapping]` 註冊到 stack 上，`defineStack()` 在構建時就校驗它，而不是等到第一次使用：`targetObject` 指向 stack 沒有定義的物件會讓構建失敗，`javascript` 轉換也會（下文再說）。因為 `defineMapping()` 在匯入時就解析配置，一個拼錯的鍵會在你寫下它的地方被拒絕，錯誤資訊裡直接給出規範拼寫。這就是對映之所以是[型別化中繼資料](/zh-Hant/glossary/typed-metadata/)而不是配置檔案的原因：評審者讀完二十行，就知道這份投影在任何一行被讀取之前是結構正確的。
 
 | 鍵 | 它決定什麼 |
 | :--- | :--- |
@@ -93,7 +93,7 @@ export const LeadFeedMapping = defineMapping({
 
 內聯路線沒有壞。它做了重新命名該做的事：讓 `Legacy ID` 帶著自己的表頭通過，然後寫入路徑拒絕了一個物件沒有宣告的欄位。對映則根本沒讓這一列靠近寫入路徑。第一份檔案帶著 `Webform` 和 `Partner Referral` 這些程式碼，在內聯路線上早一步就失敗了：每一行都因 `source` 上的 `invalid_option` 被拒絕，"Lead Source: "Webform" is not a known option"，因為沒有任何東西翻譯這些程式碼。對於一份每週從你無法控制的系統裡到來的檔案，這兩個保證就是寫那二十行的理由。
 
-對映也可以在執行時儲存，而不是隨包釋出：用同樣的形狀、換一個名字 `PUT /api/v1/meta/mapping/crm_lead_feed_saved`，答覆是 `Saved mapping 'crm_lead_feed_saved' (env-wide, state=active) [seq=1]`，按這個名字做的試執行報告 `created 3`。不管哪種來源，匯入請求都按名字解析對映；執行時先讀儲存的對映，再回退到包裡那份。包裡那個名字本身是鎖住的：同樣的 `PUT` 發到 `crm_lead_feed`，被 `403 NOT_OVERRIDABLE` 拒絕。
+對映也可以在執行時儲存，而不是隨包釋出：用同樣的形狀、換一個名字 `PUT /api/v1/meta/mapping/crm_lead_feed_saved`，答覆是 `Saved mapping 'crm_lead_feed_saved' (env-wide, state=active) [seq=1]`，按這個名字做的試執行報告 `created 3`。不管哪種來源，匯入請求都按名字解析對映；執行環境先讀儲存的對映，再回退到包裡那份。包裡那個名字本身是鎖住的：同樣的 `PUT` 發到 `crm_lead_feed`，被 `403 NOT_OVERRIDABLE` 拒絕。
 
 ## 試執行就是評審
 
@@ -128,7 +128,7 @@ POST /api/v1/data/crm_lead/import
 | 真實匯入 | `created 3` | **3** |
 | 同一檔案再來一次 | `created 0 · updated 3` | **3** |
 
-為什麼叫它評審而不是預覽？因為它正是評審者真正能簽字的那份東西。文件說得很準確：`"dryRun": true` 返回「同一份報告，但什麼都不持久化；判定來自引擎自己的寫入路徑校驗」。它不是對寫入會做什麼的猜測；它對每一行向寫入路徑要來判定，然後在持久化之前停住。所以業務負責人在週一匯入跑起來之前批准的，是兩個很小的東西：對映（二十行型別化後設資料，放在版本控制裡，能當 diff 讀）和試執行報告（多少行會建立、多少行會更新、哪些行會失敗、失敗在哪一列）。簽字的時候什麼都還沒發生，而第二次執行就是第一次說到做到的證明。
+為什麼叫它評審而不是預覽？因為它正是評審者真正能簽字的那份東西。文件說得很準確：`"dryRun": true` 返回「同一份報告，但什麼都不持久化；判定來自引擎自己的寫入路徑校驗」。它不是對寫入會做什麼的猜測；它對每一行向寫入路徑要來判定，然後在持久化之前停住。所以業務負責人在週一匯入跑起來之前批准的，是兩個很小的東西：對映（二十行型別化中繼資料，放在版本控制裡，能當 diff 讀）和試執行報告（多少行會建立、多少行會更新、哪些行會失敗、失敗在哪一列）。簽字的時候什麼都還沒發生，而第二次執行就是第一次說到做到的證明。
 
 這種預覽對將要更新的行同樣成立。三行都已存在之後再送一次，試執行答 `created 0 · updated 3`，與隨後真實匯入給出的判定一致。更新的預覽針對的是已存記錄與檔案單元格合併之後的結果，所以一條讀取檔案裡沒有的欄位的規則——比如 Lead 物件在 `lead_score` 上的 `lead_score_range` 檢查——判定的是寫入真正會存下的那條記錄。18.0 之前，預覽只拿進來的單元格做判定，可能拒絕一行寫入隨後會接受的資料。寫入會放行、但帶有提示性問題的行，回來時仍是 `ok`，並附一份 `warnings` 列表，問題在報告裡看得見而不是悄無聲息；這裡的各次執行都沒有出現過。
 
@@ -160,7 +160,7 @@ Rows 1, 2 of this import have the same match key (email), so none of them was wr
 
 ## 對映之後，單元格仍然得合法
 
-對映決定哪個值落到哪個欄位。把那個值變成儲存接受的東西是另一個步驟，在對映之後按目標物件自己的欄位後設資料執行，兩個步驟的失敗方式不一樣。一份四行的檔案在一次請求裡把它們都試了一遍：
+對映決定哪個值落到哪個欄位。把那個值變成儲存接受的東西是另一個步驟，在對映之後按目標物件自己的欄位中繼資料執行，兩個步驟的失敗方式不一樣。一份四行的檔案在一次請求裡把它們都試了一遍：
 
 | 單元格 | 發生了什麼 | 這一行的判定 |
 | :--- | :--- | :--- |
@@ -201,7 +201,7 @@ Rows 1, 2 of this import have the same match key (email), so none of them was wr
 
 ## 託管，或者在你自己的基礎設施上
 
-上面的一切都跑在腳手架裝好的開源執行時上。想把同一個迴圈託管起來、在瀏覽器裡用、什麼都不用安裝？那就是 ObjectOS——建立在 ObjectStack 之上的商業執行環境。ObjectOS 既可託管在瀏覽器中、無需安裝（ObjectOS Cloud），也可自管部署在你自己的基礎設施上（ObjectOS Enterprise）；無論哪個版本，你都可以匯出本體，拿到開源的 ObjectStack 執行時上執行。對映是這份本體的一部分：它隨包一起走。
+上面的一切都跑在腳手架裝好的開源執行環境上。想把同一個迴圈託管起來、在瀏覽器裡用、什麼都不用安裝？那就是 ObjectOS——建立在 ObjectStack 之上的商業執行環境。ObjectOS 既可託管在瀏覽器中、無需安裝（ObjectOS Cloud），也可自管部署在你自己的基礎設施上（ObjectOS Enterprise）；無論哪個版本，你都可以匯出本體，拿到開源的 ObjectStack 執行環境上執行。對映是這份本體的一部分：它隨包一起走。
 
 ## 從 agent 路徑開始
 
