@@ -13,6 +13,12 @@ import { positioning } from './positioning';
 // three editions, …"), not T4: with T4 it ran 362 characters in en and a
 // search snippet cut it off before the word ObjectOS (seat ruling on #335,
 // the same call docs.objectos.ai made in objectos #299).
+// The zero-install trial the objectstack README offers under "Try it in five
+// minutes" ("No install at all? Open a live app on StackBlitz", README.md line
+// 36 at objectstack main 2038c56e; the repository has no release tags): the
+// HotCRM reference app, booted by StackBlitz from its GitHub repository. One
+// spelling for the home hero and the /templates/ hero.
+export const TRY_IN_BROWSER_URL = 'https://stackblitz.com/github/objectstack-ai/hotcrm';
 const sentenceCase = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 // The media note under the hero image is titled with T2's first sentence —
 // "One executable business ontology" in each locale — read from positioning
@@ -30,6 +36,14 @@ interface HomeCopy {
   heroEditions: string;
   primaryCta: string;
   secondaryCta: string;
+  /**
+   * The hero's third CTA: a live app in the browser, no account and no
+   * install — `TRY_IN_BROWSER_URL` above, the objectstack README's own
+   * StackBlitz link. The /templates/ hero carries the same label in its own
+   * page copy (`templates.ts` under content/pages/en and content/pages/zh-Hans),
+   * since that page is authored in those two locales only.
+   */
+  tryInBrowserCta: string;
   /**
    * Copy around the overview video. The video and channel URLs are identical
    * in every locale; only the wording around them is translated. The English
@@ -127,6 +141,7 @@ const zhHans: HomeCopy = {
   heroEditions: positioning['zh-Hans'].e1,
   primaryCta: '开始使用',
   secondaryCta: '了解工作原理',
+  tryInBrowserCta: '在浏览器里试用（免注册）',
   videoCaption: 'ObjectStack 90 秒总览',
   videoPlayLabel: '播放视频：ObjectStack 90 秒总览',
   videoMoreLink: '在 YouTube 上观看更多视频',
@@ -219,6 +234,7 @@ const en: HomeCopy = {
   heroEditions: positioning.en.e1,
   primaryCta: 'Get started',
   secondaryCta: 'See how it works',
+  tryInBrowserCta: 'Try it in the browser (no sign-up)',
   videoCaption: 'ObjectStack in 90 Seconds',
   videoPlayLabel: 'Play the video: ObjectStack in 90 Seconds',
   videoMoreLink: 'More videos on YouTube',
@@ -312,6 +328,7 @@ const ja: HomeCopy = {
   heroEditions: positioning.ja.e1,
   primaryCta: 'はじめる',
   secondaryCta: '仕組みを見る',
+  tryInBrowserCta: 'ブラウザで試す（登録不要）',
   videoCaption: 'ObjectStack を 90 秒で',
   videoPlayLabel: '動画を再生：ObjectStack を 90 秒で',
   videoMoreLink: 'YouTube でほかの動画を見る',
@@ -405,6 +422,7 @@ const de: HomeCopy = {
   heroEditions: positioning.de.e1,
   primaryCta: 'Loslegen',
   secondaryCta: 'So funktioniert es',
+  tryInBrowserCta: 'Im Browser ausprobieren (ohne Anmeldung)',
   videoCaption: 'ObjectStack in 90 Sekunden',
   videoPlayLabel: 'Video abspielen: ObjectStack in 90 Sekunden',
   videoMoreLink: 'Mehr Videos auf YouTube',
@@ -498,6 +516,7 @@ const es: HomeCopy = {
   heroEditions: positioning.es.e1,
   primaryCta: 'Empezar',
   secondaryCta: 'Cómo funciona',
+  tryInBrowserCta: 'Pruébalo en el navegador (sin registro)',
   videoCaption: 'ObjectStack en 90 segundos',
   videoPlayLabel: 'Reproducir el vídeo: ObjectStack en 90 segundos',
   videoMoreLink: 'Más vídeos en YouTube',
@@ -591,6 +610,7 @@ const fr: HomeCopy = {
   heroEditions: positioning.fr.e1,
   primaryCta: 'Commencer',
   secondaryCta: 'Voir comment ça marche',
+  tryInBrowserCta: 'Essayer dans le navigateur (sans inscription)',
   videoCaption: 'ObjectStack en 90 secondes',
   videoPlayLabel: 'Lire la vidéo : ObjectStack en 90 secondes',
   videoMoreLink: 'Plus de vidéos sur YouTube',
@@ -684,6 +704,7 @@ const ko: HomeCopy = {
   heroEditions: positioning.ko.e1,
   primaryCta: '시작하기',
   secondaryCta: '작동 방식 보기',
+  tryInBrowserCta: '브라우저에서 체험하기 (가입 불필요)',
   videoCaption: 'ObjectStack 90초 살펴보기',
   videoPlayLabel: '동영상 재생: ObjectStack 90초 살펴보기',
   videoMoreLink: 'YouTube에서 더 많은 영상 보기',

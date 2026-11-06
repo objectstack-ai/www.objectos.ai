@@ -1,4 +1,5 @@
 import type { MarketingPage } from '../../../src/content-pages/types';
+import { TRY_IN_BROWSER_URL } from '../../../src/lib/home';
 
 const page = {
     slug: 'templates',
@@ -12,6 +13,7 @@ const page = {
       'Templates give coding agents a concrete target: object models, views, permissions, workflows, actions, and AI tools that can be copied, reviewed, adapted, and run in ObjectOS.',
     primary: { label: 'Open template source', href: 'https://github.com/objectstack-ai/templates' },
     secondary: { label: 'See the product tour', href: '/en/product-tour/' },
+    outbound: { label: 'Try it in the browser (no sign-up)', href: TRY_IN_BROWSER_URL },
     metrics: [
       { value: '8 templates', label: 'todo, contracts, procurement, compliance, helpdesk, content, hr, project' },
       { value: 'One layer', label: 'Objects, UI, workflows, APIs, and AI tools from the same definition' },

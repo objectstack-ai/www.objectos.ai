@@ -92,6 +92,12 @@ export interface MarketingPage {
   lead: string;
   primary: MarketingPageAction;
   secondary: MarketingPageAction;
+  /**
+   * An optional third hero action to an outside site, rendered after the
+   * secondary one with the same style and opened in a new tab (/templates/:
+   * the zero-install StackBlitz trial, `TRY_IN_BROWSER_URL` in src/lib/home.ts).
+   */
+  outbound?: MarketingPageAction;
   metrics: MarketingPageMetric[];
   artifact: MarketingPageArtifact;
   sections: MarketingPageSection[];
