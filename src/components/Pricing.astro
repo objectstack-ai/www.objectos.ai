@@ -7,44 +7,74 @@ interface Props {
 }
 
 const { copy, refundsHref } = Astro.props;
+
+// Two tabs, both in the static HTML, switched by CSS alone — the site CSP
+// (public/_headers) admits no new inline script. The switch is two links to
+// the empty targets at the top of the section: `#self-hosted` (and only it)
+// shows the Self-hosted panel through `:target ~` sibling selectors; any other
+// fragment, or none, shows the Cloud panel. So `/pricing/#self-hosted` deep
+// links, Back returns to the previous tab, and it works with JavaScript off.
+// The targets sit above the title so following a tab link keeps the title in
+// view. ARIA tab roles are left out on purpose: `aria-selected` cannot follow a
+// CSS-only switch, and a stale state is worse than none. The hidden panel is
+// `display: none`, so assistive technology reads only the visible one, and each
+// panel opens with a heading naming its tab.
+const panels = [
+  { key: 'cloud', tab: copy.tabs.cloud },
+  { key: 'self', tab: copy.tabs.selfHosted },
+] as const;
 ---
 
 <section class="pricing">
+  <span id="cloud" class="tab-target target-cloud"></span>
+  <span id="self-hosted" class="tab-target target-self"></span>
+
   <header>
     <h1>{copy.title}</h1>
-    <p class="intro">{copy.intro}</p>
   </header>
 
   {copy.promo && <p class="promo">{copy.promo}</p>}
 
-  <div class="plans">
-    {
-      copy.plans.map((plan) => (
-        <article class:list={['plan', 'card', { highlight: plan.highlight }]}>
-          <h2>{plan.name}</h2>
-          <p class="tagline">{plan.tagline}</p>
-          <div class="price-block">
-            <p class="price">
-              <span class="amount">{plan.price}</span>
-            </p>
-            {plan.cadence && <p class="cadence">{plan.cadence}</p>}
-            {plan.billedNote && <p class="billed">{plan.billedNote}</p>}
-            {plan.altPrice && <p class="alt">{plan.altPrice}</p>}
-          </div>
-          <a class:list={['cta', 'btn', plan.highlight ? 'btn-primary' : 'btn-secondary']} href={plan.ctaHref}>
-            {plan.cta}
-          </a>
-          <ul>
-            {plan.features.map((f) => (
-              <li>{f}</li>
-            ))}
-          </ul>
-        </article>
-      ))
-    }
-  </div>
+  <nav class="switch" aria-label={copy.switchLabel}>
+    <a class="switch-link switch-cloud" href="#cloud">{copy.tabs.cloud.label}</a>
+    <a class="switch-link switch-self" href="#self-hosted">{copy.tabs.selfHosted.label}</a>
+  </nav>
 
-  <p class="note">{copy.billingNote}</p>
+  {
+    panels.map(({ key, tab }) => (
+      <section class:list={['panel', `panel-${key}`]} aria-labelledby={`pricing-${key}-heading`}>
+        <h2 class="visually-hidden" id={`pricing-${key}-heading`}>
+          {tab.label}
+        </h2>
+        <p class="intro">{tab.intro}</p>
+        <div class:list={['plans', { pair: tab.plans.length === 2 }]}>
+          {tab.plans.map((plan) => (
+            <article class:list={['plan', 'card', { highlight: plan.highlight }]}>
+              <h3>{plan.name}</h3>
+              <p class="tagline">{plan.tagline}</p>
+              <div class="price-block">
+                <p class="price">
+                  <span class="amount">{plan.price}</span>
+                </p>
+                {plan.cadence && <p class="cadence">{plan.cadence}</p>}
+                {plan.billedNote && <p class="billed">{plan.billedNote}</p>}
+                {plan.altPrice && <p class="alt">{plan.altPrice}</p>}
+              </div>
+              <a class:list={['cta', 'btn', plan.highlight ? 'btn-primary' : 'btn-secondary']} href={plan.ctaHref}>
+                {plan.cta}
+              </a>
+              <ul>
+                {plan.features.map((f) => (
+                  <li>{f}</li>
+                ))}
+              </ul>
+            </article>
+          ))}
+        </div>
+        <p class="note">{tab.billingNote}</p>
+      </section>
+    ))
+  }
 
   <p class="mor">
     {copy.morNote} <a href={refundsHref}>{copy.refundsLabel}</a>.
@@ -59,20 +89,97 @@ const { copy, refundsHref } = Astro.props;
   header {
     text-align: center;
     max-width: var(--measure-lead);
-    margin: 0 auto 2.5rem;
+    margin: 0 auto 1.75rem;
+  }
+  /* The switch's fragment targets: empty, at the top of the section. Their
+     scroll margin is taller than the page header above them, so following a
+     tab link (or a #self-hosted deep link) scrolls to the very top, with the
+     title and the switch in view, instead of jumping by a few pixels. */
+  .tab-target {
+    display: block;
+    height: 0;
+    scroll-margin-top: 100vh;
+  }
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
   }
   /* Display face for the page title, as on every page (Base.astro
      --font-display); plan names are card titles and stay in the text face. */
   h1 {
-    margin: 0 0 0.75rem;
+    margin: 0;
     font-family: var(--font-display);
     font-size: var(--fs-h1);
     line-height: var(--lh-display);
     letter-spacing: -0.01em;
     text-wrap: balance;
   }
+  /* The Cloud / Self-hosted switch: a pill of two links on the surface, the
+     buttons' type (--fs-14, 700). The active tab takes the brand chip's
+     colours (--brand on --brand-soft, Base.astro .chip-brand), the
+     site's mark for a selected facet; focus keeps the global --ring. */
+  .switch {
+    display: flex;
+    width: fit-content;
+    max-width: 100%;
+    margin: 0 auto 1.75rem;
+    padding: var(--sp-1);
+    gap: var(--sp-1);
+    border: 1px solid var(--line);
+    border-radius: var(--r-pill);
+    background: var(--surface);
+  }
+  .switch-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    padding: 0.4rem 1.1rem;
+    border-radius: var(--r-pill);
+    color: var(--ink-soft);
+    font-size: var(--fs-14);
+    font-weight: 700;
+    line-height: var(--lh-ui);
+    text-align: center;
+    text-decoration: none;
+    transition: color 0.16s ease, background 0.16s ease;
+  }
+  /* Hover changes only the colour to --brand, which the active tab already
+     has, so hovering it changes nothing. */
+  .switch-link:hover {
+    color: var(--brand);
+  }
+  /* Active tab: Cloud unless the Self-hosted target is the URL fragment. */
+  .switch-cloud,
+  .target-self:target ~ .switch .switch-self {
+    color: var(--brand);
+    background: var(--brand-soft);
+  }
+  .target-self:target ~ .switch .switch-cloud {
+    color: var(--ink-soft);
+    background: transparent;
+  }
+  .target-self:target ~ .switch .switch-cloud:hover {
+    color: var(--brand);
+  }
+  .panel-self,
+  .target-self:target ~ .panel-cloud {
+    display: none;
+  }
+  .target-self:target ~ .panel-self {
+    display: block;
+  }
   .intro {
-    margin: 0;
+    max-width: var(--measure-lead);
+    margin: 0 auto 2rem;
+    text-align: center;
     color: var(--ink-soft);
     font-size: var(--fs-17);
   }
@@ -94,6 +201,12 @@ const { copy, refundsHref } = Astro.props;
     gap: 1rem;
     align-items: stretch;
   }
+  /* Both tabs hold two plans: the pair is held to the wide measure, so two
+     cards do not each stretch to half the page. */
+  .plans.pair {
+    max-width: var(--measure-wide);
+    margin: 0 auto;
+  }
   /* Each card's five parts (name, tagline, price, CTA, features) sit on the
      row's shared tracks, so they start at the same height in every card of a
      row however each card's copy wraps. The fixed min-heights this replaces
@@ -112,7 +225,7 @@ const { copy, refundsHref } = Astro.props;
     border-color: var(--brand);
     padding: calc(1.5rem - 1px);
   }
-  .plan h2 {
+  .plan h3 {
     margin: 0;
     font-size: var(--fs-18);
   }
