@@ -1,15 +1,18 @@
 ---
 import Base from '../../layouts/Base.astro';
 import ClusterPage from '../../components/ClusterPage.astro';
+import ContactPage from '../../components/ContactPage.astro';
 import MarketingEvidencePage from '../../components/MarketingEvidencePage.astro';
 import {
+  getContactPage,
   getMarketingPages,
   getMarketingPageSourceLocale,
   marketingPageAlternates,
   marketingPageNavTargets,
   marketingPagePath,
 } from '../../content-pages/registry';
-import type { MarketingPage } from '../../content-pages/types';
+import type { ContactPage as ContactPageContent, MarketingPage } from '../../content-pages/types';
+import { CONTACT_URL } from '../../lib/contact';
 import { clusterCopy, clusterSourceLocale } from '../../lib/cluster-i18n';
 import { CLUSTERS, clusterPath, type Cluster } from '../../lib/clusters';
 import { fallbackRoute } from '../../lib/fallback';
@@ -31,13 +34,28 @@ export function getStaticPaths() {
         props: { kind: 'marketing', page, locale },
       });
     }
+    // /contact/ (#397): a marketing-tree page with its own template. Every
+    // contact CTA links `CONTACT_URL`, so the two must name the same URL.
+    const contact = getContactPage(locale);
+    if (contact) {
+      if (CONTACT_URL[locale] !== marketingPagePath(locale, contact.slug)) {
+        throw new Error(
+          `CONTACT_URL[${locale}] is ${CONTACT_URL[locale]}, but the contact page builds at ${marketingPagePath(locale, contact.slug)}`
+        );
+      }
+      paths.push({
+        params: { lang: locale, cluster: contact.slug },
+        props: { kind: 'contact', page: contact, locale },
+      });
+    }
   }
   return paths;
 }
 
 type Props =
   | { kind: 'cluster'; cluster: Cluster; locale: Locale }
-  | { kind: 'marketing'; page: MarketingPage; locale: Locale };
+  | { kind: 'marketing'; page: MarketingPage; locale: Locale }
+  | { kind: 'contact'; page: ContactPageContent; locale: Locale };
 
 const props = Astro.props as Props;
 const currentLocale = segToLocale(Astro.params.lang!)!;
@@ -59,7 +77,7 @@ let navAlternates: Partial<Record<Locale, string>> | undefined;
 let jsonLd: Record<string, unknown>[];
 let relatedPosts: LocalePost[] = [];
 
-if (props.kind === 'marketing') {
+if (props.kind === 'marketing' || props.kind === 'contact') {
   const page = props.page;
   const pagePath = marketingPagePath(currentLocale, page.slug);
   const sourceLocale = getMarketingPageSourceLocale(currentLocale, page.slug) ?? currentLocale;
@@ -79,7 +97,7 @@ if (props.kind === 'marketing') {
   jsonLd = [
     {
       '@context': 'https://schema.org',
-      '@type': 'WebPage',
+      '@type': props.kind === 'contact' ? 'ContactPage' : 'WebPage',
       name: page.title,
       description: page.description,
       url: pageUrl,
@@ -108,18 +126,22 @@ if (props.kind === 'marketing') {
         },
       ],
     },
-    {
-      '@context': 'https://schema.org',
-      '@type': 'FAQPage',
-      mainEntity: page.faqs.map((faq) => ({
-        '@type': 'Question',
-        name: faq.question,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: faq.answer,
-        },
-      })),
-    },
+    ...(props.kind === 'marketing'
+      ? [
+          {
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: props.page.faqs.map((faq) => ({
+              '@type': 'Question',
+              name: faq.question,
+              acceptedAnswer: {
+                '@type': 'Answer',
+                text: faq.answer,
+              },
+            })),
+          },
+        ]
+      : []),
   ];
 } else {
   const cluster = props.cluster;
@@ -213,6 +235,8 @@ if (props.kind === 'marketing') {
   {
     props.kind === 'marketing' ? (
       <MarketingEvidencePage page={props.page} locale={currentLocale} />
+    ) : props.kind === 'contact' ? (
+      <ContactPage page={props.page} locale={currentLocale} />
     ) : (
       <ClusterPage cluster={props.cluster} locale={currentLocale} posts={relatedPosts} />
     )

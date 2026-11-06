@@ -1,6 +1,7 @@
 import { s2t } from './zhconvert';
 import type { Locale } from './i18n';
 import { CLOUD_SIGNUP_URL, positioning } from './positioning';
+import { CONTACT_URL } from './contact';
 
 export interface PricingPlan {
   name: string;
@@ -11,7 +12,12 @@ export interface PricingPlan {
   tagline: string;
   features: string[];
   cta: string;
-  ctaHref: string;
+  /**
+   * A URL, or a function of the page's locale for a target that has one per
+   * locale (/contact/). The non-zh locales share the English copy object, so a
+   * per-locale target cannot be baked into the copy; `planHref` resolves it.
+   */
+  ctaHref: string | ((locale: Locale) => string);
   highlight?: boolean;
 }
 
@@ -28,13 +34,12 @@ export interface PricingCopy {
 }
 
 // CTA targets. The Free and Team buttons open the ObjectOS Cloud sign-up page;
-// enterprise opens an email.
-// The Enterprise contact is sales@, the address the public licence page
-// (docs.objectos.ai/docs/resources/license) names for "contact sales" on
-// Enterprise, the Runtime Subscription and OEM terms; support@ is the
-// billing and refunds address the refund policy names.
+// Enterprise opens the locale's /contact/ page (#397), which names sales@ —
+// the address the public licence page (docs.objectos.ai/docs/resources/license)
+// names for "contact sales" on Enterprise, the Runtime Subscription and OEM
+// terms — beside support@, the billing and refunds address.
 const GET_STARTED = CLOUD_SIGNUP_URL;
-const CONTACT = 'mailto:sales@objectstack.ai';
+const CONTACT = (locale: Locale): string => CONTACT_URL[locale];
 // ObjectOS Community has no checkout: its button goes to the objectstack
 // deployment docs (the runtime image and `os start` live in that repository).
 const COMMUNITY = 'https://objectstack.ai/docs/deployment';
@@ -214,6 +219,10 @@ const toHant = (p: PricingCopy): PricingCopy => ({
   morNote: s2t(p.morNote),
   refundsLabel: s2t(p.refundsLabel),
 });
+
+/** A plan's CTA target on a page in `locale`. */
+export const planHref = (plan: PricingPlan, locale: Locale): string =>
+  typeof plan.ctaHref === 'function' ? plan.ctaHref(locale) : plan.ctaHref;
 
 export const pricingCopy: Record<Locale, PricingCopy> = {
   en: pricingEn,

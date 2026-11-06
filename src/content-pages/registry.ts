@@ -1,6 +1,6 @@
 import { LOCALES, type Locale } from '../lib/i18n';
 import { s2t } from '../lib/zhconvert';
-import type { MarketingPage } from './types';
+import { isContactPage, type ContactPage, type MarketingPage, type RegisteredPage } from './types';
 
 const PAGE_ORDER = [
   'ontology',
@@ -26,7 +26,7 @@ const PAGE_ORDER = [
 
 const FALLBACK_LOCALE: Locale = 'en';
 const localeSet = new Set<string>(LOCALES);
-const pageModules = import.meta.glob<MarketingPage>('../../content/pages/*/*.ts', {
+const pageModules = import.meta.glob<RegisteredPage>('../../content/pages/*/*.ts', {
   eager: true,
   import: 'default',
 });
@@ -37,7 +37,7 @@ const orderOf = (slug: string): number => {
 };
 
 const RAW_PAGES_BY_LOCALE = Object.entries(pageModules).reduce<
-  Partial<Record<Locale, MarketingPage[]>>
+  Partial<Record<Locale, RegisteredPage[]>>
 >((pagesByLocale, [modulePath, page]) => {
   const match = modulePath.match(/content\/pages\/([^/]+)\/([^/]+)\.ts$/);
   if (!match) return pagesByLocale;
@@ -78,12 +78,23 @@ const deepS2t = <T,>(value: T): T => {
 
 const fallbackPages = RAW_PAGES_BY_LOCALE[FALLBACK_LOCALE] ?? [];
 
-const pageMapForLocale = (locale: Locale): Map<string, MarketingPage> =>
+const pageMapForLocale = (locale: Locale): Map<string, RegisteredPage> =>
   new Map((RAW_PAGES_BY_LOCALE[locale] ?? []).map((page) => [page.slug, page]));
 
-const localizedPage = (locale: Locale, slug: string): MarketingPage | undefined =>
+const localizedPage = (locale: Locale, slug: string): RegisteredPage | undefined =>
   RAW_PAGES_BY_LOCALE[locale]?.find((page) => page.slug === slug);
 
+/** A page of any kind in this locale, else its English source. */
+const resolvedPage = (locale: Locale, slug: string): RegisteredPage | undefined =>
+  localizedPage(locale, slug) ?? localizedPage(FALLBACK_LOCALE, slug);
+
+const isEvidencePage = (page: RegisteredPage): page is MarketingPage => !isContactPage(page);
+
+/**
+ * The evidence pages, in `PAGE_ORDER`. The contact page is not one of them: it
+ * has its own shape and is fetched with `getContactPage`, so it never lands in
+ * a "next pages" list, the template lookup or llms.txt's product map.
+ */
 export const getMarketingPages = (locale: Locale): readonly MarketingPage[] => {
   const localizedPages = pageMapForLocale(locale);
   const mergedPages = fallbackPages.map((page) => localizedPages.get(page.slug) ?? page);
@@ -91,16 +102,24 @@ export const getMarketingPages = (locale: Locale): readonly MarketingPage[] => {
   const localizedOnlyPages = (RAW_PAGES_BY_LOCALE[locale] ?? []).filter(
     (page) => !fallbackSlugs.has(page.slug)
   );
-  return [...mergedPages, ...localizedOnlyPages].sort(
-    (a, b) => orderOf(a.slug) - orderOf(b.slug) || a.slug.localeCompare(b.slug)
-  );
+  return [...mergedPages, ...localizedOnlyPages]
+    .filter(isEvidencePage)
+    .sort((a, b) => orderOf(a.slug) - orderOf(b.slug) || a.slug.localeCompare(b.slug));
 };
 
 export const getMarketingPage = (
   locale: Locale,
   slug: string
-): MarketingPage | undefined =>
-  localizedPage(locale, slug) ?? localizedPage(FALLBACK_LOCALE, slug);
+): MarketingPage | undefined => {
+  const page = resolvedPage(locale, slug);
+  return page && isEvidencePage(page) ? page : undefined;
+};
+
+/** The /contact/ page in this locale, else the English one (#397). */
+export const getContactPage = (locale: Locale): ContactPage | undefined => {
+  const page = resolvedPage(locale, 'contact');
+  return page && isContactPage(page) ? page : undefined;
+};
 
 export const getMarketingPageSourceLocale = (
   locale: Locale,
@@ -118,7 +137,7 @@ export const marketingPagePath = (locale: Locale, slug: string): string =>
 /**
  * hreflang targets for a page — real equivalents only, never fallback pages.
  *
- * Filters on `localizedPage`, not `getMarketingPage`: the latter falls back to
+ * Filters on `localizedPage`, not `resolvedPage`: the latter falls back to
  * English, so every locale would pass for any slug authored in English and the
  * page would advertise `hreflang` for the very URLs this same code path marks
  * `noindex, nofollow` and canonicalizes back to the source locale. An hreflang
@@ -142,9 +161,10 @@ export const marketingPageAlternates = (
  *
  * The switcher should offer the reader the same page in the locale they pick,
  * including the locales that render fallback content: those URLs are really
- * built (`getStaticPaths` emits them from `getMarketingPages`), they read fine,
+ * built (`getStaticPaths` emits them from `getMarketingPages` and
+ * `getContactPage`), they read fine,
  * and they are the page the reader asked for. Sending them to the locale home
- * instead loses their place. So this filters on `getMarketingPage`, which
+ * instead loses their place. So this filters on `resolvedPage`, which
  * resolves through the English fallback — deliberately the opposite of
  * `marketingPageAlternates` above, which must name authored locales only
  * because an hreflang annotation claims the target is indexable.
@@ -153,7 +173,7 @@ export const marketingPageNavTargets = (
   slug: string
 ): Partial<Record<Locale, string>> =>
   Object.fromEntries(
-    LOCALES.filter((locale) => Boolean(getMarketingPage(locale, slug))).map((locale) => [
+    LOCALES.filter((locale) => Boolean(resolvedPage(locale, slug))).map((locale) => [
       locale,
       marketingPagePath(locale, slug),
     ])
