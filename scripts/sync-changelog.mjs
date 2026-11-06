@@ -42,7 +42,10 @@
 //   a leading warning sign, list numbering and a trailing reference
 //   parenthetical such as "(#2578)" or "(14.0.0, ADR-0090 D3)" are removed,
 //   and Markdown links keep their text. Inline code keeps its backticks; the
-//   page renders them as code.
+//   page renders them as code. Two kinds of candidate are skipped and the next
+//   one taken: a bullet that opens with a warning sign (a notice about the
+//   release, such as "A minor that breaks", not a change in it), and the
+//   headings in SCAFFOLDING.
 //
 // The site build never runs this and never reads the network: the generated
 // file is committed, and re-running the sync is how it is refreshed.
@@ -60,6 +63,20 @@ const RELEASES = 'content/docs/releases';
 const NOT_RELEASES = new Set(['index', 'implementation-status']);
 const MAX_HIGHLIGHTS = 4;
 const MIN_HIGHLIGHTS = 3;
+
+// Release-notes scaffolding that sits where highlights are read, but names a
+// part of the page, not a change that shipped. Matched against the trimmed
+// text, exactly. Measured over all 18 pages at objectstack 2038c56ec9 by
+// listing every candidate each page offers:
+//   - "A minor that breaks": the 18.1, 18.2 and 18.3 notice that the minor
+//     carries breaking changes (also caught by the warning-sign rule below);
+//   - "Console": the 17.x bullet that lists objectui pin moves;
+//   - "New to author": an 18.2 bullet that introduces a list;
+//   - "Smaller declarative additions": v12's catch-all heading.
+// The pages' breaking-change, migration, upgrade-checklist and overview
+// headings are H2s outside the sections highlights are read from, so they
+// need no entry here.
+const SCAFFOLDING = new Set(['A minor that breaks', 'Console', 'New to author', 'Smaller declarative additions']);
 
 const fail = (message) => {
   console.error(`sync-changelog: ${message}`);
@@ -197,16 +214,20 @@ function highlightsOf(rel, body) {
       else if (bullets.length && /^\s+\S/.test(line)) bullets[bullets.length - 1] += ` ${line.trim()}`;
       else if (line.trim() && !/^\s/.test(line)) bullets.push(null);
     }
+    // A bullet that opens with a warning sign is a notice about the release
+    // (18.1-18.3: "A minor that breaks"), not a change in it.
     items = bullets
-      .filter(Boolean)
-      .map((text) => text.replace(/^⚠️?\s*/u, ''))
+      .filter((text) => text && !/^⚠/u.test(text))
       .map((text) => /^\*\*(.+?)\*\*/.exec(text)?.[1] ?? null)
       .filter(Boolean);
   } else {
     const fresh = all.find((s) => /^New\b/.test(s.heading) && !/Console/.test(s.heading));
     items = (fresh?.lines ?? []).filter((line) => /^### /.test(line)).map((line) => line.slice(4));
   }
-  const picked = items.map(trim).filter((text) => text.length >= 12).slice(0, MAX_HIGHLIGHTS);
+    const picked = items
+    .map(trim)
+    .filter((text) => text.length >= 12 && !SCAFFOLDING.has(text))
+    .slice(0, MAX_HIGHLIGHTS);
   if (picked.length < MIN_HIGHLIGHTS) {
     fail(`${rel}.mdx: found ${picked.length} highlight(s), need ${MIN_HIGHLIGHTS}; the page has no "## Highlights" bullets or "## New ..." headings to take them from`);
   }

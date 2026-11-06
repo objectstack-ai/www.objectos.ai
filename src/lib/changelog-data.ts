@@ -15,9 +15,9 @@ export const changelogSnapshot: ChangelogSnapshot = {
       "dateSource": "content/docs/releases/index.mdx",
       "highlights": [
         "An installed package is customized in its pair",
-        "A minor that breaks",
         "Ownership queues and assignment rules",
-        "Connectors carry each organization's credentials"
+        "Connectors carry each organization's credentials",
+        "One record page, opened in a drawer"
       ],
       "url": "https://objectstack.ai/docs/releases/v18/18-3"
     },
@@ -27,9 +27,9 @@ export const changelogSnapshot: ChangelogSnapshot = {
       "dateSource": "content/docs/releases/v18/18-2.mdx",
       "highlights": [
         "The Console and `@object-ui/*` ship from this repository",
-        "A minor that breaks",
         "One access rule for a file reference",
-        "App automation cannot write identity rows under elevation"
+        "App automation cannot write identity rows under elevation",
+        "Installs check what a package declares"
       ],
       "url": "https://objectstack.ai/docs/releases/v18/18-2"
     },
@@ -38,10 +38,10 @@ export const changelogSnapshot: ChangelogSnapshot = {
       "date": "2026-10-24",
       "dateSource": "content/docs/releases/v18/18-1.mdx",
       "highlights": [
-        "A minor that breaks",
         "ADR-0131's last steps: an organization-less row confers nothing",
         "A production `os serve` with no organization object is refused",
-        "Nine metadata narrowings come with a conversion"
+        "Nine metadata narrowings come with a conversion",
+        "One federation rule at every datasource door"
       ],
       "url": "https://objectstack.ai/docs/releases/v18/18-1"
     },
