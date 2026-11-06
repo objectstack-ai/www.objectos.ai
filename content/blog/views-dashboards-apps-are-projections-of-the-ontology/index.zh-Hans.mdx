@@ -31,33 +31,33 @@ tags:
 +    }),
 ```
 
-在 ObjectStack 运行时上启动之后，这五行改动了数据库表、REST 的读与写、元数据接口、MCP 的 `describe_object` 与 `query_records` 应答，以及控制台的新建表单——七个面，没有一个被编辑过。它们没有改动三个列表视图、仪表盘的数据集和中文翻译，因为这三样东西都逐个写明了字段名。前一组是从定义推导出来的，后一组是钉在定义上的。**命名测试**在你打开任何一个投影之前就能把它归到两组之一：它写明了这个字段，你就审它；它只写明了对象，运行时已经替你审过了。本文余下的部分，是这句话背后的测量——在 ObjectStack `18.0.0-next.2` 上、示例源码取自提交 `43567a8f`——以及它对读一份 diff 这件事改变了什么。
+在 ObjectStack 运行时上启动之后，这五行改动了数据库表、REST 的读与写、元数据接口、MCP 的 `describe_object` 与 `query_records` 应答，以及控制台的新建表单——七个面，没有一个被编辑过。它们没有改动三个列表视图、仪表盘的数据集和中文翻译，因为这三样东西都逐个写明了字段名。前一组是从定义推导出来的，后一组是钉在定义上的。**命名测试**在你打开任何一个投影之前就能把它归到两组之一：它写明了这个字段，你就审它；它只写明了对象，运行时已经替你审过了。本文余下的部分，是这句话背后的测量——在 ObjectStack `18.3.0`（运行时 npm 上的 `latest` 版本）上、示例源码取自该版本的发布提交 `83d7e4ae`——以及它对读一份 diff 这件事改变了什么。
 
 ## 投影的定义住在哪里
 
-投影是什么，已经有三处定义，本文不重复。[定义那篇](/zh-Hans/blog/what-does-the-ontology-is-the-software-mean/)点名了四种投影，并给出区分核心与投影的删除测试。[本体页](/zh-Hans/ontology/)用一句话说明规则：改动核心，投影跟着变；删掉一个投影，它所展示的业务不变。[术语表条目](/zh-Hans/glossary/ontology-projection/)补上了对审阅者的推论：只碰投影的 diff 改的是呈现，碰到核心的 diff 改的是权限与事实。
+投影是什么，已经有三处定义，本文不重复；[《本体即软件》](/zh-Hans/blog/the-ontology-is-the-software/)这篇长文也划了同一条线，那是它每次用这个词都要声明的两条边界中的第一条。[定义那篇](/zh-Hans/blog/what-does-the-ontology-is-the-software-mean/)点名了四种投影，并给出区分核心与投影的删除测试。[本体页](/zh-Hans/ontology/)用一句话说明规则：改动核心，投影跟着变；删掉一个投影，它所展示的业务不变。[术语表条目](/zh-Hans/glossary/ontology-projection/)补上了对审阅者的推论：只碰投影的 diff 改的是呈现，碰到核心的 diff 改的是权限与事实。
 
 它们都没说的是，投影是*怎么*跟着变的。「跟着变」底下藏着两种不同的机制，审阅者得知道眼前的是哪一种。下面这次运行回答的就是这个问题。
 
 ## 这次运行：一个字段，十一个读数
 
-对象是自带的 Todo 示例（`examples/app-todo`），从仓库提交 `43567a8f` 复制出来，用已发布的 `18.0.0-next.2` 包以 `os dev` 启动。数据库是默认的 SQLite 文件；API key 用种子化的开发管理员通过 REST 签发。每个读数取两次：一次在提交原样的定义上，一次在上面那五行 diff 之后、带 `--compile` 重启之后。「之前」和「之后」就是这两次的答案。
+对象是自带的 Todo 示例（`examples/app-todo`），从仓库提交 `83d7e4ae`（`@objectstack/cli@18.3.0` 的发布标签）复制出来，用已发布的 `18.3.0` 包以 `os dev` 启动。数据库是一个本地 SQLite 文件；API key 用种子化的开发管理员通过 REST 签发。每个读数取两次：一次在提交原样的定义上，一次在上面那五行 diff 之后、带 `--compile` 重启之后。「之前」和「之后」就是这两次的答案。
 
 | 面 | 怎么读的 | 之前 | 之后 | 跟着变？ |
 | :--- | :--- | :--- | :--- | :--- |
-| 数据库表 `todo_task` | 对 SQLite 文件执行 `PRAGMA table_info` | 27 列 | 28 列；`budget float` 加到了已有的表上 | 推导 |
-| REST 读 | `GET /api/v1/data/todo_task` | 每条记录 27 个键 | 28 个键 | 推导 |
+| 数据库表 `todo_task` | 对 SQLite 文件执行 `PRAGMA table_info` | 28 列 | 29 列；`budget float` 加到了已有的表上 | 推导 |
+| REST 读 | `GET /api/v1/data/todo_task` | 每条记录 28 个键 | 29 个键 | 推导 |
 | REST 写 | `POST /api/v1/data/todo_task`，带 `budget: 1200` | `400`——`Unknown field 'budget' on object 'todo_task'`，错误码 `INVALID_FIELD` | `201`，记录已创建 | 推导 |
-| 元数据接口 | `GET /api/v1/meta/object/todo_task` | 27 个字段 | 28 个；`{ label: 'Budget', type: 'currency', min: 0, … }` | 推导 |
-| MCP `describe_object` | 对 `/api/v1/mcp` 发 `tools/call` | 19 个字段 | 20 个 | 推导 |
+| 元数据接口 | `GET /api/v1/meta/object/todo_task` | 28 个字段 | 29 个；`{ label: 'Budget', type: 'currency', min: 0, … }` | 推导 |
+| MCP `describe_object` | 对 `/api/v1/mcp` 发 `tools/call` | 28 个字段 | 29 个 | 推导 |
 | MCP `query_records` | `where: { budget: { $gte: 1000 } }, fields: ['subject', 'budget']` | — | `[["Renew the domain", 1200]]` | 推导 |
-| 控制台新建表单 | `/_console/apps/todo_app/todo_task/new` | 16 个输入项 | 17 个；*Budget* 按声明顺序出现在 *Actual Hours* 和 *Notes* 之间 | 推导 |
-| 控制台记录详情 | 新记录的页面 | — | *Details* 区显示 `BUDGET 1,200.00` | 推导 |
+| 控制台新建表单 | `/_console/apps/com.example.todo/todo_task/new` | 16 个输入项 | 17 个；*Budget* 按声明顺序出现在 *Actual Hours* 和 *Notes* 之间 | 推导 |
+| 控制台记录详情 | 新记录的页面 | — | *Overview* 标签页显示 `BUDGET 1,200.00` | 推导 |
 | 控制台列表视图 *All Tasks* | `GET /api/v1/meta/view` → `todo_task.default` | 6 列 | 6 列，没有变化 | 钉死 |
 | 翻译，`zh-CN` | 带 `Accept-Language: zh-CN` 的 `GET /api/v1/meta/object/todo_task` | `subject` → 主题 | `budget` → `Budget`（回落到英文） | 钉死 |
 | 仪表盘数据集 `task_metrics` | 数据集定义本身 | 6 个维度、3 个度量，每个都点名一个字段 | 没有变化；在某个度量点名 `budget` 之前，没有任何图表能画它 | 钉死 |
 
-另有两个读数没有变化，而它们也不是投影：OpenAPI 文档仍然为 `todo_task` 列出 14 条路径，没有逐字段的 schema；MCP 的 `tools/list` 仍然应答同样的 12 个工具（`list_objects`、`describe_object`、`validate_expression`、`query_records`、`aggregate_records`、`get_record`、`create_record`、`update_record`、`delete_record`、`list_actions`、`run_action`、`resume_run`）。两者描述的都是对象，不是字段；字段出现在它们的应答里，而不是它们的形状里。
+另有两个读数没有变化，而它们也不是投影：OpenAPI 文档仍然为 `todo_task` 列出 17 条路径，没有逐字段的 schema；MCP 的 `tools/list` 仍然应答同样的 12 个工具（`list_objects`、`describe_object`、`validate_expression`、`query_records`、`aggregate_records`、`get_record`、`create_record`、`update_record`、`delete_record`、`list_actions`、`run_action`、`resume_run`）。两者描述的都是对象，不是字段；字段出现在它们的应答里，而不是它们的形状里。
 
 ![命名测试：中间是那份五行 diff；左边是只写明对象、未经编辑就跟上了定义的面，附前后读数；右边是写明了字段名、原样未动的投影；底部是构建门禁自己打出的警告——新字段没有任何消费者](./naming-test.svg)
 
@@ -66,10 +66,10 @@ tags:
 ```text
 ⚠ object "todo_task" · field "budget": declared, but nothing in this stack displays or reads it (inert)
   fix: add it to a view column or a form section, or remove the declaration
-  rule: field-no-consumers  at objects[0].fields.budget
+  rule: field-no-consumers  at objects[0].fields.budget — `os explain field-no-consumers` for what counts as a consumer
 ```
 
-`os explain field-no-consumers` 把「消费者」定义为「a view column, an inline grid column, a form section, a page binding, a flow node, a dataset or cube member, a dashboard widget, a formula, a validation, a hook or an action that names it」，并把它和「载体」区分开——载体「names a field without reading it」，例如「a translation label, a seed value, an import-mapping target, a permission grant」。门禁的这份清单，正是上表的右半栏。这是运行时在启动之前就告诉你：哪些投影是钉在字段上的，而其中还没有任何一个接住这个新字段。
+`os explain field-no-consumers` 把「消费者」定义为「a view column, an inline grid column, a form section, a page binding, a flow node, a dataset or cube member, a dashboard widget, a formula, a validation, a hook or an action that names it」（18.3.0 的原文接着还把声明的字段分组、以及按某字段匹配的种子数据或导入映射算进去），并把它和「载体」区分开——载体「names a field without reading it」，例如「a translation label, a seed value, an import-mapping target, a permission grant」。门禁的这份清单，正是上表的右半栏。这是运行时在启动之前就告诉你：哪些投影是钉在字段上的，而其中还没有任何一个接住这个新字段。
 
 ## 命名测试
 
@@ -115,10 +115,10 @@ tags:
 
 **外部消费者在栈之外。** 门禁自己就这么说：「a consumer can legitimately live outside the stack — an API client, a hook or package this stack does not carry, a Studio-authored view」。另一个工具里按名字选取 `estimated_hours` 的仪表盘，钉在那个字段上，而仓库里没有任何东西知道它。命名测试对它适用；枚举对它不适用。
 
-**语义改动不是结构改动。** 加字段是最简单的情形，所以才选它来做一次干净的前后对照。换成改一个字段的*含义*——比如给 `status` 加一个 `cancelled` 选项——推导面会同样忠实地跟上，但 Todo 示例的 *Overdue Tasks* 视图和它的 *Overdue Tasks* 指标都把「逾期」编码成 `status != completed`，于是一条截止日期已过的已取消任务，在两处都会被算作逾期。这是对视图和数据集定义的一次阅读，不是一次测量，而它正是命名测试会把你指过去——两个投影都写明了 `status`——却不替你拍板的那类后果。
+**语义改动不是结构改动。** 加字段是最简单的情形，所以才选它来做一次干净的前后对照。换成改一个字段的*含义*——比如给 `status` 加一个 `cancelled` 选项——推导面会同样忠实地跟上，但 Todo 示例的 *Overdue Tasks* 视图和它的 *Overdue Tasks* 指标都把「逾期」编码成 `status != completed`，于是一条截止日期已过的已取消任务，在两处都会被算作逾期。字段本身确实把这个定义声明了一次——`due_date` 上写着 `` dueLike: true, settledWhen: P`record.status == 'completed'` ``（18.3.0 的 `examples/app-todo/src/objects/task.object.ts` 第 73–74 行）——但 spec 把这两个键都标为只用于显示，由控制台的日期单元格读取，所以视图的过滤条件和那个指标仍然各自把规则写了一遍。这是对视图、仪表盘和对象定义的一次阅读，不是一次测量，而它正是命名测试会把你指过去——三处都写明了 `status`——却不替你拍板的那类后果。
 
 ## 把你的 Agent 指向它
 
 上面这次运行可以从仓库复现，包装好之后大约一分钟，这意味着它也是你的 Agent 可以替你做的事。把一个编码 Agent 指向一个 ObjectStack 项目——脚手架会写出 `AGENTS.md` 并安装技能包，运行中的应用在 `/api/v1/mcp` 提供 MCP，[如何配置它](/en/blog/how-to-point-your-agent-at-objectstack/)覆盖了规则文件、技能和工具服务器——当它开出一个改字段的变更时，向它要它自己这份 diff 的命名测试表：哪些面跟上了，哪些投影写明了这个字段，它打算对每一个怎么办。门禁那行 `field-no-consumers` 是这张表的第一行，而 Agent 可以比你先读到它。
 
-本文的一切都跑在开源栈上。「想把同一个循环托管起来、在浏览器里用、什么都不用安装？那就是 ObjectOS——建立在 ObjectStack 之上的商业运行环境。」ObjectOS 既可托管在浏览器中、无需安装（ObjectOS Cloud），也可自管部署在你自己的基础设施上（ObjectOS Enterprise）；无论哪个版本，你都可以导出本体，拿到开源的 ObjectStack 运行时上运行。命名测试不随宿主而变；它读的那份定义，是同一个文件。
+本文的一切都跑在开源栈上。「想把同一个循环托管起来、在浏览器里用、什么都不用安装？那就是 ObjectOS——建立在 ObjectStack 之上的商业运行环境。」ObjectOS 既可托管在浏览器中、无需安装（ObjectOS Cloud），也可自管部署在你自己的基础设施上（ObjectOS Enterprise）。你的本体是普通的 ObjectStack 元数据。从 ObjectOS Cloud 或 ObjectOS Enterprise 导出本体、在开源的 ObjectStack 运行时上运行，目前尚在计划中。命名测试不随宿主而变；它读的那份定义，是同一个文件。
