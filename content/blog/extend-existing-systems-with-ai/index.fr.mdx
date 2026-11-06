@@ -3,7 +3,7 @@ title: Rendre votre système métier existant AI-native sans migration
 description: Sur ObjectOS autogéré (Enterprise), connectez votre base existante en lecture seule, laissez un agent de code modéliser les tables en objets et mettez l'AI sur des données réelles, sous vos permissions, système d'origine intact.
 author: ObjectStack Team
 date: 2026-05-30
-updated: 2026-10-15T10:00:00+08:00
+updated: 2026-10-29T10:00:00+08:00
 status: published
 topic: integration-data
 audience: general
@@ -43,27 +43,27 @@ Personne ne touche au CRM. Les commerciaux ne voient rien changer. Vous obtenez 
 
 ### 1. Connecter la base comme datasource
 
-Une datasource est une connexion nommée : Postgres, MySQL, MongoDB ou SQLite. Les identifiants viennent de l'environnement, jamais du code source. Pour commencer par l'analyse, utilisez une réplique ou un utilisateur read-only.
+Une datasource est une connexion nommée : Postgres, MySQL, MongoDB ou SQLite. Les paramètres de connexion viennent de l'environnement, et le mot de passe n'est jamais écrit en clair, ni dans le code source ni dans `config` : il est stocké chiffré dans le coffre de secrets, et la datasource ne porte que l'identifiant opaque que le coffre a émis pour lui, `external.credentialsRef`. Pour commencer par l'analyse, utilisez une réplique ou un utilisateur read-only.
 
 ```ts
-import type { Datasource } from '@objectstack/spec';
+import { defineDatasource } from '@objectstack/spec/data';
 
-export const BusinessDb: Datasource = {
+export const BusinessDb = defineDatasource({
   name: 'business_primary',
   label: 'Business System (Postgres)',
   driver: 'postgres',
   config: {
-    connection: {
-      host: process.env.BIZ_DB_HOST,
-      user: process.env.BIZ_DB_USER,
-      password: process.env.BIZ_DB_PASSWORD,
-      database: process.env.BIZ_DB_NAME,
-    },
+    host: process.env.BIZ_DB_HOST,
+    database: process.env.BIZ_DB_NAME,
+    username: process.env.BIZ_DB_USER,
   },
+  external: { credentialsRef: process.env.BIZ_DB_CREDENTIALS_REF },
   pool: { min: 1, max: 10 },
   active: true,
-};
+});
 ```
+
+`defineDatasource` valide la déclaration contre le schéma de configuration propre au driver Postgres dès le chargement du fichier : une clé mal orthographiée (`user` au lieu de `username`) ou un `password` écrit en clair échoue sur place, avant toute connexion.
 
 ### 2. Modéliser les tables comme objets avec un agent de code
 

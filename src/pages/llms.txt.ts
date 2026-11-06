@@ -12,7 +12,7 @@ import {
 } from '../lib/i18n';
 import { CLUSTERS, clusterPath } from '../lib/clusters';
 import { clusterCopy } from '../lib/cluster-i18n';
-import { positioning } from '../lib/positioning';
+import { CLOUD_SIGNIN_URL, CLOUD_SIGNUP_URL, positioning } from '../lib/positioning';
 import { getMarketingPages, marketingPagePath } from '../content-pages/registry';
 import {
   getGlossaryTerms,
@@ -63,7 +63,7 @@ export const GET: APIRoute = async ({ site }) => {
     '',
     `> ${p.t1} ${p.t2} ${p.t4} ${p.e1}`,
     '',
-    `ObjectStack (Apache 2.0) keeps your app’s definition — objects and fields, relations, actions, permissions, flows, and agent and tool definitions — as one business ontology: open, versioned, and yours, in your own repository, not code scattered across a framework. Views, dashboards, apps, and translations are projections of the ontology, not part of it; code does not disappear, it moves into the runtime as hooks, action bodies, CEL, and constrained JSX. It is executable, not a knowledge-representation ontology: no inheritance, no axioms, no reasoner — validated rather than reasoned over — and it is not a semantic layer over your existing systems; federating an external datasource is read-only by default and early. Strict TypeScript, Zod schemas, and the \`os validate\` gate reject metadata that would fail silently at runtime; the open-source ObjectStack runtime then derives the database, REST API, UI, and MCP server from the validated definition and enforces permissions and audit on every call. On open-source ObjectStack you bring your own coding agent and MCP client, author metadata as source files, and review changes as diffs. ObjectOS is ${p.descriptor}: in-app AI Build and Ask, human approvals, SSO, managed deployment, and operational controls on ObjectOS Cloud (hosted, nothing to install) and ObjectOS Enterprise (self-managed on your own infrastructure).`,
+    `ObjectStack (Apache 2.0) keeps your app’s definition — objects and fields, relations, actions, permissions, flows, and agent and tool definitions — as one business ontology: open, versioned, and yours, in your own repository, not code scattered across a framework. Views, dashboards, apps, and translations are projections of the ontology, not part of it; code does not disappear, it moves into the runtime as hooks, action bodies, CEL, and constrained JSX. It is executable, not a knowledge-representation ontology: no inheritance, no axioms, no reasoner — validated rather than reasoned over — and it is not a semantic layer over your existing systems; federating an external datasource is read-only by default and early. Strict TypeScript, Zod schemas, and the \`os validate\` gate reject metadata that would fail silently at runtime; the open-source ObjectStack runtime then derives the database, REST API, UI, and MCP server from the validated definition and enforces permissions and audit on every call. On open-source ObjectStack you bring your own coding agent and MCP client, author metadata as source files, and review changes as diffs. ObjectOS comes in three editions, ${p.descriptor}: in-app AI Build and Ask, human approvals, SSO, managed deployment, and operational controls on ObjectOS Cloud (hosted, nothing to install) and ObjectOS Enterprise (self-managed on your own infrastructure).`,
     '',
     '## Core Definitions',
     '',
@@ -90,10 +90,11 @@ export const GET: APIRoute = async ({ site }) => {
       (page) => `- [${page.navLabel}](${absoluteUrl(site, marketingPagePath('en', page.slug))}): ${page.description}`
     ),
     `- [Security](${absoluteUrl(site, securityPath('en'))}): Data residency, permissions, approvals, audit logs, and the ObjectOS Enterprise self-managed deployment boundary.`,
-    `- [Pricing](${absoluteUrl(site, pricingPath('en'))}): Open-source ObjectStack, the ObjectOS Cloud plans (Free, Team, Business), and self-managed ObjectOS Enterprise, from its single-node Business Self-Managed entry up.`,
+    `- [Pricing](${absoluteUrl(site, pricingPath('en'))}): Open-source ObjectStack, the ObjectOS Cloud plans (Free, Team), and ObjectOS Enterprise, from its Enterprise Single-Node entry option up.`,
     `- [Glossary](${absoluteUrl(site, glossaryIndexPath('en'))}): One-sentence definitions of the vocabulary this site uses, each linked to the pages and articles that apply it.`,
     `- [Articles](${absoluteUrl(site, blogPath('en'))}): Practical writing on executable business ontologies and AI-written software, enterprise AI agents, integration, modernization, and governance.`,
     `- [Documentation](https://docs.objectos.ai/): Product and developer documentation.`,
+    `- [Sign up for ObjectOS Cloud](${CLOUD_SIGNUP_URL}): Create an account on the hosted edition, in Public Preview; existing accounts [sign in](${CLOUD_SIGNIN_URL}).`,
     '',
     '## Glossary',
     '',

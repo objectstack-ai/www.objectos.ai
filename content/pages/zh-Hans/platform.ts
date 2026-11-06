@@ -96,11 +96,11 @@ export const Order = ObjectSchema.create({
         eyebrow: '为 AI 而设计',
         title: '让 Agent 来写，让人来审',
         copy:
-          `上面每一项 ObjectStack 能力都以元数据定义——这正是「元数据驱动开发」在作者是 AI 时依然成立的原因：整体可装入上下文的定义、可读 diff 与运行时强制执行。ObjectOS 是${p.descriptor}，在这套开放机制之上增加产品内 AI Builder 与 Ask，从商业版起提供 AI 治理，并提供托管或自管交付。`,
+          `上面每一项 ObjectStack 能力都以元数据定义——这正是「元数据驱动开发」在作者是 AI 时依然成立的原因：整体可装入上下文的定义、可读 diff 与运行时强制执行。ObjectOS 是${p.descriptor}，在这套开放机制之上增加产品内 AI Builder 与 Ask，在 Enterprise（自管版）提供 AI 治理，并提供托管或自管交付。`,
         items: [
           {
             title: 'AI Build & Ask',
-            body: '在 ObjectOS 云端与企业版中，用自然语言描述变更并审阅 diff，或对实时业务数据提问——始终在登录用户的权限之内。',
+            body: '在 ObjectOS Cloud（托管版）与 Enterprise 版中，用自然语言描述变更并审阅 diff，或对实时业务数据提问——始终在登录用户的权限之内。',
             meta: '指南',
             href: '/en/ai/',
           },
@@ -136,12 +136,12 @@ export const Order = ObjectSchema.create({
       {
         question: '开源 ObjectStack 包含哪些能力？',
         answer:
-          '本页的运行时能力——数据、界面、自动化、审批、权限、报表分析——都属于开源 ObjectStack（Apache-2.0）：协议、内核、CLI、生产运行时、Console UI 与 MCP 服务器，开发与生产之间没有功能门槛。AI 自带（BYO-AI）：编码 Agent 以源码文件编写元数据，任意 MCP 客户端可以查询你的对象。产品内 AI Builder 与 Ask 是 ObjectOS 在此之上增加的——在 Cloud 与 Enterprise（含单节点入门选项 Business Self-Managed）上提供。',
+          '本页的运行时能力——数据、界面、自动化、审批、权限、报表分析——都属于开源 ObjectStack（Apache-2.0）：协议、内核、CLI、生产运行时、Console UI 与 MCP 服务器，开发与生产之间没有功能门槛。AI 自带（BYO-AI）：编码 Agent 以源码文件编写元数据，任意 MCP 客户端可以查询你的对象。产品内 AI Builder 与 Ask 是 ObjectOS 在此之上增加的——在 Cloud 与 Enterprise（含单节点入门选项 Enterprise 单机版）上提供。',
       },
       {
         question: '能跑在我们自己的基础设施里吗？',
         answer:
-          '可以，有三条路。开源 ObjectStack 运行时免费自托管，经 MCP 自带 AI。自管部署的 ObjectOS 即 ObjectOS 企业版：其单节点入门选项 Business Self-Managed 是带许可的部署，把产品内 AI 放到你自己的基础设施上，自带模型或密钥；单节点以上，企业版部署在 VPC、本地服务器或隔离网络中，提供集群、本地模型、内部身份系统、自有密钥管理与企业支持。',
+          '可以，有三条路。开源 ObjectStack 运行时免费自托管，经 MCP 自带 AI。自管部署的 ObjectOS 即 ObjectOS Enterprise：其单节点入门选项 Enterprise 单机版是带许可的部署，把产品内 AI 放到你自己的基础设施上，自带模型或密钥；单节点以上，Enterprise 部署在 VPC、本地服务器或隔离网络中，提供集群、本地模型、内部身份系统、自有密钥管理与企业支持。',
       },
     ],
   } satisfies MarketingPage;

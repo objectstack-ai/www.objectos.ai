@@ -7,6 +7,7 @@ import { phraseHtml } from '../../scripts/lib/cjk-phrases.mjs';
 import { formatDate, ui, blogPath, postPath, STATUS_COLOR, type Locale } from '../lib/i18n';
 import { termBySlug, termHref, termLabel } from '../lib/terms';
 import { getPostsInLocale, isPublicPost } from '../lib/posts';
+import { darkCover } from '../lib/cover-variant';
 import { clusterCopy, clusterLabels } from '../lib/cluster-i18n';
 import { CLUSTERS, clusterPath } from '../lib/clusters';
 import { ORGANIZATION_ID } from '../lib/organization';
@@ -54,6 +55,11 @@ const coverFile: string | undefined = entry?.filePath ? postCoverFile(entry.file
 if (data.cover && !coverFile) {
   throw new Error(`BlogPost: ${locale}/${slug} has a cover, but its file could not be resolved`);
 }
+// An SVG cover with a dark variant (src/lib/cover-variant.ts) is drawn twice,
+// one image per theme. Both are lazy: a display:none image is only skipped
+// when it is lazy, so the eager, high-priority pair would fetch both. The
+// visible one sits in the first viewport and is requested at first layout.
+const coverDark = darkCover(entry?.filePath, data.cover);
 const shareImage = coverFile
   ? { url: absoluteUrl(ogImagePath(coverFile)), width: OG_IMAGE.width, height: OG_IMAGE.height, alt: data.title }
   : undefined;
@@ -75,7 +81,8 @@ const relatedPosts = (await getPostsInLocale(locale))
 // The pillar pages that list this post in their reading path. Each links the
 // post; the post links back, so a reader who lands on one article from search
 // finds the guide it belongs to, and the pillar is not an orphan that only the
-// home page links (src/components/FooterClusters.astro has the other half).
+// home page links (the footer's Resources column, src/layouts/Base.astro, has
+// the other half).
 // Titles only: outside English a cluster's description is one template with
 // the name swapped, and five of them stacked under a post read as exactly that.
 const readingPaths = CLUSTERS.filter((cluster) => cluster.articleSlugs.includes(slug)).map(
@@ -237,29 +244,33 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
 
     <header class="post-head">
       <div class="meta">
-        <a class="cat topic" href={termHref(locale, topic)}>
+        <a class="chip chip-brand" href={termHref(locale, topic)}>
           {termLabel(data.topic, locale)}
         </a>
-        <a class="cat" href={termHref(locale, termBySlug(data.audience)!)}>
+        <a class="chip" href={termHref(locale, termBySlug(data.audience)!)}>
           {termLabel(data.audience, locale)}
         </a>
         {
           (data.solutions ?? []).map((slug) => (
-            <a class="cat" href={termHref(locale, termBySlug(slug)!)}>
+            <a class="chip" href={termHref(locale, termBySlug(slug)!)}>
               {termLabel(slug, locale)}
             </a>
           ))
         }
         {
           (data.industries ?? []).map((slug) => (
-            <a class="cat" href={termHref(locale, termBySlug(slug)!)}>
+            <a class="chip" href={termHref(locale, termBySlug(slug)!)}>
               {termLabel(slug, locale)}
             </a>
           ))
         }
-        <span class="pill" style={`--c:${STATUS_COLOR[data.status]}`}>
-          {t.status[data.status]}
-        </span>
+        {
+          data.status !== 'published' && (
+            <span class="pill" style={`--c:${STATUS_COLOR[data.status]}`}>
+              {t.status[data.status]}
+            </span>
+          )
+        }
         <span class="dot">·</span>
         <time datetime={dateStr}>{displayDate}</time>
         {
@@ -282,16 +293,41 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
       {
         data.cover &&
           (data.cover.format === 'svg' ? (
-            <img
-              class="cover"
-              src={data.cover.src}
-              alt={data.title}
-              width={data.cover.width}
-              height={data.cover.height}
-              loading="eager"
-              decoding="async"
-              fetchpriority="high"
-            />
+            coverDark ? (
+              <>
+                <img
+                  class="cover cover-light"
+                  src={data.cover.src}
+                  alt={data.title}
+                  width={data.cover.width}
+                  height={data.cover.height}
+                  loading="lazy"
+                  decoding="async"
+                  fetchpriority="high"
+                />
+                <img
+                  class="cover cover-dark"
+                  src={coverDark.src}
+                  alt={data.title}
+                  width={coverDark.width}
+                  height={coverDark.height}
+                  loading="lazy"
+                  decoding="async"
+                  fetchpriority="high"
+                />
+              </>
+            ) : (
+              <img
+                class="cover"
+                src={data.cover.src}
+                alt={data.title}
+                width={data.cover.width}
+                height={data.cover.height}
+                loading="eager"
+                decoding="async"
+                fetchpriority="high"
+              />
+            )
           ) : (
             <Image
               class="cover"
@@ -312,7 +348,7 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
         data.tags.length > 0 && (
           <ul class="tags">
             {data.tags.map((tag) => (
-              <li>{tag}</li>
+              <li class="chip">{tag}</li>
             ))}
           </ul>
         )
@@ -323,7 +359,7 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
           <div class="channels">
             <span class="channels-label">{t.alsoOn}</span>
             {data.channels.map((c) => (
-              <a href={c.url} target="_blank" rel="noopener">
+              <a class="chip chip-brand" href={c.url} target="_blank" rel="noopener">
                 {c.platform}
               </a>
             ))}
@@ -357,7 +393,7 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
           <h2 id="related-title" set:html={phraseHtml(t.relatedTitle, locale)} />
           <ul>
             {relatedPosts.map((post) => (
-              <li>
+              <li class="card card-link">
                 <a href={postPath(locale, post.slug)}>{post.entry.data.title}</a>
                 <p>{post.entry.data.description}</p>
               </li>
@@ -370,7 +406,7 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
 
   <style>
     article {
-      max-width: 860px;
+      max-width: var(--measure-wide);
       min-width: 0;
       margin: 0 auto;
     }
@@ -382,7 +418,7 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
       align-items: center;
       min-height: 44px;
       margin: -0.675rem 0 1.325rem;
-      font-size: 0.85rem;
+      font-size: var(--fs-14);
       color: var(--ink-soft);
       text-decoration: none;
       transition: color 0.16s ease, transform 0.16s ease;
@@ -401,21 +437,9 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
       flex-wrap: wrap;
       align-items: center;
       gap: 0.6rem;
-      font-size: 0.85rem;
+      font-size: var(--fs-14);
       color: var(--ink-soft);
       margin-bottom: 1.1rem;
-    }
-    .cat {
-      font-size: 0.78rem;
-      color: var(--accent);
-      background: var(--accent-soft);
-      padding: 0.15rem 0.55rem;
-      border: 1px solid color-mix(in srgb, var(--accent) 16%, transparent);
-      border-radius: 999px;
-      text-decoration: none;
-    }
-    .cat:hover {
-      background: color-mix(in srgb, var(--accent) 16%, var(--surface));
     }
     .dot {
       color: var(--muted);
@@ -426,26 +450,30 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
     }
     h1 {
       font-family: var(--font-display);
-      font-size: clamp(2.25rem, 5vw, 3.35rem);
-      line-height: 1.06;
-      letter-spacing: 0;
+      font-size: var(--fs-h1);
+      line-height: var(--lh-display);
+      letter-spacing: -0.01em;
       margin: 0 0 1rem;
     }
     /* zh and ja: the title breaks only at the <wbr> between phrases
        (scripts/lib/cjk-phrases.mjs); a phrase wider than the line still
        breaks, as a last resort. The body's own headings get theirs from the
-       markdown pipeline (rehypeCjkHeadingPhrases) and the rule below. */
+       markdown pipeline (rehypeCjkHeadingPhrases) and the rule below.
+       ko: Korean puts a space between words, so keep-all alone breaks it at
+       the spaces and never inside a word (없음 stays whole); no <wbr>. */
     h1:lang(zh),
     h1:lang(ja),
+    h1:lang(ko),
     h2:lang(zh),
-    h2:lang(ja) {
+    h2:lang(ja),
+    h2:lang(ko) {
       word-break: keep-all;
       overflow-wrap: anywhere;
       text-wrap: balance;
     }
     .lead {
-      font-size: 1.15rem;
-      line-height: 1.55;
+      font-size: var(--fs-20);
+      line-height: var(--lh-ui);
       color: var(--ink-soft);
       margin: 0;
     }
@@ -456,10 +484,20 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
       object-fit: cover;
       display: block;
       margin-top: 1.75rem;
-      border-radius: 8px;
+      border-radius: var(--r-card);
       border: 1px solid var(--line);
       background: var(--surface-sunk);
-      box-shadow: 0 28px 70px -48px rgba(var(--shadow), 0.68);
+      box-shadow: var(--shadow-md);
+      filter: var(--cover-filter);
+    }
+    /* One cover per theme (src/lib/cover-variant.ts); the dark variant is
+       drawn dark and takes no --cover-filter dimming. */
+    :global(:root:not([data-theme='dark'])) .cover-dark,
+    :global(:root[data-theme='dark']) .cover-light {
+      display: none;
+    }
+    .cover.cover-dark {
+      filter: none;
     }
     .tags {
       list-style: none;
@@ -469,44 +507,31 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
       padding: 0;
       margin: 1.4rem 0 0;
     }
-    .tags li {
-      font-size: 0.74rem;
-      color: var(--ink-soft);
-      background: var(--surface-sunk);
-      border-radius: 999px;
-      padding: 0.15rem 0.55rem;
-    }
     .channels {
       margin-top: 1.2rem;
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       gap: 0.55rem;
-      font-size: 0.85rem;
+      font-size: var(--fs-14);
     }
     .channels-label {
       color: var(--muted);
-    }
-    .channels a {
-      text-decoration: none;
-      background: var(--accent-soft);
-      padding: 0.1rem 0.5rem;
-      border-radius: 999px;
     }
     .reading-path {
       margin-top: 3rem;
       padding: 1rem 1.1rem;
       border: 1px solid var(--line);
-      border-left: 3px solid var(--accent);
-      border-radius: 8px;
+      border-left: 3px solid var(--green);
+      border-radius: var(--r-card);
       background: var(--surface);
     }
     .reading-path-label {
       margin: 0 0 0.5rem;
       color: var(--ink-soft);
-      font-size: 0.75rem;
+      font-size: var(--fs-12);
       font-weight: 700;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
     }
     .reading-path ul {
@@ -519,11 +544,11 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
     .reading-path a {
       color: var(--ink);
       font-weight: 700;
-      line-height: 1.35;
+      line-height: var(--lh-heading);
       text-decoration: none;
     }
     .reading-path a:hover {
-      color: var(--accent);
+      color: var(--brand);
     }
     .related {
       margin-top: 3rem;
@@ -531,7 +556,7 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
       border-top: 1px solid var(--line);
     }
     .related h2 {
-      font-size: 1.1rem;
+      font-size: var(--fs-18);
       margin: 0 0 1rem;
       letter-spacing: 0;
     }
@@ -544,61 +569,64 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
     }
     .related li {
       padding: 0.95rem 1rem;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--surface);
-      box-shadow: 0 14px 38px -34px rgba(var(--shadow), 0.45);
-      transition: transform 0.16s ease, border-color 0.16s ease;
-    }
-    .related li:hover {
-      border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
-      transform: translateY(-2px);
     }
     .related a {
       display: inline-block;
       color: var(--ink);
       font-weight: 700;
-      line-height: 1.35;
+      line-height: var(--lh-heading);
       text-decoration: none;
     }
     .related a:hover {
-      color: var(--accent);
+      color: var(--brand);
     }
     .related p {
       margin: 0.35rem 0 0;
       color: var(--ink-soft);
-      font-size: 0.9rem;
-      line-height: 1.55;
+      font-size: var(--fs-14);
+      line-height: var(--lh-ui);
     }
   </style>
 
   <style is:global>
     .prose {
       min-width: 0;
-      font-size: 1.06rem;
-      line-height: 1.82;
+      font-size: var(--fs-17);
+      line-height: var(--lh-prose);
       color: var(--ink);
     }
     .prose > :first-child {
       margin-top: 0;
     }
+    /* Measure. At the article's 860px a line ran about 95 characters in en
+       and 47 in zh; text blocks stop at 44rem. Code blocks, tables and
+       figures keep the full article width (each already has its own scroll
+       container or scales down), and they start on the same left edge as
+       the text, under the title. */
+    .prose > * {
+      max-width: var(--measure-prose);
+    }
+    .prose > :is(pre, table),
+    .prose > p:has(> .figure-link, > img) {
+      max-width: 100%;
+    }
     .prose h2 {
       font-family: var(--font-display);
-      font-size: 1.75rem;
+      font-size: var(--fs-30);
       letter-spacing: 0;
       margin: 2.6rem 0 1rem;
-      line-height: 1.25;
+      line-height: var(--lh-heading);
       scroll-margin-top: 104px;
     }
     .prose h3 {
-      font-size: 1.22rem;
+      font-size: var(--fs-20);
       margin: 2rem 0 0.75rem;
       scroll-margin-top: 104px;
     }
     /* zh and ja body headings carry a <wbr> between phrases, added at build
        time by rehypeCjkHeadingPhrases (scripts/lib/cjk-phrases.mjs), and break
-       nowhere else. */
-    .prose :is(h1, h2, h3, h4, h5, h6):is(:lang(zh), :lang(ja)) {
+       nowhere else. ko headings break at their own spaces. */
+    .prose :is(h1, h2, h3, h4, h5, h6):is(:lang(zh), :lang(ja), :lang(ko)) {
       word-break: keep-all;
       overflow-wrap: anywhere;
       text-wrap: balance;
@@ -607,12 +635,12 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
       margin: 0 0 1.25rem;
     }
     .prose a {
-      color: var(--accent);
+      color: var(--brand);
       text-underline-offset: 2px;
     }
     .prose strong {
       color: var(--ink);
-      font-weight: 650;
+      font-weight: 700;
     }
     .prose ul,
     .prose ol {
@@ -625,8 +653,8 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
     .prose blockquote {
       margin: 1.5rem 0;
       padding: 1rem 1.2rem;
-      border-left: 4px solid color-mix(in srgb, var(--accent) 42%, var(--line));
-      border-radius: 0 8px 8px 0;
+      border-left: 4px solid color-mix(in srgb, var(--brand) 42%, var(--line));
+      border-radius: 0 var(--r-card) var(--r-card) 0;
       background: color-mix(in srgb, var(--surface) 64%, transparent);
       color: var(--ink-soft);
       overflow-wrap: anywhere;
@@ -643,10 +671,10 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
       width: 100%;
       height: auto;
       max-width: 100%;
-      border-radius: 8px;
+      border-radius: var(--r-card);
       border: 1px solid var(--line);
       background: var(--surface);
-      box-shadow: 0 18px 48px -42px rgba(var(--shadow), 0.55);
+      box-shadow: var(--shadow-sm);
       display: block;
       margin: 1.5rem auto;
     }
@@ -662,7 +690,7 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
       font-size: 0.88em;
       background: var(--surface-sunk);
       padding: 0.12em 0.4em;
-      border-radius: 5px;
+      border-radius: var(--r-control);
       border: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
       overflow-wrap: anywhere;
     }
@@ -670,13 +698,13 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
       max-width: 100%;
       margin: 1.5rem 0;
       padding: 1rem 1.15rem;
-      border-radius: 10px;
+      border-radius: var(--r-card);
       overflow-x: auto;
-      font-size: 0.86rem;
-      line-height: 1.6;
+      font-size: var(--fs-14);
+      line-height: var(--lh-body);
       border: 1px solid var(--line);
       background: color-mix(in srgb, var(--surface-sunk) 72%, var(--surface));
-      box-shadow: 0 18px 42px -36px rgba(var(--shadow), 0.45);
+      box-shadow: var(--shadow-sm);
       overscroll-behavior-x: contain;
     }
     /* A code block scrolls sideways at every width, not only on a phone, so
@@ -688,12 +716,12 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
       height: 6px;
     }
     .prose pre::-webkit-scrollbar-track {
-      background: rgba(255, 255, 255, 0.08);
-      border-radius: 999px;
+      background: color-mix(in srgb, var(--on-panel) 8%, transparent);
+      border-radius: var(--r-pill);
     }
     .prose pre::-webkit-scrollbar-thumb {
-      background: rgba(225, 228, 232, 0.42);
-      border-radius: 999px;
+      background: color-mix(in srgb, var(--on-panel) 42%, transparent);
+      border-radius: var(--r-pill);
     }
     @supports (animation-timeline: scroll(self inline)) {
       .prose pre {
@@ -713,13 +741,15 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
       width: 100%;
       border-collapse: collapse;
       margin: 1.5rem 0;
-      font-size: 0.95rem;
+      font-size: var(--fs-15);
     }
+    /* Tabular figures, so the digits of one column line up row to row. */
     .prose th,
     .prose td {
       border: 1px solid var(--line);
       padding: 0.5rem 0.75rem;
       text-align: left;
+      font-variant-numeric: tabular-nums;
     }
     .prose th {
       background: var(--surface-sunk);
@@ -734,48 +764,62 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
       }
       .meta {
         gap: 0.4rem;
-        font-size: 0.76rem;
+        font-size: var(--fs-13);
       }
-      .cat {
+      .meta .chip {
         min-height: 32px;
-        display: inline-flex;
-        align-items: center;
       }
       .dot {
         display: none;
       }
       h1 {
-        font-size: 2rem;
-        line-height: 1.18;
         overflow-wrap: anywhere;
       }
       .lead {
-        font-size: 1rem;
-        line-height: 1.65;
+        font-size: var(--fs-16);
+        line-height: var(--lh-body);
       }
       .cover {
         margin-top: 1.25rem;
-        border-radius: 6px;
+        border-radius: var(--r-control);
       }
       .prose {
-        font-size: 1rem;
-        line-height: 1.75;
+        font-size: var(--fs-16);
+        line-height: var(--lh-prose);
       }
       .prose h2 {
         margin-top: 2.25rem;
-        font-size: 1.35rem;
+        font-size: var(--fs-24);
         overflow-wrap: anywhere;
       }
       .prose h3 {
-        font-size: 1.12rem;
+        font-size: var(--fs-18);
         overflow-wrap: anywhere;
+      }
+      /* Latin-script titles and headings hyphenate a word wider than the
+         column (by the <html lang> dictionary) instead of splitting it at an
+         arbitrary letter: at 360 `overflow-wrap: anywhere` alone rendered
+         `Produktionsdatenba` / `nk` and `Metadatengenerieru` / `ng`. It stays
+         above as the last resort for a word with no hyphenation point.
+         Only words of 12+ letters hyphenate, 5 kept on each side, so short
+         words still wrap whole. zh, ja and ko keep their keep-all rules. */
+      h1:is(:lang(en), :lang(de), :lang(fr), :lang(es)),
+      .prose :is(h2, h3):is(:lang(en), :lang(de), :lang(fr), :lang(es)) {
+        -webkit-hyphens: auto;
+        hyphens: auto;
+        hyphenate-limit-chars: 12 5 5;
+      }
+      /* An identifier in a heading must not gain a hyphen it does not have. */
+      .prose :is(h2, h3) code {
+        -webkit-hyphens: manual;
+        hyphens: manual;
       }
       .prose pre {
         margin-right: -0.25rem;
         margin-left: -0.25rem;
         padding: 0.85rem;
-        border-radius: 6px;
-        font-size: 0.78rem;
+        border-radius: var(--r-control);
+        font-size: var(--fs-13);
       }
       /* The table itself is the scroll container here (`display: block` +
          `overflow-x: auto`), so wide tables scroll instead of clipping and the
@@ -789,7 +833,7 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
         display: block;
         max-width: 100%;
         overflow-x: auto;
-        font-size: 0.82rem;
+        font-size: var(--fs-13);
         /* Keep a horizontal swipe that reaches the end of the table from
            chaining into the page/browser behind it. */
         overscroll-behavior-x: contain;
@@ -827,11 +871,11 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
       }
       .prose table::-webkit-scrollbar-track {
         background: color-mix(in srgb, var(--surface-sunk) 70%, transparent);
-        border-radius: 999px;
+        border-radius: var(--r-pill);
       }
       .prose table::-webkit-scrollbar-thumb {
         background: color-mix(in srgb, var(--ink) 32%, transparent);
-        border-radius: 999px;
+        border-radius: var(--r-pill);
       }
       /* Affordance 2 — fade the trailing edge while there is more table to the
          right. Driven by the container's own scroll position so it clears

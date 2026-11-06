@@ -57,6 +57,12 @@ const OPENING = /^[「『（(【〔〈《“‘]+$/u;
  *  and suffixes (的, 工程师, 数据库, 工作台) and measure words (另一次).
  *  Checked against every zh heading the site renders. */
 const ZH_SUFFIX = new Set([...'的了着过们地得吗呢吧啊之性化者权时里上下中内外前后间式型级端师员家商人台面个次种份套步张条位项库话版']);
+/** Terms the ICU dictionary cuts into two words that are one term in this
+ *  site's copy. The Traditional ones are what `src/lib/zhconvert.ts` emits for
+ *  运行时, 运行时校验 and 元数据 (#361); ICU splits them 執行|環境, 執行|階段,
+ *  中繼|資料, and the zh-Hant hero lead broke at 1440px between 執行 and 環境.
+ *  Two adjacent segments that spell one of these are taken as one word. */
+const ZH_COMPOUNDS = new Set(['執行環境', '執行階段', '中繼資料']);
 
 const segmenters = new Map();
 const segmenter = (lang) => {
@@ -79,7 +85,12 @@ export const phraseLanguage = (locale) =>
 export function cjkPhrases(text, locale) {
   const lang = phraseLanguage(locale);
   if (!lang || !CJK.test(text)) return [text];
-  const segs = [...segmenter(lang).segment(text)].map((s) => s.segment);
+  const segs = [];
+  for (const { segment } of segmenter(lang).segment(text)) {
+    const joined = segs.length ? segs[segs.length - 1] + segment : '';
+    if (lang === 'zh' && ZH_COMPOUNDS.has(joined)) segs[segs.length - 1] = joined;
+    else segs.push(segment);
+  }
   const phrases = [];
   let glueNext = false;
   // A straight double quote opens or closes by parity: "同意" in the copy.
