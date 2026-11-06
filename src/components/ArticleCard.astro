@@ -4,6 +4,7 @@ import type { Locale } from '../lib/i18n';
 import { formatDate, postPath, STATUS_COLOR, ui } from '../lib/i18n';
 import type { LocalePost } from '../lib/posts';
 import { termLabel } from '../lib/terms';
+import { darkCover } from '../lib/cover-variant';
 import { phraseHtml } from '../../scripts/lib/cjk-phrases.mjs';
 
 interface Props {
@@ -32,21 +33,48 @@ const thumbSizes =
     ? '(min-width: 1024px) 640px, calc(100vw - 2rem)'
     : '(max-width: 640px) calc(100vw - 2rem), (max-width: 900px) calc(55vw - 2rem), 400px';
 const thumbLoading = variant === 'feature' ? 'eager' : 'lazy';
+// An SVG cover with a dark variant (src/lib/cover-variant.ts) is drawn twice,
+// one image per theme. Both are lazy, the feature card's too: a display:none
+// image is only skipped when it is lazy, so an eager pair would fetch both.
+const coverDark = darkCover(post.entry.filePath, d.cover);
 ---
 
 <li class:list={['article-item', variant]}>
-  <a class="card" href={postPath(locale, post.slug)}>
+  <a class="card card-link" href={postPath(locale, post.slug)}>
     <div class="thumb">
       {d.cover ? (
         d.cover.format === 'svg' ? (
-          <img
-            src={d.cover.src}
-            alt={d.title}
-            width={d.cover.width}
-            height={d.cover.height}
-            loading={thumbLoading}
-            decoding="async"
-          />
+          coverDark ? (
+            <>
+              <img
+                class="cover-light"
+                src={d.cover.src}
+                alt={d.title}
+                width={d.cover.width}
+                height={d.cover.height}
+                loading="lazy"
+                decoding="async"
+              />
+              <img
+                class="cover-dark"
+                src={coverDark.src}
+                alt={d.title}
+                width={coverDark.width}
+                height={coverDark.height}
+                loading="lazy"
+                decoding="async"
+              />
+            </>
+          ) : (
+            <img
+              src={d.cover.src}
+              alt={d.title}
+              width={d.cover.width}
+              height={d.cover.height}
+              loading={thumbLoading}
+              decoding="async"
+            />
+          )
         ) : (
           <Image
             src={d.cover}
@@ -78,16 +106,16 @@ const thumbLoading = variant === 'feature' ? 'eager' : 'lazy';
       <h2 set:html={phraseHtml(d.title, locale)} />
       <p class="desc">{d.description}</p>
       <div class="facets">
-        <span class="facet topic">{termLabel(d.topic, locale)}</span>
-        <span class="facet">{termLabel(d.audience, locale)}</span>
+        <span class="chip chip-brand">{termLabel(d.topic, locale)}</span>
+        <span class="chip">{termLabel(d.audience, locale)}</span>
         {(d.solutions ?? []).map((slug) => (
-          <span class="facet">{termLabel(slug, locale)}</span>
+          <span class="chip">{termLabel(slug, locale)}</span>
         ))}
         {(d.industries ?? []).map((slug) => (
-          <span class="facet">{termLabel(slug, locale)}</span>
+          <span class="chip">{termLabel(slug, locale)}</span>
         ))}
         {d.tags.map((tag) => (
-          <span class="facet tag">{tag}</span>
+          <span class="chip tag">{tag}</span>
         ))}
       </div>
     </div>
@@ -106,20 +134,7 @@ const thumbLoading = variant === 'feature' ? 'eager' : 'lazy';
     height: 100%;
     text-decoration: none;
     color: inherit;
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: 8px;
     overflow: hidden;
-    box-shadow: 0 18px 48px -40px rgba(var(--shadow), 0.52);
-    transition:
-      border-color 0.18s ease,
-      box-shadow 0.18s ease,
-      transform 0.18s ease;
-  }
-  .card:hover {
-    border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
-    box-shadow: 0 28px 58px -40px rgba(var(--shadow), 0.72);
-    transform: translateY(-3px);
   }
   .thumb {
     aspect-ratio: 16 / 10;
@@ -133,25 +148,32 @@ const thumbLoading = variant === 'feature' ? 'eager' : 'lazy';
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.28s ease;
+    filter: var(--cover-filter);
   }
-  .card:hover .thumb :global(img) {
-    transform: scale(1.035);
+  /* One cover per theme (src/lib/cover-variant.ts). The dark variant is drawn
+     dark, so it takes no --cover-filter dimming; raster covers and SVGs with
+     no variant keep it. */
+  :global(:root:not([data-theme='dark'])) .cover-dark,
+  :global(:root[data-theme='dark']) .cover-light {
+    display: none;
+  }
+  .thumb .cover-dark {
+    filter: none;
   }
   .thumb-fallback {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 0.4rem;
-    color: color-mix(in srgb, var(--accent) 50%, var(--muted));
+    color: color-mix(in srgb, var(--brand) 50%, var(--muted));
   }
   .thumb-fallback .fmark {
-    font-size: 1.7rem;
+    font-size: var(--fs-24);
     opacity: 0.45;
   }
   .thumb-fallback .ftopic {
-    font-size: 0.78rem;
-    letter-spacing: 0.05em;
+    font-size: var(--fs-13);
+    letter-spacing: 0.08em;
   }
   .body {
     display: flex;
@@ -167,24 +189,24 @@ const thumbLoading = variant === 'feature' ? 'eager' : 'lazy';
     margin-bottom: 0.55rem;
   }
   .pill {
-    font-size: 0.72rem;
+    font-size: var(--fs-12);
     color: var(--c);
     background: color-mix(in srgb, var(--c) 9%, var(--surface));
     border: 1px solid color-mix(in srgb, var(--c) 18%, transparent);
-    border-radius: 999px;
+    border-radius: var(--r-pill);
     padding: 0.12rem 0.5rem;
     text-transform: capitalize;
   }
   .top time {
-    font-size: 0.8rem;
+    font-size: var(--fs-13);
     color: var(--muted);
     font-variant-numeric: tabular-nums;
     flex-shrink: 0;
   }
   h2 {
     font-family: var(--font-display);
-    font-size: 1.25rem;
-    line-height: 1.24;
+    font-size: var(--fs-20);
+    line-height: var(--lh-heading);
     letter-spacing: 0;
     margin: 0 0 0.4rem;
     transition: color 0.18s ease;
@@ -202,13 +224,13 @@ const thumbLoading = variant === 'feature' ? 'eager' : 'lazy';
     text-wrap: balance;
   }
   .card:hover h2 {
-    color: var(--accent);
+    color: var(--brand);
   }
   .desc {
     margin: 0 0 1rem;
     color: var(--ink-soft);
-    font-size: 0.92rem;
-    line-height: 1.6;
+    font-size: var(--fs-15);
+    line-height: var(--lh-body);
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
@@ -220,25 +242,9 @@ const thumbLoading = variant === 'feature' ? 'eager' : 'lazy';
     gap: 0.4rem;
     margin-top: auto;
   }
-  .facet {
-    font-size: 0.72rem;
-    color: var(--ink-soft);
-    background: var(--surface-sunk);
-    padding: 0.12rem 0.5rem;
-    border-radius: 999px;
-    white-space: nowrap;
-  }
-  .facet.topic {
-    color: var(--accent);
-    background: var(--accent-soft);
-    font-weight: 600;
-  }
-  .facet.tag {
-    color: var(--muted);
-    background: transparent;
-    padding: 0.12rem 0.35rem;
-  }
-  .facet.tag::before {
+  /* A tag is a plain chip with a # before it, so the three facet kinds read
+     as two: the topic (brand) and everything else. */
+  .chip.tag::before {
     content: '#';
     opacity: 0.6;
   }
@@ -246,11 +252,11 @@ const thumbLoading = variant === 'feature' ? 'eager' : 'lazy';
     aspect-ratio: 16 / 9;
   }
   .feature h2 {
-    font-size: clamp(1.55rem, 2.6vw, 2.15rem);
-    line-height: 1.12;
+    font-size: var(--fs-30);
+    line-height: var(--lh-heading);
   }
   .feature .desc {
-    font-size: 1rem;
+    font-size: var(--fs-16);
     -webkit-line-clamp: 4;
   }
   .feature .body {
@@ -287,11 +293,6 @@ const thumbLoading = variant === 'feature' ? 'eager' : 'lazy';
       justify-content: center;
       padding: 1.35rem 1.6rem;
     }
-    /* Sized so the text fits beside the cover's 16:9 at the 1072px content
-       width; longer localized titles fall back to the stretch above. */
-    .feature h2 {
-      font-size: clamp(1.45rem, 2.2vw, 1.85rem);
-    }
     .feature .desc {
       -webkit-line-clamp: 3;
     }
@@ -300,9 +301,6 @@ const thumbLoading = variant === 'feature' ? 'eager' : 'lazy';
     }
   }
   @media (max-width: 640px) {
-    .card {
-      border-radius: 8px;
-    }
     .thumb,
     .feature .thumb {
       aspect-ratio: 2 / 1;
@@ -313,23 +311,32 @@ const thumbLoading = variant === 'feature' ? 'eager' : 'lazy';
     }
     h2,
     .feature h2 {
-      font-size: 1.08rem;
-      line-height: 1.38;
+      font-size: var(--fs-18);
+      line-height: var(--lh-heading);
+    }
+    /* Latin-script titles: a word wider than the card hyphenates (by the
+       <html lang> dictionary); one with no hyphenation point breaks anywhere
+       as the last resort. Without either, a 36-letter German compound ran
+       5px past the card at 360 and was clipped by its `overflow: hidden`.
+       Same 12-letter floor as the article title (BlogPost.astro). zh, ja
+       and ko keep their keep-all rule above. */
+    h2:is(:lang(en), :lang(de), :lang(fr), :lang(es)) {
+      -webkit-hyphens: auto;
+      hyphens: auto;
+      hyphenate-limit-chars: 12 5 5;
+      overflow-wrap: anywhere;
     }
     .desc,
     .feature .desc {
       margin-bottom: 0.75rem;
-      font-size: 0.85rem;
-      line-height: 1.55;
+      font-size: var(--fs-14);
+      line-height: var(--lh-ui);
       -webkit-line-clamp: 2;
     }
     .facets {
       gap: 0.3rem;
     }
-    .facet {
-      font-size: 0.67rem;
-    }
-    .facet.tag {
+    .chip.tag {
       display: none;
     }
   }

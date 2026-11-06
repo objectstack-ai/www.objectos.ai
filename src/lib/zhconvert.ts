@@ -23,7 +23,7 @@ import type { DictGroup, DictLike, LocalePreset } from 'opencc-js/core';
 // fail with ERR_MODULE_NOT_FOUND. Keep relative imports out of this file — the
 // same constraint `src/lib/term-data.ts` documents, for the same reason.
 
-// ─── Taiwanese vocabulary: s2twp, minus eight wrong entries ────────────────
+// ─── Taiwanese vocabulary: s2twp, minus eight wrong entries, plus five ─────
 //
 // `twp` is the right preset. Its phrase layer is what turns 数据 into 資料,
 // 程序 into 程式, 对象 into 物件, 接口 into 介面, 服务器 into 伺服器, 软件 into
@@ -59,6 +59,12 @@ import type { DictGroup, DictLike, LocalePreset } from 'opencc-js/core';
 // across STPhrases (49276 entries), STCharacters (3882) and TWVariants (39),
 // the only hit for any of them is STPhrases' identity entry 介面卡 → 介面卡,
 // which can preserve a NIC but can never introduce one.
+//
+// THE FIVE AT THE END ARE A DIFFERENT KIND (#361). They correct vocabulary,
+// not a broken TWPhrases rule, and one of them shadows nothing: 平台 → 平臺
+// happens in the first group (plain `tw` already gives 平臺), so ['平臺', '平台']
+// rewrites what reaches TWPhrases instead of replacing a rule inside it. The
+// keying rule is the same — post-s2t form, as the group head sees it.
 export const TWP_PHRASE_OVERRIDES: readonly (readonly [string, string])[] = [
   // 权限 → 許可權 is a Microsoft-glossary rendering; 權限 is the ordinary term in
   // Taiwanese technical and legal writing.
@@ -103,6 +109,26 @@ export const TWP_PHRASE_OVERRIDES: readonly (readonly [string, string])[] = [
   // escaped the substitution and read 腳本 while the rest read 指令碼. The
   // identity entry settles every site the same way, straddled or not.
   ['腳本', '腳本'],
+
+  // ── Developer vocabulary, Taiwan usage (#361, maintainer ruling 2026-11-04) ──
+  //
+  // 运行时 → 執行時 reads as "at the time it executes", not a noun, so T2's
+  // 运行时运行它 came out as a clause and the home hero broke inside it. As a
+  // component — the runtime that runs the ontology — Taiwanese writing says
+  // 執行環境 (Java 執行環境, Node.js 執行環境). The two longer keys keep the
+  // phase sense: they match first (longest match) and so 在运行时 stays
+  // 在執行時 and 运行时校验 becomes 執行階段校驗, not 執行環境校驗.
+  ['運行時', '執行環境'],
+  ['在運行時', '在執行時'],
+  ['運行時校驗', '執行階段校驗'],
+  // 平台 → 平臺 is the Ministry of Education form; 平台 is what Taiwanese
+  // technical and everyday writing actually uses.
+  ['平臺', '平台'],
+  // 元数据 → 後設資料 is the library-science term; Microsoft, Apple and Google
+  // zh-TW write 中繼資料 for metadata. The key is 元數據, not 後設資料: the
+  // rewrite happens inside the TWPhrases group, so the group head sees the
+  // post-s2t source form (a 後設資料 key was probed and never fires).
+  ['元數據', '中繼資料'],
 ];
 
 /** `s2twp` with TWP_PHRASE_OVERRIDES shadowing the head of its phrase group. */

@@ -151,7 +151,7 @@ export const MrrByPlan = defineReport({
       {
         question: 'What is open source here, and what does ObjectOS add?',
         answer:
-          'Aggregations, time series, funnels, semantic datasets, drilldown, and the dashboard and report designers are part of the open-source ObjectStack runtime, Apache-2.0, with the same permission enforcement as the rest of the platform. ObjectOS adds the “ask your data” assistant: a question asked in chat is answered from the same datasets, inside the asking user’s permissions, with the query audited and guardrailed from Business. On the open runtime you ask the same questions through any MCP client with your own model.',
+          'Aggregations, time series, funnels, semantic datasets, drilldown, and the dashboard and report designers are part of the open-source ObjectStack runtime, Apache-2.0, with the same permission enforcement as the rest of the platform. ObjectOS adds the “ask your data” assistant: a question asked in chat is answered from the same datasets, inside the asking user’s permissions, with the query audited and guardrailed on Enterprise. On the open runtime you ask the same questions through any MCP client with your own model.',
       },
     ],
   } satisfies MarketingPage;
