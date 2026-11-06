@@ -111,6 +111,11 @@ interface HomeCopy {
   closingKicker: string;
   closingTitle: string;
   closingCopy: string;
+  /**
+   * The closing CTA pair's first button, to ObjectOS Cloud sign-up
+   * (`CLOUD_SIGNUP_URL`); the second is `ui[locale].contactUs`, to /contact/
+   * (#397).
+   */
   closingCta: string;
   compareKicker: string;
   compareTitle: [string, string];
@@ -199,7 +204,7 @@ const zhHans: HomeCopy = {
   closingKicker: '下一步',
   closingTitle: '从你最熟悉的一套业务数据开始。',
   closingCopy: '把一个已在运行的数据库联邦接入（默认只读），定义关键业务对象，让 Agent 用一个小元数据 diff 发布第一个由 AI 编写、受治理的应用。',
-  closingCta: '连接你现有的系统',
+  closingCta: '免费开始',
   compareKicker: '对比',
   compareTitle: ['和你熟悉的工具', '不是一回事'],
   compareLink: '阅读对比',
@@ -291,7 +296,7 @@ const en: HomeCopy = {
   closingKicker: 'Next step',
   closingTitle: 'Start with the business data you know best.',
   closingCopy: 'Federate one database you already run — read-only by default — define its key business objects, and let your agent ship the first governed AI-written application as a small metadata diff.',
-  closingCta: 'Connect your existing systems',
+  closingCta: 'Start free',
   compareKicker: 'How it compares',
   compareTitle: ['Different from', 'the tools you know'],
   compareLink: 'Read the comparison',
@@ -384,7 +389,7 @@ const ja: HomeCopy = {
   closingKicker: '次のステップ',
   closingTitle: '最もよく知る業務データから始めましょう。',
   closingCopy: 'すでに稼働中のデータベースを一つフェデレートし（既定で読み取り専用）、主要な業務オブジェクトを定義して、最初のガバナンス付き AI-written アプリを小さなメタデータ diff として出荷します。',
-  closingCta: '既存システムを接続する',
+  closingCta: '無料で始める',
   compareKicker: '比較',
   compareTitle: ['よくあるツールとは', '別物です'],
   compareLink: '比較を読む',
@@ -477,7 +482,7 @@ const de: HomeCopy = {
   closingKicker: 'Nächster Schritt',
   closingTitle: 'Beginnen Sie mit den Geschäftsdaten, die Sie am besten kennen.',
   closingCopy: 'Föderieren Sie eine Datenbank, die Sie bereits betreiben (standardmäßig nur lesend), definieren Sie zentrale Geschäftsobjekte und lassen Sie Ihren Agent die erste kontrollierte AI-geschriebene Anwendung als kleinen Metadaten-Diff ausliefern.',
-  closingCta: 'Bestehende Systeme verbinden',
+  closingCta: 'Kostenlos starten',
   compareKicker: 'Im Vergleich',
   compareTitle: ['Anders als die Tools,', 'die Sie kennen'],
   compareLink: 'Vergleich lesen',
@@ -570,7 +575,7 @@ const es: HomeCopy = {
   closingKicker: 'Siguiente paso',
   closingTitle: 'Empieza con los datos de negocio que mejor conoces.',
   closingCopy: 'Federa una base de datos que ya usas (solo lectura por defecto), define sus objetos clave y deja que tu agente entregue la primera aplicación escrita por AI y gobernada como un diff pequeño de metadatos.',
-  closingCta: 'Conecta tus sistemas existentes',
+  closingCta: 'Empieza gratis',
   compareKicker: 'Comparativa',
   compareTitle: ['Distinto de las', 'herramientas que conoces'],
   compareLink: 'Leer la comparación',
@@ -663,7 +668,7 @@ const fr: HomeCopy = {
   closingKicker: 'Étape suivante',
   closingTitle: 'Commencez par les données métier que vous connaissez le mieux.',
   closingCopy: 'Fédérez une base que vous exploitez déjà (en lecture seule par défaut), définissez ses objets clés et laissez votre agent livrer la première application gouvernée écrite par l’AI sous forme de petit diff de métadonnées.',
-  closingCta: 'Connecter les systèmes existants',
+  closingCta: 'Commencer gratuitement',
   compareKicker: 'Comparatif',
   compareTitle: ['Différent des outils', 'que vous connaissez'],
   compareLink: 'Lire le comparatif',
@@ -756,7 +761,7 @@ const ko: HomeCopy = {
   closingKicker: '다음 단계',
   closingTitle: '가장 잘 아는 비즈니스 데이터에서 시작하세요.',
   closingCopy: '이미 운영 중인 데이터베이스 하나를 연합하고(기본 읽기 전용), 핵심 비즈니스 객체를 정의해 에이전트가 첫 거버넌스 AI 작성 애플리케이션을 작은 메타데이터 diff로 배포하게 하세요.',
-  closingCta: '기존 시스템 연결하기',
+  closingCta: '무료로 시작하기',
   compareKicker: '비교',
   compareTitle: ['익숙한 도구들과는', '다릅니다'],
   compareLink: '비교 보기',
