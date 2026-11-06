@@ -19,6 +19,13 @@ import { positioning } from './positioning';
 // HotCRM reference app, booted by StackBlitz from its GitHub repository. One
 // spelling for the home hero and the /templates/ hero.
 export const TRY_IN_BROWSER_URL = 'https://stackblitz.com/github/objectstack-ai/hotcrm';
+// The trial's label ends in a parenthetical ("(no sign-up)", "(sans
+// inscription)"). Where the button wraps (fr on a phone), it breaks before the
+// parenthetical, never inside it: its spaces become non-breaking. The button
+// renders the label and the ↗ as one text run, so the mark stays on the last
+// word's line.
+export const keepParentheticalWhole = (label: string): string =>
+  label.replace(/\([^()]*\)$/u, (part) => part.replace(/ /g, '\u00a0'));
 const sentenceCase = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 // The media note under the hero image is titled with T2's first sentence —
 // "One executable business ontology" in each locale — read from positioning
