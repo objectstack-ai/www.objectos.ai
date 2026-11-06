@@ -48,6 +48,12 @@ import type { Locale } from './i18n';
  *
  * Translations keep T1–T4, E1 and the protocol link semantically exact. zh-Hans T1 is the README's
  * own Chinese line, 本体即软件。 zh-Hant is derived from zh-Hans, never hand-kept.
+ *
+ * The home H1 is a rendering of T1, not a second copy of it (#360, maintainer
+ * ruling 2026-11-04): one line, T1's terminal full stop dropped, the trailing
+ * phrase in the emphasis colour (`t1Hero`). That is a display rule of the same
+ * kind as rendering the README's Markdown away, so Q4 still holds — T1 and the
+ * README are untouched, and `check-positioning.mjs` never reads the H1.
  */
 /**
  * The developer site: the open ObjectStack protocol, SDK, CLI and docs. The
@@ -61,8 +67,22 @@ export const OBJECTSTACK_URL = 'https://objectstack.ai';
  * page's Free and Team buttons and the footer all link these two constants,
  * so the hosted product is named in one place. `cloud.objectos.ai/` itself
  * redirects to this site, so the links name the console's own pages.
+ *
+ * The sign-up link carries `src`, which cloud reads from the register page's
+ * Referer and records as `signed_up.source`. Cloud clamps it to a closed list,
+ * mirrored by `SIGNUP_SOURCES`; any other value is sent as `other`. The link
+ * must open `/_console/register` itself: a detour through another console page
+ * drops the query from the Referer and the sign-up records as `direct`. The
+ * sign-in link carries no source.
  */
-export const CLOUD_SIGNUP_URL = 'https://cloud.objectos.ai/_console/register';
+export const SIGNUP_SOURCES = ['site', 'docs', 'hn', 'blog', 'cn_demo', 'direct', 'other'] as const;
+
+export function signupUrl(src: string): string {
+  const source = (SIGNUP_SOURCES as readonly string[]).includes(src) ? src : 'other';
+  return `https://cloud.objectos.ai/_console/register?src=${source}`;
+}
+
+export const CLOUD_SIGNUP_URL = signupUrl('site');
 export const CLOUD_SIGNIN_URL = 'https://cloud.objectos.ai/_console/login';
 
 /**
@@ -99,10 +119,16 @@ export const T4_STANDALONE = CANONICAL.t4.replace('this repository', 'the Object
 const EDITIONS = ['Community', 'Cloud', 'Enterprise'] as const;
 
 export interface PositioningStrings {
-  /** T1, one sentence. The home H1 renders `t1Lines`, which rejoin to exactly this. */
+  /** T1, one sentence. The home H1 renders `t1Hero`, which rejoins to exactly this minus its full stop. */
   t1: string;
-  /** T1 split for the two-line hero: dark first line, accented second line. */
-  t1Lines: [string, string];
+  /**
+   * T1 as the home H1 shows it: one line, with its terminal full stop (`.` or
+   * `。`) dropped, and the trailing phrase set in the emphasis colour. The two
+   * parts rejoin with `heroLineJoin` to T1 minus that one stop; the check at
+   * the foot of this file holds them to it. T1 itself keeps its stop: the
+   * README, `<title>`, the kicker and `/llms.txt` all quote it whole.
+   */
+  t1Hero: [string, string];
   /** T2. */
   t2: string;
   /** T3, the four promises, in README order. */
@@ -124,7 +150,7 @@ export interface PositioningStrings {
 
 const en: PositioningStrings = {
   t1: CANONICAL.t1,
-  t1Lines: ['The ontology', 'is the software.'],
+  t1Hero: ['The ontology', 'is the software'],
   t2: CANONICAL.t2,
   t3: [...CANONICAL.t3],
   t4: T4_STANDALONE,
@@ -135,7 +161,7 @@ const en: PositioningStrings = {
 
 const zhHans: PositioningStrings = {
   t1: '本体即软件。',
-  t1Lines: ['本体', '即软件。'],
+  t1Hero: ['本体', '即软件'],
   t2: '一份可执行的业务本体。AI 编写它，运行时运行它，Agent 操作它，你拥有它。',
   t3: ['可执行', 'AI 可编写', 'Agent 可操作', '归你所有'],
   // The same words docs.objectos.ai uses for this sentence (objectos #416).
@@ -147,7 +173,7 @@ const zhHans: PositioningStrings = {
 
 const ja: PositioningStrings = {
   t1: 'オントロジーがソフトウェアである。',
-  t1Lines: ['オントロジーが', 'ソフトウェアである。'],
+  t1Hero: ['オントロジーが', 'ソフトウェアである'],
   t2: '実行可能なビジネスオントロジーをひとつ。AI が書き、ランタイムが動かし、エージェントが操作し、あなたが所有する。',
   t3: ['実行可能', 'AI が書ける', 'エージェントが操作できる', 'あなたが所有する'],
   // The same words docs.objectos.ai uses for this sentence (objectos #416).
@@ -159,7 +185,7 @@ const ja: PositioningStrings = {
 
 const de: PositioningStrings = {
   t1: 'Die Ontologie ist die Software.',
-  t1Lines: ['Die Ontologie', 'ist die Software.'],
+  t1Hero: ['Die Ontologie', 'ist die Software'],
   t2: 'Eine ausführbare Geschäftsontologie. AI schreibt sie, die Runtime führt sie aus, Agents bedienen sie, Sie besitzen sie.',
   t3: ['Ausführbar', 'Von AI schreibbar', 'Von Agents bedienbar', 'Sie besitzen sie'],
   t4: 'Zum Ausführen liefert das ObjectStack-Repository ObjectOS Community — das Image ghcr.io/objectstack-ai/objectstack, os start und die Console, kostenlos und selbst gehostet — während ObjectOS Cloud die gehostete Edition ist und ObjectOS Enterprise die selbst verwaltete, lizenzierte.',
@@ -170,7 +196,7 @@ const de: PositioningStrings = {
 
 const es: PositioningStrings = {
   t1: 'La ontología es el software.',
-  t1Lines: ['La ontología', 'es el software.'],
+  t1Hero: ['La ontología', 'es el software'],
   t2: 'Una ontología de negocio ejecutable. La AI la escribe, el runtime la ejecuta, los agentes la operan, tú la posees.',
   t3: ['Ejecutable', 'Escribible por AI', 'Operable por agentes', 'Tú la posees'],
   t4: 'Para ejecutarlo, el repositorio de ObjectStack incluye ObjectOS Community — la imagen ghcr.io/objectstack-ai/objectstack, os start y la Console, gratuita y autoalojada — mientras que ObjectOS Cloud es la edición alojada y ObjectOS Enterprise la autogestionada, con licencia.',
@@ -181,7 +207,7 @@ const es: PositioningStrings = {
 
 const fr: PositioningStrings = {
   t1: 'L’ontologie est le logiciel.',
-  t1Lines: ['L’ontologie', 'est le logiciel.'],
+  t1Hero: ['L’ontologie', 'est le logiciel'],
   t2: 'Une ontologie métier exécutable. L’AI l’écrit, le runtime l’exécute, les agents l’opèrent, vous la possédez.',
   t3: ['Exécutable', 'Rédigeable par l’AI', 'Opérable par les agents', 'Vous la possédez'],
   t4: 'Pour l’exécuter, le dépôt ObjectStack fournit ObjectOS Community — l’image ghcr.io/objectstack-ai/objectstack, os start et la Console, gratuite et auto-hébergée — tandis qu’ObjectOS Cloud est l’édition hébergée et ObjectOS Enterprise l’édition autogérée, sous licence.',
@@ -192,7 +218,7 @@ const fr: PositioningStrings = {
 
 const ko: PositioningStrings = {
   t1: '온톨로지가 곧 소프트웨어다.',
-  t1Lines: ['온톨로지가', '곧 소프트웨어다.'],
+  t1Hero: ['온톨로지가', '곧 소프트웨어다'],
   t2: '실행 가능한 비즈니스 온톨로지 하나. AI가 쓰고, 런타임이 실행하고, 에이전트가 운영하고, 당신이 소유합니다.',
   t3: ['실행 가능', 'AI가 작성', '에이전트가 운영', '당신이 소유'],
   t4: '이를 실행하기 위해 ObjectStack 저장소는 ObjectOS Community(ghcr.io/objectstack-ai/objectstack 이미지, os start, Console로 이루어진 무료 직접 호스팅 에디션)를 제공하며, ObjectOS Cloud는 호스팅 에디션, ObjectOS Enterprise는 직접 운영하는 라이선스 에디션입니다.',
@@ -205,7 +231,7 @@ const ko: PositioningStrings = {
 // the same rule the home, pricing, security and marketing-page copy follow.
 const zhHant: PositioningStrings = {
   t1: s2t(zhHans.t1),
-  t1Lines: [s2t(zhHans.t1Lines[0]), s2t(zhHans.t1Lines[1])],
+  t1Hero: [s2t(zhHans.t1Hero[0]), s2t(zhHans.t1Hero[1])],
   t2: s2t(zhHans.t2),
   t3: [s2t(zhHans.t3[0]), s2t(zhHans.t3[1]), s2t(zhHans.t3[2]), s2t(zhHans.t3[3])],
   t4: s2t(zhHans.t4),
@@ -225,22 +251,25 @@ export const positioning: Record<Locale, PositioningStrings> = {
   ko,
 };
 
-/** How `MarketingHome.astro` joins the two H1 lines: no space in CJK scripts that use none. */
+/** How `MarketingHome.astro` joins the two H1 parts: no space in CJK scripts that use none. */
 export const heroLineJoin = (locale: Locale): string =>
   locale === 'zh-Hans' || locale === 'zh-Hant' || locale === 'ja' ? '' : ' ';
 
 // Two facts the copy above promises and a later edit could quietly break:
-// the two-line hero must still read as exactly T1, and the phrase every page
-// uses to say what ObjectOS is must still name the editions T4 names — all
-// three, in T4's order, each spelled "ObjectOS <edition>" in T4 itself.
+// the hero must still read as exactly T1 with one terminal stop dropped (the
+// H1's one display rule, applied here and nowhere else: no page strips the
+// stop itself), and the phrase every page uses to say what ObjectOS is must
+// still name the editions T4 names — all three, in T4's order, each spelled
+// "ObjectOS <edition>" in T4 itself.
 // Checked once, at load, so `astro build` (and the dev server) fail loudly
 // instead of a page drifting. (T4 against the README is the build-time
 // gate, `scripts/check-positioning.mjs`.)
 for (const [locale, strings] of Object.entries(positioning) as [Locale, PositioningStrings][]) {
-  const rejoined = strings.t1Lines.join(heroLineJoin(locale));
-  if (rejoined !== strings.t1) {
+  const rejoined = strings.t1Hero.join(heroLineJoin(locale));
+  const t1Bare = strings.t1.replace(/[.。]$/u, '');
+  if (rejoined !== t1Bare) {
     throw new Error(
-      `positioning[${locale}].t1Lines rejoin to "${rejoined}", not T1 "${strings.t1}"`
+      `positioning[${locale}].t1Hero rejoins to "${rejoined}", not T1 minus its full stop "${t1Bare}"`
     );
   }
   const positions = EDITIONS.map((edition) => strings.descriptor.indexOf(edition));

@@ -9,7 +9,7 @@ const page = {
     eyebrow: '报表与分析',
     heroTitle: '答案来自记录系统本身——而不是第二套数据栈。',
     lead:
-      '财务要看按套餐分的 MRR 逐月走势，运营要一块 SLA 仪表盘。常见做法是导出到 BI 工具——权限、口径和新鲜度在那里悄悄漂移。ObjectStack 运行时直接在受治理对象上回答这些问题：数据集定义一次，仪表盘渲染，设计器组装；在 ObjectOS 上，“数据问询”助手还能在聊天里、在同一套权限内回答它们。',
+      '财务要看按套餐分的 MRR 逐月走势，运营要一块 SLA 仪表盘。常见做法是导出到 BI 工具——权限、口径和新鲜度在那里悄悄漂移。ObjectStack 运行时直接在受治理对象上回答这些问题：数据集定义一次，仪表盘渲染，设计器组装；在 ObjectOS 上，“数据查询”助手还能在聊天里、在同一套权限内回答它们。',
     primary: { label: '阅读仪表盘文档', href: 'https://docs.objectos.ai/docs/build/interface/dashboards' },
     secondary: { label: '查看数据建模', href: '/en/data-modeling/' },
     metrics: [
@@ -151,7 +151,7 @@ export const MrrByPlan = defineReport({
       {
         question: '这里哪些是开源的，ObjectOS 又加了什么？',
         answer:
-          '聚合、时间序列、漏斗、语义数据集、下钻，以及仪表盘与报表设计器，都是开源 ObjectStack 运行时的一部分，Apache-2.0，权限执行与平台其他部分完全一致。ObjectOS 加的是“数据问询”助手：在聊天里提的问题从同一批数据集得到回答，范围以提问者的权限为界，查询在企业版受审计与护栏约束。在开源运行时上，同样的问题经任意 MCP 客户端用你自己的模型来问。',
+          '聚合、时间序列、漏斗、语义数据集、下钻，以及仪表盘与报表设计器，都是开源 ObjectStack 运行时的一部分，Apache-2.0，权限执行与平台其他部分完全一致。ObjectOS 加的是“数据查询”助手：在聊天里提的问题从同一批数据集得到回答，范围以提问者的权限为界，查询在 Enterprise（自管版）受审计与护栏约束。在开源运行时上，同样的问题经任意 MCP 客户端用你自己的模型来问。',
       },
     ],
   } satisfies MarketingPage;

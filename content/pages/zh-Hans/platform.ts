@@ -96,11 +96,11 @@ export const Order = ObjectSchema.create({
         eyebrow: '为 AI 而设计',
         title: '让 Agent 来写，让人来审',
         copy:
-          `上面每一项 ObjectStack 能力都以元数据定义——这正是「元数据驱动开发」在作者是 AI 时依然成立的原因：整体可装入上下文的定义、可读 diff 与运行时强制执行。ObjectOS 是${p.descriptor}，在这套开放机制之上增加产品内 AI Builder 与 Ask，在企业版提供 AI 治理，并提供托管或自管交付。`,
+          `上面每一项 ObjectStack 能力都以元数据定义——这正是「元数据驱动开发」在作者是 AI 时依然成立的原因：整体可装入上下文的定义、可读 diff 与运行时强制执行。ObjectOS 是${p.descriptor}，在这套开放机制之上增加产品内 AI Builder 与 Ask，在 Enterprise（自管版）提供 AI 治理，并提供托管或自管交付。`,
         items: [
           {
             title: 'AI Build & Ask',
-            body: '在 ObjectOS 云端与企业版中，用自然语言描述变更并审阅 diff，或对实时业务数据提问——始终在登录用户的权限之内。',
+            body: '在 ObjectOS Cloud（托管版）与 Enterprise 版中，用自然语言描述变更并审阅 diff，或对实时业务数据提问——始终在登录用户的权限之内。',
             meta: '指南',
             href: '/en/ai/',
           },
@@ -141,7 +141,7 @@ export const Order = ObjectSchema.create({
       {
         question: '能跑在我们自己的基础设施里吗？',
         answer:
-          '可以，有三条路。开源 ObjectStack 运行时免费自托管，经 MCP 自带 AI。自管部署的 ObjectOS 即 ObjectOS 企业版：其单节点入门选项 Enterprise 单机版是带许可的部署，把产品内 AI 放到你自己的基础设施上，自带模型或密钥；单节点以上，企业版部署在 VPC、本地服务器或隔离网络中，提供集群、本地模型、内部身份系统、自有密钥管理与企业支持。',
+          '可以，有三条路。开源 ObjectStack 运行时免费自托管，经 MCP 自带 AI。自管部署的 ObjectOS 即 ObjectOS Enterprise：其单节点入门选项 Enterprise 单机版是带许可的部署，把产品内 AI 放到你自己的基础设施上，自带模型或密钥；单节点以上，Enterprise 部署在 VPC、本地服务器或隔离网络中，提供集群、本地模型、内部身份系统、自有密钥管理与企业支持。',
       },
     ],
   } satisfies MarketingPage;

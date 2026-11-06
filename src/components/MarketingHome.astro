@@ -39,8 +39,9 @@ const copy = homeCopy[locale];
 const protocolLink = positioning[locale].protocol;
 const posterSplit = copy.videoCaption.match(/^(ObjectStack(?: [\u3040-\u309f]+)?) (.+)$/u);
 const posterTitle: [string, string] = posterSplit ? [posterSplit[1], posterSplit[2]] : [copy.videoCaption, ''];
-// The H1 is the canonical T1 split over two lines; `positioning.ts` asserts the
-// two halves rejoin to T1 with exactly this joiner, so the rule lives there.
+// The H1 is T1 on one line, its full stop dropped and its trailing phrase
+// emphasised; `positioning.ts` asserts the two parts rejoin to T1 minus that
+// stop with exactly this joiner, so the rule lives there and nowhere here.
 const lineJoin = heroLineJoin(locale);
 // Headings in zh and ja carry a <wbr> between phrases (scripts/lib/cjk-phrases.mjs)
 // and break nowhere else; the copy itself is unchanged.
@@ -72,12 +73,14 @@ const posts = (await getPostsInLocale(locale))
   .slice(0, 3)
   .map((post) => ({ ...post, coverDark: darkCover(post.entry.filePath, post.entry.data.cover) }));
 
-const topicLink = (slug: string) => {
-  const term = termBySlug(slug);
-  return term ? termHref(locale, term) : `/${locale}/`;
-};
-
-const templateLinks = [{ href: templatesHref }, { href: templatesHref }, { href: templatesHref }];
+// The three scenario cards, in `homeCopy.useCases` order: service, finance &
+// procurement, sales — the /use-cases/ sections whose scenarios have both a
+// post and a template or guide behind them (#359 ruling).
+const useCasesHref = marketingPagePath(locale, 'use-cases');
+const useCaseHrefs = ['service', 'finance-procurement', 'sales'].map((id) => `${useCasesHref}#${id}`);
+if (useCaseHrefs.length !== copy.useCases.length) {
+  throw new Error(`homeCopy[${locale}].useCases has ${copy.useCases.length} cards; MarketingHome links ${useCaseHrefs.length}`);
+}
 const insightTerms = [
   'app-building',
   'integration-data',
@@ -187,7 +190,7 @@ const demoCopy = DEMO_COPY[locale];
       1366×625 laptop and at 1114px on a 390px phone. */}
   <section class="hero">
     <p class="eyebrow"><span></span> <Fragment set:html={ph(copy.eyebrow)} /></p>
-    <h1><span class="title-line" set:html={ph(copy.hero[0])} />{lineJoin}<strong set:html={ph(copy.hero[1])} /></h1>
+    <h1><span set:html={ph(copy.hero[0])} />{lineJoin}<strong set:html={ph(copy.hero[1])} /></h1>
     {/* The lead and the edition paragraph take the headings' phrase <wbr>
         in zh and ja: at 17px, centred, one to two lines, a break inside a
         word (运/行时, ひと/つ) read as an error where body text would not. */}
@@ -365,23 +368,30 @@ const demoCopy = DEMO_COPY[locale];
     </div>
   </section>
 
+  {/* "How business teams use it" (#359): the block that held three template
+      cards now holds three scenario cards, each landing on its team's section
+      of /use-cases/; the templates catalog stays one link away, under the
+      cards. The old #templates anchor is kept on the section for existing
+      deep links. */}
   <section class="solution-section" id="templates">
     <div class="section-head">
       <div>
-        <p class="section-kicker">{copy.solutionsKicker}</p>
-        <h2><span class="title-line" set:html={ph(copy.solutionsTitle[0])} />{lineJoin}<span class="title-line" set:html={ph(copy.solutionsTitle[1])} /></h2>
+        <p class="section-kicker">{copy.useCasesKicker}</p>
+        <h2><span class="title-line" set:html={ph(copy.useCasesTitle[0])} />{lineJoin}<span class="title-line" set:html={ph(copy.useCasesTitle[1])} /></h2>
       </div>
+      <a class="btn btn-ghost" href={useCasesHref}>{copy.useCasesLink} <span>→</span></a>
     </div>
     <div class="solution-grid">
-      {copy.solutions.map((solution, index) => (
-        <a class="solution card card-link" href={templateLinks[index].href}>
+      {copy.useCases.map((useCase, index) => (
+        <a class="solution card card-link" href={useCaseHrefs[index]}>
           <span class="solution-mark"></span>
-          <h3>{solution.title}</h3>
-          <p>{solution.copy}</p>
-          <span class="solution-link">{copy.solutionLink}&nbsp;→</span>
+          <h3>{useCase.title}</h3>
+          <p>{useCase.copy}</p>
+          <span class="solution-link">{copy.useCaseCardLink}&nbsp;→</span>
         </a>
       ))}
     </div>
+    <p class="solution-more"><a class="btn btn-ghost" href={templatesHref}>{copy.useCasesTemplatesLink} <span>→</span></a></p>
   </section>
 
   {/* id="compare" is the home page's own comparison section. Nav contract: the
@@ -496,13 +506,16 @@ const demoCopy = DEMO_COPY[locale];
     <p class="section-kicker">{copy.closingKicker}</p>
     <h2 set:html={ph(copy.closingTitle)} />
     <p>{copy.closingCopy}</p>
-    <a class="btn btn-primary" href={topicLink('integration-data')}>{copy.closingCta} <span>→</span></a>
+    {/* The closing copy names an action — federate a database you already
+        run — and /data-modeling/ is the page that does it, so the last solid
+        button lands there, not on a blog topic list (#361). */}
+    <a class="btn btn-primary" href={marketingPagePath(locale, 'data-modeling')}>{copy.closingCta} <span>→</span></a>
   </section>
 </div>
 
 <style>
   /* Colours, type and boxes are the Base.astro tokens: --green is the
-     emphasis (eyebrows, indexes, the hero's second line), --brand the
+     emphasis (eyebrows, indexes, the hero's trailing phrase), --brand the
      interaction (card hover, arrows), --ink the action (buttons). */
   .home :global(h1),
   .home :global(h2),
@@ -636,12 +649,12 @@ const demoCopy = DEMO_COPY[locale];
        two-column one did, which left a one-word orphan on its second line. */
     text-wrap: balance;
   }
+  /* The emphasis stays inline (#360): the headline is one line on a desktop
+     and wraps at its own word or phrase breaks on a phone, so it takes the
+     h1's size rather than a smaller second-line size. */
   .hero h1 strong {
-    display: block;
     color: color-mix(in srgb, var(--green) 88%, var(--ink));
     font-weight: inherit;
-    font-size: 0.9em;
-    text-wrap: balance;
     overflow-wrap: anywhere;
   }
   /* The lead is T2 alone — two lines at this measure in en, three in de — and
@@ -1155,6 +1168,12 @@ const demoCopy = DEMO_COPY[locale];
     font-size: var(--fs-13);
     font-weight: 700;
   }
+  /* The templates catalog, one link under the cards: a ghost link at least
+     24px from the cards above it, so its target clears the cards' (axe
+     target-size). Two classes: `.home p` above resets margin-top. */
+  .solution-section > .solution-more {
+    margin: 2rem 0 0;
+  }
   .article-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -1371,9 +1390,9 @@ const demoCopy = DEMO_COPY[locale];
     .home.lang-es .hero h1 {
       font-size: var(--fs-36);
     }
-    /* The second line, ソフトウェアである。, is one phrase of ten characters:
-       at the hero floor it was wider than a 390px phone's column and broke
-       inside it. At 30px it fits the 312px column of a 360px phone. */
+    /* The trailing phrase, ソフトウェアである, is one phrase of nine
+       characters: at the hero floor it was wider than a 390px phone's column
+       and broke inside it. At 30px it fits the 312px column of a 360px phone. */
     .home.lang-ja .hero h1 {
       font-size: var(--fs-30);
     }

@@ -38,41 +38,49 @@ const page = {
           '八个可 fork 的起步应用，每个都是真实成形的应用：在 Marketplace 一键安装，或用 CLI 克隆得到可扩展的 TypeScript 代码库。Apache-2.0，fork 无需请示。你的 Agent 可以 fork 一份、修改元数据，然后开一个 diff 供人审阅。',
         items: [
           {
+            id: 'template-todo',
             title: 'todo',
             body: '可 fork 的起步应用：任何“待办事项，按某种方式分组”的工具。',
             meta: '任务与项目',
           },
           {
+            id: 'template-contracts',
             title: 'contracts',
             body: '可 fork 的起步应用：审批 + 文档 AI。',
             meta: '合同全生命周期管理，含 AI 条款提取',
           },
           {
+            id: 'template-procurement',
             title: 'procurement',
             body: '可 fork 的起步应用：审批链 + 收货。',
             meta: '供应商、PO、三单匹配',
           },
           {
+            id: 'template-compliance',
             title: 'compliance',
             body: '可 fork 的起步应用：证据收集工作流。',
             meta: 'SOC 2 / ISO 27001 控制项',
           },
           {
+            id: 'template-helpdesk',
             title: 'helpdesk',
             body: '可 fork 的起步应用：工单 + SLA + AI 副驾。',
             meta: 'AI 优先的客户支持',
           },
           {
+            id: 'template-content',
             title: 'content',
             body: '可 fork 的起步应用：生命周期 + 指标。',
             meta: '编辑日历 + 渠道 ROI',
           },
           {
+            id: 'template-hr',
             title: 'hr',
             body: '可 fork 的起步应用：以人为中心的应用。',
             meta: '通讯录、组织架构、休假',
           },
           {
+            id: 'template-project',
             title: 'project',
             body: '可 fork 的起步应用：项目管理工具。',
             meta: '项目 / 任务 / 里程碑跟踪',

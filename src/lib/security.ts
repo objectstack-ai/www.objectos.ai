@@ -82,10 +82,10 @@ export interface SecurityCopy {
 
 const zhHans: SecurityCopy = {
   title: '安全与治理 · ObjectOS',
-  description: '了解 ObjectOS 如何让 AI Agent 安全接触业务数据，并在 ObjectOS 企业版自管部署中保护权限边界、审批和审计证据。',
+  description: '了解 ObjectOS 如何让 AI Agent 安全接触业务数据，并在 ObjectOS Enterprise 自管部署中保护权限边界、审批和审计证据。',
   eyebrow: '安全与治理',
   hero: ['让 AI Agent 安全接触', '真实业务数据'],
-  lead: `ObjectOS 有三个版本：${positioning['zh-Hans'].descriptor}。它不把 AI 挡在业务系统外面，而是让 Agent 在明确的身份、权限、工具、审批和审计边界内工作。在 ObjectOS 企业版中，数据仍在你的基础设施里；在每个版本中，AI 的每一步都受 ObjectStack 运行时约束。`,
+  lead: `ObjectOS 有三个版本：${positioning['zh-Hans'].descriptor}。它不把 AI 挡在业务系统外面，而是让 Agent 在明确的身份、权限、工具、审批和审计边界内工作。在 ObjectOS Enterprise（自管版）中，数据仍在你的基础设施里；在每个版本中，AI 的每一步都受 ObjectStack 运行时约束。`,
   metrics: [
     { value: 'Agent', label: '继承用户身份' },
     { value: 'Tool', label: '受控工具访问' },
@@ -93,7 +93,7 @@ const zhHans: SecurityCopy = {
   ],
   residencyKicker: '数据放在哪里',
   residencyTitle: '数据驻留',
-  residencyLead: 'ObjectOS 企业版不要求你把业务数据搬到我们的云上。ObjectStack 运行时连接你的数据库、存储和身份系统，数据驻留边界由你的部署方式决定。',
+  residencyLead: 'ObjectOS Enterprise 不要求你把业务数据搬到我们的云上。ObjectStack 运行时连接你的数据库、存储和身份系统，数据驻留边界由你的部署方式决定。',
   residencyColumns: ['数据类别', '存放位置', '是否离开网络'],
   residencyRows: [
     { data: '业务记录', location: '你的数据库', leaves: '否' },
@@ -131,7 +131,7 @@ const zhHans: SecurityCopy = {
   ],
   deploymentKicker: '跑在哪里',
   deploymentTitle: '部署边界',
-  deploymentLead: 'ObjectOS 企业版可在企业内网中运营 ObjectStack：一个 Node.js 运行时、你的数据库、你的密钥和你的入口层。需要更严格边界时，也可以使用文件制品和离线镜像。',
+  deploymentLead: 'ObjectOS Enterprise 可在企业内网中运营 ObjectStack：一个 Node.js 运行时、你的数据库、你的密钥和你的入口层。需要更严格边界时，也可以使用文件制品和离线镜像。',
   deployments: [
     { title: 'VPC / 私有网络', copy: '运行在你的云账号或私有网络中，只开放必要的入站 HTTP/HTTPS 和数据库连接。' },
     { title: '本地服务器', copy: '用 Docker、systemd 或自有平台运行，连接本地数据库、对象存储和身份系统。' },
@@ -141,7 +141,7 @@ const zhHans: SecurityCopy = {
   faqKicker: '常见问题',
   faqTitle: '安全评审常见问题',
   faqs: [
-    { question: 'ObjectOS 会回传数据吗？', answer: '自管部署的 ObjectOS 在线校验许可证，企业版离线许可证可离线校验。除此之外，除非你显式配置 OIDC、邮件、AI 提供方、Webhook 或外部存储等集成，否则业务数据不会离开你的部署。开源 ObjectStack 运行时没有遥测、不查许可证、也不检查更新。' },
+    { question: 'ObjectOS 会回传数据吗？', answer: '自管部署的 ObjectOS 在线校验许可证，Enterprise 离线许可证可离线校验。除此之外，除非你显式配置 OIDC、邮件、AI 提供方、Webhook 或外部存储等集成，否则业务数据不会离开你的部署。开源 ObjectStack 运行时没有遥测、不查许可证、也不检查更新。' },
     { question: 'AI 请求会发什么给模型厂商？', answer: '只会发送模型完成任务所需的对话上下文、工具定义和必要工具输出。你可以选择外部模型，也可以配置本地模型，让这些内容留在边界内。' },
     { question: '如何限制 Agent 写入？', answer: '可以使用只读数据源、对象级权限、字段级权限、动作权限和审批队列。Agent 无法绕过运行时权限，也无法静默应用结构性变更。' },
     { question: '谁负责 TLS、数据库加密和密钥管理？', answer: '这些属于你的部署责任。ObjectStack 运行时提供权限执行、审计、API key 哈希存储和设置加密；TLS、数据库静态加密、备份和密钥注入由你的基础设施负责。' },
@@ -149,7 +149,7 @@ const zhHans: SecurityCopy = {
   ],
   disclosureKicker: '发现漏洞？',
   disclosureTitle: '漏洞披露',
-  disclosureLead: '如发现 ObjectOS Cloud、ObjectOS 企业版、开源 ObjectStack 运行时及其软件包或本网站的安全问题，请通过邮件私下报告。请不要为安全问题创建公开的 GitHub issue、讨论或 pull request。',
+  disclosureLead: '如发现 ObjectOS Cloud、ObjectOS Enterprise、开源 ObjectStack 运行时及其软件包或本网站的安全问题，请通过邮件私下报告。请不要为安全问题创建公开的 GitHub issue、讨论或 pull request。',
   disclosureContactLabel: '报告邮箱',
   disclosureFacts: [
     { label: '确认收到', value: '1 个工作日内' },

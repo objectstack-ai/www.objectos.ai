@@ -4,7 +4,7 @@ import { CLOUD_SIGNUP_URL, positioning } from './positioning';
 
 export interface PricingPlan {
   name: string;
-  price: string; // headline number: "Free", "$0", "$20", "Custom"
+  price: string; // headline: "Free", "$0", "$20", or "Contact sales" where there is no public price
   cadence?: string; // "self-hosted", "forever", "per seat / month", "contact sales"
   billedNote?: string; // "billed annually"
   altPrice?: string; // "$24 billed monthly"
@@ -50,7 +50,7 @@ const pricingEn: PricingCopy = {
   intro:
     'Start on the free plan and upgrade when you need more. Paid plans are billed per AI seat: you pay for the people who use AI, while viewers and non-AI users stay free. Prefer to run it yourself? ObjectOS Community is the open-source runtime and Console, self-hosted and free under Apache-2.0: bring your own AI through MCP, author metadata as source files, and review changes as diffs. ObjectStack is the open protocol it runs. ObjectOS Cloud and Enterprise add hosting, the in-app AI Build and Ask experience, SSO, and commercial support. On Cloud, one organization has one environment and many apps; complex apps use source-level development (os dev + Git) and package install.',
   billingNote:
-    'Prices are in USD per AI seat. The headline price is billed annually (about two months free); monthly billing is also available. Cancel anytime. Exact quotas are shown in the app and at checkout. ObjectOS Cloud is Free and Team. Enterprise Single-Node (a single-node license for 10–25 AI seats at $540 per AI seat per year, bring your own model or key; no clustering, multiple organizations, SCIM or offline) is a contract option under ObjectOS Enterprise — contact sales. Beyond a single node, Enterprise is priced by volume, with offline and invoice payment.',
+    'Prices are in USD per AI seat. The headline price is billed annually (about two months free); monthly billing is also available. Cancel anytime. Exact quotas are shown in the app and at checkout. ObjectOS Cloud is Free and Team. ObjectOS Enterprise has no public price: it is licensed by contract, including its Enterprise Single-Node option (a single-node license, bring your own model or key; no clustering, multiple organizations, SCIM or offline) — contact sales. Enterprise offers volume pricing, with offline and invoice payment.',
   plans: [
     {
       name: 'Community',
@@ -100,18 +100,17 @@ const pricingEn: PricingCopy = {
     },
     {
       name: 'Enterprise',
-      price: 'Custom',
-      cadence: 'contact sales',
-      tagline: 'For organizations that need SSO and AI governance, or ObjectOS on their own infrastructure — from a single node to air-gapped clusters.',
+      price: 'Contact sales',
+      tagline: 'For organizations that need AI governance, hierarchy-based record access and multiple organizations, or ObjectOS on their own infrastructure — single node or air-gapped.',
       features: [
         'Self-managed on your own infrastructure, including air-gapped',
-        'Enterprise Single-Node — entry option: 10–25 AI seats, $540 / AI seat / yr, bring your own model; no clustering, multiple organizations, SCIM or offline',
+        'Enterprise Single-Node — entry option on one node, bring your own model; no clustering, multiple organizations, SCIM or offline',
         'Volume AI-seat pricing',
-        'SCIM, compliance attestations',
-        'Clustering / HA / multi-node',
+        'SCIM 2.0 provisioning, enabled by default',
+        'High availability (HA): on the roadmap',
         'SLA + dedicated support',
       ],
-      cta: 'Contact us',
+      cta: 'Contact sales',
       ctaHref: CONTACT,
     },
   ],
@@ -124,12 +123,12 @@ const pricingZhHans: PricingCopy = {
   title: '定价',
   description: `${positioning['zh-Hans'].descriptor} 的定价：按 AI 席位计费，只为使用 AI 的人付费，查看者与非 AI 用户免费。`,
   intro:
-    '从免费版开始，需要更多时再升级。付费套餐按 AI 席位计费——只为真正使用 AI 的人付费；查看者与非 AI 用户免费。想自己运行？ObjectOS 社区版是开源的运行时与 Console，自托管、免费，采用 Apache-2.0：经 MCP 自带 AI，以源码方式编写元数据并审阅 diff。ObjectStack 是它运行的开放协议。ObjectOS 云端版与企业版在此之上增加托管、产品内 AI Build 与 Ask、SSO 和商业支持。在云端版上，一个组织对应一个环境、多个应用；复杂应用使用源码级开发（os dev + Git）和包安装。',
+    '从 Free（免费方案）开始，需要更多时再升级。付费套餐按 AI 席位计费——只为真正使用 AI 的人付费；查看者与非 AI 用户免费。想自己运行？ObjectOS Community（开源自托管）是开源的运行时与 Console，自托管、免费，采用 Apache-2.0：经 MCP 自带 AI，以源码方式编写元数据并审阅 diff。ObjectStack 是它运行的开放协议。ObjectOS Cloud（托管版）与 Enterprise（自管版）在此之上增加托管、产品内 AI Build 与 Ask、SSO 和商业支持。在 Cloud 上，一个组织对应一个环境、多个应用；复杂应用使用源码级开发（os dev + Git）和包安装。',
   billingNote:
-    '价格以美元计，按 AI 席位计费。标价为年付价（约省两个月）；也可选择月付。可随时取消。具体配额在应用内和结账时显示。ObjectOS 云端版包含免费版与团队版。Enterprise 单机版（Enterprise Single-Node，单节点许可，10–25 个 AI 席位，每 AI 席每年 $540，自带模型或密钥；不含集群、多组织、SCIM 与离线）是 ObjectOS 企业版下的合同选项——请联系销售。单节点以上的企业版按量定价，支持线下与发票付款。',
+    '价格以美元计，按 AI 席位计费。标价为年付价（约省两个月）；也可选择月付。可随时取消。具体配额在应用内和结账时显示。ObjectOS Cloud 包含 Free（免费）与 Team（团队）两个方案。ObjectOS Enterprise 不公开报价，按合同授权，包括其 Enterprise 单机版（Enterprise Single-Node，单节点许可，自带模型或密钥；不含集群、多组织、SCIM 与离线）——请联系销售。Enterprise 提供批量定价，支持线下与发票付款。',
   plans: [
     {
-      name: '社区版',
+      name: 'Community',
       price: '免费',
       cadence: '自托管',
       tagline: '开源的运行时与 Console，部署在你自己的基础设施上。',
@@ -144,10 +143,10 @@ const pricingZhHans: PricingCopy = {
       ctaHref: COMMUNITY,
     },
     {
-      name: '免费版',
+      name: 'Free',
       price: '$0',
       cadence: '永久免费',
-      tagline: '用于在 ObjectOS 云端评估和小型个人项目。',
+      tagline: '用于在 ObjectOS Cloud 上评估和小型个人项目。',
       features: [
         '查看者与非 AI 用户免费',
         'AI 经 MCP — 自带模型；每环境每分钟 20 次、每天 1,000 次请求',
@@ -157,14 +156,14 @@ const pricingZhHans: PricingCopy = {
       ctaHref: GET_STARTED,
     },
     {
-      name: '团队版',
+      name: 'Team',
       price: '$20',
       cadence: '每 AI 席 / 月',
       billedNote: '按年付',
       altPrice: '月付 $24',
       tagline: '面向共同搭建与共享应用的团队。',
       features: [
-        '界面内 AI:搭建应用 + 数据问询',
+        '界面内 AI:搭建应用 + 数据查询',
         'AI 额度',
         '审批',
         '定时流程',
@@ -175,19 +174,18 @@ const pricingZhHans: PricingCopy = {
       highlight: true,
     },
     {
-      name: '企业版',
-      price: '定制',
-      cadence: '联系销售',
-      tagline: '面向需要 SSO 与 AI 治理、或在自己基础设施上运行 ObjectOS 的组织——从单节点到离线隔离集群。',
+      name: 'Enterprise',
+      price: '联系销售',
+      tagline: '面向需要 AI 治理、按组织架构控制记录可见范围、多组织，或在自己基础设施上运行 ObjectOS 的组织——单节点或离线隔离部署。',
       features: [
         '自管部署在你自己的基础设施上，含离线隔离（air-gap）',
-        'Enterprise 单机版（Enterprise Single-Node）——入门选项：10–25 个 AI 席位、每 AI 席每年 $540、自带模型；不含集群、多组织、SCIM 与离线',
+        'Enterprise 单机版（Enterprise Single-Node）——单节点入门选项，自带模型；不含集群、多组织、SCIM 与离线',
         'AI 席位批量定价',
-        'SCIM、合规鉴证',
-        '集群 / HA / 多节点',
+        '默认开启的 SCIM 2.0',
+        '高可用（HA）：规划中',
         'SLA + 专属支持',
       ],
-      cta: '联系我们',
+      cta: '联系销售',
       ctaHref: CONTACT,
     },
   ],
