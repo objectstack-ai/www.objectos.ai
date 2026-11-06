@@ -1,0 +1,124 @@
+---
+title: "Las vistas, los dashboards y las apps son proyecciones de la ontología: qué cambia eso para la revisión"
+description: "Añade un campo a una app de ObjectStack: la tabla, la API REST, la llamada describe de MCP y el formulario de la Console lo siguen solos; las vistas, el dataset y la traducción fijados, no. La prueba del nombre dice cuál es cuál."
+author: ObjectStack Team
+date: 2026-11-10
+status: published
+topic: app-building
+audience: developer
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Ontología
+  - Ontología de negocio ejecutable
+  - Diff revisable
+  - Revisión de metadatos
+---
+
+Este es el diff completo. Cinco líneas, un campo, añadido al objeto `todo_task` del ejemplo Todo que viene en el repositorio de ObjectStack:
+
+```diff
+     actual_hours: Field.number({
+       label: 'Actual Hours',
+       scale: 2,
+       min: 0,
+     }),
++
++    budget: Field.currency({
++      label: 'Budget',
++      min: 0,
++    }),
+```
+
+Arrancadas en el runtime de ObjectStack, esas cinco líneas cambiaron la tabla de la base de datos, la lectura y la escritura REST, el endpoint de metadatos, las respuestas de `describe_object` y `query_records` de MCP y el formulario de creación de la Console: siete superficies, ninguna de ellas editada. No cambiaron las tres vistas de lista, el dataset del dashboard ni la traducción al chino, porque cada una nombra los campos por su nombre. El primer grupo se deriva de la definición; el segundo está fijado a ella. **La prueba del nombre** clasifica cualquier proyección en uno de los dos antes de abrirla: *si nombra el campo, la revisas tú; si solo nombra el objeto, ya lo hizo el runtime.* El resto de este artículo es la medición que hay detrás de esa frase, hecha en ObjectStack `18.3.0`, la versión `latest` en npm cuando se ejecutó, con el código del ejemplo en el commit `83d7e4ae` de esa versión, y lo que cambia en la forma de leer un diff.
+
+## Dónde vive la definición de una proyección
+
+Tres lugares ya definen qué es una proyección, y este artículo no los repite; el ensayo [La ontología es el software](/es/blog/the-ontology-is-the-software/) traza la misma línea como el primero de los dos límites que mantiene sobre la palabra. [El artículo de definición](/es/blog/what-does-the-ontology-is-the-software-mean/) nombra las cuatro proyecciones y da la prueba de eliminación para distinguir el núcleo de una proyección. [La página de la ontología](/en/ontology/) enuncia la regla en una línea: cambia el núcleo y las proyecciones lo siguen; elimina una proyección y el negocio que mostraba no cambia. La [entrada del glosario](/en/glossary/ontology-projection/) añade la consecuencia para quien revisa: un diff que solo toca proyecciones cambia la presentación, y un diff que toca el núcleo cambia la autoridad.
+
+Lo que ninguno dice es *cómo* sigue una proyección. «Seguir» abarca dos mecanismos distintos, y quien revisa necesita saber cuál tiene delante. Esa es la pregunta que responde la ejecución de abajo.
+
+## La ejecución: un campo, once lecturas
+
+La base es el ejemplo Todo incluido (`examples/app-todo`), copiado del repositorio en el commit `83d7e4ae` (la etiqueta de versión `@objectstack/cli@18.3.0`) y ejecutado con los paquetes `18.3.0` publicados mediante `os dev`. La base de datos es un archivo SQLite local; la clave de API se emitió por REST desde el administrador de desarrollo sembrado. Cada lectura se tomó dos veces: una con la definición confirmada en el repositorio, otra después del diff de cinco líneas de arriba y de un reinicio con `--compile`. «Antes» y «después» son las dos respuestas.
+
+| Superficie | Cómo se leyó | Antes | Después | ¿Sigue? |
+| :--- | :--- | :--- | :--- | :--- |
+| Tabla de la base de datos `todo_task` | `PRAGMA table_info` sobre el archivo SQLite | 28 columnas | 29; `budget float` añadida a la tabla existente | Derivada |
+| Lectura REST | `GET /api/v1/data/todo_task` | 28 claves por registro | 29 claves | Derivada |
+| Escritura REST | `POST /api/v1/data/todo_task` con `budget: 1200` | `400` — `Unknown field 'budget' on object 'todo_task'`, código `INVALID_FIELD` | `201`, registro creado | Derivada |
+| Endpoint de metadatos | `GET /api/v1/meta/object/todo_task` | 28 campos | 29; `{ label: 'Budget', type: 'currency', min: 0, … }` | Derivada |
+| MCP `describe_object` | `tools/call` sobre `/api/v1/mcp` | 28 campos | 29 | Derivada |
+| MCP `query_records` | `where: { budget: { $gte: 1000 } }, fields: ['subject', 'budget']` | — | `[["Renew the domain", 1200]]` | Derivada |
+| Formulario de creación de la Console | `/_console/apps/com.example.todo/todo_task/new` | 16 entradas | 17; *Budget* entre *Actual Hours* y *Notes*, en orden de declaración | Derivada |
+| Detalle de registro de la Console | la página del nuevo registro | — | `BUDGET 1,200.00` en la pestaña *Overview* | Derivada |
+| Vista de lista de la Console *All Tasks* | `GET /api/v1/meta/view` → `todo_task.default` | 6 columnas | 6 columnas, sin cambios | Fijada |
+| Traducción, `zh-CN` | `GET /api/v1/meta/object/todo_task` con `Accept-Language: zh-CN` | `subject` → 主题 | `budget` → `Budget` (cae al inglés) | Fijada |
+| Dataset del dashboard `task_metrics` | la definición del dataset | 6 dimensiones, 3 medidas, cada una nombra un campo | sin cambios; nada puede graficar `budget` hasta que una medida lo nombre | Fijada |
+
+Dos lecturas no se movieron y no son proyecciones: el documento OpenAPI sigue listando 17 rutas para `todo_task` sin esquema por campo, y el `tools/list` de MCP sigue respondiendo las mismas 12 herramientas (`list_objects`, `describe_object`, `validate_expression`, `query_records`, `aggregate_records`, `get_record`, `create_record`, `update_record`, `delete_record`, `list_actions`, `run_action`, `resume_run`). Ambos describen objetos, no campos; el campo aparece dentro de sus respuestas, no en su forma.
+
+![La prueba del nombre: el diff de cinco líneas en el centro; a la izquierda, las superficies que solo nombran el objeto y lo siguieron sin edición, con sus lecturas de antes y después; a la derecha, las proyecciones que nombran el campo y se quedaron exactamente como se escribieron; abajo, el propio aviso de la puerta de build de que el nuevo campo no tiene consumidor](./naming-test-en.svg)
+
+Una lectura más vino gratis. `os dev --compile` ejecuta las reglas de tiempo de autoría antes de escribir el artefacto, y esto es lo que imprimió la puerta sobre el nuevo campo:
+
+```text
+⚠ object "todo_task" · field "budget": declared, but nothing in this stack displays or reads it (inert)
+  fix: add it to a view column or a form section, or remove the declaration
+  rule: field-no-consumers  at objects[0].fields.budget — `os explain field-no-consumers` for what counts as a consumer
+```
+
+`os explain field-no-consumers` define un consumidor como <span lang="en">«a view column, an inline grid column, a form section, a page binding, a flow node, a dataset or cube member, a dashboard widget, a formula, a validation, a hook or an action that names it»</span> (una columna de vista, una columna de grid en línea, una sección de formulario, un binding de página, un nodo de flow, un miembro de dataset o de cubo, un widget de dashboard, una fórmula, una validación, un hook o una acción que lo nombre); el texto de 18.3.0 cuenta además un grupo de campos declarado y la clave de coincidencia de un seed o de un mapeo de importación. Lo separa de un portador, que <span lang="en">«names a field without reading it»</span> (nombra un campo sin leerlo), como <span lang="en">«a translation label, a seed value, an import-mapping target, a permission grant»</span> (una etiqueta de traducción, un valor de seed, un destino de mapeo de importación, una concesión de permiso). La lista de la puerta es la columna derecha de la tabla. Es el runtime diciéndote, antes del arranque, qué proyecciones están fijadas a un campo y que ninguna ha recogido todavía este.
+
+## La prueba del nombre
+
+¿Por qué siete superficies siguen y cuatro se quedan quietas? No porque unas sean más importantes. Por lo que nombra cada una.
+
+La tabla, las rutas REST, el endpoint de metadatos y las herramientas MCP se generan a partir del objeto. La sincronización de esquema del driver SQL recorre `obj.fields` y crea una columna por cada entrada; las rutas de datos se registran por objeto y leen los campos que el objeto tenga; `describe_object` mapea `Object.entries(def.fields)` a su respuesta; la Console, al no encontrar una vista de formulario declarada para `todo_task`, dispone los campos propios del objeto. Ninguna guarda una lista de nombres de campo. Guardan el nombre del objeto y piden el resto a la definición en cada llamada, y por eso el campo llegó a todas sin edición, y llegó en orden de declaración.
+
+Las vistas de lista, el dataset y el paquete de traducción también son metadatos escritos, y cada uno deletrea nombres de campo: `columns: [{ field: 'subject' }, { field: 'status' }, …]`, `measures: [{ name: 'est_hours', field: 'estimated_hours', … }]`, `fields: { subject: { label: '主题' }, … }`. Una proyección que nombra el campo está tomando una decisión sobre él —esta columna, esta etiqueta, esta agregación— y el runtime respeta esa decisión al pie de la letra. No añade lo que no pediste.
+
+Así que la prueba, enunciada para quien revisa:
+
+> **La prueba del nombre.** Para cada proyección a la que el diff podría llegar, pregunta si nombra el campo o solo el objeto. Si solo nombra el objeto, es derivada: el diff que estás leyendo es todo el cambio, y el runtime ya lo propagó. Si nombra el campo, está fijada: no se movió, y si debería haberlo hecho es decisión tuya.
+
+Se combina con la prueba de eliminación del artículo de definición. La prueba de eliminación clasifica una definición como núcleo o proyección. La prueba del nombre clasifica las proyecciones a las que puede llegar un cambio en el núcleo como derivadas o fijadas. Con las dos, quien revisa sabe, solo por el diff, qué hizo el runtime y qué sigue esperando una decisión.
+
+## Qué cambia en la forma de leer el diff
+
+La consecuencia práctica es un orden de trabajo, y es más corto que el que siguen la mayoría de los equipos.
+
+**Primero, la línea de la definición es la revisión de cada superficie derivada.** No hay una migración de tabla que leer al lado, ni serializador, ni controlador, ni manifiesto de herramientas. En la ejecución de arriba, la columna `budget` existe porque existe el campo; la escritura REST acepta `budget` porque existe el campo; el `describe_object` del agente lo muestra porque existe el campo. Si el campo está bien, ellas están bien, y si el campo está mal, están mal exactamente de la misma manera que el campo. Revisar las cinco líneas fue revisar siete superficies, que es la frase que prometía el título y la frase que la entrada del glosario quiere decir con «un diff que toca el núcleo cambia la autoridad».
+
+**Segundo, busca el nombre del campo en las proyecciones fijadas, y espera no encontrar nada.** Un campo añadido no aparecerá en ninguna vista, dataset ni traducción, porque ninguna ha sido editada. No es una omisión que el runtime esconda; es el aviso que imprimió la puerta. La pregunta de quien revisa es la que plantea la línea `fix:` de la puerta: ¿debería este campo tener un consumidor, y cuál? Para `budget`, probablemente una columna en *All Tasks* y una etiqueta `zh-CN`; probablemente todavía no una medida de dashboard. Son tres ediciones pequeñas y deliberadas en tres archivos con nombre, y cada una es tan revisable como las cinco primeras líneas.
+
+**Tercero, trata una eliminación como otro tipo de cambio.** Todo lo anterior trata de un campo añadido. La sincronización de esquema del driver solo suma: crea las tablas que faltan y añade las columnas que faltan, y nunca altera ni elimina las existentes, así que un campo eliminado o renombrado deja su columna atrás como una deriva que `os migrate` informa y que una persona concilia. Las superficies derivadas siguen una eliminación al instante —el registro REST pierde la clave, `describe_object` pierde el campo— mientras que la tabla no. Y cada proyección fijada que todavía nombra el campo eliminado pasa a estar mal, cosa que la misma puerta te dirá como un binding colgante. La prueba del nombre sigue valiendo; la lista de cosas que mirar es simplemente más larga, y empieza por la migración.
+
+Este orden es también la mitad que le faltaba a la [lista de revisión en cuatro pasadas](/en/blog/how-to-review-ai-generated-app-changes/), cuya cuarta pasada es «campos y vistas, al final». La prueba del nombre dice qué vistas: las que nombran el campo. Las demás quedaron revisadas cuando se revisó el campo.
+
+## En defensa de fijar
+
+Sería fácil leer la columna derecha de la tabla como una limitación, y la lectura honesta es la contraria.
+
+Un grid que añadiera cada columna nueva automáticamente reordenaría una pantalla cada vez que un desarrollador añadiera un campo para que un flow escriba en él. Un dashboard que graficara cada campo numérico graficaría `recurrence_interval`. Una traducción que inventara etiquetas sería una traducción que nadie escribió. Las proyecciones fijadas están fijadas porque una persona tomó una decisión de presentación, y un runtime que la anulara en silencio sería justo lo que este formato existe para impedir: un comportamiento que nadie declaró. El propio respaldo de la Console —disponer todos los campos cuando no hay vista de formulario declarada— es la excepción que confirma la regla: solo se aplica donde nadie ha decidido nada todavía.
+
+Lo que el formato le da a quien revisa no es que las proyecciones fijadas sigan, sino que se pueden *encontrar*. Son metadatos en el mismo repositorio, nombran el campo y la puerta las enumera. La alternativa, en un código escrito a mano, es una lista de columnas en un componente React, un serializador en otro directorio, una etiqueta en un archivo JSON y una configuración de gráfico en un tercer sistema, sin nada que sepa que tratan del mismo campo.
+
+## Lo que esto no cubre
+
+Una medición sobre un ejemplo es una medición sobre un ejemplo. Cuatro cosas quedan fuera.
+
+**Las vistas ajustadas a mano siguen ajustadas a mano.** Cada vista de lista del ejemplo Todo declara sus columnas, y también cada vista del ejemplo CRM. Un campo nuevo llega a un grid fijado solo cuando alguien lo añade, y ese alguien suele ser el agente que añadió el campo, en el mismo PR. La prueba del nombre te dice que mires ahí; no mira por ti.
+
+**Las traducciones hay que escribirlas.** El runtime cae a la etiqueta declarada, así que una entrada `zh-CN` que falta muestra `Budget` en lugar de nada. Es el valor por defecto correcto y aun así un hueco que un usuario chino ve. Una traducción es una proyección fijada en el sentido más estricto: cada cadena que contiene es una decisión.
+
+**Los consumidores externos están fuera del stack.** La propia puerta lo dice: <span lang="en">«a consumer can legitimately live outside the stack — an API client, a hook or package this stack does not carry, a Studio-authored view»</span> (un consumidor puede vivir legítimamente fuera del stack: un cliente de API, un hook o un paquete que este stack no lleva, una vista creada en Studio). Un dashboard en otra herramienta que selecciona `estimated_hours` por nombre está fijado a ese campo y nada en el repositorio lo sabe. La prueba del nombre se le aplica; la enumeración no.
+
+**Los cambios semánticos no son cambios estructurales.** Añadir un campo es el caso fácil, y por eso se eligió para un antes y después limpio. Cambia en su lugar el *significado* de un campo —añade una opción `cancelled` a `status`, por ejemplo— y las superficies derivadas siguen con la misma fidelidad, pero la vista *Overdue Tasks* del ejemplo Todo y su métrica *Overdue Tasks* codifican ambas el vencimiento como `status != completed`, así que una tarea cancelada con la fecha de vencimiento pasada contaría como vencida en las dos. El campo sí declara esa definición una vez —`due_date` lleva `` dueLike: true, settledWhen: P`record.status == 'completed'` `` (`examples/app-todo/src/objects/task.object.ts`, líneas 73–74 en 18.3.0)—, pero la especificación marca ambas claves como solo de visualización, leídas por las celdas de fecha de la Console, así que el filtro de la vista y la métrica siguen deletreando la regla por su cuenta. Es una lectura de las definiciones de la vista, del dashboard y del objeto, no una medición, y es el tipo de consecuencia hacia la que te apunta la prueba del nombre —las tres nombran `status`— sin decidir por ti.
+
+## Apunta tu agente hacia ella
+
+La ejecución de arriba es reproducible desde el repositorio y tarda alrededor de un minuto una vez instalados los paquetes, lo que significa que también es algo que tu agente puede hacer por ti. Apunta un agente de código a un proyecto de ObjectStack —el scaffolder escribe un `AGENTS.md` e instala el paquete de skills, la app en ejecución sirve MCP en `/api/v1/mcp`, y [cómo configurarlo](/en/blog/how-to-point-your-agent-at-objectstack/) cubre el archivo de reglas, las skills y el servidor de herramientas— y cuando abra un cambio en un campo, pídele la tabla de la prueba del nombre de su propio diff: qué superficies siguieron, qué proyecciones nombran el campo y qué propone hacer con cada una. La línea `field-no-consumers` de la puerta es la primera fila de esa tabla, y el agente puede leerla antes que tú.
+
+Todo en este artículo se ejecutó sobre el stack open source. «Para ejecutarlo, el repositorio de ObjectStack incluye ObjectOS Community — la imagen ghcr.io/objectstack-ai/objectstack, os start y la Console, gratuita y autoalojada — mientras que ObjectOS Cloud es la edición alojada y ObjectOS Enterprise la autogestionada, con licencia.» Tu ontología son metadatos ordinarios de ObjectStack. La exportación desde ObjectOS Cloud u ObjectOS Enterprise para ejecutarla en el runtime open source de ObjectStack está prevista. La prueba del nombre no cambia con el host; la definición que lee es el mismo archivo.

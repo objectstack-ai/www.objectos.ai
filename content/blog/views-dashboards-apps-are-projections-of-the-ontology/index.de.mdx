@@ -1,0 +1,124 @@
+---
+title: "Views, Dashboards und Apps sind Projektionen der Ontologie: Was das für das Review ändert"
+description: "Ein Feld mehr in einer mitgelieferten ObjectStack-App: Tabelle, REST-API, MCP-describe und Console-Formular folgen von selbst, die festgeschriebenen Views, das Dataset und die Übersetzung nicht. Der Namenstest sagt, was was ist."
+author: ObjectStack Team
+date: 2026-11-10
+status: published
+topic: app-building
+audience: developer
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Ontologie
+  - Ausführbare Geschäftsontologie
+  - Reviewbarer Diff
+  - Metadaten-Review
+---
+
+Das ist der ganze Diff. Fünf Zeilen, ein Feld, hinzugefügt zum Objekt `todo_task` des Todo-Beispiels, das im ObjectStack-Repository mitgeliefert wird:
+
+```diff
+     actual_hours: Field.number({
+       label: 'Actual Hours',
+       scale: 2,
+       min: 0,
+     }),
++
++    budget: Field.currency({
++      label: 'Budget',
++      min: 0,
++    }),
+```
+
+Auf der ObjectStack Runtime gestartet, haben diese fünf Zeilen die Datenbanktabelle verändert, das Lesen und Schreiben über REST, den Metadaten-Endpunkt, die Antworten von MCP `describe_object` und `query_records` und das Anlegeformular der Console: sieben Oberflächen, von denen keine bearbeitet wurde. Nicht verändert haben sie die drei Listen-Views, das Dataset des Dashboards und die chinesische Übersetzung, denn jede davon nennt Felder beim Namen. Die erste Gruppe ist aus der Definition abgeleitet; die zweite ist an sie festgeschrieben. **Der Namenstest** ordnet jede Projektion einer der beiden zu, bevor Sie sie öffnen: *Nennt sie das Feld, reviewen Sie sie; nennt sie nur das Objekt, hat die Runtime es schon getan.* Der Rest dieses Beitrags ist die Messung hinter diesem Satz, durchgeführt auf ObjectStack `18.3.0`, dem `latest`-Release auf npm zum Zeitpunkt des Laufs, mit dem Quellcode des Beispiels am Commit `83d7e4ae` dieses Releases, und das, was sie am Lesen eines Diffs ändert.
+
+## Wo die Definition einer Projektion steht
+
+Drei Stellen definieren bereits, was eine Projektion ist, und dieser Beitrag wiederholt sie nicht; der Essay [Die Ontologie ist die Software](/de/blog/the-ontology-is-the-software/) zieht dieselbe Linie als erste der beiden Grenzen, die er für das Wort festhält. [Der Definitionsbeitrag](/de/blog/what-does-the-ontology-is-the-software-mean/) nennt die vier Projektionen und gibt den Entfernungstest an, der Kern von Projektion trennt. [Die Ontologie-Seite](/en/ontology/) formuliert die Regel in einer Zeile: Ändern Sie den Kern, und die Projektionen folgen; entfernen Sie eine Projektion, und das Geschäft, das sie zeigte, ist unverändert. Der [Glossareintrag](/en/glossary/ontology-projection/) ergänzt die Folge für einen Reviewer: Ein Diff, der nur Projektionen berührt, ändert die Darstellung, und ein Diff, der den Kern berührt, ändert die Autorität.
+
+Was keine davon sagt, ist, *wie* eine Projektion folgt. „Folgen“ umfasst zwei verschiedene Mechanismen, und ein Reviewer muss wissen, welcher vor ihm liegt. Diese Frage beantwortet der Lauf unten.
+
+## Der Lauf: ein Feld, elf Messwerte
+
+Grundlage ist das mitgelieferte Todo-Beispiel (`examples/app-todo`), aus dem Repository am Commit `83d7e4ae` (dem Release-Tag `@objectstack/cli@18.3.0`) herauskopiert und auf den veröffentlichten `18.3.0`-Paketen mit `os dev` gestartet. Die Datenbank ist eine lokale SQLite-Datei; der API-Schlüssel wurde über REST vom geseedeten Dev-Admin erzeugt. Jeder Messwert wurde zweimal erhoben: einmal auf der committeten Definition, einmal nach dem Fünf-Zeilen-Diff oben und einem Neustart mit `--compile`. „Vorher“ und „Nachher“ sind die beiden Antworten.
+
+| Oberfläche | Wie gelesen | Vorher | Nachher | Folgt? |
+| :--- | :--- | :--- | :--- | :--- |
+| Datenbanktabelle `todo_task` | `PRAGMA table_info` auf der SQLite-Datei | 28 Spalten | 29; `budget float` zur bestehenden Tabelle hinzugefügt | Abgeleitet |
+| REST-Lesen | `GET /api/v1/data/todo_task` | 28 Schlüssel pro Datensatz | 29 Schlüssel | Abgeleitet |
+| REST-Schreiben | `POST /api/v1/data/todo_task` mit `budget: 1200` | `400` — `Unknown field 'budget' on object 'todo_task'`, Code `INVALID_FIELD` | `201`, Datensatz angelegt | Abgeleitet |
+| Metadaten-Endpunkt | `GET /api/v1/meta/object/todo_task` | 28 Felder | 29; `{ label: 'Budget', type: 'currency', min: 0, … }` | Abgeleitet |
+| MCP `describe_object` | `tools/call` auf `/api/v1/mcp` | 28 Felder | 29 | Abgeleitet |
+| MCP `query_records` | `where: { budget: { $gte: 1000 } }, fields: ['subject', 'budget']` | — | `[["Renew the domain", 1200]]` | Abgeleitet |
+| Console-Anlegeformular | `/_console/apps/com.example.todo/todo_task/new` | 16 Eingaben | 17; *Budget* zwischen *Actual Hours* und *Notes*, in Deklarationsreihenfolge | Abgeleitet |
+| Console-Datensatzdetail | die Seite des neuen Datensatzes | — | `BUDGET 1,200.00` im Tab *Overview* | Abgeleitet |
+| Console-Listen-View *All Tasks* | `GET /api/v1/meta/view` → `todo_task.default` | 6 Spalten | 6 Spalten, unverändert | Festgeschrieben |
+| Übersetzung, `zh-CN` | `GET /api/v1/meta/object/todo_task` mit `Accept-Language: zh-CN` | `subject` → 主题 | `budget` → `Budget` (fällt auf Englisch zurück) | Festgeschrieben |
+| Dashboard-Dataset `task_metrics` | die Dataset-Definition | 6 Dimensionen, 3 Kennzahlen, jede nennt ein Feld | unverändert; nichts kann `budget` darstellen, bis eine Kennzahl es nennt | Festgeschrieben |
+
+Zwei Messwerte haben sich nicht bewegt und sind keine Projektionen: Das OpenAPI-Dokument listet für `todo_task` weiterhin 17 Pfade ohne feldweises Schema, und MCP `tools/list` antwortet weiterhin mit denselben 12 Tools (`list_objects`, `describe_object`, `validate_expression`, `query_records`, `aggregate_records`, `get_record`, `create_record`, `update_record`, `delete_record`, `list_actions`, `run_action`, `resume_run`). Beide beschreiben Objekte, nicht Felder; das Feld taucht in ihren Antworten auf, nicht in ihrer Form.
+
+![Der Namenstest: in der Mitte der Fünf-Zeilen-Diff; links die Oberflächen, die nur das Objekt nennen und ihm ohne Bearbeitung gefolgt sind, mit ihren Vorher-Nachher-Werten; rechts die Projektionen, die das Feld nennen und genau so geblieben sind, wie sie geschrieben wurden; unten die eigene Warnung des Build-Gates, dass das neue Feld keinen Konsumenten hat](./naming-test-en.svg)
+
+Ein weiterer Messwert kam gratis dazu. `os dev --compile` führt die Autorenzeit-Regeln aus, bevor es das Artefakt schreibt, und das hat das Gate über das neue Feld ausgegeben:
+
+```text
+⚠ object "todo_task" · field "budget": declared, but nothing in this stack displays or reads it (inert)
+  fix: add it to a view column or a form section, or remove the declaration
+  rule: field-no-consumers  at objects[0].fields.budget — `os explain field-no-consumers` for what counts as a consumer
+```
+
+`os explain field-no-consumers` definiert einen Konsumenten als <span lang="en">„a view column, an inline grid column, a form section, a page binding, a flow node, a dataset or cube member, a dashboard widget, a formula, a validation, a hook or an action that names it“</span> (eine View-Spalte, eine Inline-Grid-Spalte, ein Formularabschnitt, eine Seitenbindung, ein Flow-Knoten, ein Dataset- oder Cube-Member, ein Dashboard-Widget, eine Formel, eine Validierung, ein Hook oder eine Aktion, die es nennt); der Text in 18.3.0 zählt danach auch eine deklarierte Feldgruppe und einen Match-Schlüssel eines Seeds oder Import-Mappings mit. Er grenzt ihn von einem Träger ab, der <span lang="en">„names a field without reading it“</span> (ein Feld nennt, ohne es zu lesen), etwa <span lang="en">„a translation label, a seed value, an import-mapping target, a permission grant“</span> (ein Übersetzungslabel, ein Seed-Wert, ein Ziel eines Import-Mappings, eine Berechtigungsvergabe). Die Liste des Gates ist die rechte Spalte der Tabelle. Es ist die Runtime, die Ihnen vor dem Start sagt, welche Projektionen an ein Feld festgeschrieben sind und dass noch keine davon dieses aufgenommen hat.
+
+## Der Namenstest
+
+Warum folgen sieben Oberflächen und vier bleiben stehen? Nicht, weil manche wichtiger sind. Sondern wegen dessen, was jede nennt.
+
+Die Tabelle, die REST-Routen, der Metadaten-Endpunkt und die MCP-Tools werden aus dem Objekt erzeugt. Der Schema-Sync des SQL-Treibers durchläuft `obj.fields` und legt für jeden Eintrag eine Spalte an; die Datenrouten werden pro Objekt registriert und lesen die Felder, die das Objekt gerade hat; `describe_object` bildet `Object.entries(def.fields)` in seine Antwort ab; die Console findet für `todo_task` keine deklarierte Formular-View und legt die eigenen Felder des Objekts aus. Keine davon hält eine Liste von Feldnamen. Sie halten den Namen des Objekts und fragen die Definition bei jedem Aufruf nach dem Rest, weshalb das Feld sie alle ohne Bearbeitung erreicht hat, und zwar in Deklarationsreihenfolge.
+
+Die Listen-Views, das Dataset und das Übersetzungsbündel sind ebenfalls geschriebene Metadaten, und jede davon buchstabiert Feldnamen aus: `columns: [{ field: 'subject' }, { field: 'status' }, …]`, `measures: [{ name: 'est_hours', field: 'estimated_hours', … }]`, `fields: { subject: { label: '主题' }, … }`. Eine Projektion, die das Feld nennt, trifft eine Entscheidung darüber, diese Spalte, dieses Label, diese Aggregation, und die Runtime hält sich genau an diese Entscheidung. Sie fügt nicht hinzu, worum Sie nicht gebeten haben.
+
+Also der Test, formuliert für einen Reviewer:
+
+> **Der Namenstest.** Fragen Sie für jede Projektion, die der Diff erreichen könnte, ob sie das Feld nennt oder nur das Objekt. Nennt sie nur das Objekt, ist sie abgeleitet: Der Diff, den Sie lesen, ist die ganze Änderung, und die Runtime hat sie bereits verbreitet. Nennt sie das Feld, ist sie festgeschrieben: Sie hat sich nicht bewegt, und ob sie es hätte tun sollen, entscheiden Sie.
+
+Er ergänzt den Entfernungstest aus dem Definitionsbeitrag. Der Entfernungstest ordnet eine Definition dem Kern oder einer Projektion zu. Der Namenstest ordnet die Projektionen, die eine Kernänderung erreichen kann, in abgeleitet und festgeschrieben. Mit beiden weiß ein Reviewer allein aus dem Diff, was die Runtime getan hat und was noch auf eine Entscheidung wartet.
+
+## Was das am Lesen des Diffs ändert
+
+Die praktische Folge ist eine Arbeitsreihenfolge, und sie ist kürzer als die, der die meisten Teams folgen.
+
+**Erstens: Die Definitionszeile ist das Review für jede abgeleitete Oberfläche.** Es gibt keine Tabellenmigration, die man daneben liest, keinen Serializer, keinen Controller, kein Tool-Manifest. Im Lauf oben existiert die Spalte `budget`, weil das Feld existiert; das REST-Schreiben akzeptiert `budget`, weil das Feld existiert; das `describe_object` des Agents zeigt es, weil das Feld existiert. Ist das Feld richtig, sind sie richtig, und ist das Feld falsch, sind sie genau so falsch wie das Feld. Die fünf Zeilen zu reviewen hieß, sieben Oberflächen zu reviewen; das ist der Satz, den der Titel versprochen hat, und der Satz, den der Glossareintrag mit „ein Diff, der den Kern berührt, ändert die Autorität“ meint.
+
+**Zweitens: Durchsuchen Sie die festgeschriebenen Projektionen nach dem Namen des Feldes, und erwarten Sie, nichts zu finden.** Ein hinzugefügtes Feld erscheint in keiner View, keinem Dataset und keiner Übersetzung, weil keine davon bearbeitet wurde. Das ist kein Versäumnis, das die Runtime versteckt; es ist die Warnung, die das Gate ausgegeben hat. Die Frage des Reviewers ist die, die die `fix:`-Zeile des Gates stellt: Sollte dieses Feld einen Konsumenten haben, und welchen? Für `budget` wahrscheinlich eine Spalte in *All Tasks* und ein `zh-CN`-Label; wahrscheinlich noch keine Dashboard-Kennzahl. Das sind drei kleine, bewusste Änderungen an drei benannten Dateien, und jede ist so reviewbar wie die ersten fünf Zeilen.
+
+**Drittens: Behandeln Sie eine Entfernung als eine andere Art von Änderung.** Alles oben betrifft ein hinzugefügtes Feld. Der Schema-Sync des Treibers ist rein additiv: Er legt fehlende Tabellen an und fügt fehlende Spalten hinzu, ändert oder löscht aber nie bestehende, sodass ein entferntes oder umbenanntes Feld seine Spalte als Drift zurücklässt, die `os migrate` meldet und ein Mensch abgleicht. Die abgeleiteten Oberflächen folgen einer Entfernung sofort, der REST-Datensatz verliert den Schlüssel, `describe_object` verliert das Feld, die Tabelle aber nicht. Und jede festgeschriebene Projektion, die das entfernte Feld noch nennt, ist jetzt falsch, was Ihnen dasselbe Gate als hängende Bindung meldet. Der Namenstest gilt weiterhin; die Liste der Dinge, die man ansehen muss, ist nur länger, und sie beginnt mit der Migration.
+
+Diese Reihenfolge ist auch die fehlende Hälfte der [Review-Checkliste in vier Durchgängen](/en/blog/how-to-review-ai-generated-app-changes/), deren vierter Durchgang „Felder und Views zuletzt“ lautet. Der Namenstest sagt, welche Views: die, die das Feld nennen. Die übrigen wurden reviewt, als das Feld reviewt wurde.
+
+## Zur Verteidigung des Festschreibens
+
+Es wäre leicht, die rechte Spalte der Tabelle als Einschränkung zu lesen, und die ehrliche Lesart ist das Gegenteil.
+
+Ein Grid, das jede neue Spalte automatisch hinzufügt, würde einen Bildschirm jedes Mal umordnen, wenn ein Entwickler ein Feld hinzufügt, in das ein Flow schreiben soll. Ein Dashboard, das jedes numerische Feld darstellt, würde `recurrence_interval` darstellen. Eine Übersetzung, die Labels erfindet, wäre eine Übersetzung, die niemand geschrieben hat. Festgeschriebene Projektionen sind festgeschrieben, weil ein Mensch eine Darstellungsentscheidung getroffen hat, und eine Runtime, die sie stillschweigend überschreibt, wäre genau das, was dieses Format verhindern soll: Verhalten, das niemand deklariert hat. Der eigene Fallback der Console, alle Felder auszulegen, wenn keine Formular-View deklariert ist, ist die Ausnahme, die die Regel bestätigt: Er greift nur dort, wo noch niemand etwas entschieden hat.
+
+Was das Format dem Reviewer gibt, ist nicht, dass festgeschriebene Projektionen folgen, sondern dass sie *auffindbar* sind. Sie sind Metadaten im selben Repository, sie nennen das Feld, und das Gate zählt sie auf. Die Alternative in einer handgeschriebenen Codebasis ist eine Spaltenliste in einer React-Komponente, ein Serializer in einem anderen Verzeichnis, ein Label in einer JSON-Datei und eine Diagrammkonfiguration in einem dritten System, ohne dass irgendetwas weiß, dass sie dasselbe Feld betreffen.
+
+## Was das nicht abdeckt
+
+Eine Messung an einem Beispiel ist eine Messung an einem Beispiel. Vier Dinge bleiben außerhalb.
+
+**Handgepflegte Views bleiben handgepflegt.** Jede Listen-View im Todo-Beispiel deklariert ihre Spalten, und ebenso jede View im CRM-Beispiel. Ein neues Feld erreicht ein festgeschriebenes Grid nur, wenn jemand es hinzufügt, und dieser Jemand ist oft der Agent, der das Feld hinzugefügt hat, im selben PR. Der Namenstest sagt Ihnen, dass Sie dort hinsehen sollen; das Hinsehen übernimmt er nicht.
+
+**Übersetzungen müssen geschrieben werden.** Die Runtime fällt auf das deklarierte Label zurück, sodass ein fehlender `zh-CN`-Eintrag `Budget` statt nichts anzeigt. Das ist der richtige Standard und trotzdem eine Lücke, die ein chinesischer Nutzer sieht. Eine Übersetzung ist eine festgeschriebene Projektion im strengsten Sinn: Jeder String darin ist eine Entscheidung.
+
+**Externe Konsumenten liegen außerhalb des Stacks.** Das Gate sagt es selbst: <span lang="en">„a consumer can legitimately live outside the stack — an API client, a hook or package this stack does not carry, a Studio-authored view“</span> (ein Konsument kann berechtigterweise außerhalb des Stacks liegen: ein API-Client, ein Hook oder Paket, das dieser Stack nicht mitführt, eine im Studio erstellte View). Ein Dashboard in einem anderen Werkzeug, das `estimated_hours` beim Namen auswählt, ist an dieses Feld festgeschrieben, und nichts im Repository weiß davon. Der Namenstest gilt dafür; die Aufzählung nicht.
+
+**Semantische Änderungen sind keine strukturellen Änderungen.** Ein Feld hinzuzufügen ist der einfache Fall, weshalb er für einen sauberen Vorher-Nachher-Vergleich gewählt wurde. Ändern Sie stattdessen die *Bedeutung* eines Feldes, fügen Sie etwa `status` eine Option `cancelled` hinzu, und die abgeleiteten Oberflächen folgen ebenso treu, aber die View *Overdue Tasks* des Todo-Beispiels und seine Kennzahl *Overdue Tasks* kodieren überfällig beide als `status != completed`, sodass eine abgebrochene Aufgabe mit vergangenem Fälligkeitsdatum an beiden Stellen als überfällig zählen würde. Das Feld deklariert diese Definition durchaus einmal: `due_date` trägt `` dueLike: true, settledWhen: P`record.status == 'completed'` `` (`examples/app-todo/src/objects/task.object.ts`, Zeilen 73–74 in 18.3.0), aber die Spezifikation erklärt beide Schlüssel als reine Anzeige, gelesen von den Datumszellen der Console, sodass der View-Filter und die Kennzahl die Regel weiterhin selbst ausbuchstabieren. Das ist eine Lektüre der View-, Dashboard- und Objektdefinitionen, keine Messung, und es ist die Art von Folge, auf die der Namenstest Sie hinweist, alle drei nennen `status`, ohne für Sie zu entscheiden.
+
+## Richten Sie Ihren Agent darauf
+
+Der Lauf oben ist aus dem Repository reproduzierbar und dauert etwa eine Minute, sobald die Pakete installiert sind, was heißt, dass auch Ihr Agent ihn für Sie erledigen kann. Richten Sie einen Coding-Agent auf ein ObjectStack-Projekt: Der Scaffolder schreibt eine `AGENTS.md` und installiert das Skills-Bündel, die laufende App stellt MCP unter `/api/v1/mcp` bereit, und [wie man ihn konfiguriert](/en/blog/how-to-point-your-agent-at-objectstack/) behandelt die Regeldatei, die Skills und den Tool-Server. Wenn er eine Änderung an einem Feld vorlegt, verlangen Sie von ihm die Namenstest-Tabelle seines eigenen Diffs: welche Oberflächen gefolgt sind, welche Projektionen das Feld nennen und was er mit jeder vorhat. Die `field-no-consumers`-Zeile des Gates ist die erste Zeile dieser Tabelle, und der Agent kann sie lesen, bevor Sie es tun.
+
+Alles in diesem Beitrag lief auf dem Open-Source-Stack. „Zum Ausführen liefert das ObjectStack-Repository ObjectOS Community — das Image ghcr.io/objectstack-ai/objectstack, os start und die Console, kostenlos und selbst gehostet — während ObjectOS Cloud die gehostete Edition ist und ObjectOS Enterprise die selbst verwaltete, lizenzierte.“ Ihre Ontologie besteht aus gewöhnlichen ObjectStack-Metadaten. Der Export aus ObjectOS Cloud oder ObjectOS Enterprise zur Ausführung auf der quelloffenen ObjectStack Runtime ist geplant. Der Namenstest ändert sich nicht mit dem Host; die Definition, die er liest, ist dieselbe Datei.
