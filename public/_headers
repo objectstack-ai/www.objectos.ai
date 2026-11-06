@@ -31,6 +31,18 @@
 # it, naming each unlisted 'sha256-…' digest and each listed digest no page
 # uses: replace the old digest with the new one it prints.
 # JSON-LD blocks are data, not script, and CSP does not apply to them.
+#
+# Two external hosts, both for Cloudflare Web Analytics, which the maintainer
+# turns on in the Pages dashboard (#382). Pages then adds one external tag
+# before </body>, `<script defer src="https://static.cloudflareinsights.com/
+# beacon.min.js" data-cf-beacon='{"token":"…"}'>`, with no inline loader, so no
+# new hash is needed. The beacon posts its page views to
+# https://cloudflareinsights.com/cdn-cgi/rum; a zone-level automatic setup
+# posts to this site's own /cdn-cgi/rum instead, which 'self' already allows.
+# Both are bare hosts, not paths: the zone setup loads a versioned
+# beacon.min.js/v… path. Without them the browser blocks the beacon silently
+# and the dashboard shows no visits. `pnpm seo:smoke` holds script-src and
+# connect-src to exactly these hosts, so any other host added here fails it.
 # style-src keeps 'unsafe-inline': the built pages carry thousands of style=
 # attributes (code highlighting among them), which hashes cannot cover.
 /*
@@ -39,4 +51,4 @@
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: SAMEORIGIN
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), hid=(), midi=(), magnetometer=(), display-capture=(), browsing-topics=()
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'sha256-MROlkXV7qZMmgpiViKWX7vedcy/kpsdTj607FDRs0J0=' 'sha256-u2YaQ16t/k2AKp3dFBaRAF3AqK55c24QneDP66lFWRg=' 'sha256-UDyX13IlhVqh51pbuohNxhGd8zlz5igCWbpbe4UCltE=' 'sha256-7HfAlwoqCm4eoryFyKWMfdZMivqvJIEELXCpr4bXpbI='; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; media-src 'self'; frame-src https://www.youtube-nocookie.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'sha256-MROlkXV7qZMmgpiViKWX7vedcy/kpsdTj607FDRs0J0=' 'sha256-u2YaQ16t/k2AKp3dFBaRAF3AqK55c24QneDP66lFWRg=' 'sha256-UDyX13IlhVqh51pbuohNxhGd8zlz5igCWbpbe4UCltE=' 'sha256-7HfAlwoqCm4eoryFyKWMfdZMivqvJIEELXCpr4bXpbI=' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self' https://cloudflareinsights.com; media-src 'self'; frame-src https://www.youtube-nocookie.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'
