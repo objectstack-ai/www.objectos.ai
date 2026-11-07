@@ -12,11 +12,11 @@ const page = {
     eyebrow: 'Trust center',
     heroTitle: 'AI can write software. The harder question is whether you can approve it.',
     lead:
-      `ObjectOS is designed for the procurement, security, and IT review that happens after a demo works. ${p.e1} On either edition, agent authority is explicit in metadata and runtime enforcement.`,
+      `ObjectOS is designed for the procurement, security, and IT review that happens after a demo works. ${p.e1} On every edition, agent authority is explicit in metadata and runtime enforcement.`,
     primary: { label: 'Read the security model', href: '/en/security/' },
     secondary: { label: 'See deployment paths', href: '/en/pricing/' },
     metrics: [
-      { value: '2 editions', label: 'Hosted on ObjectOS Cloud, or self-managed on your own infrastructure with ObjectOS Enterprise' },
+      { value: '3 editions', label: `${p.descriptor}: open source and free to self-host; hosted in the browser with nothing to install; self-managed on your own infrastructure` },
       { value: 'User scoped', label: 'Agents inherit the signed-in user permissions' },
       { value: 'Auditable', label: 'Reads, writes, tool calls, approvals, and schema changes' },
     ],
