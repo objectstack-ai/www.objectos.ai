@@ -71,7 +71,7 @@ const page = {
         eyebrow: 'Boundaries',
         title: 'Keep sensitive business data inside controlled infrastructure',
         copy:
-          'On ObjectOS Enterprise — from its Enterprise Single-Node entry option up — the runtime, your business data, user identities, audit log, files, and secrets all live in your own infrastructure; unless you configure external providers, they stay inside that boundary. ObjectOS Cloud is operated by us.',
+          'On ObjectOS Enterprise, a private deployment, the runtime, your business data, user identities, audit log, files, and secrets all live in your own infrastructure; unless you configure external providers, they stay inside that boundary. ObjectOS Cloud is operated by us.',
         items: [
           {
             title: 'Data residency',
