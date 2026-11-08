@@ -117,7 +117,7 @@ const page = {
       {
         question: 'Which models does it use?',
         answer:
-          'Cloud editions run managed models behind AI Build and Ask. The open-source ObjectStack brings your own — any MCP-compatible client or a local model. Self-managed ObjectOS Enterprise, from its Enterprise Single-Node entry option up, brings your own model or key.',
+          'Cloud editions run managed models behind AI Build and Ask. The open-source ObjectStack brings your own — any MCP-compatible client or a local model. Self-managed ObjectOS Enterprise brings your own model or key.',
       },
     ],
   } satisfies MarketingPage;

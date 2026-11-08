@@ -21,8 +21,8 @@ export const CONTACT_URL: Record<Locale, string> = Object.fromEntries(
  * The public addresses, by purpose. Each one is already named elsewhere on the
  * site; /contact/ gathers them and adds none:
  * - sales@: the Enterprise "contact sales" address, the one the public licence
- *   page (docs.objectos.ai/docs/resources/license) names for Enterprise, the
- *   Runtime Subscription and OEM terms;
+ *   page (docs.objectos.ai/docs/resources/license) names for Enterprise and
+ *   OEM terms;
  * - support@: accounts, billing, refunds and cancellations (the Refund Policy);
  * - security@: `SECURITY_CONTACT`, kept in `security.ts` with security.txt;
  * - privacy@: privacy requests and data processing addenda (the Privacy Policy);
