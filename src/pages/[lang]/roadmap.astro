@@ -1,0 +1,31 @@
+---
+import Base from '../../layouts/Base.astro';
+import RoadmapPage from '../../components/RoadmapPage.astro';
+import { roadmapCopy, roadmapSnapshot } from '../../lib/roadmap';
+import { fallbackRoute, sourceLocaleByIdentity } from '../../lib/fallback';
+import { LOCALES, roadmapPath, segToLocale } from '../../lib/i18n';
+
+export function getStaticPaths() {
+  return LOCALES.map((locale) => ({ params: { lang: locale } }));
+}
+
+const locale = segToLocale(Astro.params.lang!)!;
+const copy = roadmapCopy[locale];
+// ja/de/es/fr/ko render the English copy: noindexed, canonical to
+// /en/roadmap/, and absent from hreflang (src/lib/fallback.ts). The page is
+// linked from no navigation yet: the maintainer reads the rendered page first
+// (cloud#3887), then a one-line change adds it to the footer or header.
+const route = fallbackRoute(locale, sourceLocaleByIdentity(roadmapCopy), roadmapPath);
+---
+
+<Base
+  title={copy.title}
+  description={copy.description}
+  {locale}
+  contentLocale={route.sourceLocale}
+  canonical={route.canonical}
+  noindex={route.isFallback}
+  alternates={route.alternates}
+  navAlternates={route.navAlternates}>
+  <RoadmapPage {copy} locale={route.sourceLocale} snapshot={roadmapSnapshot} />
+</Base>

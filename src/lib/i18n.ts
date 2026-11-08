@@ -32,6 +32,9 @@ export const pricingPath = (l: Locale): string => `/${l}/pricing/`;
 /** Changelog page URL: /<locale>/changelog/. */
 export const changelogPath = (l: Locale): string => `/${l}/changelog/`;
 
+/** Enterprise roadmap page URL: /<locale>/roadmap/ (src/lib/roadmap.ts). */
+export const roadmapPath = (l: Locale): string => `/${l}/roadmap/`;
+
 /** Article URL: /<locale>/blog/<baseSlug>. */
 export const postPath = (l: Locale, slug: string): string =>
   `/${l}/blog/${slug}/`;
