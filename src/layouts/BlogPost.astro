@@ -708,7 +708,7 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
       overscroll-behavior-x: contain;
     }
     /* A code block scrolls sideways at every width, not only on a phone, so
-       it carries the two scroll affordances the phone table carries (see the
+       it carries the two scroll affordances the table carries (see the
        comments there) at every width. Shiki paints the block dark in both
        themes, so its scrollbar is drawn light. A block that fits draws no
        scrollbar and its scroll timeline is inactive, so it is unchanged. */
@@ -753,6 +753,88 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
     }
     .prose th {
       background: var(--surface-sunk);
+    }
+    /* An identifier in a table cell is never split. Under the inline-code
+       rule above (`overflow-wrap: anywhere`) a column narrower than its token
+       broke it at an arbitrary letter and added no hyphen: `beforeDelet` /
+       `e` at 390, `crm_sales_us` / `er` at 1366. Here the code wraps only
+       where it already may (a space, a hyphen), so a token sets its column's
+       minimum width, and a table that outgrows its column scrolls inside
+       itself (below), never the page. Code in running text keeps `anywhere`
+       as the last resort for a path wider than the line. */
+    .prose :is(th, td) code {
+      overflow-wrap: normal;
+    }
+    /* The table itself is the scroll container, at every width (`display:
+       block` + `overflow-x: auto`), so a wide table scrolls instead of
+       clipping and the page keeps `documentElement.scrollWidth === viewport`.
+       A desktop column is not wide enough for every table either: with whole
+       identifiers the access-matrix table needs about 970px. What scrolling
+       costs is the affordance: a phone draws an OVERLAY scrollbar, which is
+       invisible until a gesture is already in progress, so a reader who never
+       swipes never learns the right-hand columns exist. The cut-off column at
+       the edge is indistinguishable from a clipped table. The two rules below
+       are the signal, not the scrolling. */
+    .prose table {
+      display: block;
+      max-width: 100%;
+      overflow-x: auto;
+      /* Keep a horizontal swipe that reaches the end of the table from
+         chaining into the page/browser behind it. */
+      overscroll-behavior-x: contain;
+    }
+    /* Affordance 1 — a scrollbar that is always drawn, not just mid-gesture.
+       Styling ::-webkit-scrollbar opts the container out of overlay
+       scrollbars on iOS Safari and Blink, which is the whole point.
+       ⚠️ Do NOT add `scrollbar-width`/`scrollbar-color` to `.prose table`:
+       Chrome 121+ drops ::-webkit-scrollbar customization entirely on any
+       element that sets either one, which would silently give the overlay
+       scrollbar back. A scrollbar only renders when the content overflows,
+       so short tables are unaffected. */
+    .prose table::-webkit-scrollbar {
+      height: 6px;
+    }
+    .prose table::-webkit-scrollbar-track {
+      background: color-mix(in srgb, var(--surface-sunk) 70%, transparent);
+      border-radius: var(--r-pill);
+    }
+    .prose table::-webkit-scrollbar-thumb {
+      background: color-mix(in srgb, var(--ink) 32%, transparent);
+      border-radius: var(--r-pill);
+    }
+    /* Affordance 2 — fade the trailing edge while there is more table to the
+       right. Driven by the container's own scroll position so it clears
+       exactly at the end of the scroll: a fade that is always on is a false
+       signal, and telling a reader there is more table when there is not is
+       the same defect in the other direction.
+       The fade lives ONLY in the keyframes, never in the base rule. When a
+       table is narrow enough not to overflow, its scroll timeline is inactive
+       and the effect is not applied at all (`mask-image` computes to `none`)
+       — a fade declared in the base rule would instead be stuck on for every
+       table that does not scroll. */
+    @supports (animation-timeline: scroll(self inline)) {
+      .prose table {
+        animation: prose-scroll-edge-fade linear both;
+        animation-timeline: scroll(self inline);
+      }
+    }
+    /* `display: block` wraps the rows in an anonymous table that shrinks to
+       its content, so a short table no longer spans the column as it does at
+       `display: table; width: 100%`. Above the phone breakpoint an empty
+       caption as wide as the table element (`100cqi`, the table being its
+       own container) widens that anonymous table back to the column: the
+       grid takes the same width and the same column widths as before, and a
+       table that does not fit still scrolls. Phones keep shrink-to-fit. */
+    @media (min-width: 641px) {
+      .prose table {
+        container-type: inline-size;
+      }
+      .prose table::after {
+        content: '';
+        display: table-caption;
+        caption-side: bottom;
+        inline-size: 100cqi;
+      }
     }
     @media (max-width: 640px) {
       .back {
@@ -821,35 +903,19 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
         border-radius: var(--r-control);
         font-size: var(--fs-13);
       }
-      /* The table itself is the scroll container here (`display: block` +
-         `overflow-x: auto`), so wide tables scroll instead of clipping and the
-         page keeps `documentElement.scrollWidth === viewport`. What that costs
-         is the affordance: a phone draws an OVERLAY scrollbar, which is
-         invisible until a gesture is already in progress, so a reader who never
-         swipes never learns the right-hand columns exist. The cut-off column at
-         the edge is indistinguishable from a clipped table. The two rules below
-         are the signal, not the scrolling. */
       .prose table {
-        display: block;
-        max-width: 100%;
-        overflow-x: auto;
         font-size: var(--fs-13);
-        /* Keep a horizontal swipe that reaches the end of the table from
-           chaining into the page/browser behind it. */
-        overscroll-behavior-x: contain;
       }
       /* Cells wrap; each column keeps a floor. Unwrapped (`nowrap`), a row of
          prose cells ran as long as its longest sentence: 2,035px on a 328px
          column, seven screens of swiping per row. 6.5rem (104px, padding
          included) is the widest floor at which three columns still fit the
-         328px column of a 360px phone (3 × 104 = 312), so every two- and
-         three-column table, 57 of the 69 in the English corpus, needs no
-         sideways scroll at 360 or 390; four to six columns still scroll,
-         to at most 6 × 104px + 1px of border = 625px. `overflow-wrap:
-         anywhere` is what keeps a column at its floor: it lets a long
-         identifier break instead of setting the column's minimum width, so
-         an overflowing table is never wider than its column count × 104px
-         plus its border. */
+         328px column of a 360px phone (3 × 104 = 312), so a two- or
+         three-column table of prose needs no sideways scroll at 360 or 390;
+         four to six columns scroll. `overflow-wrap: anywhere` keeps a column
+         of prose at its floor. It does not reach inline code (the rule above
+         the media query): an identifier wider than its column widens the
+         column instead of splitting, and the table scrolls further. */
       .prose th,
       .prose td {
         box-sizing: border-box;
@@ -857,41 +923,6 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
         padding-right: 0.6rem;
         padding-left: 0.6rem;
         overflow-wrap: anywhere;
-      }
-      /* Affordance 1 — a scrollbar that is always drawn, not just mid-gesture.
-         Styling ::-webkit-scrollbar opts the container out of overlay
-         scrollbars on iOS Safari and Blink, which is the whole point.
-         ⚠️ Do NOT add `scrollbar-width`/`scrollbar-color` to `.prose table`:
-         Chrome 121+ drops ::-webkit-scrollbar customization entirely on any
-         element that sets either one, which would silently give the overlay
-         scrollbar back. A scrollbar only renders when the content overflows,
-         so short tables are unaffected. */
-      .prose table::-webkit-scrollbar {
-        height: 6px;
-      }
-      .prose table::-webkit-scrollbar-track {
-        background: color-mix(in srgb, var(--surface-sunk) 70%, transparent);
-        border-radius: var(--r-pill);
-      }
-      .prose table::-webkit-scrollbar-thumb {
-        background: color-mix(in srgb, var(--ink) 32%, transparent);
-        border-radius: var(--r-pill);
-      }
-      /* Affordance 2 — fade the trailing edge while there is more table to the
-         right. Driven by the container's own scroll position so it clears
-         exactly at the end of the scroll: a fade that is always on is a false
-         signal, and telling a reader there is more table when there is not is
-         the same defect in the other direction.
-         The fade lives ONLY in the keyframes, never in the base rule. When a
-         table is narrow enough not to overflow, its scroll timeline is inactive
-         and the effect is not applied at all (`mask-image` computes to `none`)
-         — a fade declared in the base rule would instead be stuck on for every
-         table that does not scroll. */
-      @supports (animation-timeline: scroll(self inline)) {
-        .prose table {
-          animation: prose-scroll-edge-fade linear both;
-          animation-timeline: scroll(self inline);
-        }
       }
     }
   </style>

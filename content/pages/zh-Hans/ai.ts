@@ -117,7 +117,7 @@ const page = {
       {
         question: '用的是什么模型？',
         answer:
-          'ObjectOS Cloud 由托管模型驱动 AI Build 与 Ask。开源 ObjectStack 自带模型——任意兼容 MCP 的客户端或本地模型。自管部署的 ObjectOS Enterprise（含单节点入门选项 Enterprise 单机版）自带模型或密钥。',
+          'ObjectOS Cloud 由托管模型驱动 AI Build 与 Ask。开源 ObjectStack 自带模型——任意兼容 MCP 的客户端或本地模型。自管部署的 ObjectOS Enterprise 自带模型或密钥。',
       },
     ],
   } satisfies MarketingPage;

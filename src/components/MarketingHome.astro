@@ -7,8 +7,9 @@ import { getPostsInLocale } from '../lib/posts';
 import { darkCover } from '../lib/cover-variant';
 import { blogPath, formatDate, postPath, securityPath, ui, type Locale } from '../lib/i18n';
 import { s2t } from '../lib/zhconvert';
-import { homeCopy } from '../lib/home';
+import { homeCopy, keepParentheticalWhole, TRY_IN_BROWSER_URL } from '../lib/home';
 import { CLOUD_SIGNUP_URL, heroLineJoin, OBJECTSTACK_URL, positioning, YOUTUBE_CHANNEL_URL } from '../lib/positioning';
+import { CONTACT_URL } from '../lib/contact';
 import { phraseHtml } from '../../scripts/lib/cjk-phrases.mjs';
 import { termBySlug, termHref, termLabel } from '../lib/terms';
 import { CLUSTERS, clusterPath } from '../lib/clusters';
@@ -198,6 +199,12 @@ const demoCopy = DEMO_COPY[locale];
     <div class="hero-actions">
       <a class="btn btn-primary" href={CLOUD_SIGNUP_URL}>{copy.primaryCta} <span>→</span></a>
       <a class="btn btn-secondary" href={productTourHref}>{copy.secondaryCta}</a>
+      {/* The README's zero-install trial (TRY_IN_BROWSER_URL in home.ts). An
+          outbound link, so it opens a new tab as the YouTube link below and
+          the header's external items do, with the header's ↗ mark. */}
+      <a class="btn btn-secondary hero-try" href={TRY_IN_BROWSER_URL} target="_blank" rel="noopener">
+        <span>{keepParentheticalWhole(copy.tryInBrowserCta)}&nbsp;<span aria-hidden="true">↗</span></span>
+      </a>
     </div>
     <p class="hero-editions" set:html={ph(copy.heroEditions)} />
     <a class="btn btn-ghost hero-protocol-link" href={OBJECTSTACK_URL}>{protocolLink} <span aria-hidden="true">→</span></a>
@@ -506,10 +513,14 @@ const demoCopy = DEMO_COPY[locale];
     <p class="section-kicker">{copy.closingKicker}</p>
     <h2 set:html={ph(copy.closingTitle)} />
     <p>{copy.closingCopy}</p>
-    {/* The closing copy names an action — federate a database you already
-        run — and /data-modeling/ is the page that does it, so the last solid
-        button lands there, not on a blog topic list (#361). */}
-    <a class="btn btn-primary" href={marketingPagePath(locale, 'data-modeling')}>{copy.closingCta} <span>→</span></a>
+    {/* The closing CTA is the site's two-button pair (#397): start free on
+        ObjectOS Cloud, or talk to someone — /contact/, through CONTACT_URL
+        like every contact CTA. /data-modeling/, the page that federates a
+        database (#361), stays linked from the capability cards above. */}
+    <div class="closing-actions">
+      <a class="btn btn-primary" href={CLOUD_SIGNUP_URL}>{copy.closingCta} <span aria-hidden="true">→</span></a>
+      <a class="btn btn-secondary" href={CONTACT_URL[locale]}>{ui[locale].contactUs}</a>
+    </div>
   </section>
 </div>
 
@@ -1278,7 +1289,10 @@ const demoCopy = DEMO_COPY[locale];
   .closing .section-kicker {
     color: var(--on-panel-accent);
   }
-  .closing .btn {
+  .closing-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.7rem;
     margin-top: 1rem;
   }
   /* On phones and small tablets (`max-width: 900px`) the video moves to
@@ -1384,6 +1398,11 @@ const demoCopy = DEMO_COPY[locale];
        full-width rows rather than two ragged, centred buttons. */
     .hero-actions .btn {
       flex: 1 1 auto;
+    }
+    /* The browser trial takes a row of its own under the two CTAs, so it never
+       pulls either of them off the first row (the 360px one-row rule above). */
+    .hero-actions .hero-try {
+      flex-basis: 100%;
     }
     .home.lang-de .hero h1,
     .home.lang-fr .hero h1,

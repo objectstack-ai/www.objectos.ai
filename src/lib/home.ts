@@ -13,6 +13,19 @@ import { positioning } from './positioning';
 // three editions, …"), not T4: with T4 it ran 362 characters in en and a
 // search snippet cut it off before the word ObjectOS (seat ruling on #335,
 // the same call docs.objectos.ai made in objectos #299).
+// The zero-install trial the objectstack README offers under "Try it in five
+// minutes" ("No install at all? Open a live app on StackBlitz", README.md line
+// 36 at objectstack main 2038c56e; the repository has no release tags): the
+// HotCRM reference app, booted by StackBlitz from its GitHub repository. One
+// spelling for the home hero and the /templates/ hero.
+export const TRY_IN_BROWSER_URL = 'https://stackblitz.com/github/objectstack-ai/hotcrm';
+// The trial's label ends in a parenthetical ("(no sign-up)", "(sans
+// inscription)"). Where the button wraps (fr on a phone), it breaks before the
+// parenthetical, never inside it: its spaces become non-breaking. The button
+// renders the label and the ↗ as one text run, so the mark stays on the last
+// word's line.
+export const keepParentheticalWhole = (label: string): string =>
+  label.replace(/\([^()]*\)$/u, (part) => part.replace(/ /g, '\u00a0'));
 const sentenceCase = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 // The media note under the hero image is titled with T2's first sentence —
 // "One executable business ontology" in each locale — read from positioning
@@ -30,6 +43,14 @@ interface HomeCopy {
   heroEditions: string;
   primaryCta: string;
   secondaryCta: string;
+  /**
+   * The hero's third CTA: a live app in the browser, no account and no
+   * install — `TRY_IN_BROWSER_URL` above, the objectstack README's own
+   * StackBlitz link. The /templates/ hero carries the same label in its own
+   * page copy (`templates.ts` under content/pages/en and content/pages/zh-Hans),
+   * since that page is authored in those two locales only.
+   */
+  tryInBrowserCta: string;
   /**
    * Copy around the overview video. The video and channel URLs are identical
    * in every locale; only the wording around them is translated. The English
@@ -111,6 +132,11 @@ interface HomeCopy {
   closingKicker: string;
   closingTitle: string;
   closingCopy: string;
+  /**
+   * The closing CTA pair's first button, to ObjectOS Cloud sign-up
+   * (`CLOUD_SIGNUP_URL`); the second is `ui[locale].contactUs`, to /contact/
+   * (#397).
+   */
   closingCta: string;
   compareKicker: string;
   compareTitle: [string, string];
@@ -127,6 +153,7 @@ const zhHans: HomeCopy = {
   heroEditions: positioning['zh-Hans'].e1,
   primaryCta: '开始使用',
   secondaryCta: '了解工作原理',
+  tryInBrowserCta: '在浏览器里试用（免注册）',
   videoCaption: 'ObjectStack 90 秒总览',
   videoPlayLabel: '播放视频：ObjectStack 90 秒总览',
   videoMoreLink: '在 YouTube 上观看更多视频',
@@ -199,7 +226,7 @@ const zhHans: HomeCopy = {
   closingKicker: '下一步',
   closingTitle: '从你最熟悉的一套业务数据开始。',
   closingCopy: '把一个已在运行的数据库联邦接入（默认只读），定义关键业务对象，让 Agent 用一个小元数据 diff 发布第一个由 AI 编写、受治理的应用。',
-  closingCta: '连接你现有的系统',
+  closingCta: '免费开始',
   compareKicker: '对比',
   compareTitle: ['和你熟悉的工具', '不是一回事'],
   compareLink: '阅读对比',
@@ -219,6 +246,7 @@ const en: HomeCopy = {
   heroEditions: positioning.en.e1,
   primaryCta: 'Get started',
   secondaryCta: 'See how it works',
+  tryInBrowserCta: 'Try it in the browser (no sign-up)',
   videoCaption: 'ObjectStack in 90 Seconds',
   videoPlayLabel: 'Play the video: ObjectStack in 90 Seconds',
   videoMoreLink: 'More videos on YouTube',
@@ -291,7 +319,7 @@ const en: HomeCopy = {
   closingKicker: 'Next step',
   closingTitle: 'Start with the business data you know best.',
   closingCopy: 'Federate one database you already run — read-only by default — define its key business objects, and let your agent ship the first governed AI-written application as a small metadata diff.',
-  closingCta: 'Connect your existing systems',
+  closingCta: 'Start free',
   compareKicker: 'How it compares',
   compareTitle: ['Different from', 'the tools you know'],
   compareLink: 'Read the comparison',
@@ -312,6 +340,7 @@ const ja: HomeCopy = {
   heroEditions: positioning.ja.e1,
   primaryCta: 'はじめる',
   secondaryCta: '仕組みを見る',
+  tryInBrowserCta: 'ブラウザで試す（登録不要）',
   videoCaption: 'ObjectStack を 90 秒で',
   videoPlayLabel: '動画を再生：ObjectStack を 90 秒で',
   videoMoreLink: 'YouTube でほかの動画を見る',
@@ -384,7 +413,7 @@ const ja: HomeCopy = {
   closingKicker: '次のステップ',
   closingTitle: '最もよく知る業務データから始めましょう。',
   closingCopy: 'すでに稼働中のデータベースを一つフェデレートし（既定で読み取り専用）、主要な業務オブジェクトを定義して、最初のガバナンス付き AI-written アプリを小さなメタデータ diff として出荷します。',
-  closingCta: '既存システムを接続する',
+  closingCta: '無料で始める',
   compareKicker: '比較',
   compareTitle: ['よくあるツールとは', '別物です'],
   compareLink: '比較を読む',
@@ -405,6 +434,7 @@ const de: HomeCopy = {
   heroEditions: positioning.de.e1,
   primaryCta: 'Loslegen',
   secondaryCta: 'So funktioniert es',
+  tryInBrowserCta: 'Im Browser ausprobieren (ohne Anmeldung)',
   videoCaption: 'ObjectStack in 90 Sekunden',
   videoPlayLabel: 'Video abspielen: ObjectStack in 90 Sekunden',
   videoMoreLink: 'Mehr Videos auf YouTube',
@@ -477,7 +507,7 @@ const de: HomeCopy = {
   closingKicker: 'Nächster Schritt',
   closingTitle: 'Beginnen Sie mit den Geschäftsdaten, die Sie am besten kennen.',
   closingCopy: 'Föderieren Sie eine Datenbank, die Sie bereits betreiben (standardmäßig nur lesend), definieren Sie zentrale Geschäftsobjekte und lassen Sie Ihren Agent die erste kontrollierte AI-geschriebene Anwendung als kleinen Metadaten-Diff ausliefern.',
-  closingCta: 'Bestehende Systeme verbinden',
+  closingCta: 'Kostenlos starten',
   compareKicker: 'Im Vergleich',
   compareTitle: ['Anders als die Tools,', 'die Sie kennen'],
   compareLink: 'Vergleich lesen',
@@ -498,6 +528,7 @@ const es: HomeCopy = {
   heroEditions: positioning.es.e1,
   primaryCta: 'Empezar',
   secondaryCta: 'Cómo funciona',
+  tryInBrowserCta: 'Pruébalo en el navegador (sin registro)',
   videoCaption: 'ObjectStack en 90 segundos',
   videoPlayLabel: 'Reproducir el vídeo: ObjectStack en 90 segundos',
   videoMoreLink: 'Más vídeos en YouTube',
@@ -570,7 +601,7 @@ const es: HomeCopy = {
   closingKicker: 'Siguiente paso',
   closingTitle: 'Empieza con los datos de negocio que mejor conoces.',
   closingCopy: 'Federa una base de datos que ya usas (solo lectura por defecto), define sus objetos clave y deja que tu agente entregue la primera aplicación escrita por AI y gobernada como un diff pequeño de metadatos.',
-  closingCta: 'Conecta tus sistemas existentes',
+  closingCta: 'Empieza gratis',
   compareKicker: 'Comparativa',
   compareTitle: ['Distinto de las', 'herramientas que conoces'],
   compareLink: 'Leer la comparación',
@@ -591,6 +622,7 @@ const fr: HomeCopy = {
   heroEditions: positioning.fr.e1,
   primaryCta: 'Commencer',
   secondaryCta: 'Voir comment ça marche',
+  tryInBrowserCta: 'Essayer dans le navigateur (sans inscription)',
   videoCaption: 'ObjectStack en 90 secondes',
   videoPlayLabel: 'Lire la vidéo : ObjectStack en 90 secondes',
   videoMoreLink: 'Plus de vidéos sur YouTube',
@@ -663,7 +695,7 @@ const fr: HomeCopy = {
   closingKicker: 'Étape suivante',
   closingTitle: 'Commencez par les données métier que vous connaissez le mieux.',
   closingCopy: 'Fédérez une base que vous exploitez déjà (en lecture seule par défaut), définissez ses objets clés et laissez votre agent livrer la première application gouvernée écrite par l’AI sous forme de petit diff de métadonnées.',
-  closingCta: 'Connecter les systèmes existants',
+  closingCta: 'Commencer gratuitement',
   compareKicker: 'Comparatif',
   compareTitle: ['Différent des outils', 'que vous connaissez'],
   compareLink: 'Lire le comparatif',
@@ -684,6 +716,7 @@ const ko: HomeCopy = {
   heroEditions: positioning.ko.e1,
   primaryCta: '시작하기',
   secondaryCta: '작동 방식 보기',
+  tryInBrowserCta: '브라우저에서 체험하기 (가입 불필요)',
   videoCaption: 'ObjectStack 90초 살펴보기',
   videoPlayLabel: '동영상 재생: ObjectStack 90초 살펴보기',
   videoMoreLink: 'YouTube에서 더 많은 영상 보기',
@@ -756,7 +789,7 @@ const ko: HomeCopy = {
   closingKicker: '다음 단계',
   closingTitle: '가장 잘 아는 비즈니스 데이터에서 시작하세요.',
   closingCopy: '이미 운영 중인 데이터베이스 하나를 연합하고(기본 읽기 전용), 핵심 비즈니스 객체를 정의해 에이전트가 첫 거버넌스 AI 작성 애플리케이션을 작은 메타데이터 diff로 배포하게 하세요.',
-  closingCta: '기존 시스템 연결하기',
+  closingCta: '무료로 시작하기',
   compareKicker: '비교',
   compareTitle: ['익숙한 도구들과는', '다릅니다'],
   compareLink: '비교 보기',

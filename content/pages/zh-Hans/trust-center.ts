@@ -16,7 +16,7 @@ const page = {
     primary: { label: '阅读安全模型', href: '/en/security/' },
     secondary: { label: '查看部署路径', href: '/en/pricing/' },
     metrics: [
-      { value: '两种版本', label: '托管在 ObjectOS Cloud，或以 ObjectOS Enterprise 自管部署在你自己的基础设施上' },
+      { value: '三个版本', label: `${p.descriptor}：开源、可免费自托管；托管在浏览器中、无需安装；自管部署在你自己的基础设施上` },
       { value: '用户级', label: 'Agent 继承登录用户的权限' },
       { value: '可审计', label: '读、写、工具调用、审批与 schema 变更' },
     ],
@@ -71,7 +71,7 @@ const page = {
         eyebrow: '边界',
         title: '敏感业务数据留在受控基础设施内',
         copy:
-          '在 ObjectOS Enterprise 中——从其单节点入门选项 Enterprise 单机版起——运行时、业务数据、用户身份、审计日志、文件与密钥都在你自己的基础设施内；除非你显式配置外部服务，它们都留在这个边界内。ObjectOS Cloud 由我们运营。',
+          '在 ObjectOS Enterprise（私有部署）中，运行时、业务数据、用户身份、审计日志、文件与密钥都在你自己的基础设施内；除非你显式配置外部服务，它们都留在这个边界内。ObjectOS Cloud 由我们运营。',
         items: [
           {
             title: '数据驻留',

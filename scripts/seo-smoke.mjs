@@ -842,6 +842,17 @@ if (internalLinksChecked === 0) {
 }
 
 let inlineScriptDigests = 0;
+let cspHostsChecked = 0;
+// The only hosts the /* CSP's script-src and connect-src may name: Cloudflare
+// Web Analytics (#382), which Pages injects at the edge as one external tag, so
+// no built page shows it. Every other source there is a keyword or a hash. A
+// host (or a scheme or wildcard source) missing from this list fails, and so
+// does a listed host the policy no longer names, so the two directives name
+// exactly these.
+const CSP_HOSTS = {
+  'script-src': ['https://static.cloudflareinsights.com'],
+  'connect-src': ['https://cloudflareinsights.com'],
+};
 // ─── Cache headers for hashed assets ────────────────────────────────────────
 //
 // Every file astro writes under /_astro/ has a content hash in its name, so it
@@ -866,7 +877,9 @@ let inlineScriptDigests = 0;
   // not governed) must be listed, and a listed digest no page uses is an issue
   // too, so the policy allows exactly what ships.
   const csp = /^\/\*[ \t]*\n(?:[ \t]+.*\n)*?[ \t]+Content-Security-Policy:(.*)$/im.exec(headers ?? '')?.[1] ?? '';
-  const allowed = new Set(/(?:^|;)\s*script-src\b([^;]*)/.exec(csp)?.[1].match(/'sha256-[A-Za-z0-9+/]+=*'/g) ?? []);
+  const sources = (directive) =>
+    new RegExp(`(?:^|;)\\s*${directive}(?=[\\s;]|$)([^;]*)`).exec(csp)?.[1].trim().split(/\s+/).filter(Boolean) ?? [];
+  const allowed = new Set(sources('script-src').filter((source) => /^'sha256-[A-Za-z0-9+/]+=*'$/.test(source)));
   const used = new Map();
   for (const page of pages.values()) {
     for (const [, attrs, body] of page.html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)) {
@@ -882,6 +895,17 @@ let inlineScriptDigests = 0;
   }
   for (const digest of allowed) if (!used.has(digest)) issues.push(`_headers: CSP script-src lists ${digest}, which no built page uses`);
   inlineScriptDigests = used.size;
+
+  for (const [directive, hosts] of Object.entries(CSP_HOSTS)) {
+    const named = sources(directive).filter((source) => !source.startsWith("'"));
+    for (const host of named) {
+      if (!hosts.includes(host)) issues.push(`_headers: CSP ${directive} names ${host}, which is not in seo-smoke's CSP_HOSTS allowlist`);
+    }
+    for (const host of hosts) {
+      if (!named.includes(host)) issues.push(`_headers: CSP ${directive} does not name ${host}, so the browser blocks Cloudflare Web Analytics`);
+    }
+    cspHostsChecked += named.length;
+  }
 }
 
 // ─── Open Graph and the Organization node ───────────────────────────────────
@@ -914,5 +938,5 @@ console.log(
   `SEO smoke test passed (${htmlFiles.length} HTML pages checked; ${sitemapChecked} sitemap URLs against ` +
     `${noindexedBuilt} noindexed pages; ${annotationsChecked} canonical/hreflang annotations; ` +
     `${langBlocksJudged} prose blocks language-checked; ${internalLinksChecked} internal links redirect-checked; ` +
-    `${inlineScriptDigests} inline script digests CSP-checked)`
+    `${inlineScriptDigests} inline script digests and ${cspHostsChecked} CSP hosts checked)`
 );

@@ -29,6 +29,9 @@ export const refundsPath = (l: Locale): string => `/${l}/refunds/`;
 /** Pricing page URL. */
 export const pricingPath = (l: Locale): string => `/${l}/pricing/`;
 
+/** Changelog page URL: /<locale>/changelog/. */
+export const changelogPath = (l: Locale): string => `/${l}/changelog/`;
+
 /** Article URL: /<locale>/blog/<baseSlug>. */
 export const postPath = (l: Locale, slug: string): string =>
   `/${l}/blog/${slug}/`;
@@ -178,6 +181,13 @@ interface Strings {
     blog: string;
     /** The YouTube channel — an external entry under Resources, and its footer link. */
     videos: string;
+    /** /[lang]/changelog/ — the release history; a footer link under Resources. */
+    changelog: string;
+    /**
+     * GitHub Discussions on objectstack-ai/objectstack (enabled there:
+     * `has_discussions`) — an external footer link under Resources.
+     */
+    community: string;
     /**
      * Label over the five pillar guides: the second column of the Resources
      * panel, the drawer's sub-label and the footer's sub-label. It is a label,
@@ -200,6 +210,11 @@ interface Strings {
     langUnavailable: (lang: string) => string;
   };
   getStarted: string;
+  /**
+   * The link to /contact/ (`CONTACT_URL`, #397): the footer's Why ObjectOS
+   * entry and the second button of the home page's closing CTA.
+   */
+  contactUs: string;
   /** The ObjectOS Cloud sign-in link in the header, drawer and footer. */
   signIn: string;
   skipToContent: string;
@@ -274,12 +289,15 @@ const en: Strings = {
     companyLegal: 'Company & Legal',
     blog: 'Blog',
     videos: 'Videos',
+    changelog: 'Changelog',
+    community: 'Community',
     guides: 'Guides',
     featuredGuides: 'Featured guides',
     forFde: 'For FDE teams',
     langUnavailable: (lang) => `${lang} — this article is not available in this language; opens the blog`,
   },
   getStarted: 'Get started',
+  contactUs: 'Contact us',
   signIn: 'Sign in',
   skipToContent: 'Skip to content',
   footer: { terms: 'Terms & License', privacy: 'Privacy', pricing: 'Pricing', refunds: 'Refunds' },
@@ -350,12 +368,15 @@ const zhHans: Strings = {
     companyLegal: '公司与法律',
     blog: '博客',
     videos: '视频',
+    changelog: '更新日志',
+    community: '社区',
     guides: '专题指南',
     featuredGuides: '精选专题',
     forFde: '面向驻场工程（FDE）团队',
     langUnavailable: (lang) => `${lang}——本文暂无该语言版本，将打开该语言的博客`,
   },
   getStarted: '开始使用',
+  contactUs: '联系我们',
   signIn: '登录',
   skipToContent: '跳到正文',
   footer: { terms: '条款与许可', privacy: '隐私政策', pricing: '定价', refunds: '退款政策' },
@@ -426,12 +447,15 @@ const ja: Strings = {
     companyLegal: '会社と法務',
     blog: 'ブログ',
     videos: '動画',
+    changelog: '更新履歴',
+    community: 'コミュニティ',
     guides: 'ガイド',
     featuredGuides: '注目のガイド',
     forFde: 'FDE チーム向け',
     langUnavailable: (lang) => `${lang} — この記事にはこの言語の版がありません。ブログ一覧を開きます`,
   },
   getStarted: 'はじめる',
+  contactUs: 'お問い合わせ',
   signIn: 'ログイン',
   skipToContent: '本文へ移動',
   footer: { terms: '利用規約・ライセンス', privacy: 'プライバシー', pricing: '料金', refunds: '返金' },
@@ -502,12 +526,15 @@ const de: Strings = {
     companyLegal: 'Unternehmen & Rechtliches',
     blog: 'Blog',
     videos: 'Videos',
+    changelog: 'Changelog',
+    community: 'Community',
     guides: 'Leitfäden',
     featuredGuides: 'Ausgewählte Leitfäden',
     forFde: 'Für FDE-Teams',
     langUnavailable: (lang) => `${lang} – dieser Artikel ist in dieser Sprache nicht verfügbar; öffnet den Blog`,
   },
   getStarted: 'Loslegen',
+  contactUs: 'Kontakt',
   signIn: 'Anmelden',
   skipToContent: 'Zum Inhalt springen',
   footer: { terms: 'Bedingungen & Lizenz', privacy: 'Datenschutz', pricing: 'Preise', refunds: 'Rückerstattung' },
@@ -578,12 +605,15 @@ const es: Strings = {
     companyLegal: 'Empresa y legal',
     blog: 'Blog',
     videos: 'Vídeos',
+    changelog: 'Registro de cambios',
+    community: 'Comunidad',
     guides: 'Guías',
     featuredGuides: 'Guías destacadas',
     forFde: 'Para equipos FDE',
     langUnavailable: (lang) => `${lang}: este artículo no está disponible en este idioma; abre el blog`,
   },
   getStarted: 'Empezar',
+  contactUs: 'Contáctanos',
   signIn: 'Iniciar sesión',
   skipToContent: 'Saltar al contenido',
   footer: { terms: 'Términos y licencia', privacy: 'Privacidad', pricing: 'Precios', refunds: 'Reembolsos' },
@@ -654,12 +684,15 @@ const fr: Strings = {
     companyLegal: 'Entreprise et mentions légales',
     blog: 'Blog',
     videos: 'Vidéos',
+    changelog: 'Journal des versions',
+    community: 'Communauté',
     guides: 'Guides',
     featuredGuides: 'Guides à la une',
     forFde: 'Pour les équipes FDE',
     langUnavailable: (lang) => `${lang} : cet article n’est pas disponible dans cette langue ; ouvre le blog`,
   },
   getStarted: 'Commencer',
+  contactUs: 'Nous contacter',
   signIn: 'Se connecter',
   skipToContent: 'Aller au contenu',
   footer: { terms: 'Conditions et licence', privacy: 'Confidentialité', pricing: 'Tarifs', refunds: 'Remboursements' },
@@ -730,12 +763,15 @@ const ko: Strings = {
     companyLegal: '회사 및 법적 고지',
     blog: '블로그',
     videos: '동영상',
+    changelog: '변경 이력',
+    community: '커뮤니티',
     guides: '가이드',
     featuredGuides: '추천 가이드',
     forFde: 'FDE 팀용',
     langUnavailable: (lang) => `${lang} — 이 글은 이 언어로 제공되지 않습니다. 블로그 목록으로 이동합니다`,
   },
   getStarted: '시작하기',
+  contactUs: '문의하기',
   signIn: '로그인',
   skipToContent: '본문으로 건너뛰기',
   footer: { terms: '약관 및 라이선스', privacy: '개인정보 보호', pricing: '가격', refunds: '환불' },
@@ -807,6 +843,8 @@ const toHant = (s: Strings): Strings => ({
     companyLegal: s2t(s.siteNav.companyLegal),
     blog: s2t(s.siteNav.blog),
     videos: s2t(s.siteNav.videos),
+    changelog: s2t(s.siteNav.changelog),
+    community: s2t(s.siteNav.community),
     guides: s2t(s.siteNav.guides),
     featuredGuides: s2t(s.siteNav.featuredGuides),
     forFde: s2t(s.siteNav.forFde),
@@ -815,6 +853,7 @@ const toHant = (s: Strings): Strings => ({
     langUnavailable: (lang) => s2t(s.siteNav.langUnavailable('{lang}')).replace('{lang}', lang),
   },
   getStarted: s2t(s.getStarted),
+  contactUs: s2t(s.contactUs),
   signIn: s2t(s.signIn),
   skipToContent: s2t(s.skipToContent),
   footer: {
