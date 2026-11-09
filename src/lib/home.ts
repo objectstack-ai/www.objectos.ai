@@ -4,9 +4,28 @@ import { positioning } from './positioning';
 
 // What ObjectStack and ObjectOS are is stated once, in `./positioning` (the
 // objectstack README's canonical lines, T1–T4, and the edition clause E1), and
-// every locale's title, hero, lead and proof chips below read from it. The
-// eyebrow is T4's noun phrase for ObjectOS, sentence-cased (the CSS uppercases
-// it anyway).
+// every locale's title, hero, lead, edition paragraph and proof chips below
+// read from it. The eyebrow is `descriptor`, the three editions' short name,
+// sentence-cased (the CSS uppercases it anyway). The hero lead is T2 alone and
+// the edition paragraph under the CTA row is E1 verbatim — the check at the
+// bottom of this file holds every locale to that. The meta `description` is
+// T2 plus the edition sentence the security lead carries ("ObjectOS comes in
+// three editions, …"), not T4: with T4 it ran 362 characters in en and a
+// search snippet cut it off before the word ObjectOS (seat ruling on #335,
+// the same call docs.objectos.ai made in objectos #299).
+// The zero-install trial the objectstack README offers under "Try it in five
+// minutes" ("No install at all? Open a live app on StackBlitz", README.md line
+// 36 at objectstack main 2038c56e; the repository has no release tags): the
+// HotCRM reference app, booted by StackBlitz from its GitHub repository. One
+// spelling for the home hero and the /templates/ hero.
+export const TRY_IN_BROWSER_URL = 'https://stackblitz.com/github/objectstack-ai/hotcrm';
+// The trial's label ends in a parenthetical ("(no sign-up)", "(sans
+// inscription)"). Where the button wraps (fr on a phone), it breaks before the
+// parenthetical, never inside it: its spaces become non-breaking. The button
+// renders the label and the ↗ as one text run, so the mark stays on the last
+// word's line.
+export const keepParentheticalWhole = (label: string): string =>
+  label.replace(/\([^()]*\)$/u, (part) => part.replace(/ /g, '\u00a0'));
 const sentenceCase = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 // The media note under the hero image is titled with T2's first sentence —
 // "One executable business ontology" in each locale — read from positioning
@@ -18,9 +37,20 @@ interface HomeCopy {
   description: string;
   eyebrow: string;
   hero: [string, string];
+  /** The first screen's one paragraph: T2, nothing else (the CTA row follows it). */
   heroLead: string;
+  /** The paragraph under the CTA row: E1 verbatim, asserted below for every locale. */
+  heroEditions: string;
   primaryCta: string;
   secondaryCta: string;
+  /**
+   * The hero's third CTA: a live app in the browser, no account and no
+   * install — `TRY_IN_BROWSER_URL` above, the objectstack README's own
+   * StackBlitz link. The /templates/ hero carries the same label in its own
+   * page copy (`templates.ts` under content/pages/en and content/pages/zh-Hans),
+   * since that page is authored in those two locales only.
+   */
+  tryInBrowserCta: string;
   /**
    * Copy around the overview video. The video and channel URLs are identical
    * in every locale; only the wording around them is translated. The English
@@ -76,10 +106,21 @@ interface HomeCopy {
   secureExecution: string;
   outcomes: string;
   outcomeLabels: [string, string, string];
-  solutionsKicker: string;
-  solutionsTitle: [string, string];
-  solutionLink: string;
-  solutions: { title: string; copy: string }[];
+  /**
+   * "How business teams use it" (#359): three scenario cards that link into
+   * /[lang]/use-cases/, in the order service, finance & procurement, sales
+   * (MarketingHome.astro pairs them with the page's section ids by index).
+   * Each card summarizes that section's scenario posts; nothing else.
+   */
+  useCasesKicker: string;
+  useCasesTitle: [string, string];
+  /** The section's link to the whole /use-cases/ page. */
+  useCasesLink: string;
+  /** The link line at the foot of each card. */
+  useCaseCardLink: string;
+  /** The secondary link under the cards, to the /templates/ catalog. */
+  useCasesTemplatesLink: string;
+  useCases: { title: string; copy: string }[];
   securityKicker: string;
   securityTitle: [string, string];
   securityCopy: string;
@@ -91,6 +132,11 @@ interface HomeCopy {
   closingKicker: string;
   closingTitle: string;
   closingCopy: string;
+  /**
+   * The closing CTA pair's first button, to ObjectOS Cloud sign-up
+   * (`CLOUD_SIGNUP_URL`); the second is `ui[locale].contactUs`, to /contact/
+   * (#397).
+   */
   closingCta: string;
   compareKicker: string;
   compareTitle: [string, string];
@@ -100,12 +146,14 @@ interface HomeCopy {
 
 const zhHans: HomeCopy = {
   title: `ObjectOS · ${positioning['zh-Hans'].t1}`,
-  description: `${positioning['zh-Hans'].t2}${positioning['zh-Hans'].t4}`,
+  description: `${positioning['zh-Hans'].t2}ObjectOS 有三个版本：${positioning['zh-Hans'].descriptor}。`,
   eyebrow: positioning['zh-Hans'].descriptor,
-  hero: positioning['zh-Hans'].t1Lines,
-  heroLead: `${positioning['zh-Hans'].t2}${positioning['zh-Hans'].t4}${positioning['zh-Hans'].e1}`,
+  hero: positioning['zh-Hans'].t1Hero,
+  heroLead: positioning['zh-Hans'].t2,
+  heroEditions: positioning['zh-Hans'].e1,
   primaryCta: '开始使用',
   secondaryCta: '了解工作原理',
+  tryInBrowserCta: '在浏览器里试用（免注册）',
   videoCaption: 'ObjectStack 90 秒总览',
   videoPlayLabel: '播放视频：ObjectStack 90 秒总览',
   videoMoreLink: '在 YouTube 上观看更多视频',
@@ -115,30 +163,30 @@ const zhHans: HomeCopy = {
     [positioning['zh-Hans'].t3[0], '运行时运行它'],
     [positioning['zh-Hans'].t3[1], 'AI 编写它'],
     [positioning['zh-Hans'].t3[2], 'Agent 操作它'],
-    [positioning['zh-Hans'].t3[3], '导出本体，拿到开源 ObjectStack 上运行'],
+    [positioning['zh-Hans'].t3[3], '普通的 ObjectStack 元数据；导出到开源运行时尚在计划中'],
   ],
   imageAlt: 'ObjectOS 连接业务数据、应用和 AI Agent 的产品示意图',
   imageNoteTitle: t2Lead(positioning['zh-Hans'].t2),
   imageNote: '正在连接应用、数据与 Agent',
   positioningKicker: positioning['zh-Hans'].t1,
-  positioningTitle: ['保留已经有效的系统，', '补上 Agent 可治理运行时。'],
+  positioningTitle: ['保留运转良好的系统，', '补上受治理的 Agent 运行时。'],
   positioningLink: '什么是可执行的业务本体',
   positioningCopy: '企业 AI 不需要又一次重建，也不需要更多不可审的生成代码。它需要一份 Agent 能写、人能审、运行时能治理的定义，把旧系统、新应用和 AI Agent 接在一起。你的对象与字段、关系、动作、权限、流程，以及 Agent 与工具定义，就是这份定义——你的业务本体：开放、带版本、归你所有，而不是锁在别人平台里的资产。',
   capabilitiesKicker: '平台能力',
   capabilitiesTitle: ['从业务结构出发，', '而不是从空白代码开始'],
-  capabilitiesLink: '阅读 AI 与 Agent 文章',
+  capabilitiesLink: '看 Agent 怎样编写本体',
   capabilities: [
     { title: '给 Agent 一个业务模型', copy: '把客户、订单、设备、工单和审批建模成对象，让 Agent 能准确读取、关联和操作。' },
     { title: '接入已在运行的系统——先只读', copy: '把已经在跑的数据库作为外部数据源联邦接入，再把它的表建模成对象。联邦默认只读、尚在早期：记录系统继续写入数据，写权限按对象有意开启。' },
     { title: '编写本体，而不是整套代码', copy: '对典型 CRUD 和流程型软件，Agent 把业务本体——对象与字段、关系、动作、权限、流程——写成一份紧凑的 ObjectStack 定义，开源 ObjectStack 运行时从中派生表、API、界面和工具，并强制执行权限与审计；ObjectOS 负责团队的生产部署与运营。要生成的代码更少，要审的代码也更少。' },
-    { title: '在运行时执行治理', copy: '复用企业身份、权限、审批队列和审计日志，让每一次 Agent 操作都有明确边界。' },
+    { title: '治理由运行时强制执行', copy: '复用企业身份、权限、审批队列和审计日志，让每一次 Agent 操作都有明确边界。' },
   ],
-  aiKicker: 'AI 构建与 Agent 运行',
+  aiKicker: 'AI 构建与 Agent 运营',
   aiTitle: ['让 Agent 生成软件，', '让人保留审阅权。'],
-  aiCopy: `ObjectStack 把对象、字段、流程、权限、动作和界面保留为 Agent 可读写的类型化定义。开源运行时从中派生数据库、API、界面与 MCP 工具，并强制执行权限与审计。Strict TypeScript、Zod schema 和 validation gate 会在发布前捕获 Agent 的结构性错误。整份定义小到 AI 能一次读全，因此编码 Agent 能跨整个系统推理，你只需审阅它的 diff。ObjectOS 是${positioning['zh-Hans'].descriptor}：云端与企业版提供界面内 AI Build & Ask、人机审批、SSO、部署与运营；开源 ObjectStack 则由你自带编码 Agent 和 MCP 客户端。`,
+  aiCopy: `ObjectStack 把对象、字段、流程、权限、动作和界面保留为 Agent 可读写的类型化定义。开源运行时从中派生数据库、API、界面与 MCP 工具，并强制执行权限与审计。Strict TypeScript、Zod schema 和 validation gate 会在发布前捕获 Agent 的结构性错误。整份定义小到 AI 能一次读全，因此编码 Agent 能跨整个系统推理，你只需审阅它的 diff。ObjectOS 有三个版本：${positioning['zh-Hans'].descriptor}。ObjectOS Cloud（托管版）与 Enterprise（自管版）提供界面内 AI Build & Ask、人机审批、SSO、部署与运营；开源 ObjectStack 则由你自带编码 Agent 和 MCP 客户端。`,
   aiItems: [
-    { title: 'AI Builder', copy: '云端与企业版：用自然语言描述变更。内置 Builder 生成对象、字段、视图和流程，结构性变更进入审批。在开源 ObjectStack 中，你自己的编码 Agent 编写同样紧凑的元数据 diff，而不是生成整套应用代码。' },
-    { title: 'AI Ask', copy: '云端与企业版：在产品内问询数据、分析业务上下文，并在登录用户权限内触发已批准动作。开源 ObjectStack 则通过 MCP 用你自己的 AI 问询同样的对象。' },
+    { title: 'AI Builder', copy: 'Cloud 与 Enterprise 版：用自然语言描述变更。内置 Builder 生成对象、字段、视图和流程，结构性变更进入审批。在开源 ObjectStack 中，你自己的编码 Agent 编写同样紧凑的元数据 diff，而不是生成整套应用代码。' },
+    { title: 'AI Ask', copy: 'Cloud 与 Enterprise 版：在产品内向数据提问、分析业务上下文，并在登录用户权限内触发已批准动作。开源 ObjectStack 则通过 MCP 用你自己的 AI 向同样的对象提问。' },
     { title: 'Tools / MCP', copy: '各版本通用：@objectstack/mcp 把对象、查询和动作暴露为受策略约束的工具，供 Claude、Cursor、任意 MCP 客户端或本地模型调用。' },
   ],
   aiLink: '把你的 Agent 指向 ObjectStack',
@@ -152,31 +200,33 @@ const zhHans: HomeCopy = {
   secureExecution: '安全执行',
   outcomes: '持续产生价值',
   outcomeLabels: ['业务应用', 'AI Agent', '自动化'],
-  solutionsKicker: '应用模板',
-  solutionsTitle: ['从可运行模板开始，', '而不是从空白系统开始'],
-  solutionLink: '查看模板源码',
-  solutions: [
-    { title: 'Helpdesk 模板', copy: '面向客户支持的 AI-first 模板，覆盖工单、SLA、摘要、建议回复和知识库召回。' },
-    { title: 'Contracts 模板', copy: '覆盖合同生命周期管理，支持元数据提取、审批、续约提醒和审计追踪。' },
-    { title: 'Procurement 模板', copy: '覆盖采购请求、供应商、PO、收货和三单匹配，把审批流变成可运行应用。' },
+  useCasesKicker: '业务团队怎么用',
+  useCasesTitle: ['AI 为每个团队接手什么，', '哪些仍由人来确认'],
+  useCasesLink: '查看全部使用场景',
+  useCaseCardLink: '查看场景',
+  useCasesTemplatesLink: '或者从应用模板开始',
+  useCases: [
+    { title: '客服', copy: 'AI 给工单分类、匹配知识库、起草带引用的回复；发出什么由客服确认，敏感回复可设为须主管审批。' },
+    { title: '财务与采购', copy: 'AI 按政策和预算核对报销，在下单前核对供应商风险；财务与采购看着证据审批。' },
+    { title: '销售', copy: '销售用语音或文字更新 CRM，AI 为下一次客户会议做准备；每条记录变更建议都等销售本人确认。' },
   ],
   securityKicker: '安全与治理',
   securityTitle: ['数据留在你的网络里，', 'AI 在权限边界内工作'],
-  securityCopy: 'ObjectOS 企业版可以把 ObjectStack 应用部署并运营在你的基础设施中。业务数据、身份、审计日志和文件仍由你控制；AI Agent 通过受控工具访问对象，并继承登录用户已有的权限。',
+  securityCopy: 'ObjectOS Enterprise 可以把 ObjectStack 应用部署并运营在你的基础设施中。业务数据、身份、审计日志和文件仍由你控制；AI Agent 通过受控工具访问对象，并继承登录用户已有的权限。',
   securityItems: [
-    { title: '数据驻留', copy: '连接你的数据库和存储；业务记录、身份、审计日志和文件都留在那里。自管部署的 ObjectOS 在线校验许可证（企业版离线许可证可离线校验）；开源 ObjectStack 运行时没有遥测、不查许可证、也不检查更新。' },
+    { title: '数据驻留', copy: '连接你的数据库和存储；业务记录、身份、审计日志和文件都留在那里。自管部署的 ObjectOS 在线校验许可证（Enterprise 离线许可证可离线校验）；开源 ObjectStack 运行时没有遥测、不查许可证、也不检查更新。' },
     { title: '继承用户权限', copy: 'Agent 以登录用户身份执行，遵守对象级、记录级和字段级权限，看不到用户本来无权看到的数据。' },
     { title: '审批与审计', copy: '结构性变更进入人机协作审批队列；读取、写入、工具调用和权限变更都能写入审计日志。' },
     { title: '支持离线部署', copy: '可在 VPC、本地服务器或隔离网络中运行，并可接入本地模型、内部身份系统和自有密钥管理。' },
   ],
   securityLink: '了解安全与治理',
   insightsKicker: '最新洞察',
-  insightsTitle: '关于 AI 编写的软件的实践思考',
+  insightsTitle: 'AI 编写软件的实践思考',
   insightsLink: '浏览全部文章',
   closingKicker: '下一步',
   closingTitle: '从你最熟悉的一套业务数据开始。',
-  closingCopy: '把一个已在运行的数据库联邦接入（默认只读），定义关键业务对象，让 Agent 用一个小元数据 diff 发布第一个受治理的 AI 所写应用。',
-  closingCta: '了解如何连接现有系统',
+  closingCopy: '把一个已在运行的数据库联邦接入（默认只读），定义关键业务对象，让 Agent 用一个小元数据 diff 发布第一个由 AI 编写、受治理的应用。',
+  closingCta: '免费开始',
   compareKicker: '对比',
   compareTitle: ['和你熟悉的工具', '不是一回事'],
   compareLink: '阅读对比',
@@ -189,12 +239,14 @@ const zhHans: HomeCopy = {
 
 const en: HomeCopy = {
   title: `ObjectOS · ${positioning.en.t1}`,
-  description: `${positioning.en.t2} ${positioning.en.t4}`,
+  description: `${positioning.en.t2} ObjectOS comes in three editions, ${positioning.en.descriptor}.`,
   eyebrow: sentenceCase(positioning.en.descriptor),
-  hero: positioning.en.t1Lines,
-  heroLead: `${positioning.en.t2} ${positioning.en.t4} ${positioning.en.e1}`,
+  hero: positioning.en.t1Hero,
+  heroLead: positioning.en.t2,
+  heroEditions: positioning.en.e1,
   primaryCta: 'Get started',
   secondaryCta: 'See how it works',
+  tryInBrowserCta: 'Try it in the browser (no sign-up)',
   videoCaption: 'ObjectStack in 90 Seconds',
   videoPlayLabel: 'Play the video: ObjectStack in 90 Seconds',
   videoMoreLink: 'More videos on YouTube',
@@ -204,7 +256,7 @@ const en: HomeCopy = {
     [positioning.en.t3[0], 'The runtime runs it'],
     [positioning.en.t3[1], 'AI writes it'],
     [positioning.en.t3[2], 'Agents operate it'],
-    [positioning.en.t3[3], 'Export your ontology, run it on open-source ObjectStack'],
+    [positioning.en.t3[3], 'Ordinary ObjectStack metadata; export to the open runtime is planned'],
   ],
   imageAlt: 'ObjectOS connecting business data, applications, and AI agents',
   imageNoteTitle: t2Lead(positioning.en.t2),
@@ -215,7 +267,7 @@ const en: HomeCopy = {
   positioningCopy: 'Enterprise AI does not need another rebuild project or another pile of generated code. It needs one definition agents can write, humans can review, and a runtime can govern across legacy systems, new applications, and AI agents. Your objects and fields, relations, actions, permissions, flows, and agent and tool definitions are that definition — your business ontology: open, versioned, and yours, not an asset locked inside someone else’s platform.',
   capabilitiesKicker: 'Platform capabilities',
   capabilitiesTitle: ['Start with the business model,', 'not a blank codebase'],
-  capabilitiesLink: 'Read about AI and agents',
+  capabilitiesLink: 'See how your agent writes the ontology',
   capabilities: [
     { title: 'Give agents a business model', copy: 'Model customers, orders, equipment, cases, and approvals as objects agents can read, relate, and act on.' },
     { title: 'Extend what already runs — read-only first', copy: 'Federate a database you already run as an external datasource and model its tables as objects. Federation is read-only by default and early: the system of record keeps writing the rows, and writes are enabled deliberately, per object.' },
@@ -224,7 +276,7 @@ const en: HomeCopy = {
   ],
   aiKicker: 'AI build and agent operations',
   aiTitle: ['Let agents create the software.', 'Keep people in the review loop.'],
-  aiCopy: `ObjectStack keeps objects, fields, workflows, permissions, actions, and UI as typed definitions agents can read and change. Its open runtime derives the database, APIs, screens, and MCP tools, then enforces permissions and audit on every call. Strict TypeScript, Zod schemas, and a validation gate catch structural mistakes before deployment. The definition stays small enough for AI to hold whole, so a coding agent can reason across the entire system and you can review the diff. ObjectOS is ${positioning.en.descriptor}: in-app AI Build & Ask, human approvals, SSO, deployment, and operations on Cloud and Enterprise; bring your own coding agent and MCP client on open-source ObjectStack.`,
+  aiCopy: `ObjectStack keeps objects, fields, workflows, permissions, actions, and UI as typed definitions agents can read and change. Its open runtime derives the database, APIs, screens, and MCP tools, then enforces permissions and audit on every call. Strict TypeScript, Zod schemas, and a validation gate catch structural mistakes before deployment. The definition stays small enough for AI to hold whole, so a coding agent can reason across the entire system and you can review the diff. ObjectOS comes in three editions, ${positioning.en.descriptor}: in-app AI Build & Ask, human approvals, SSO, deployment, and operations on Cloud and Enterprise; bring your own coding agent and MCP client on open-source ObjectStack.`,
   aiItems: [
     { title: 'AI Builder', copy: 'Cloud & Enterprise: describe a change in natural language. The in-app Builder generates objects, fields, views, and workflows, then routes structural changes for approval. On the open-source ObjectStack, your coding agent writes the same compact metadata diff instead of a full app codebase.' },
     { title: 'AI Ask', copy: 'Cloud & Enterprise: ask questions inside the product, analyze business context, and trigger approved actions within the signed-in user’s permissions. On the open-source ObjectStack, query the same objects through MCP with your own AI.' },
@@ -241,13 +293,15 @@ const en: HomeCopy = {
   secureExecution: 'Govern execution',
   outcomes: 'What runs on top',
   outcomeLabels: ['Business apps', 'AI agents', 'Automation'],
-  solutionsKicker: 'Application templates',
-  solutionsTitle: ['Start with working templates,', 'not a blank canvas'],
-  solutionLink: 'View template source',
-  solutions: [
-    { title: 'Helpdesk template', copy: 'An AI-first customer support template for tickets, SLA, summaries, suggested replies, and knowledge retrieval.' },
-    { title: 'Contracts template', copy: 'Manage the contract lifecycle with metadata extraction, approval, renewal reminders, and audit trails.' },
-    { title: 'Procurement template', copy: 'Run purchase requests, suppliers, POs, receiving, and three-way matching as a governed application.' },
+  useCasesKicker: 'How business teams use it',
+  useCasesTitle: ['What AI takes on for each team,', 'and what a person still approves'],
+  useCasesLink: 'All use cases',
+  useCaseCardLink: 'See the scenario',
+  useCasesTemplatesLink: 'Or start from an app template',
+  useCases: [
+    { title: 'Customer service', copy: 'AI classifies each ticket, matches knowledge articles and drafts replies with citations; agents confirm what is sent, and sensitive replies can require a manager’s approval.' },
+    { title: 'Finance & procurement', copy: 'AI checks expense claims against policy and budget, and supplier risk before an order is placed; finance and procurement approve with the evidence in front of them.' },
+    { title: 'Sales', copy: 'Reps update the CRM by voice or text and AI preps the next account meeting; every suggested record change waits for the rep to confirm it.' },
   ],
   securityKicker: 'Security and governance',
   securityTitle: ['Keep data in your network.', 'Let AI work inside permissions.'],
@@ -265,7 +319,7 @@ const en: HomeCopy = {
   closingKicker: 'Next step',
   closingTitle: 'Start with the business data you know best.',
   closingCopy: 'Federate one database you already run — read-only by default — define its key business objects, and let your agent ship the first governed AI-written application as a small metadata diff.',
-  closingCta: 'Learn how to connect existing systems',
+  closingCta: 'Start free',
   compareKicker: 'How it compares',
   compareTitle: ['Different from', 'the tools you know'],
   compareLink: 'Read the comparison',
@@ -279,12 +333,14 @@ const en: HomeCopy = {
 const ja: HomeCopy = {
   ...en,
   title: `ObjectOS · ${positioning.ja.t1}`,
-  description: `${positioning.ja.t2}${positioning.ja.t4}`,
+  description: `${positioning.ja.t2}ObjectOS には ${positioning.ja.descriptor} の 3 つのエディションがあります。`,
   eyebrow: positioning.ja.descriptor,
-  hero: positioning.ja.t1Lines,
-  heroLead: `${positioning.ja.t2}${positioning.ja.t4}${positioning.ja.e1}`,
+  hero: positioning.ja.t1Hero,
+  heroLead: positioning.ja.t2,
+  heroEditions: positioning.ja.e1,
   primaryCta: 'はじめる',
   secondaryCta: '仕組みを見る',
+  tryInBrowserCta: 'ブラウザで試す（登録不要）',
   videoCaption: 'ObjectStack を 90 秒で',
   videoPlayLabel: '動画を再生：ObjectStack を 90 秒で',
   videoMoreLink: 'YouTube でほかの動画を見る',
@@ -294,7 +350,7 @@ const ja: HomeCopy = {
     [positioning.ja.t3[0], 'ランタイムが動かす'],
     [positioning.ja.t3[1], 'AI が書く'],
     [positioning.ja.t3[2], 'エージェントが操作する'],
-    [positioning.ja.t3[3], 'オントロジーをエクスポートし、オープンソースの ObjectStack で実行'],
+    [positioning.ja.t3[3], '通常の ObjectStack メタデータ。オープンソースランタイムへのエクスポートは計画中'],
   ],
   imageAlt: '業務データ、アプリ、AI エージェントを接続する ObjectOS',
   imageNoteTitle: t2Lead(positioning.ja.t2),
@@ -305,7 +361,7 @@ const ja: HomeCopy = {
   positioningCopy: 'エンタープライズ AI に必要なのは、また一つの再構築プロジェクトでも、レビュー不能な生成コードの山でもありません。エージェントが書き、人がレビューでき、ランタイムが統制する、ひとつの定義です。オブジェクトとフィールド、リレーション、アクション、権限、フロー、そしてエージェントとツールの定義がその定義 — あなたのビジネスオントロジーです。オープンで、バージョン管理され、あなたのもの。誰かのプラットフォームに閉じ込められた資産ではありません。',
   capabilitiesKicker: 'プラットフォーム機能',
   capabilitiesTitle: ['白紙のコードではなく、', '業務構造から始める'],
-  capabilitiesLink: 'AI とエージェントの記事',
+  capabilitiesLink: 'エージェントがオントロジーを書く仕組み',
   capabilities: [
     { title: 'エージェントに業務モデルを渡す', copy: '顧客、注文、設備、ケース、承認を、エージェントが読み、関連付け、操作できるオブジェクトとしてモデル化します。' },
     { title: '今あるシステムを活かす — まずは読み取り専用で', copy: 'すでに稼働中のデータベースを外部データソースとしてフェデレートし、そのテーブルをオブジェクトとしてモデル化します。フェデレーションは既定で読み取り専用で、まだ初期段階です。記録システムが行を書き続け、書き込みはオブジェクト単位で意図的に有効化します。' },
@@ -314,7 +370,7 @@ const ja: HomeCopy = {
   ],
   aiKicker: 'AI 構築とエージェント運用',
   aiTitle: ['エージェントにソフトウェアを作らせる。', '人はレビューの輪に残る。'],
-  aiCopy: `ObjectStack はオブジェクト、項目、ワークフロー、権限、アクション、UI を、エージェントが読み書きできる型付き定義として保持します。オープンなランタイムがデータベース、API、画面、MCP ツールを派生し、すべての呼び出しで権限と監査を強制します。Strict TypeScript、Zod スキーマ、検証ゲートが構造的な誤りをデプロイ前に検出します。定義全体が AI が一度に把握できる小ささに収まるので、コーディングエージェントはシステム全体をまたいで推論でき、人は diff をレビューできます。ObjectOS は ${positioning.ja.descriptor}です。Cloud／Enterprise では製品内 AI Build & Ask、人による承認、SSO、デプロイ、運用を提供し、オープンソース ObjectStack では自分のコーディングエージェントと MCP クライアントを使えます。`,
+  aiCopy: `ObjectStack はオブジェクト、項目、ワークフロー、権限、アクション、UI を、エージェントが読み書きできる型付き定義として保持します。オープンなランタイムがデータベース、API、画面、MCP ツールを派生し、すべての呼び出しで権限と監査を強制します。Strict TypeScript、Zod スキーマ、検証ゲートが構造的な誤りをデプロイ前に検出します。定義全体が AI が一度に把握できる小ささに収まるので、コーディングエージェントはシステム全体をまたいで推論でき、人は diff をレビューできます。ObjectOS には ${positioning.ja.descriptor} の 3 つのエディションがあります。Cloud／Enterprise では製品内 AI Build & Ask、人による承認、SSO、デプロイ、運用を提供し、オープンソース ObjectStack では自分のコーディングエージェントと MCP クライアントを使えます。`,
   aiItems: [
     { title: 'AI Builder', copy: 'Cloud／Enterprise：自然言語で変更を説明します。製品内 Builder がオブジェクト、項目、ビュー、ワークフローを生成し、構造変更を承認へ送ります。オープンソースの ObjectStack では、自分のコーディングエージェントがフルコードではなく同じコンパクトなメタデータ diff を書きます。' },
     { title: 'AI Ask', copy: 'Cloud／Enterprise：製品内で質問し、業務コンテキストを分析し、ログインユーザーの権限内で承認済みアクションを実行します。オープンソースの ObjectStack では、同じオブジェクトを MCP 経由で自分の AI から問い合わせます。' },
@@ -331,13 +387,15 @@ const ja: HomeCopy = {
   secureExecution: '安全に実行',
   outcomes: '継続的な価値',
   outcomeLabels: ['業務アプリ', 'AI エージェント', '自動化'],
-  solutionsKicker: 'アプリテンプレート',
-  solutionsTitle: ['動くテンプレートから始め、', '白紙のシステムから始めない'],
-  solutionLink: 'テンプレートのソースを見る',
-  solutions: [
-    { title: 'Helpdesk テンプレート', copy: 'チケット、SLA、要約、返信提案、ナレッジ検索を備えた AI-first の顧客サポートテンプレートです。' },
-    { title: 'Contracts テンプレート', copy: '契約ライフサイクルを管理し、メタデータ抽出、承認、更新リマインダー、監査に対応します。' },
-    { title: 'Procurement テンプレート', copy: '購買依頼、サプライヤー、PO、受領、三点照合を管理されたアプリとして実行します。' },
+  useCasesKicker: 'ビジネスチームでの使い方',
+  useCasesTitle: ['チームごとに AI が担うこと、', 'そして人が承認すること'],
+  useCasesLink: 'すべてのユースケース',
+  useCaseCardLink: 'シナリオを見る',
+  useCasesTemplatesLink: 'アプリテンプレートから始める',
+  useCases: [
+    { title: 'カスタマーサービス', copy: 'AI がチケットを分類し、ナレッジ記事を照合し、引用付きの返信案を作成します。送信内容は担当者が確認し、機微な返信にはマネージャーの承認を必須にできます。' },
+    { title: '財務・購買', copy: 'AI が経費精算をポリシーと予算に照らして確認し、発注前にサプライヤーのリスクを洗い出します。財務と購買は根拠を見たうえで承認します。' },
+    { title: '営業', copy: '営業担当は音声やテキストで CRM を更新し、AI が次の商談を準備します。レコード変更の提案は、すべて本人の確認を待ちます。' },
   ],
   securityKicker: 'セキュリティとガバナンス',
   securityTitle: ['データは自社ネットワーク内に。', 'AI は権限の内側で動く。'],
@@ -355,7 +413,7 @@ const ja: HomeCopy = {
   closingKicker: '次のステップ',
   closingTitle: '最もよく知る業務データから始めましょう。',
   closingCopy: 'すでに稼働中のデータベースを一つフェデレートし（既定で読み取り専用）、主要な業務オブジェクトを定義して、最初のガバナンス付き AI-written アプリを小さなメタデータ diff として出荷します。',
-  closingCta: '既存システムとの接続方法',
+  closingCta: '無料で始める',
   compareKicker: '比較',
   compareTitle: ['よくあるツールとは', '別物です'],
   compareLink: '比較を読む',
@@ -369,12 +427,14 @@ const ja: HomeCopy = {
 const de: HomeCopy = {
   ...en,
   title: `ObjectOS · ${positioning.de.t1}`,
-  description: `${positioning.de.t2} ${positioning.de.t4}`,
+  description: `${positioning.de.t2} ObjectOS gibt es in drei Editionen, ${positioning.de.descriptor}.`,
   eyebrow: sentenceCase(positioning.de.descriptor),
-  hero: positioning.de.t1Lines,
-  heroLead: `${positioning.de.t2} ${positioning.de.t4} ${positioning.de.e1}`,
+  hero: positioning.de.t1Hero,
+  heroLead: positioning.de.t2,
+  heroEditions: positioning.de.e1,
   primaryCta: 'Loslegen',
   secondaryCta: 'So funktioniert es',
+  tryInBrowserCta: 'Im Browser ausprobieren (ohne Anmeldung)',
   videoCaption: 'ObjectStack in 90 Sekunden',
   videoPlayLabel: 'Video abspielen: ObjectStack in 90 Sekunden',
   videoMoreLink: 'Mehr Videos auf YouTube',
@@ -384,7 +444,7 @@ const de: HomeCopy = {
     [positioning.de.t3[0], 'Die Runtime führt sie aus'],
     [positioning.de.t3[1], 'AI schreibt sie'],
     [positioning.de.t3[2], 'Agents bedienen sie'],
-    [positioning.de.t3[3], 'Ontologie exportieren, auf quelloffenem ObjectStack ausführen'],
+    [positioning.de.t3[3], 'Gewöhnliche ObjectStack-Metadaten; Export in die offene Runtime geplant'],
   ],
   imageAlt: 'ObjectOS verbindet Geschäftsdaten, Anwendungen und AI Agents',
   imageNoteTitle: t2Lead(positioning.de.t2),
@@ -395,7 +455,7 @@ const de: HomeCopy = {
   positioningCopy: 'Enterprise AI braucht kein weiteres Neuaufbauprojekt und keinen weiteren Stapel generierten Codes. Sie braucht eine Definition, die Agents schreiben, Menschen prüfen und eine Runtime über Legacy-Systeme, neue Anwendungen und AI Agents hinweg kontrolliert. Ihre Objekte und Felder, Beziehungen, Aktionen, Berechtigungen, Flows sowie Agent- und Tool-Definitionen sind diese Definition — Ihre Geschäftsontologie: offen, versioniert und in Ihrem Besitz, kein Asset in der Plattform eines anderen.',
   capabilitiesKicker: 'Plattformfunktionen',
   capabilitiesTitle: ['Mit der Geschäftsstruktur beginnen,', 'nicht mit einer leeren Codebasis'],
-  capabilitiesLink: 'Artikel zu AI und Agents',
+  capabilitiesLink: 'So schreibt Ihr Agent die Ontologie',
   capabilities: [
     { title: 'Agents ein Geschäftsmodell geben', copy: 'Modellieren Sie Kunden, Aufträge, Anlagen, Fälle und Freigaben als Objekte, die Agents lesen, verknüpfen und bearbeiten können.' },
     { title: 'Bestehendes erweitern — zuerst nur lesend', copy: 'Föderieren Sie eine Datenbank, die Sie bereits betreiben, als externe Datasource und modellieren Sie ihre Tabellen als Objekte. Föderation ist standardmäßig nur lesend und noch früh: Das Ursprungssystem schreibt die Zeilen weiter, Schreibzugriff wird bewusst pro Objekt freigegeben.' },
@@ -404,7 +464,7 @@ const de: HomeCopy = {
   ],
   aiKicker: 'AI-Build und Agent-Betrieb',
   aiTitle: ['Agents erstellen die Software.', 'Menschen bleiben in der Prüfung.'],
-  aiCopy: `ObjectStack hält Objekte, Felder, Workflows, Berechtigungen, Aktionen und UI als typisierte Definitionen fest, die Agents lesen und ändern können. Die offene Runtime leitet daraus Datenbank, APIs, Oberflächen und MCP-Tools ab und setzt Rechte sowie Audit durch. Strict TypeScript, Zod-Schemas und ein Validierungs-Gate erkennen strukturelle Fehler vor der Bereitstellung. Die Definition bleibt klein genug, dass AI sie als Ganzes erfassen kann, sodass ein Coding-Agent über das ganze System hinweg denken und ein Mensch den Diff prüfen kann. ObjectOS ist ${positioning.de.descriptor}: In-App AI Build & Ask, menschliche Freigaben, SSO, Bereitstellung und Betrieb auf Cloud und Enterprise; auf dem quelloffenen ObjectStack nutzen Sie Ihren eigenen Coding-Agent und MCP-Client.`,
+  aiCopy: `ObjectStack hält Objekte, Felder, Workflows, Berechtigungen, Aktionen und UI als typisierte Definitionen fest, die Agents lesen und ändern können. Die offene Runtime leitet daraus Datenbank, APIs, Oberflächen und MCP-Tools ab und setzt Rechte sowie Audit durch. Strict TypeScript, Zod-Schemas und ein Validierungs-Gate erkennen strukturelle Fehler vor der Bereitstellung. Die Definition bleibt klein genug, dass AI sie als Ganzes erfassen kann, sodass ein Coding-Agent über das ganze System hinweg denken und ein Mensch den Diff prüfen kann. ObjectOS gibt es in drei Editionen, ${positioning.de.descriptor}: In-App AI Build & Ask, menschliche Freigaben, SSO, Bereitstellung und Betrieb auf Cloud und Enterprise; auf dem quelloffenen ObjectStack nutzen Sie Ihren eigenen Coding-Agent und MCP-Client.`,
   aiItems: [
     { title: 'AI Builder', copy: 'Cloud & Enterprise: Beschreiben Sie eine Änderung in natürlicher Sprache. Der In-App-Builder generiert Objekte, Felder, Views und Workflows und schickt Strukturänderungen zur Freigabe. Auf dem quelloffenen ObjectStack schreibt Ihr Coding-Agent denselben kompakten Metadaten-Diff statt einer vollständigen App-Codebasis.' },
     { title: 'AI Ask', copy: 'Cloud & Enterprise: Stellen Sie Fragen im Produkt, analysieren Sie Geschäftskontext und lösen Sie freigegebene Aktionen innerhalb der Rechte des angemeldeten Nutzers aus. Auf dem quelloffenen ObjectStack fragen Sie dieselben Objekte über MCP mit Ihrer eigenen AI ab.' },
@@ -421,13 +481,15 @@ const de: HomeCopy = {
   secureExecution: 'Sicher ausführen',
   outcomes: 'Kontinuierlicher Nutzen',
   outcomeLabels: ['Geschäftsanwendungen', 'AI Agents', 'Automatisierung'],
-  solutionsKicker: 'Anwendungsvorlagen',
-  solutionsTitle: ['Mit lauffähigen Vorlagen starten,', 'nicht mit einem leeren System'],
-  solutionLink: 'Quellcode ansehen',
-  solutions: [
-    { title: 'Helpdesk-Vorlage', copy: 'AI-first Kundenservice mit Tickets, SLA, Zusammenfassungen, Antwortvorschlägen und Wissensabruf.' },
-    { title: 'Contracts-Vorlage', copy: 'Vertragslebenszyklus mit Metadatenextraktion, Freigabe, Verlängerungserinnerungen und Audit-Trails.' },
-    { title: 'Procurement-Vorlage', copy: 'Einkaufsanfragen, Lieferanten, Bestellungen, Wareneingang und Three-way Matching als kontrollierte Anwendung.' },
+  useCasesKicker: 'So nutzen es Fachteams',
+  useCasesTitle: ['Was AI für jedes Team übernimmt,', 'und was ein Mensch weiterhin freigibt'],
+  useCasesLink: 'Alle Anwendungsfälle',
+  useCaseCardLink: 'Szenario ansehen',
+  useCasesTemplatesLink: 'Oder mit einer Anwendungsvorlage starten',
+  useCases: [
+    { title: 'Kundenservice', copy: 'AI klassifiziert jedes Ticket, findet passende Wissensartikel und entwirft Antworten mit Quellen; das Team bestätigt, was verschickt wird, und heikle Antworten lassen sich an die Freigabe der Leitung binden.' },
+    { title: 'Finanzen & Einkauf', copy: 'AI prüft Spesenabrechnungen gegen Richtlinie und Budget und das Lieferantenrisiko vor der Bestellung; Finanzen und Einkauf geben mit den Belegen vor Augen frei.' },
+    { title: 'Vertrieb', copy: 'Der Vertrieb pflegt das CRM per Sprache oder Text, und AI bereitet den nächsten Kundentermin vor; jede vorgeschlagene Änderung wartet auf die Bestätigung des Verkäufers.' },
   ],
   securityKicker: 'Sicherheit und Governance',
   securityTitle: ['Daten bleiben in Ihrem Netzwerk.', 'AI arbeitet innerhalb von Berechtigungen.'],
@@ -445,7 +507,7 @@ const de: HomeCopy = {
   closingKicker: 'Nächster Schritt',
   closingTitle: 'Beginnen Sie mit den Geschäftsdaten, die Sie am besten kennen.',
   closingCopy: 'Föderieren Sie eine Datenbank, die Sie bereits betreiben (standardmäßig nur lesend), definieren Sie zentrale Geschäftsobjekte und lassen Sie Ihren Agent die erste kontrollierte AI-geschriebene Anwendung als kleinen Metadaten-Diff ausliefern.',
-  closingCta: 'Bestehende Systeme verbinden',
+  closingCta: 'Kostenlos starten',
   compareKicker: 'Im Vergleich',
   compareTitle: ['Anders als die Tools,', 'die Sie kennen'],
   compareLink: 'Vergleich lesen',
@@ -459,12 +521,14 @@ const de: HomeCopy = {
 const es: HomeCopy = {
   ...en,
   title: `ObjectOS · ${positioning.es.t1}`,
-  description: `${positioning.es.t2} ${positioning.es.t4}`,
+  description: `${positioning.es.t2} ObjectOS se ofrece en tres ediciones, ${positioning.es.descriptor}.`,
   eyebrow: sentenceCase(positioning.es.descriptor),
-  hero: positioning.es.t1Lines,
-  heroLead: `${positioning.es.t2} ${positioning.es.t4} ${positioning.es.e1}`,
+  hero: positioning.es.t1Hero,
+  heroLead: positioning.es.t2,
+  heroEditions: positioning.es.e1,
   primaryCta: 'Empezar',
   secondaryCta: 'Cómo funciona',
+  tryInBrowserCta: 'Pruébalo en el navegador (sin registro)',
   videoCaption: 'ObjectStack en 90 segundos',
   videoPlayLabel: 'Reproducir el vídeo: ObjectStack en 90 segundos',
   videoMoreLink: 'Más vídeos en YouTube',
@@ -474,7 +538,7 @@ const es: HomeCopy = {
     [positioning.es.t3[0], 'El runtime la ejecuta'],
     [positioning.es.t3[1], 'La AI la escribe'],
     [positioning.es.t3[2], 'Los agentes la operan'],
-    [positioning.es.t3[3], 'Exporta tu ontología y ejecútala en ObjectStack open source'],
+    [positioning.es.t3[3], 'Metadatos ordinarios de ObjectStack; la exportación al runtime abierto está prevista'],
   ],
   imageAlt: 'ObjectOS conectando datos, aplicaciones y agentes de AI',
   imageNoteTitle: t2Lead(positioning.es.t2),
@@ -485,7 +549,7 @@ const es: HomeCopy = {
   positioningCopy: 'La AI empresarial no necesita otro proyecto de reconstrucción ni otra pila de código generado. Necesita una definición que los agentes puedan escribir, las personas revisar y un runtime gobernar entre sistemas heredados, nuevas aplicaciones y agentes de AI. Tus objetos y campos, relaciones, acciones, permisos, flujos y definiciones de agentes y herramientas son esa definición — tu ontología de negocio: abierta, versionada y tuya, no un activo encerrado en la plataforma de otro.',
   capabilitiesKicker: 'Capacidades de la plataforma',
   capabilitiesTitle: ['Empieza por la estructura del negocio,', 'no por código en blanco'],
-  capabilitiesLink: 'Artículos sobre AI y agentes',
+  capabilitiesLink: 'Mira cómo tu agente escribe la ontología',
   capabilities: [
     { title: 'Da a los agentes un modelo de negocio', copy: 'Modela clientes, pedidos, equipos, casos y aprobaciones como objetos que los agentes pueden leer, relacionar y modificar.' },
     { title: 'Extiende lo que ya funciona — primero en solo lectura', copy: 'Federa una base de datos que ya usas como datasource externa y modela sus tablas como objetos. La federación es de solo lectura por defecto y aún temprana: el sistema de registro sigue escribiendo las filas y las escrituras se habilitan deliberadamente, objeto por objeto.' },
@@ -494,7 +558,7 @@ const es: HomeCopy = {
   ],
   aiKicker: 'Construcción AI y operación con agentes',
   aiTitle: ['Deja que los agentes creen el software.', 'Mantén a las personas en la revisión.'],
-  aiCopy: `ObjectStack conserva objetos, campos, workflows, permisos, acciones y UI como definiciones tipadas que los agentes pueden leer y cambiar. Su runtime abierto deriva la base de datos, las API, las pantallas y las herramientas MCP, y aplica permisos y auditoría. Strict TypeScript, los esquemas Zod y una puerta de validación detectan errores estructurales antes del despliegue. La definición se mantiene lo bastante pequeña para que la AI la abarque entera, por lo que un agente de código puede razonar sobre todo el sistema y tú puedes revisar el diff. ObjectOS es ${positioning.es.descriptor}: AI Build & Ask integrado, aprobaciones humanas, SSO, despliegue y operaciones en Cloud y Enterprise; en ObjectStack open source usas tu propio agente de código y cliente MCP.`,
+  aiCopy: `ObjectStack conserva objetos, campos, workflows, permisos, acciones y UI como definiciones tipadas que los agentes pueden leer y cambiar. Su runtime abierto deriva la base de datos, las API, las pantallas y las herramientas MCP, y aplica permisos y auditoría. Strict TypeScript, los esquemas Zod y una puerta de validación detectan errores estructurales antes del despliegue. La definición se mantiene lo bastante pequeña para que la AI la abarque entera, por lo que un agente de código puede razonar sobre todo el sistema y tú puedes revisar el diff. ObjectOS se ofrece en tres ediciones, ${positioning.es.descriptor}: AI Build & Ask integrado, aprobaciones humanas, SSO, despliegue y operaciones en Cloud y Enterprise; en ObjectStack open source usas tu propio agente de código y cliente MCP.`,
   aiItems: [
     { title: 'AI Builder', copy: 'Cloud y Enterprise: describe un cambio en lenguaje natural. El Builder integrado genera objetos, campos, vistas y workflows, y envía los cambios estructurales a aprobación. En el ObjectStack open source, tu agente de código escribe el mismo diff compacto de metadatos en lugar de una base de código completa.' },
     { title: 'AI Ask', copy: 'Cloud y Enterprise: haz preguntas dentro del producto, analiza contexto de negocio y ejecuta acciones aprobadas dentro de los permisos del usuario conectado. En el ObjectStack open source, consulta los mismos objetos mediante MCP con tu propia AI.' },
@@ -511,13 +575,15 @@ const es: HomeCopy = {
   secureExecution: 'Ejecución segura',
   outcomes: 'Valor continuo',
   outcomeLabels: ['Apps de negocio', 'Agentes de AI', 'Automatización'],
-  solutionsKicker: 'Plantillas de aplicaciones',
-  solutionsTitle: ['Empieza con plantillas operativas,', 'no con un sistema en blanco'],
-  solutionLink: 'Ver código fuente',
-  solutions: [
-    { title: 'Plantilla Helpdesk', copy: 'Soporte al cliente AI-first con tickets, SLA, resúmenes, respuestas sugeridas y recuperación de conocimiento.' },
-    { title: 'Plantilla Contracts', copy: 'Ciclo de vida contractual con extracción de metadatos, aprobación, recordatorios de renovación y auditoría.' },
-    { title: 'Plantilla Procurement', copy: 'Solicitudes de compra, proveedores, PO, recepción y conciliación de tres vías como aplicación gobernada.' },
+  useCasesKicker: 'Cómo lo usan los equipos de negocio',
+  useCasesTitle: ['Qué asume la AI en cada equipo,', 'y qué sigue aprobando una persona'],
+  useCasesLink: 'Todos los casos de uso',
+  useCaseCardLink: 'Ver el escenario',
+  useCasesTemplatesLink: 'O empieza con una plantilla de aplicación',
+  useCases: [
+    { title: 'Atención al cliente', copy: 'La AI clasifica cada ticket, busca artículos de conocimiento y redacta respuestas con citas; el agente confirma qué se envía, y las respuestas sensibles pueden exigir la aprobación de un responsable.' },
+    { title: 'Finanzas y compras', copy: 'La AI revisa los gastos frente a la política y el presupuesto, y el riesgo del proveedor antes de cada pedido; finanzas y compras aprueban con la evidencia delante.' },
+    { title: 'Ventas', copy: 'Los comerciales actualizan el CRM por voz o texto y la AI prepara la próxima reunión con el cliente; cada cambio sugerido espera la confirmación del comercial.' },
   ],
   securityKicker: 'Seguridad y gobierno',
   securityTitle: ['Los datos permanecen en tu red.', 'La AI trabaja dentro de permisos.'],
@@ -535,7 +601,7 @@ const es: HomeCopy = {
   closingKicker: 'Siguiente paso',
   closingTitle: 'Empieza con los datos de negocio que mejor conoces.',
   closingCopy: 'Federa una base de datos que ya usas (solo lectura por defecto), define sus objetos clave y deja que tu agente entregue la primera aplicación escrita por AI y gobernada como un diff pequeño de metadatos.',
-  closingCta: 'Cómo conectar sistemas existentes',
+  closingCta: 'Empieza gratis',
   compareKicker: 'Comparativa',
   compareTitle: ['Distinto de las', 'herramientas que conoces'],
   compareLink: 'Leer la comparación',
@@ -549,12 +615,14 @@ const es: HomeCopy = {
 const fr: HomeCopy = {
   ...en,
   title: `ObjectOS · ${positioning.fr.t1}`,
-  description: `${positioning.fr.t2} ${positioning.fr.t4}`,
+  description: `${positioning.fr.t2} ObjectOS existe en trois éditions, ${positioning.fr.descriptor}.`,
   eyebrow: sentenceCase(positioning.fr.descriptor),
-  hero: positioning.fr.t1Lines,
-  heroLead: `${positioning.fr.t2} ${positioning.fr.t4} ${positioning.fr.e1}`,
+  hero: positioning.fr.t1Hero,
+  heroLead: positioning.fr.t2,
+  heroEditions: positioning.fr.e1,
   primaryCta: 'Commencer',
   secondaryCta: 'Voir comment ça marche',
+  tryInBrowserCta: 'Essayer dans le navigateur (sans inscription)',
   videoCaption: 'ObjectStack en 90 secondes',
   videoPlayLabel: 'Lire la vidéo : ObjectStack en 90 secondes',
   videoMoreLink: 'Plus de vidéos sur YouTube',
@@ -564,7 +632,7 @@ const fr: HomeCopy = {
     [positioning.fr.t3[0], 'Le runtime l’exécute'],
     [positioning.fr.t3[1], 'L’AI l’écrit'],
     [positioning.fr.t3[2], 'Les agents l’opèrent'],
-    [positioning.fr.t3[3], 'Exportez votre ontologie, exécutez-la sur ObjectStack open source'],
+    [positioning.fr.t3[3], 'Des métadonnées ObjectStack ordinaires ; l’export vers le runtime ouvert est prévu'],
   ],
   imageAlt: 'ObjectOS connectant données métier, applications et agents AI',
   imageNoteTitle: t2Lead(positioning.fr.t2),
@@ -575,7 +643,7 @@ const fr: HomeCopy = {
   positioningCopy: 'L’AI en entreprise n’a pas besoin d’un nouveau chantier de reconstruction ni d’une nouvelle pile de code généré. Elle a besoin d’une définition que les agents peuvent écrire, que les humains peuvent relire, et qu’un runtime gouverne à travers systèmes existants, nouvelles applications et agents AI. Vos objets et champs, relations, actions, permissions, flux, et définitions d’agents et d’outils sont cette définition — votre ontologie métier : ouverte, versionnée et à vous, pas un actif enfermé dans la plateforme d’un autre.',
   capabilitiesKicker: 'Capacités de la plateforme',
   capabilitiesTitle: ['Partez de la structure métier,', 'pas d’une base de code vide'],
-  capabilitiesLink: 'Articles sur l’AI et les agents',
+  capabilitiesLink: 'Voir comment votre agent écrit l’ontologie',
   capabilities: [
     { title: 'Donnez aux agents un modèle métier', copy: 'Modélisez clients, commandes, équipements, dossiers et validations comme des objets que les agents peuvent lire, relier et modifier.' },
     { title: 'Étendez l’existant — en lecture seule d’abord', copy: 'Fédérez une base que vous exploitez déjà comme datasource externe et modélisez ses tables en objets. La fédération est en lecture seule par défaut, et encore récente : le système de référence continue d’écrire les lignes, et l’écriture s’active délibérément, objet par objet.' },
@@ -584,7 +652,7 @@ const fr: HomeCopy = {
   ],
   aiKicker: 'Construction AI et opérations d’agents',
   aiTitle: ['Laissez les agents créer le logiciel.', 'Gardez les humains dans la boucle de revue.'],
-  aiCopy: `ObjectStack conserve objets, champs, workflows, permissions, actions et UI sous forme de définitions typées que les agents peuvent lire et modifier. Son runtime ouvert en dérive la base de données, les API, les écrans et les outils MCP, puis applique permissions et audit. Strict TypeScript, les schémas Zod et une porte de validation détectent les erreurs structurelles avant le déploiement. La définition reste assez petite pour que l’AI la tienne entière, afin qu’un agent de code puisse raisonner sur tout le système et que vous puissiez relire le diff. ObjectOS est ${positioning.fr.descriptor} : AI Build & Ask intégré, validations humaines, SSO, déploiement et opérations sur Cloud et Enterprise ; sur ObjectStack open source, vous utilisez votre propre agent de code et client MCP.`,
+  aiCopy: `ObjectStack conserve objets, champs, workflows, permissions, actions et UI sous forme de définitions typées que les agents peuvent lire et modifier. Son runtime ouvert en dérive la base de données, les API, les écrans et les outils MCP, puis applique permissions et audit. Strict TypeScript, les schémas Zod et une porte de validation détectent les erreurs structurelles avant le déploiement. La définition reste assez petite pour que l’AI la tienne entière, afin qu’un agent de code puisse raisonner sur tout le système et que vous puissiez relire le diff. ObjectOS existe en trois éditions, ${positioning.fr.descriptor} : AI Build & Ask intégré, validations humaines, SSO, déploiement et opérations sur Cloud et Enterprise ; sur ObjectStack open source, vous utilisez votre propre agent de code et client MCP.`,
   aiItems: [
     { title: 'AI Builder', copy: 'Cloud et Enterprise : décrivez un changement en langage naturel. Le Builder intégré génère objets, champs, vues et workflows, puis envoie les changements structurants en validation. Sur ObjectStack open source, votre agent de code écrit le même diff compact de métadonnées au lieu d’une base de code complète.' },
     { title: 'AI Ask', copy: 'Cloud et Enterprise : posez des questions dans le produit, analysez le contexte métier et déclenchez des actions approuvées dans les permissions de l’utilisateur connecté. Sur ObjectStack open source, interrogez les mêmes objets via MCP avec votre propre AI.' },
@@ -601,13 +669,15 @@ const fr: HomeCopy = {
   secureExecution: 'Exécuter en sécurité',
   outcomes: 'Valeur continue',
   outcomeLabels: ['Applications métier', 'Agents AI', 'Automatisation'],
-  solutionsKicker: 'Modèles d’applications',
-  solutionsTitle: ['Partez de modèles opérationnels,', 'pas d’un système vide'],
-  solutionLink: 'Voir le code source',
-  solutions: [
-    { title: 'Modèle Helpdesk', copy: 'Support client AI-first avec tickets, SLA, résumés, réponses suggérées et recherche dans la base de connaissances.' },
-    { title: 'Modèle Contracts', copy: 'Cycle de vie contractuel avec extraction de métadonnées, validation, rappels de renouvellement et audit.' },
-    { title: 'Modèle Procurement', copy: 'Demandes d’achat, fournisseurs, PO, réception et rapprochement à trois pièces dans une application gouvernée.' },
+  useCasesKicker: 'Comment les équipes métier l’utilisent',
+  useCasesTitle: ['Ce que l’AI prend en charge pour chaque équipe,', 'et ce qu’une personne approuve encore'],
+  useCasesLink: 'Tous les cas d’usage',
+  useCaseCardLink: 'Voir le scénario',
+  useCasesTemplatesLink: 'Ou partir d’un modèle d’application',
+  useCases: [
+    { title: 'Service client', copy: 'L’AI classe chaque ticket, retrouve les articles de connaissance et rédige des réponses sourcées ; l’agent confirme ce qui part, et les réponses sensibles peuvent exiger l’accord d’un responsable.' },
+    { title: 'Finance et achats', copy: 'L’AI vérifie les notes de frais au regard de la politique et du budget, et le risque fournisseur avant chaque commande ; finance et achats approuvent avec les preuves sous les yeux.' },
+    { title: 'Ventes', copy: 'Les commerciaux mettent à jour le CRM à la voix ou par écrit, et l’AI prépare le prochain rendez-vous client ; chaque modification proposée attend leur confirmation.' },
   ],
   securityKicker: 'Sécurité et gouvernance',
   securityTitle: ['Les données restent dans votre réseau.', 'L’AI agit dans les permissions.'],
@@ -625,7 +695,7 @@ const fr: HomeCopy = {
   closingKicker: 'Étape suivante',
   closingTitle: 'Commencez par les données métier que vous connaissez le mieux.',
   closingCopy: 'Fédérez une base que vous exploitez déjà (en lecture seule par défaut), définissez ses objets clés et laissez votre agent livrer la première application gouvernée écrite par l’AI sous forme de petit diff de métadonnées.',
-  closingCta: 'Connecter les systèmes existants',
+  closingCta: 'Commencer gratuitement',
   compareKicker: 'Comparatif',
   compareTitle: ['Différent des outils', 'que vous connaissez'],
   compareLink: 'Lire le comparatif',
@@ -639,12 +709,14 @@ const fr: HomeCopy = {
 const ko: HomeCopy = {
   ...en,
   title: `ObjectOS · ${positioning.ko.t1}`,
-  description: `${positioning.ko.t2} ${positioning.ko.t4}`,
+  description: `${positioning.ko.t2} ObjectOS는 ${positioning.ko.descriptor}의 세 가지 에디션으로 제공됩니다.`,
   eyebrow: positioning.ko.descriptor,
-  hero: positioning.ko.t1Lines,
-  heroLead: `${positioning.ko.t2} ${positioning.ko.t4} ${positioning.ko.e1}`,
+  hero: positioning.ko.t1Hero,
+  heroLead: positioning.ko.t2,
+  heroEditions: positioning.ko.e1,
   primaryCta: '시작하기',
   secondaryCta: '작동 방식 보기',
+  tryInBrowserCta: '브라우저에서 체험하기 (가입 불필요)',
   videoCaption: 'ObjectStack 90초 살펴보기',
   videoPlayLabel: '동영상 재생: ObjectStack 90초 살펴보기',
   videoMoreLink: 'YouTube에서 더 많은 영상 보기',
@@ -654,7 +726,7 @@ const ko: HomeCopy = {
     [positioning.ko.t3[0], '런타임이 실행합니다'],
     [positioning.ko.t3[1], 'AI가 작성합니다'],
     [positioning.ko.t3[2], '에이전트가 운영합니다'],
-    [positioning.ko.t3[3], '온톨로지를 내보내 오픈소스 ObjectStack에서 실행'],
+    [positioning.ko.t3[3], '일반적인 ObjectStack 메타데이터. 오픈 런타임으로 내보내기는 계획 중'],
   ],
   imageAlt: '비즈니스 데이터, 애플리케이션과 AI 에이전트를 연결하는 ObjectOS',
   imageNoteTitle: t2Lead(positioning.ko.t2),
@@ -665,7 +737,7 @@ const ko: HomeCopy = {
   positioningCopy: '엔터프라이즈 AI에 필요한 것은 또 하나의 재구축 프로젝트도, 검토하기 어려운 생성 코드 더미도 아닙니다. 에이전트가 작성하고 사람이 검토하며 런타임이 기존 시스템, 새 애플리케이션, AI 에이전트 전반에서 거버넌스를 유지하는 하나의 정의입니다. 객체와 필드, 관계, 작업, 권한, 플로, 그리고 에이전트와 도구 정의가 그 정의 — 당신의 비즈니스 온톨로지입니다. 열려 있고, 버전 관리되며, 당신의 것이지, 남의 플랫폼에 갇힌 자산이 아닙니다.',
   capabilitiesKicker: '플랫폼 기능',
   capabilitiesTitle: ['빈 코드가 아니라,', '업무 구조에서 시작합니다'],
-  capabilitiesLink: 'AI와 에이전트 글 읽기',
+  capabilitiesLink: '에이전트가 온톨로지를 작성하는 방식 보기',
   capabilities: [
     { title: '에이전트에 비즈니스 모델 제공', copy: '고객, 주문, 장비, 케이스, 승인을 에이전트가 읽고 연결하고 작업할 수 있는 객체로 모델링합니다.' },
     { title: '이미 운영 중인 시스템 확장 — 우선 읽기 전용으로', copy: '이미 운영 중인 데이터베이스를 외부 데이터소스로 연합하고 그 테이블을 객체로 모델링합니다. 연합은 기본적으로 읽기 전용이며 아직 초기 단계입니다. 기록 시스템이 계속 행을 쓰고, 쓰기는 객체 단위로 의도적으로 활성화합니다.' },
@@ -674,7 +746,7 @@ const ko: HomeCopy = {
   ],
   aiKicker: 'AI 빌드와 에이전트 운영',
   aiTitle: ['에이전트가 소프트웨어를 만들게 하세요.', '사람은 검토 루프 안에 남습니다.'],
-  aiCopy: `ObjectStack은 객체, 필드, 워크플로, 권한, 작업, UI를 에이전트가 읽고 변경할 수 있는 타입이 지정된 정의로 유지합니다. 오픈 런타임은 데이터베이스, API, 화면, MCP 도구를 파생하고 권한과 감사를 강제합니다. Strict TypeScript, Zod 스키마, validation gate가 구조적 오류를 배포 전에 찾아냅니다. 정의 전체가 AI가 한 번에 담을 수 있을 만큼 작게 유지되므로 코딩 에이전트가 시스템 전체를 추론하고 사람은 diff를 검토할 수 있습니다. ObjectOS는 ${positioning.ko.descriptor}입니다. Cloud와 Enterprise에서는 제품 내 AI Build & Ask, 사람의 승인, SSO, 배포와 운영을 제공하며, 오픈소스 ObjectStack에서는 자체 코딩 에이전트와 MCP 클라이언트를 사용합니다.`,
+  aiCopy: `ObjectStack은 객체, 필드, 워크플로, 권한, 작업, UI를 에이전트가 읽고 변경할 수 있는 타입이 지정된 정의로 유지합니다. 오픈 런타임은 데이터베이스, API, 화면, MCP 도구를 파생하고 권한과 감사를 강제합니다. Strict TypeScript, Zod 스키마, validation gate가 구조적 오류를 배포 전에 찾아냅니다. 정의 전체가 AI가 한 번에 담을 수 있을 만큼 작게 유지되므로 코딩 에이전트가 시스템 전체를 추론하고 사람은 diff를 검토할 수 있습니다. ObjectOS는 ${positioning.ko.descriptor}의 세 가지 에디션으로 제공됩니다. Cloud와 Enterprise에서는 제품 내 AI Build & Ask, 사람의 승인, SSO, 배포와 운영을 제공하며, 오픈소스 ObjectStack에서는 자체 코딩 에이전트와 MCP 클라이언트를 사용합니다.`,
   aiItems: [
     { title: 'AI Builder', copy: 'Cloud · Enterprise: 자연어로 변경을 설명하세요. 제품 내 Builder가 객체, 필드, 뷰, 워크플로를 생성하고 구조 변경을 승인으로 보냅니다. 오픈소스 ObjectStack에서는 코딩 에이전트가 전체 앱 코드베이스 대신 같은 압축 메타데이터 diff를 작성합니다.' },
     { title: 'AI Ask', copy: 'Cloud · Enterprise: 제품 안에서 질문하고 비즈니스 맥락을 분석하며 로그인 사용자 권한 안에서 승인된 작업을 실행합니다. 오픈소스 ObjectStack에서는 같은 객체를 MCP로 당신의 AI에서 조회합니다.' },
@@ -691,13 +763,15 @@ const ko: HomeCopy = {
   secureExecution: '안전한 실행',
   outcomes: '지속적인 가치',
   outcomeLabels: ['업무 앱', 'AI 에이전트', '자동화'],
-  solutionsKicker: '애플리케이션 템플릿',
-  solutionsTitle: ['빈 시스템이 아니라,', '실행 가능한 템플릿에서 시작하세요'],
-  solutionLink: '템플릿 소스 보기',
-  solutions: [
-    { title: 'Helpdesk 템플릿', copy: '티켓, SLA, 요약, 추천 답변과 지식 검색을 포함한 AI-first 고객 지원 템플릿입니다.' },
-    { title: 'Contracts 템플릿', copy: '메타데이터 추출, 승인, 갱신 알림과 감사 추적을 포함한 계약 라이프사이클 템플릿입니다.' },
-    { title: 'Procurement 템플릿', copy: '구매 요청, 공급업체, PO, 입고와 3-way match를 관리되는 애플리케이션으로 실행합니다.' },
+  useCasesKicker: '비즈니스 팀의 활용 방식',
+  useCasesTitle: ['팀마다 AI가 맡는 일,', '그리고 사람이 승인하는 일'],
+  useCasesLink: '모든 활용 사례',
+  useCaseCardLink: '시나리오 보기',
+  useCasesTemplatesLink: '또는 애플리케이션 템플릿에서 시작하기',
+  useCases: [
+    { title: '고객 서비스', copy: 'AI가 티켓을 분류하고 지식 문서를 찾아 출처가 달린 답변 초안을 씁니다. 무엇을 보낼지는 상담원이 확인하고, 민감한 답변은 관리자 승인을 거치도록 할 수 있습니다.' },
+    { title: '재무·구매', copy: 'AI가 경비 청구를 정책과 예산에 비추어 확인하고, 발주 전에 공급업체 리스크를 점검합니다. 재무와 구매는 근거를 보고 승인합니다.' },
+    { title: '영업', copy: '영업 담당자는 음성이나 텍스트로 CRM을 업데이트하고 AI가 다음 고객 미팅을 준비합니다. 제안된 레코드 변경은 모두 담당자의 확인을 기다립니다.' },
   ],
   securityKicker: '보안 및 거버넌스',
   securityTitle: ['데이터는 네트워크 안에 유지하고,', 'AI는 권한 경계 안에서 작동합니다'],
@@ -715,7 +789,7 @@ const ko: HomeCopy = {
   closingKicker: '다음 단계',
   closingTitle: '가장 잘 아는 비즈니스 데이터에서 시작하세요.',
   closingCopy: '이미 운영 중인 데이터베이스 하나를 연합하고(기본 읽기 전용), 핵심 비즈니스 객체를 정의해 에이전트가 첫 거버넌스 AI 작성 애플리케이션을 작은 메타데이터 diff로 배포하게 하세요.',
-  closingCta: '기존 시스템 연결 방법',
+  closingCta: '무료로 시작하기',
   compareKicker: '비교',
   compareTitle: ['익숙한 도구들과는', '다릅니다'],
   compareLink: '비교 보기',
@@ -745,3 +819,19 @@ export const homeCopy: Record<Locale, HomeCopy> = {
   fr,
   ko,
 };
+
+// The hero's edition paragraph is E1 verbatim in every locale, and the lead is
+// T2 alone — the first-screen contract the hero split made (www #335). A later
+// hand edit to either, in any locale, fails `astro build` here instead of
+// shipping a paraphrase; zh-Hant is covered too, since both sides derive it
+// from zh-Hans the same way.
+for (const [locale, copy] of Object.entries(homeCopy) as [Locale, HomeCopy][]) {
+  if (copy.heroEditions !== positioning[locale].e1) {
+    throw new Error(
+      `homeCopy[${locale}].heroEditions is not E1 verbatim: "${copy.heroEditions}" vs "${positioning[locale].e1}"`
+    );
+  }
+  if (copy.heroLead !== positioning[locale].t2) {
+    throw new Error(`homeCopy[${locale}].heroLead is not T2: "${copy.heroLead}" vs "${positioning[locale].t2}"`);
+  }
+}

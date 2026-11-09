@@ -16,7 +16,7 @@ const page = {
     primary: { label: '阅读安全模型', href: '/en/security/' },
     secondary: { label: '查看部署路径', href: '/en/pricing/' },
     metrics: [
-      { value: '两种版本', label: '托管在 ObjectOS Cloud，或以 ObjectOS Enterprise 自管部署在你自己的基础设施上' },
+      { value: '三个版本', label: `${p.descriptor}：开源、可免费自托管；托管在浏览器中、无需安装；自管部署在你自己的基础设施上` },
       { value: '用户级', label: 'Agent 继承登录用户的权限' },
       { value: '可审计', label: '读、写、工具调用、审批与 schema 变更' },
     ],
@@ -34,19 +34,52 @@ const page = {
     },
     sections: [
       {
+        id: 'gates',
+        eyebrow: '四道闸',
+        title: 'AI 的每个动作都要过的四道闸',
+        copy:
+          '管理层只问一个问题：怎么防止 AI 做错事？下面就是答案，写成一张清单，每道闸都链到讲清它如何运作的页面。撤销不在清单上：审计日志会记下每次改动的旧值 → 新值，但我们不声称 AI 的动作可以一键回滚，所以它不算一道闸。',
+        items: [
+          {
+            meta: '第 1 道 · 权限',
+            title: '同岗同权',
+            body: 'AI 能看到、能做的，不超过它所代表的那个人被允许看到、被允许做的。',
+            href: '/en/permissions/#ai-safety',
+          },
+          {
+            meta: '第 2 道 · 数据规则',
+            title: '同样的自动校验',
+            body: '挡住人录入错误数据的那些规则，同样挡住 AI——每一次写入都要过，不管是谁写的。',
+            href: '/en/data-modeling/#modeling',
+          },
+          {
+            meta: '第 3 道 · 审批',
+            title: '敏感改动等人批',
+            body: '结构性变更，以及你标为需要签核的动作（比如退款、批量更新），都要等人批准后才执行。',
+            href: '/en/approvals/#ai-gate',
+          },
+          {
+            meta: '第 4 道 · 审计',
+            title: '每次 AI 工具调用都留痕',
+            body: 'AI 的工具调用和人的操作写进同一份审计日志，审 AI 就和审你的团队是同一件事。',
+            href: '/en/permissions/#admin',
+          },
+        ],
+      },
+      {
         id: 'boundaries',
         eyebrow: '边界',
         title: '敏感业务数据留在受控基础设施内',
         copy:
-          '在 ObjectOS 企业版中——从其单节点入门选项商业版自管（Business Self-Managed）起——运行时、业务数据、用户身份、审计日志、文件与密钥都在你自己的基础设施内；除非你显式配置外部服务，它们都留在这个边界内。ObjectOS Cloud 由我们运营。',
+          '在 ObjectOS Enterprise（私有部署）中，运行时、业务数据、用户身份、审计日志、文件与密钥都在你自己的基础设施内；除非你显式配置外部服务，它们都留在这个边界内。ObjectOS Cloud 由我们运营。',
         items: [
           {
             title: '数据驻留',
-            body: '在 ObjectOS 企业版中，连接你自己的数据库与存储：业务记录、身份、审计日志与文件都存放在那里，而不是供应商的工作区。',
+            body: '在 ObjectOS Enterprise 中，连接你自己的数据库与存储：业务记录、身份、审计日志与文件都存放在那里，而不是供应商的工作区。',
           },
           {
             title: '许可证校验',
-            body: '自管部署的 ObjectOS 在线校验许可证（企业版离线许可证可离线校验）。开源 ObjectStack 运行时没有遥测、不查许可证、也不检查更新。',
+            body: '自管部署的 ObjectOS 在线校验许可证（Enterprise 离线许可证可离线校验）。开源 ObjectStack 运行时没有遥测、不查许可证、也不检查更新。',
           },
           {
             title: '模型可选',
@@ -77,10 +110,10 @@ const page = {
       },
     ],
     table: {
-      columns: ['评审领域', '现已可用', '企业版材料包'],
+      columns: ['评审领域', '现已可用', 'Enterprise 材料包'],
       rows: [
         ['部署', '自托管开源 ObjectStack 运行时', 'VPC、私有网络、隔离部署说明'],
-        ['身份', '项目身份与权限元数据；SSO / SAML 从 ObjectOS 商业版起', 'SCIM 与身份生命周期、管理员角色、会话策略映射'],
+        ['身份', '项目身份与权限元数据；SSO / SAML / OIDC 由开源框架免费提供', 'SCIM 与身份生命周期、管理员角色、会话策略映射'],
         ['AI 治理', 'MCP 工具、对象权限、审批', '模型路由策略与提示词/数据边界报告'],
         ['审计', '运行时审计设计与元数据评审', '可导出的审计留存与调查工作流'],
       ],
@@ -103,7 +136,7 @@ const page = {
       {
         question: 'ObjectOS 能在无互联网环境运行吗？',
         answer:
-          '能。ObjectOS 企业版可在自托管或隔离环境中运营 ObjectStack 运行时。具体方式取决于包镜像、模型路由、身份系统与客户基础设施。',
+          '能。ObjectOS Enterprise 可在自托管或隔离环境中运营 ObjectStack 运行时。具体方式取决于包镜像、模型路由、身份系统与客户基础设施。',
       },
     ],
   } satisfies MarketingPage;

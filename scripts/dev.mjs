@@ -54,6 +54,14 @@ try {
   /* non-fatal — keep the dev server starting even if generation hiccups */
 }
 
+// 2.6) Write the dark cover variants (scripts/cover-dark.mjs), which the
+// templates pick up through src/lib/cover-variant.ts.
+try {
+  execSync('node scripts/cover-dark.mjs', { stdio: 'inherit', cwd: root });
+} catch {
+  /* non-fatal — without them the covers render light-only, dimmed by --cover-filter */
+}
+
 // 3) Start one clean dev server (port/host come from astro.config.mjs).
 const child = spawn(`${root}node_modules/.bin/astro`, ['dev', '--port', String(PORT)], {
   stdio: 'inherit',

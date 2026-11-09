@@ -3,6 +3,7 @@ title: "What Is Ontology MCP? Turning an Enterprise Ontology Into Agent Tools"
 description: Ontology MCP exposes an ontology's object types, action types and functions as MCP tools any agent can call. What Palantir shipped, what Microsoft is previewing, and the tool-surface asymmetry to plan for.
 author: ObjectStack Team
 date: 2026-08-18T10:00:00+08:00
+updated: 2026-10-26T10:00:00+08:00
 status: published
 topic: ai-agents
 audience: developer
@@ -108,7 +109,7 @@ Its documented tools are `list_ontology_entity_types` and `search_ontology` — 
 
 Two honest qualifications. First, **Fabric IQ Ontology MCP is documented as preview**, not GA, and its docs state that tool names, parameters and behaviors may change before general availability. Second, **the two surfaces are not currently the same shape**: Palantir's projection includes writes through action types, while the documented Fabric IQ preview tools are discovery and query. Read that as a difference in schedule rather than philosophy — but if you are planning this quarter, plan against the surface that exists, not the one implied by the direction of travel.
 
-What both moves have in common is the interesting part: **MCP is becoming the ontology's public interface.** The semantic layer was an internal asset that applications consumed. It is now an addressable endpoint that outside agents consume, which makes decisions about it — naming, exposure, versioning — visible in a way they were not before.
+What both moves have in common is the interesting part: **MCP is becoming the ontology's public interface.** The ontology was an internal asset that applications consumed. It is now an addressable endpoint that outside agents consume, which makes decisions about it — naming, exposure, versioning — visible in a way they were not before.
 
 ## What Ontology MCP does not solve
 
@@ -144,6 +145,15 @@ Ontology MCP answers the first two well, the third by configuration, and leaves 
 
 ---
 
-ObjectStack takes the same projection idea and starts from an open definition: declare your objects, actions and permissions as reviewable metadata, and the governed tool surface — permission checks, approval steps and audit included — is generated from it rather than hand-written per agent. It is Apache-2.0 and the spec is public.
+ObjectStack starts from the other end of the same projection: an open definition. The README's section on it is now called "Agents are the first users", and its first sentence is the whole model: "Objects are tools, actions are tools, permissions decide what an agent may call, and audit records what it did." The running app "serves it as an **MCP server** at `/api/v1/mcp` — on by default"; any MCP client can operate it "under the same permissions and RLS as a human"; and "objects are exposed automatically; actions opt in with `ai: { exposed: true }`". That is this post's projection rule with the asymmetry handled at the definition: reads go through a fixed set of record tools that take the object name as a parameter, and each exposed action is reachable by name through `run_action`, gated by its own `requiredPermissions`. It is Apache-2.0 and the spec is public. [Agent-operable apps](/en/blog/agent-operable-apps-mcp-tools-user-permissions/) shows it running: two users, one action, the same twelve tools, and the permission decision made on every call.
 
-Point your coding agent at [the ObjectStack spec](https://github.com/objectstack-ai/objectstack), ask it to declare one object and one action, and read the diff it hands back. The tools your agents will call are the same file.
+The shortest way to see it is the README's own path:
+
+```bash
+npm create objectstack@latest my-app && cd my-app
+# open the project in your coding agent and describe what the business needs
+npx os dev --ui
+claude mcp add --transport http my-app http://localhost:3000/api/v1/mcp
+```
+
+Ask the agent to declare one object and one action, read the diff it hands back, then connect an MCP client to the running app and list the tools. The tools your agents will call are the same file.
