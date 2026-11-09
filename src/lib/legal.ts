@@ -15,8 +15,15 @@ export interface LegalPageCopy {
   sections: LegalSection[];
 }
 
-const company =
-  'ObjectStack AI LLC, 30 N Gould St, Ste R, Sheridan, Wyoming 82801, United States';
+/**
+ * The company's legal name and mailing address, as the Terms, the Privacy
+ * Policy and the Refund Policy state them (section 21, 20 and 10 below). The
+ * /contact/ page quotes these two constants rather than retyping them.
+ */
+export const COMPANY_NAME = 'ObjectStack AI LLC';
+export const COMPANY_ADDRESS = '30 N Gould St, Ste R, Sheridan, Wyoming 82801, United States';
+
+const company = `${COMPANY_NAME}, ${COMPANY_ADDRESS}`;
 
 const termsEn: LegalPageCopy = {
   title: 'Terms of Service and License',
@@ -742,9 +749,9 @@ const refundsZhHans: LegalPageCopy = {
       ],
     },
     {
-      heading: '2. 先用免费版',
+      heading: '2. 先用 Free（免费方案）',
       paragraphs: [
-        '我们的免费版可让你零成本、无需付款地评估平台，在购买前确认它是否符合你的需求。建议你在订阅付费套餐前先行试用。',
+        '我们的 Free 方案可让你零成本、无需付款地评估平台，在购买前确认它是否符合你的需求。建议你在订阅付费套餐前先行试用。',
       ],
     },
     {

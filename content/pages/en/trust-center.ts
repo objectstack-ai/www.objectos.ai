@@ -12,11 +12,11 @@ const page = {
     eyebrow: 'Trust center',
     heroTitle: 'AI can write software. The harder question is whether you can approve it.',
     lead:
-      `ObjectOS is designed for the procurement, security, and IT review that happens after a demo works. ${p.e1} On either edition, agent authority is explicit in metadata and runtime enforcement.`,
+      `ObjectOS is designed for the procurement, security, and IT review that happens after a demo works. ${p.e1} On every edition, agent authority is explicit in metadata and runtime enforcement.`,
     primary: { label: 'Read the security model', href: '/en/security/' },
     secondary: { label: 'See deployment paths', href: '/en/pricing/' },
     metrics: [
-      { value: '2 editions', label: 'Hosted on ObjectOS Cloud, or self-managed on your own infrastructure with ObjectOS Enterprise' },
+      { value: '3 editions', label: `${p.descriptor}: open source and free to self-host; hosted in the browser with nothing to install; self-managed on your own infrastructure` },
       { value: 'User scoped', label: 'Agents inherit the signed-in user permissions' },
       { value: 'Auditable', label: 'Reads, writes, tool calls, approvals, and schema changes' },
     ],
@@ -34,11 +34,44 @@ const page = {
     },
     sections: [
       {
+        id: 'gates',
+        eyebrow: 'Four gates',
+        title: 'Four gates every AI action passes',
+        copy:
+          'Leadership asks one question: how do we stop the AI from doing something wrong? This is the answer as a checklist, and each gate links to the page that shows how it works. Undo is not on the list. The audit log shows each change old → new, but we do not claim a one-step revert of an AI action, so it does not count as a gate.',
+        items: [
+          {
+            meta: 'Gate 1 · Permissions',
+            title: 'Same access as the person it works for',
+            body: 'AI can see and do only what the person it is working for is allowed to see and do.',
+            href: '/en/permissions/#ai-safety',
+          },
+          {
+            meta: 'Gate 2 · Data rules',
+            title: 'The same automatic checks',
+            body: 'The rules that stop a person saving bad data stop the AI too. They run on every write, whoever makes it.',
+            href: '/en/data-modeling/#modeling',
+          },
+          {
+            meta: 'Gate 3 · Approvals',
+            title: 'Sensitive changes wait for a person',
+            body: 'A structural change, or an action you mark for sign-off such as a refund or a bulk update, waits for a person to approve it.',
+            href: '/en/approvals/#ai-gate',
+          },
+          {
+            meta: 'Gate 4 · Audit',
+            title: 'Every AI tool call leaves a trail',
+            body: 'AI tool calls land in the same audit log as people’s actions, so reviewing the AI is the same job as reviewing your team.',
+            href: '/en/permissions/#admin',
+          },
+        ],
+      },
+      {
         id: 'boundaries',
         eyebrow: 'Boundaries',
         title: 'Keep sensitive business data inside controlled infrastructure',
         copy:
-          'On ObjectOS Enterprise — from its single-node entry option, Business Self-Managed, up — the runtime, your business data, user identities, audit log, files, and secrets all live in your own infrastructure; unless you configure external providers, they stay inside that boundary. ObjectOS Cloud is operated by us.',
+          'On ObjectOS Enterprise, a private deployment, the runtime, your business data, user identities, audit log, files, and secrets all live in your own infrastructure; unless you configure external providers, they stay inside that boundary. ObjectOS Cloud is operated by us.',
         items: [
           {
             title: 'Data residency',
@@ -80,7 +113,7 @@ const page = {
       columns: ['Review area', 'Available now', 'Enterprise packet'],
       rows: [
         ['Deployment', 'Self-hosted open-source ObjectStack runtime', 'VPC, private network, air-gapped deployment notes'],
-        ['Identity', 'Project identity and permission metadata; SSO / SAML from ObjectOS Business', 'SCIM and identity lifecycle, admin roles, session policy mapping'],
+        ['Identity', 'Project identity and permission metadata; SSO / SAML / OIDC included free in the open-source framework', 'SCIM and identity lifecycle, admin roles, session policy mapping'],
         ['AI governance', 'MCP tools, object permissions, approvals', 'Model routing policy and prompt/data boundary report'],
         ['Audit', 'Runtime audit design and metadata review', 'Exportable audit retention and investigation workflow'],
       ],

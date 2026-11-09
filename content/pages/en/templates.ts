@@ -1,4 +1,5 @@
 import type { MarketingPage } from '../../../src/content-pages/types';
+import { TRY_IN_BROWSER_URL } from '../../../src/lib/home';
 
 const page = {
     slug: 'templates',
@@ -12,6 +13,7 @@ const page = {
       'Templates give coding agents a concrete target: object models, views, permissions, workflows, actions, and AI tools that can be copied, reviewed, adapted, and run in ObjectOS.',
     primary: { label: 'Open template source', href: 'https://github.com/objectstack-ai/templates' },
     secondary: { label: 'See the product tour', href: '/en/product-tour/' },
+    outbound: { label: 'Try it in the browser (no sign-up)', href: TRY_IN_BROWSER_URL },
     metrics: [
       { value: '8 templates', label: 'todo, contracts, procurement, compliance, helpdesk, content, hr, project' },
       { value: 'One layer', label: 'Objects, UI, workflows, APIs, and AI tools from the same definition' },
@@ -38,41 +40,49 @@ const page = {
           'Eight forkable starters, each a real, shaped app: install it from the Marketplace in one click, or clone it with the CLI to get a TypeScript codebase to extend. Apache-2.0 — fork without asking. Your agent can fork one, change the metadata, and open a diff for review.',
         items: [
           {
+            id: 'template-todo',
             title: 'todo',
             body: 'Forkable starter for any “things to do, grouped somehow” tool.',
             meta: 'Tasks & projects',
           },
           {
+            id: 'template-contracts',
             title: 'contracts',
             body: 'Forkable starter for approvals + document AI.',
             meta: 'CLM with AI clause extraction',
           },
           {
+            id: 'template-procurement',
             title: 'procurement',
             body: 'Forkable starter for approval chains + receiving.',
             meta: 'Vendors, POs, 3-way match',
           },
           {
+            id: 'template-compliance',
             title: 'compliance',
             body: 'Forkable starter for evidence collection workflows.',
             meta: 'SOC 2 / ISO 27001 controls',
           },
           {
+            id: 'template-helpdesk',
             title: 'helpdesk',
             body: 'Forkable starter for tickets + SLAs + AI co-pilot.',
             meta: 'AI-first customer support',
           },
           {
+            id: 'template-content',
             title: 'content',
             body: 'Forkable starter for lifecycle + metrics.',
             meta: 'Editorial calendar + channel ROI',
           },
           {
+            id: 'template-hr',
             title: 'hr',
             body: 'Forkable starter for people-centric apps.',
             meta: 'Directory, org chart, time-off',
           },
           {
+            id: 'template-project',
             title: 'project',
             body: 'Forkable starter for PM tools.',
             meta: 'Project / task / milestone tracking',

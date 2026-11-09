@@ -1,7 +1,8 @@
 ---
 import { phraseHtml } from '../../scripts/lib/cjk-phrases.mjs';
+import { marketingPagePath } from '../content-pages/registry';
 import { postPath, type Locale } from '../lib/i18n';
-import { securityEnglishFields, type SecurityCopy } from '../lib/security';
+import { SECURITY_CONTACT, securityEnglishFields, type SecurityCopy } from '../lib/security';
 
 interface Props {
   copy: SecurityCopy;
@@ -46,11 +47,13 @@ const ph = (text: string, field: keyof SecurityCopy): string => phraseHtml(text,
   </section>
 
   <nav class="page-nav" aria-label={copy.title}>
-    <a href="#ai" lang={en('aiTitle')}>{copy.aiTitle}</a>
-    <a href="#data" lang={en('residencyTitle')}>{copy.residencyTitle}</a>
-    <a href="#permissions" lang={en('permissionTitle')}>{copy.permissionTitle}</a>
-    <a href="#deployment" lang={en('deploymentTitle')}>{copy.deploymentTitle}</a>
-    <a href="#faq" lang={en('faqTitle')}>{copy.faqTitle}</a>
+    <a class="pill-nav" href="#ai" lang={en('aiTitle')}>{copy.aiTitle}</a>
+    <a class="pill-nav" href="#data" lang={en('residencyTitle')}>{copy.residencyTitle}</a>
+    <a class="pill-nav" href="#permissions" lang={en('permissionTitle')}>{copy.permissionTitle}</a>
+    <a class="pill-nav" href="#more" lang={en('hubKicker')}>{copy.hubKicker}</a>
+    <a class="pill-nav" href="#deployment" lang={en('deploymentTitle')}>{copy.deploymentTitle}</a>
+    <a class="pill-nav" href="#faq" lang={en('faqTitle')}>{copy.faqTitle}</a>
+    <a class="pill-nav" href="#disclosure" lang={en('disclosureTitle')}>{copy.disclosureTitle}</a>
   </nav>
 
   <section class="panel ai-panel" id="ai">
@@ -59,7 +62,7 @@ const ph = (text: string, field: keyof SecurityCopy): string => phraseHtml(text,
       <h2 lang={en('aiTitle')} set:html={ph(copy.aiTitle, 'aiTitle')} />
       <p lang={en('aiLead')}>{copy.aiLead}</p>
     </div>
-    <ol class="step-grid" lang={en('aiSteps')}>
+    <ol class="step-grid card-grid" lang={en('aiSteps')}>
       {copy.aiSteps.map((step, index) => (
         <li>
           <span>{String(index + 1).padStart(2, '0')}</span>
@@ -102,12 +105,32 @@ const ph = (text: string, field: keyof SecurityCopy): string => phraseHtml(text,
       <h2 lang={en('permissionTitle')} set:html={ph(copy.permissionTitle, 'permissionTitle')} />
       <p lang={en('permissionLead')}>{copy.permissionLead}</p>
     </div>
-    <div class="layer-list" lang={en('permissionLayers')}>
+    <div class="layer-list card-grid" lang={en('permissionLayers')}>
       {copy.permissionLayers.map((layer) => (
         <div>
           <h3>{layer.title}</h3>
           <p>{layer.copy}</p>
         </div>
+      ))}
+    </div>
+  </section>
+
+  <!-- The hub's sub-sections. /security/ is the menu's one trust entry; the
+       trust center and the permissions page keep their URLs and are reached
+       from these cards (and from the footer). -->
+  <section class="panel" id="more">
+    <div class="section-head">
+      <p class="eyebrow" lang={en('hubKicker')}>{copy.hubKicker}</p>
+      <h2 lang={en('hubTitle')} set:html={ph(copy.hubTitle, 'hubTitle')} />
+      <p lang={en('hubLead')}>{copy.hubLead}</p>
+    </div>
+    <div class="hub-grid card-grid" lang={en('hubPages')}>
+      {copy.hubPages.map((sub) => (
+        <a class="hub-card" href={marketingPagePath(locale, sub.slug)}>
+          <h3>{sub.title}</h3>
+          <p>{sub.copy}</p>
+          <span class="hub-cta">{sub.cta} <span aria-hidden="true">→</span></span>
+        </a>
       ))}
     </div>
   </section>
@@ -118,7 +141,7 @@ const ph = (text: string, field: keyof SecurityCopy): string => phraseHtml(text,
       <h2 lang={en('deploymentTitle')} set:html={ph(copy.deploymentTitle, 'deploymentTitle')} />
       <p lang={en('deploymentLead')}>{copy.deploymentLead}</p>
     </div>
-    <div class="deploy-grid" lang={en('deployments')}>
+    <div class="deploy-grid card-grid" lang={en('deployments')}>
       {copy.deployments.map((deployment) => (
         <div>
           <h3>{deployment.title}</h3>
@@ -143,31 +166,65 @@ const ph = (text: string, field: keyof SecurityCopy): string => phraseHtml(text,
     </div>
   </section>
 
-  <section class="cta">
+  <!-- Vulnerability disclosure. /.well-known/security.txt names this section
+       as its Policy, so the id is a public URL: keep it. -->
+  <section class="split disclosure" id="disclosure">
+    <div>
+      <p class="eyebrow" lang={en('disclosureKicker')}>{copy.disclosureKicker}</p>
+      <h2 lang={en('disclosureTitle')} set:html={ph(copy.disclosureTitle, 'disclosureTitle')} />
+      <p lang={en('disclosureLead')}>{copy.disclosureLead}</p>
+      <dl class="contact-card card-grid">
+        <div>
+          <dt lang={en('disclosureContactLabel')}>{copy.disclosureContactLabel}</dt>
+          <dd><a href={`mailto:${SECURITY_CONTACT}`}>{SECURITY_CONTACT}</a></dd>
+        </div>
+        {copy.disclosureFacts.map((fact) => (
+          <div lang={en('disclosureFacts')}>
+            <dt>{fact.label}</dt>
+            <dd>{fact.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+    <div class="disclosure-list card-grid">
+      <div>
+        <h3 lang={en('disclosureIncludeTitle')}>{copy.disclosureIncludeTitle}</h3>
+        <ul lang={en('disclosureInclude')}>
+          {copy.disclosureInclude.map((item) => <li>{item}</li>)}
+        </ul>
+      </div>
+      <div>
+        <h3 lang={en('disclosureProcessTitle')}>{copy.disclosureProcessTitle}</h3>
+        <ol lang={en('disclosureProcess')}>
+          {copy.disclosureProcess.map((item) => <li>{item}</li>)}
+        </ol>
+      </div>
+      <div>
+        <h3 lang={en('disclosureSafeHarbourTitle')}>{copy.disclosureSafeHarbourTitle}</h3>
+        <p lang={en('disclosureSafeHarbour')}>{copy.disclosureSafeHarbour}</p>
+        <ul lang={en('disclosureSafeHarbourRules')}>
+          {copy.disclosureSafeHarbourRules.map((item) => <li>{item}</li>)}
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta panel-dark on-dark">
     <p class="eyebrow" lang={en('ctaKicker')}>{copy.ctaKicker}</p>
     <h2 lang={en('ctaTitle')} set:html={ph(copy.ctaTitle, 'ctaTitle')} />
     <p lang={en('ctaCopy')}>{copy.ctaCopy}</p>
     <div class="actions">
-      <a class="button primary" href={docsHref} lang={en('ctaPrimary')}>{copy.ctaPrimary} <span>→</span></a>
-      <a class="button secondary" href={blogHref} lang={en('ctaSecondary')}>{copy.ctaSecondary}</a>
+      <a class="btn btn-primary" href={docsHref} lang={en('ctaPrimary')}>{copy.ctaPrimary} <span>→</span></a>
+      <a class="btn btn-secondary" href={blogHref} lang={en('ctaSecondary')}>{copy.ctaSecondary}</a>
     </div>
   </section>
 </article>
 
 <style>
-  /* Text accents. Light on --surface: green 4.99, blue 5.16, amber 5.01.
-     Those inks read 3.2-3.3:1 on the dark surface, so the dark theme swaps
-     in the site's dark accents: green 7.20, blue 7.03, amber 7.74. */
-  .security-page {
-    --sec-green: #087f5b;
-    --sec-blue: #2563eb;
-    --sec-amber: #b45309;
-  }
-  :global(:root[data-theme='dark']) .security-page {
-    --sec-green: #3fbf8f;
-    --sec-blue: #8fa3ff;
-    --sec-amber: #e3a54a;
-  }
+  /* Colours, type and boxes are the Base.astro tokens: --green is the
+     emphasis (eyebrows, step indexes, the hero's second line, list marks),
+     --ink the action (buttons). The deployment cards' blue and amber titles
+     were decoration, and amber is a status colour, so they are plain ink. */
   .security-page :global(h1),
   .security-page :global(h2),
   .security-page :global(h3),
@@ -175,28 +232,21 @@ const ph = (text: string, field: keyof SecurityCopy): string => phraseHtml(text,
     margin-top: 0;
   }
   .hero {
-    max-width: 900px;
+    max-width: var(--measure-wide);
     padding: 2rem 0 4rem;
-  }
-  .eyebrow {
-    color: var(--sec-green);
-    font-size: 0.75rem;
-    font-weight: 750;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
   }
   /* Page title and section headings take the display face, as on every page;
      card titles stay in the text face. */
   .hero h1 {
     margin: 0 0 1.4rem;
     font-family: var(--font-display);
-    font-size: clamp(3rem, 6vw, 5rem);
-    line-height: 1.05;
-    letter-spacing: 0;
+    font-size: var(--fs-hero);
+    line-height: var(--lh-display);
+    letter-spacing: -0.01em;
     text-wrap: balance;
   }
   .hero h1 strong {
-    color: var(--sec-green);
+    color: var(--green);
     font-weight: inherit;
   }
   /* The h1's two parts are block lines, each balanced on its own: after a
@@ -206,19 +256,21 @@ const ph = (text: string, field: keyof SecurityCopy): string => phraseHtml(text,
   }
   /* zh and ja: break only at the <wbr> between phrases (scripts/lib/cjk-phrases.mjs),
      so 网络 or ネットワーク is never split; a phrase wider than the line still
-     breaks, as a last resort. */
+     breaks, as a last resort. ko breaks at its own spaces; no <wbr>. */
   h1:lang(zh),
   h1:lang(ja),
+  h1:lang(ko),
   h2:lang(zh),
-  h2:lang(ja) {
+  h2:lang(ja),
+  h2:lang(ko) {
     word-break: keep-all;
     overflow-wrap: anywhere;
   }
   .lead {
-    max-width: 720px;
+    max-width: var(--measure-prose);
     color: var(--ink-soft);
-    font-size: 1.08rem;
-    line-height: 1.85;
+    font-size: var(--fs-17);
+    line-height: var(--lh-prose);
   }
   .metrics {
     display: grid;
@@ -230,19 +282,20 @@ const ph = (text: string, field: keyof SecurityCopy): string => phraseHtml(text,
   }
   .metrics dt {
     color: var(--ink);
-    font-size: 1.8rem;
-    font-weight: 750;
-    line-height: 1.1;
+    font-size: var(--fs-30);
+    font-weight: 700;
+    line-height: var(--lh-display);
+    font-variant-numeric: tabular-nums;
   }
   .metrics dd {
     margin: 0.35rem 0 0;
     color: var(--muted);
-    font-size: 0.78rem;
+    font-size: var(--fs-13);
   }
   .split,
   .panel,
   .faq {
-    padding: 6rem 0;
+    padding: var(--space-section) 0;
     border-top: 1px solid var(--line);
     scroll-margin-top: 82px;
   }
@@ -266,19 +319,6 @@ const ph = (text: string, field: keyof SecurityCopy): string => phraseHtml(text,
   }
   .page-nav a {
     flex: 0 0 auto;
-    color: var(--ink-soft);
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    padding: 0.38rem 0.72rem;
-    font-size: 0.76rem;
-    font-weight: 650;
-    text-decoration: none;
-    white-space: nowrap;
-  }
-  .page-nav a:hover {
-    color: var(--ink);
-    border-color: color-mix(in srgb, var(--sec-green) 35%, var(--line));
   }
   .split {
     display: grid;
@@ -289,8 +329,8 @@ const ph = (text: string, field: keyof SecurityCopy): string => phraseHtml(text,
   h2 {
     margin: 0 0 1rem;
     font-family: var(--font-display);
-    font-size: clamp(2rem, 4.2vw, 3.3rem);
-    line-height: 1.18;
+    font-size: var(--fs-h2);
+    line-height: var(--lh-heading);
     letter-spacing: 0;
     text-wrap: balance;
   }
@@ -298,13 +338,13 @@ const ph = (text: string, field: keyof SecurityCopy): string => phraseHtml(text,
   .section-head p,
   .cta > p {
     color: var(--ink-soft);
-    font-size: 1rem;
-    line-height: 1.85;
+    font-size: var(--fs-16);
+    line-height: var(--lh-prose);
   }
   .table-wrap {
     overflow-x: auto;
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: var(--r-card);
     background: var(--surface);
   }
   table {
@@ -318,12 +358,13 @@ const ph = (text: string, field: keyof SecurityCopy): string => phraseHtml(text,
     border-bottom: 1px solid var(--line);
     text-align: left;
     vertical-align: top;
-    font-size: 0.86rem;
+    font-size: var(--fs-14);
+    font-variant-numeric: tabular-nums;
   }
   th {
     color: var(--muted);
-    font-size: 0.7rem;
-    letter-spacing: 0.06em;
+    font-size: var(--fs-12);
+    letter-spacing: 0.08em;
     text-transform: uppercase;
   }
   td {
@@ -331,7 +372,7 @@ const ph = (text: string, field: keyof SecurityCopy): string => phraseHtml(text,
   }
   td:first-child {
     color: var(--ink);
-    font-weight: 650;
+    font-weight: 700;
   }
   tr:last-child td {
     border-bottom: none;
@@ -353,11 +394,11 @@ const ph = (text: string, field: keyof SecurityCopy): string => phraseHtml(text,
     }
     .table-wrap::-webkit-scrollbar-track {
       background: color-mix(in srgb, var(--surface-sunk) 70%, transparent);
-      border-radius: 999px;
+      border-radius: var(--r-pill);
     }
     .table-wrap::-webkit-scrollbar-thumb {
       background: color-mix(in srgb, var(--ink) 32%, transparent);
-      border-radius: 999px;
+      border-radius: var(--r-pill);
     }
     @supports (animation-timeline: scroll(self inline)) {
       .table-wrap {
@@ -388,23 +429,17 @@ const ph = (text: string, field: keyof SecurityCopy): string => phraseHtml(text,
       letter-spacing: 0.02em;
     }
     td {
-      font-size: 0.82rem;
+      font-size: var(--fs-13);
     }
   }
   .section-head {
-    max-width: 760px;
+    max-width: var(--measure-prose);
     margin-bottom: 2.5rem;
   }
   .step-grid,
   .deploy-grid {
-    display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 1px;
     padding: 0;
-    background: var(--line);
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    overflow: hidden;
   }
   .step-grid {
     list-style: none;
@@ -414,49 +449,66 @@ const ph = (text: string, field: keyof SecurityCopy): string => phraseHtml(text,
   .deploy-grid div {
     min-height: 245px;
     padding: 1.4rem;
-    background: var(--surface);
   }
   .step-grid span {
     display: inline-block;
     margin-bottom: 2.3rem;
-    color: var(--sec-green);
-    font: 700 0.72rem/1 var(--font-mono);
+    color: var(--green);
+    font: 700 var(--fs-12)/1 var(--font-mono);
   }
   .step-grid h3,
   .deploy-grid h3,
   .layer-list h3 {
     margin-bottom: 0.55rem;
-    font-size: 1.02rem;
+    font-size: var(--fs-18);
   }
   .step-grid p,
   .deploy-grid p,
   .layer-list p {
     margin: 0;
     color: var(--ink-soft);
-    font-size: 0.84rem;
-    line-height: 1.72;
-  }
-  .layer-list {
-    display: grid;
-    gap: 1px;
-    background: var(--line);
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    overflow: hidden;
+    font-size: var(--fs-14);
+    line-height: var(--lh-prose);
   }
   .layer-list div {
     display: grid;
     grid-template-columns: 150px 1fr;
     gap: 1.25rem;
     padding: 1.1rem 1.25rem;
-    background: var(--surface);
   }
-  .deploy-grid div:nth-child(2) h3,
-  .deploy-grid div:nth-child(2) + div h3 {
-    color: var(--sec-blue);
+  /* The two sub-section cards: whole-card links, set like the deployment
+     cells, with the brand on the title when hovered and the page's green
+     on the call-to-action line. */
+  .hub-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
-  .deploy-grid div:nth-child(4) h3 {
-    color: var(--sec-amber);
+  .hub-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 1.4rem;
+    color: inherit;
+    text-decoration: none;
+  }
+  .hub-card h3 {
+    margin: 0;
+    font-size: var(--fs-18);
+  }
+  .hub-card:hover h3 {
+    color: var(--brand);
+  }
+  .hub-card p {
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: var(--fs-14);
+    line-height: var(--lh-prose);
+  }
+  .hub-cta {
+    margin-top: auto;
+    padding-top: 0.4rem;
+    color: var(--green);
+    font-size: var(--fs-14);
+    font-weight: 700;
   }
   .faq-list {
     display: grid;
@@ -465,61 +517,89 @@ const ph = (text: string, field: keyof SecurityCopy): string => phraseHtml(text,
   details {
     background: var(--surface);
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: var(--r-card);
   }
   summary {
     padding: 1rem 1.1rem;
     cursor: pointer;
     color: var(--ink);
-    font-weight: 650;
+    font-weight: 700;
   }
   details p {
     margin: 0;
     padding: 0 1.1rem 1.1rem;
     color: var(--ink-soft);
-    font-size: 0.9rem;
-    line-height: 1.75;
+    font-size: var(--fs-14);
+    line-height: var(--lh-prose);
+  }
+  .contact-card {
+    margin: 1.75rem 0 0;
+  }
+  /* Label above value at every width: beside it, a 9.5rem label left the
+     address about 180px in the narrow left column at 1366-1512px, and
+     security@objectstack.ai broke in the middle of a word. */
+  .contact-card div {
+    display: grid;
+    gap: 0.3rem;
+    padding: 0.85rem 1.1rem;
+  }
+  .contact-card dt {
+    color: var(--muted);
+    font-size: var(--fs-12);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .contact-card dd {
+    margin: 0;
+    color: var(--ink);
+    font-size: var(--fs-15);
+    font-weight: 700;
+    overflow-wrap: anywhere;
+  }
+  .disclosure-list > div {
+    padding: 1.25rem 1.4rem;
+  }
+  .disclosure-list h3 {
+    margin-bottom: 0.6rem;
+    font-size: var(--fs-18);
+  }
+  .disclosure-list p,
+  .disclosure-list li {
+    color: var(--ink-soft);
+    font-size: var(--fs-14);
+    line-height: var(--lh-prose);
+  }
+  .disclosure-list p {
+    margin: 0 0 0.5rem;
+  }
+  .disclosure-list ul,
+  .disclosure-list ol {
+    margin: 0;
+    padding-left: 1.15rem;
+  }
+  .disclosure-list li + li {
+    margin-top: 0.35rem;
+  }
+  .disclosure-list li::marker {
+    color: var(--green);
   }
   .cta {
     margin-top: 2rem;
     padding: 4rem;
-    color: white;
-    background: #172b26;
-    border-radius: 6px;
-  }
-  .cta .eyebrow {
-    color: #8ee3c2;
   }
   .cta p {
-    max-width: 680px;
-    color: #bdc9c5;
+    max-width: var(--measure-prose);
+    color: var(--on-panel-soft);
+  }
+  .cta .eyebrow {
+    color: var(--on-panel-accent);
   }
   .actions {
     display: flex;
     flex-wrap: wrap;
     gap: 0.7rem;
     margin-top: 1.5rem;
-  }
-  .button {
-    min-height: 44px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.6rem;
-    padding: 0.65rem 1rem;
-    border: 1px solid transparent;
-    border-radius: 6px;
-    font-size: 0.9rem;
-    font-weight: 650;
-    text-decoration: none;
-  }
-  .button.primary {
-    color: #172b26;
-    background: white;
-  }
-  .button.secondary {
-    color: white;
-    border-color: rgba(255, 255, 255, 0.25);
   }
   @media (max-width: 900px) {
     .split {
@@ -537,12 +617,10 @@ const ph = (text: string, field: keyof SecurityCopy): string => phraseHtml(text,
     }
     .hero h1 {
       margin-bottom: 1rem;
-      font-size: 2.28rem;
-      line-height: 1.08;
     }
     .lead {
-      font-size: 0.98rem;
-      line-height: 1.75;
+      font-size: var(--fs-16);
+      line-height: var(--lh-body);
     }
     .metrics {
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -551,17 +629,16 @@ const ph = (text: string, field: keyof SecurityCopy): string => phraseHtml(text,
       padding-top: 0.9rem;
     }
     .metrics dt {
-      font-size: 1rem;
+      font-size: var(--fs-16);
       overflow-wrap: anywhere;
     }
     .metrics dd {
-      font-size: 0.68rem;
-      line-height: 1.35;
+      font-size: var(--fs-12);
+      line-height: var(--lh-heading);
     }
     .split,
     .panel,
     .faq {
-      padding: 3.2rem 0;
       scroll-margin-top: 120px;
     }
     .page-nav {
@@ -583,20 +660,18 @@ const ph = (text: string, field: keyof SecurityCopy): string => phraseHtml(text,
       text-align: center;
       white-space: normal;
     }
-    h2 {
-      font-size: 1.9rem;
-    }
     /* Japanese breaks only between phrases, and the longest here are nine
        (ネットワーク内に。) and eleven (セキュリティレビューを) characters:
        sized so each fits the 312px column of a 360px phone. */
     .hero h1:lang(ja) {
-      font-size: 2rem;
+      font-size: var(--fs-30);
     }
     h2:lang(ja) {
-      font-size: 1.6rem;
+      font-size: var(--fs-24);
     }
     .step-grid,
-    .deploy-grid {
+    .deploy-grid,
+    .hub-grid {
       grid-template-columns: 1fr;
     }
     .step-grid li,

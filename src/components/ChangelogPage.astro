@@ -1,0 +1,183 @@
+---
+import { codeRuns, formatReleaseDate, type ChangelogCopy, type ChangelogSnapshot } from '../lib/changelog';
+import type { Locale } from '../lib/i18n';
+
+interface Props {
+  copy: ChangelogCopy;
+  /** The language the copy is written in (English on a fallback locale). */
+  locale: Locale;
+  snapshot: ChangelogSnapshot;
+}
+
+const { copy, locale, snapshot } = Astro.props;
+// The release notes are English only, so on a translated page the highlights
+// carry lang="en" (WCAG 3.1.2) and the frame says so in `languageNote`.
+const highlightsLang = locale === 'en' ? undefined : 'en';
+const snapshotDate = snapshot.source.commitDate.slice(0, 10);
+const [snapshotBefore, snapshotAfter = ''] = copy.snapshot.split('{date}');
+const ALL_NOTES = 'https://objectstack.ai/docs/releases';
+---
+
+<section class="changelog">
+  <header class="intro">
+    <p class="eyebrow">{copy.eyebrow}</p>
+    <h1>{copy.heading}</h1>
+    <p class="lead">{copy.lead}</p>
+    {copy.languageNote && <p class="note">{copy.languageNote}</p>}
+    <p class="meta">
+      <span>{snapshotBefore}<time datetime={snapshotDate}>{formatReleaseDate(locale, snapshotDate)}</time>{snapshotAfter}</span>
+      <a href={ALL_NOTES}>{copy.allNotes}<span aria-hidden="true">{' '}↗</span></a>
+    </p>
+  </header>
+
+  <ol class="releases">
+    {
+      snapshot.releases.map((release) => (
+        <li class="release">
+          <div class="when">
+            <h2 translate="no">{release.version}</h2>
+            {release.date ? (
+              <time datetime={release.date}>{formatReleaseDate(locale, release.date)}</time>
+            ) : (
+              <span class="undated">{copy.undated}</span>
+            )}
+          </div>
+          <div class="what">
+            <ul lang={highlightsLang}>
+              {release.highlights.map((highlight) => (
+                <li>
+                  {codeRuns(highlight).map((run) => (run.code ? <code>{run.text}</code> : run.text))}
+                </li>
+              ))}
+            </ul>
+            <a class="full" href={release.url}>
+              {copy.fullNotes}<span class="visually-hidden">{`: ${release.version}`}</span>
+              <span aria-hidden="true">{' '}↗</span>
+            </a>
+          </div>
+        </li>
+      ))
+    }
+  </ol>
+</section>
+
+<style>
+  .changelog {
+    max-width: var(--measure-wide);
+    margin: 0 auto;
+  }
+  .intro {
+    margin-bottom: var(--sp-7);
+  }
+  .eyebrow {
+    margin: 0 0 var(--sp-3);
+  }
+  h1 {
+    margin: 0 0 var(--sp-4);
+    font-family: var(--font-display);
+    font-size: var(--fs-h1);
+    line-height: var(--lh-display);
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  .lead {
+    margin: 0;
+    max-width: var(--measure-prose);
+    color: var(--ink-soft);
+    font-size: var(--fs-17);
+    line-height: var(--lh-body);
+  }
+  .note {
+    margin: var(--sp-4) 0 0;
+    max-width: var(--measure-prose);
+    color: var(--ink-soft);
+    font-size: var(--fs-15);
+  }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-2) var(--sp-5);
+    margin: var(--sp-5) 0 0;
+    color: var(--muted);
+    font-size: var(--fs-14);
+  }
+  .releases {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-top: 1px solid var(--line);
+  }
+  /* A release is one row: version and date on the left, its highlights and
+     the link to its full notes on the right; on a phone the two stack. */
+  .release {
+    display: grid;
+    grid-template-columns: 11rem minmax(0, 1fr);
+    gap: var(--sp-5);
+    padding: var(--sp-6) 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .when h2 {
+    margin: 0 0 var(--sp-1);
+    font-size: var(--fs-24);
+    line-height: var(--lh-heading);
+    font-variant-numeric: tabular-nums;
+  }
+  .when time,
+  .undated {
+    color: var(--muted);
+    font-size: var(--fs-14);
+  }
+  .what ul {
+    margin: 0 0 var(--sp-4);
+    padding-left: 1.15rem;
+    font-size: var(--fs-16);
+    line-height: var(--lh-body);
+  }
+  .what li + li {
+    margin-top: var(--sp-2);
+  }
+  .what li::marker {
+    color: var(--green);
+  }
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    background: var(--surface-sunk);
+    padding: 0.08em 0.35em;
+    border-radius: var(--r-control);
+    border: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
+    overflow-wrap: anywhere;
+  }
+  .full {
+    font-size: var(--fs-14);
+    font-weight: 600;
+  }
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  @media (max-width: 640px) {
+    .intro {
+      margin-bottom: var(--sp-6);
+    }
+    .release {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--sp-3);
+      padding: var(--sp-5) 0;
+    }
+    .when {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: var(--sp-1) var(--sp-3);
+    }
+    .when h2 {
+      margin: 0;
+      font-size: var(--fs-20);
+    }
+  }
+</style>

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createHash } from 'node:crypto';
 import { access, readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { cwd, exit } from 'node:process';
@@ -524,6 +525,63 @@ const pageAt = (href) => {
   const rel = decodeURIComponent(url.pathname).replace(/^\//, '');
   return pages.get(rel === '' || rel.endsWith('/') ? `${rel}index.html` : rel);
 };
+
+// ─── /.well-known/security.txt (RFC 9116) ───────────────────────────────────
+//
+// The file is static (public/.well-known/), so nothing regenerates it: an
+// `Expires` that passes turns the file into one RFC 9116 says to ignore, and a
+// mailbox changed on the security page but not here sends reports to two
+// places. Both are checked against the built site: every `Contact:` mailbox is
+// a mailto link on the page `Policy:` names, and that page carries the anchor.
+// Expired (or not a date) fails; RFC 9116 §2.5.5 asks for less than a year
+// ahead, so more than a year fails too; under 60 days left only warns, so a
+// renewal is due before the date fails every build.
+const securityTxt = await readDist('.well-known/security.txt');
+if (securityTxt) {
+  const fieldValues = (name) =>
+    [...securityTxt.matchAll(new RegExp(`^${name}:[ \\t]*(\\S.*?)[ \\t]*$`, 'gmi'))].map((m) => m[1]);
+  const contacts = fieldValues('Contact');
+  const expires = fieldValues('Expires');
+  const policies = fieldValues('Policy');
+  const canonicals = fieldValues('Canonical');
+  const DAY = 24 * 60 * 60 * 1000;
+  if (contacts.length === 0) issues.push('.well-known/security.txt: no Contact field (RFC 9116 requires one)');
+  if (expires.length !== 1) {
+    issues.push(`.well-known/security.txt: needs exactly one Expires field, found ${expires.length}`);
+  } else {
+    const at = Date.parse(expires[0]);
+    const left = at - Date.now();
+    if (Number.isNaN(at)) issues.push(`.well-known/security.txt: Expires "${expires[0]}" is not a date`);
+    else if (left <= 0) issues.push(`.well-known/security.txt: Expires ${expires[0]} has passed; set a new date under a year ahead`);
+    else if (left > 366 * DAY) issues.push(`.well-known/security.txt: Expires ${expires[0]} is more than a year ahead (RFC 9116 §2.5.5)`);
+    else if (left < 60 * DAY) console.warn(`! .well-known/security.txt: Expires ${expires[0]} is ${Math.ceil(left / DAY)} days away; renew it`);
+  }
+  if (!canonicals.includes(`${SITE}/.well-known/security.txt`)) {
+    issues.push(`.well-known/security.txt: Canonical must be ${SITE}/.well-known/security.txt`);
+  }
+  if (policies.length !== 1) {
+    issues.push(`.well-known/security.txt: needs exactly one Policy field, found ${policies.length}`);
+  } else {
+    const policyPage = pageAt(policies[0]);
+    if (!policyPage) {
+      issues.push(`.well-known/security.txt: Policy ${policies[0]} is not a page this build serves`);
+    } else {
+      const anchor = new URL(policies[0]).hash.slice(1);
+      if (anchor && !policyPage.html.includes(`id="${anchor}"`)) {
+        issues.push(`.well-known/security.txt: Policy page ${policyPage.file} has no id="${anchor}"`);
+      }
+      for (const contact of contacts.filter((c) => c.startsWith('mailto:'))) {
+        if (!policyPage.html.includes(`href="${contact}"`)) {
+          issues.push(
+            `.well-known/security.txt: Contact ${contact} is not linked from ${policyPage.file} — ` +
+              'the security page (SECURITY_CONTACT in src/lib/security.ts) and security.txt name different mailboxes'
+          );
+        }
+      }
+    }
+  }
+}
+
 // Indexable = no `noindex` and its own canonical: the only pages a sitemap may
 // list or an hreflang / canonical annotation may point at.
 const isIndexable = (page) => Boolean(page) && !page.noindex && page.canonical === page.url;
@@ -783,6 +841,18 @@ if (internalLinksChecked === 0) {
   }
 }
 
+let inlineScriptDigests = 0;
+let cspHostsChecked = 0;
+// The only hosts the /* CSP's script-src and connect-src may name: Cloudflare
+// Web Analytics (#382), which Pages injects at the edge as one external tag, so
+// no built page shows it. Every other source there is a keyword or a hash. A
+// host (or a scheme or wildcard source) missing from this list fails, and so
+// does a listed host the policy no longer names, so the two directives name
+// exactly these.
+const CSP_HOSTS = {
+  'script-src': ['https://static.cloudflareinsights.com'],
+  'connect-src': ['https://cloudflareinsights.com'],
+};
 // ─── Cache headers for hashed assets ────────────────────────────────────────
 //
 // Every file astro writes under /_astro/ has a content hash in its name, so it
@@ -799,6 +869,43 @@ if (internalLinksChecked === 0) {
   const unhashed = assets.filter((name) => !/\.[A-Za-z0-9_-]{8}(?:_[A-Za-z0-9_-]+)?\.[a-z0-9]+$/.test(name));
   if (assets.length === 0) issues.push('_astro/: no assets found — the immutable rule covers nothing');
   for (const name of unhashed) issues.push(`_astro/${name}: not content-hashed, but /_astro/* is cached as immutable`);
+
+  // The /* block's CSP allows inline scripts by sha256 only, so an edited script
+  // body is blocked in production, and `astro dev`/`preview` never serve
+  // _headers to show it. Every inline script CSP governs (no type, a JavaScript
+  // type, module, importmap, speculationrules; data blocks such as ld+json are
+  // not governed) must be listed, and a listed digest no page uses is an issue
+  // too, so the policy allows exactly what ships.
+  const csp = /^\/\*[ \t]*\n(?:[ \t]+.*\n)*?[ \t]+Content-Security-Policy:(.*)$/im.exec(headers ?? '')?.[1] ?? '';
+  const sources = (directive) =>
+    new RegExp(`(?:^|;)\\s*${directive}(?=[\\s;]|$)([^;]*)`).exec(csp)?.[1].trim().split(/\s+/).filter(Boolean) ?? [];
+  const allowed = new Set(sources('script-src').filter((source) => /^'sha256-[A-Za-z0-9+/]+=*'$/.test(source)));
+  const used = new Map();
+  for (const page of pages.values()) {
+    for (const [, attrs, body] of page.html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)) {
+      const type = (attrOf(attrs, 'type') ?? '').trim().toLowerCase();
+      if (/\ssrc=/.test(attrs) || !/^(|module|importmap|speculationrules|(text|application)\/(x-)?(java|ecma)script)$/.test(type)) continue;
+      const digest = `'sha256-${createHash('sha256').update(body).digest('base64')}'`;
+      used.set(digest, { file: used.get(digest)?.file ?? page.file, count: (used.get(digest)?.count ?? 0) + 1 });
+    }
+  }
+  if (!csp) issues.push('_headers: the /* block has no Content-Security-Policy');
+  for (const [digest, { file, count }] of used) {
+    if (!allowed.has(digest)) issues.push(`${file}: inline script ${digest} (on ${count} page${count === 1 ? '' : 's'}) is not in the /* CSP script-src, so the browser blocks it`);
+  }
+  for (const digest of allowed) if (!used.has(digest)) issues.push(`_headers: CSP script-src lists ${digest}, which no built page uses`);
+  inlineScriptDigests = used.size;
+
+  for (const [directive, hosts] of Object.entries(CSP_HOSTS)) {
+    const named = sources(directive).filter((source) => !source.startsWith("'"));
+    for (const host of named) {
+      if (!hosts.includes(host)) issues.push(`_headers: CSP ${directive} names ${host}, which is not in seo-smoke's CSP_HOSTS allowlist`);
+    }
+    for (const host of hosts) {
+      if (!named.includes(host)) issues.push(`_headers: CSP ${directive} does not name ${host}, so the browser blocks Cloudflare Web Analytics`);
+    }
+    cspHostsChecked += named.length;
+  }
 }
 
 // ─── Open Graph and the Organization node ───────────────────────────────────
@@ -830,5 +937,6 @@ if (issues.length > 0) {
 console.log(
   `SEO smoke test passed (${htmlFiles.length} HTML pages checked; ${sitemapChecked} sitemap URLs against ` +
     `${noindexedBuilt} noindexed pages; ${annotationsChecked} canonical/hreflang annotations; ` +
-    `${langBlocksJudged} prose blocks language-checked; ${internalLinksChecked} internal links redirect-checked)`
+    `${langBlocksJudged} prose blocks language-checked; ${internalLinksChecked} internal links redirect-checked; ` +
+    `${inlineScriptDigests} inline script digests and ${cspHostsChecked} CSP hosts checked)`
 );
