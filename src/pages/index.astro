@@ -13,11 +13,27 @@
 // that redirects and names a canonical is a contradictory signal (keep this
 // out of the index vs. index the target), and the redirect already keeps it
 // out. The sitemap leaves `/` out (astro.config.mjs).
+//
+// Link unfurlers (WeChat, Slack, X) do not run the script or follow the meta
+// refresh, so they build the share card from this head alone. It therefore
+// carries the /en/ home's share tags, read from the same sources: the title
+// and description from `homeCopy.en` (which reads positioning.ts), og:url =
+// the canonical, and the default share image of src/layouts/Base.astro — the
+// same `getImage` transform, so it resolves to the same built file. Keep the
+// transform and alt text equal to Base.astro's `DEFAULT_IMAGE`.
+import { getImage } from 'astro:assets';
+import heroImage from '../assets/objectos-home-hero.png';
+import { homeCopy } from '../lib/home';
 import { homePath, LOCALES } from '../lib/i18n';
 
 const site = Astro.site?.toString().replace(/\/$/, '') ?? '';
 const absoluteUrl = (href: string): string =>
   site ? new URL(href, `${site}/`).toString() : new URL(href, Astro.url).toString();
+const share = homeCopy.en;
+const shareUrl = absoluteUrl(homePath('en'));
+const shareImage = await getImage({ src: heroImage, width: 1200, height: 630, fit: 'cover', format: 'jpg', quality: 82 });
+const shareImageUrl = absoluteUrl(shareImage.src);
+const shareImageAlt = 'ObjectOS product surface connecting business data, applications, and AI agents';
 ---
 
 <!doctype html>
@@ -30,6 +46,19 @@ const absoluteUrl = (href: string): string =>
     {LOCALES.map((locale) => <link rel="alternate" hreflang={locale} href={absoluteUrl(homePath(locale))} />)}
     <link rel="alternate" hreflang="x-default" href={absoluteUrl(homePath('en'))} />
     <link rel="alternate" type="application/rss+xml" title="Articles · ObjectOS" href={absoluteUrl('/rss.xml')} />
+    <meta name="description" content={share.description} />
+    <meta property="og:title" content={share.title} />
+    <meta property="og:description" content={share.description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={shareUrl} />
+    <meta property="og:image" content={shareImageUrl} />
+    <meta property="og:image:alt" content={shareImageAlt} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={share.title} />
+    <meta name="twitter:description" content={share.description} />
+    <meta name="twitter:image" content={shareImageUrl} />
     <script is:inline>
       (function () {
         try {

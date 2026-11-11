@@ -1,0 +1,195 @@
+---
+import type { ContactPage } from '../content-pages/types';
+import { COMPANY_ADDRESS, COMPANY_NAME } from '../lib/legal';
+import { securityPath, type Locale } from '../lib/i18n';
+import { phraseHtml } from '../../scripts/lib/cjk-phrases.mjs';
+
+interface Props {
+  page: ContactPage;
+  locale: Locale;
+}
+
+const { page, locale } = Astro.props;
+// Links are written as /en/<route>/ in the content, like the evidence pages,
+// and localized here. The only routed target today is the security page;
+// /.well-known/security.txt has no locale and passes through.
+const localizeHref = (href: string): string => {
+  const match = href.match(/^\/en\/security\/(#.*)?$/);
+  return match ? `${securityPath(locale)}${match[1] ?? ''}` : href;
+};
+const ph = (text: string): string => phraseHtml(text, locale);
+---
+
+<article class="contact-page">
+  <header class="contact-hero">
+    <p class="eyebrow">{page.eyebrow}</p>
+    <h1 set:html={ph(page.heroTitle)} />
+    <p class="lead">{page.lead}</p>
+  </header>
+
+  <ul class="contact-groups" role="list">
+    {page.groups.map((group) => (
+      <li class="card contact-group" id={group.id}>
+        <h2 set:html={ph(group.title)} />
+        <p>{group.body}</p>
+        <a class="contact-email" href={`mailto:${group.email}`}>{group.email}</a>
+        {group.links && (
+          <p class="contact-links">
+            {group.links.map((link) => (
+              <a class="btn btn-ghost" href={localizeHref(link.href)}>{link.label}&nbsp;<span aria-hidden="true">→</span></a>
+            ))}
+          </p>
+        )}
+      </li>
+    ))}
+    {/* The sixth cell: who the five addresses belong to, quoted from
+        src/lib/legal.ts. It completes the 3x2 and 2x3 grids. */}
+    <li class="card contact-group contact-company">
+      <h2 id="company-title" set:html={ph(page.company.title)} />
+      <dl>
+        <div>
+          <dt>{page.company.nameLabel}</dt>
+          <dd lang="en">{COMPANY_NAME}</dd>
+        </div>
+        <div>
+          <dt>{page.company.addressLabel}</dt>
+          <dd lang="en"><address>{COMPANY_ADDRESS}</address></dd>
+        </div>
+      </dl>
+    </li>
+  </ul>
+</article>
+
+<style>
+  /* Base.astro tokens only: .card is the shared box, --green the eyebrow,
+     --ink the addresses (the action on this page). */
+  .contact-page :global(h1),
+  .contact-page :global(h2),
+  .contact-page :global(p) {
+    margin-top: 0;
+  }
+  .contact-hero {
+    padding: var(--sp-2) 0 var(--sp-7);
+  }
+  h1,
+  h2 {
+    font-family: var(--font-display);
+    letter-spacing: 0;
+    text-wrap: balance;
+  }
+  h1:lang(zh),
+  h1:lang(ja),
+  h1:lang(ko),
+  h2:lang(zh),
+  h2:lang(ja),
+  h2:lang(ko) {
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+  h1 {
+    max-width: var(--measure-wide);
+    margin-bottom: var(--sp-5);
+    font-size: var(--fs-h1);
+    line-height: var(--lh-display);
+    letter-spacing: -0.01em;
+  }
+  .lead {
+    max-width: var(--measure-prose);
+    margin-bottom: 0;
+    color: var(--ink-soft);
+    font-size: var(--fs-17);
+    line-height: var(--lh-prose);
+  }
+  .contact-groups {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--sp-4);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .contact-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-3);
+    min-width: 0;
+    padding: var(--sp-5);
+  }
+  .contact-group h2 {
+    margin-bottom: 0;
+    font-size: var(--fs-20);
+    line-height: var(--lh-heading);
+  }
+  .contact-group p {
+    margin-bottom: 0;
+    color: var(--ink-soft);
+    font-size: var(--fs-15);
+    line-height: var(--lh-body);
+  }
+  /* The address is the action: last in the card's text, pushed to the bottom
+     so the five addresses line up across a row. */
+  .contact-email {
+    margin-top: auto;
+    padding-top: var(--sp-2);
+    color: var(--ink);
+    font-size: var(--fs-16);
+    font-weight: 700;
+    line-height: var(--lh-ui);
+    overflow-wrap: anywhere;
+    text-decoration: underline;
+    text-decoration-color: var(--line);
+    text-underline-offset: 0.2em;
+  }
+  .contact-email:hover {
+    color: var(--brand);
+    text-decoration-color: currentColor;
+  }
+  .contact-group p.contact-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-2) var(--sp-5);
+  }
+  .contact-company dl {
+    display: grid;
+    gap: var(--sp-3);
+    margin: 0;
+  }
+  .contact-company dl > div {
+    display: grid;
+    gap: var(--sp-1);
+  }
+  .contact-company dt {
+    color: var(--muted);
+    font-size: var(--fs-12);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .contact-company dt:is(:lang(zh), :lang(ja), :lang(ko)) {
+    letter-spacing: 0.04em;
+    text-transform: none;
+  }
+  .contact-company dd {
+    margin: 0;
+    color: var(--ink);
+    font-size: var(--fs-15);
+    line-height: var(--lh-body);
+    overflow-wrap: anywhere;
+  }
+  .contact-company address {
+    font-style: normal;
+  }
+  @media (max-width: 960px) {
+    .contact-groups {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 640px) {
+    .contact-hero {
+      padding-bottom: var(--sp-6);
+    }
+    .contact-groups {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>

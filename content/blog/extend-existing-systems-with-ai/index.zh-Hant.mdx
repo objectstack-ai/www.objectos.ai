@@ -4,7 +4,7 @@ title: 給現有系統加 AI：連線資料庫，而不是先遷移
 description: 在自管部署的 ObjectOS（企業版）裡，把已經執行的資料庫接入（預設只讀），讓 agent 把關鍵資料表建模為物件，再在你的權限邊界內疊加 AI 能力；原系統繼續執行，AI 走受控物件層。
 author: ObjectStack Team
 date: 2026-05-30
-updated: 2026-10-15T10:00:00+08:00
+updated: 2026-10-29T10:00:00+08:00
 status: published
 topic: integration-data
 audience: general
@@ -12,7 +12,7 @@ cover: ./cover.jpg
 tags: []
 # 原文（規範）地址 —— 所有轉載都應指回這裡。
 # canonical_url: https://your-domain.com/blog/extend-existing-systems-with-ai
-# 這篇文章對外發布到了哪些平臺（會顯示在看板上）。
+# 這篇文章對外發布到了哪些平台（會顯示在看板上）。
 # channels:
 #   - platform: own-blog
 #     url: https://your-domain.com/zh/blog/extend-existing-systems-with-ai
@@ -21,7 +21,7 @@ tags: []
 
 **先給結論**：讓現有系統支援 AI，不必先遷移或重建——把 ObjectOS 連到你正在跑的資料庫，讓 agent 在你的權限之下讀懂真實資料、疊加 AI，優先連線，而不是先重建。
 
-大多數"給你的業務加上 AI"的說辭，都悄悄假設了一次重建：把資料搬到新平臺、
+大多數"給你的業務加上 AI"的說辭，都悄悄假設了一次重建：把資料搬到新平台、
 重新實現工作流、重新培訓團隊，然後祈禱遷移順利落地。而這正是沒人想做的部分。
 那套記錄系統 —— CRM、ERP、工單工具、自研的後辦公系統 —— 已經在運轉，資料
 也已經在那裡。
@@ -62,29 +62,32 @@ AI 的物件與權限邊界。
 
 ### 1. 將資料庫連線為資料來源
 
-資料來源是一個具名連線 —— Postgres、MySQL、MongoDB、SQLite。憑據來自環境
-變數，絕不寫死在原始碼裡。如果你想先做分析，把它指向只讀副本或只讀資料庫
-使用者，寫入便根本無從發生。
+資料來源是一個具名連線 —— Postgres、MySQL、MongoDB、SQLite。連線資訊來自環境
+變數；密碼則從不內聯 —— 既不寫在原始碼裡，也不寫進 `config`。它加密存放在金鑰
+儲存中，資料來源只攜帶儲存為它簽發的不透明控制代碼 `external.credentialsRef`。如果
+你想先做分析，把它指向只讀副本或只讀資料庫使用者，寫入便根本無從發生。
 
 ```ts
-import type { Datasource } from '@objectstack/spec';
+import { defineDatasource } from '@objectstack/spec/data';
 
-export const BusinessDb: Datasource = {
+export const BusinessDb = defineDatasource({
   name: 'business_primary',
   label: 'Business System (Postgres)',
   driver: 'postgres',
   config: {
-    connection: {
-      host: process.env.BIZ_DB_HOST,
-      user: process.env.BIZ_DB_USER,
-      password: process.env.BIZ_DB_PASSWORD,
-      database: process.env.BIZ_DB_NAME,
-    },
+    host: process.env.BIZ_DB_HOST,
+    database: process.env.BIZ_DB_NAME,
+    username: process.env.BIZ_DB_USER,
   },
+  external: { credentialsRef: process.env.BIZ_DB_CREDENTIALS_REF },
   pool: { min: 1, max: 10 },
   active: true,
-};
+});
 ```
+
+`defineDatasource` 在檔案載入時就按 Postgres 驅動自己的配置 schema 校驗這份
+宣告，所以拼錯的鍵（把 `username` 寫成 `user`）或內聯的 `password` 會當場報錯，
+不必等到連線時才暴露。
 
 ### 2. 將資料表建模為物件 —— 交給編碼 Agent
 
@@ -157,23 +160,23 @@ Postgres 上以 `SELECT … WHERE …` 執行，並基於真實、當前的資�
 
 ## 為什麼這是安全的
 
-對"在我們的業務資料上跑 AI"的質疑總是關於治理，而這恰恰是執行時發揮作用的
+對"在我們的業務資料上跑 AI"的質疑總是關於治理，而這恰恰是執行環境發揮作用的
 地方：
 
 - **AI 以使用者身份行動，絕不凌駕其上。** Agent 看到的，恰好是它背後那個人被
-  允許看到的內容 —— 物件級、記錄級、欄位級權限由執行時強制，而非由提示詞約束。
+  允許看到的內容 —— 物件級、記錄級、欄位級權限由執行環境強制，而非由提示詞約束。
 - **如果你願意，預設只讀。** 把物件繫結到只讀連線或只讀資料庫使用者。安全地
   分析生產資料；再有意識地、一個物件一個物件地開啟寫入。
 - **一切皆有審計。** 每一次讀取、寫入和提權 —— 無論來自人還是 Agent ——
   都記錄下何人、何事、何時、何因。
 - **你的資料留在你的網路裡。** 自管部署時（ObjectOS Enterprise），ObjectOS 跑在
-  你的環境中；運行同一份本體的開源 ObjectStack 執行時也是如此。業務資料留在你的
+  你的環境中；運行同一份本體的開源 ObjectStack 執行環境也是如此。業務資料留在你的
   資料庫裡；提示詞只會發給你配置的 AI 提供方（ObjectOS Cloud 則代為執行模型），
   模型能看到什麼由權限決定。
 
 ## 重建 vs. 連線
 
-| | 重建到新平臺 | 用 ObjectOS 連線 |
+| | 重建到新平台 | 用 ObjectOS 連線 |
 |---|---|---|
 | **首次見效時間** | 數月 | 從少量物件開始，逐步擴充 |
 | **對記錄系統的風險** | 高 —— 資料遷移、雙寫、切換上線 | 低 —— 先只讀連線，源應用繼續執行 |
@@ -182,6 +185,8 @@ Postgres 上以 `SELECT … WHERE …` 執行，並基於真實、當前的資�
 | **權限** | 重建並重新審計 | 繼承；AI 遵守同一套模型 |
 | **可逆性** | 難以撤銷 | 斷開資料來源 —— 什麼都沒變 |
 
+連線是給要留下來的系統用的。當一個系統終於下線、只剩下一份匯出檔案時，[通過命名對映匯入那份電子表格](/zh-Hant/blog/how-to-import-a-spreadsheet-from-an-old-system/)就是裝載這一步——先試執行、簽字，再讓任何一行落地。
+
 ## 第一天你就能得到什麼
 
 一旦幾張表被建模並繫結：
@@ -189,7 +194,7 @@ Postgres 上以 `SELECT … WHERE …` 執行，並基於真實、當前的資�
 - **自然語言分析**作用於即時記錄，經由 ObjectQL 計算 —— 而非一份過期的匯出。
 - **受治理的自動化。** 流程與動作讀取、並（在允許處）寫入同一批資料，每一步
   皆有審計。
-- **生成式 API 與控制台。** REST/GraphQL 端點與管理介面源自同一份後設資料 ——
+- **生成式 API 與控制台。** REST/GraphQL 端點與管理介面源自同一份中繼資料 ——
   無需另建整合層。
 - **同一套權限模型。** 適用於人的邊界，同樣適用於 AI 流量。
 
@@ -204,7 +209,7 @@ Postgres 上以 `SELECT … WHERE …` 執行，並基於真實、當前的資�
 [ADR-0015](https://github.com/objectstack-ai/objectstack/blob/main/docs/adr/0015-external-datasource-federation.md)
 現在是 **Accepted**（後端、REST 與 CLI 均已實現），
 [ADR-0062](https://github.com/objectstack-ai/objectstack/blob/main/docs/adr/0062-external-datasource-runtime.md)
-則是其執行時那一半的規範決策。具體來說：
+則是其執行環境那一半的規範決策。具體來說：
 
 - **schema 匯入是一條命令，而不是一個專案。**
   `os datasource list-tables <name>` 列出遠端的表，
@@ -236,7 +241,7 @@ ADR-0015 上仍未完成的，是聯邦的 Studio 介面，以及更多 SQL 方�
 使用者，寫入便不可能發生；準備好後，再有意識地、按物件開啟寫入。
 
 **我的資料會發給模型廠商嗎？** 自管部署（ObjectOS Enterprise）或開源 ObjectStack
-執行時跑在你的環境中，查詢在你的資料庫上執行，AI 提供方由你配置；ObjectOS Cloud
+執行環境跑在你的環境中，查詢在你的資料庫上執行，AI 提供方由你配置；ObjectOS Cloud
 則代為執行模型。無論哪個版本，模型能看到什麼都由權限決定。
 
 **如果我的 schema 變了怎麼辦？** 針對更新後的 schema 重新執行編碼 Agent，

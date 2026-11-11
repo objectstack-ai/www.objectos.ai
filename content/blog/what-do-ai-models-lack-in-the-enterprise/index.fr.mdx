@@ -1,0 +1,181 @@
+---
+title: "Que manque-t-il aux modèles d’AI en entreprise ? Un monde, des mains et une clôture"
+description: "Pas l’intelligence. En entreprise, un modèle manque d’un monde pour raisonner, de mains pour agir et d’une clôture autour de l’action. Une ontologie métier exécutable fournit les trois ; un tableau sourcé donne chaque mécanisme."
+author: ObjectStack Team
+date: 2026-11-04
+status: published
+topic: ai-agents
+audience: it
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Agents AI
+  - Ontologie métier exécutable
+  - MCP
+  - Permissions des agents
+---
+
+**Monde.** Ce qui existe dans cette entreprise, comment chaque chose est typée, et comment les choses se relient.
+
+**Mains.** Les opérations qu’un agent peut effectuer sur ce monde, offertes comme des outils qu’il peut appeler.
+
+**Clôture.** Qui peut faire quoi, décidé à chaque appel plutôt qu’une fois pour toutes, et consigné après coup.
+
+Voilà les trois choses qui manquent à un modèle d’AI quand il arrive dans une entreprise, et l’intelligence n’est pas sur la liste. La phrase est d’ObjectStack, écrite pour la section « 00 · The idea » de sa page d’accueil : <span lang="en">"What the model lacks is not intelligence: a world, hands, and a fence."</span> (Ce qui manque au modèle n’est pas l’intelligence : un monde, des mains et une clôture.) Cet article pose l’affirmation plus étroite et vérifiable qui se trouve derrière : une ontologie métier exécutable fournit les trois à partir d’un seul artefact, et chaque fourniture correspond à un mécanisme nommé du runtime, lisible dans le code source. Le tableau ci-dessous est cette correspondance, avec fichier et ligne pour chaque cellule. Ensuite : ce qu’est chaque fourniture, un chiffre mesuré sur l’exemple de CRM fourni, l’alternative la plus forte exposée équitablement, et ce que rien de tout cela ne résout.
+
+## D’où vient la phrase
+
+Du 2026-10-12 au 2026-10-27, la page d’accueil d’objectstack.ai énonçait l’idée en trois phrases, conservées mot pour mot dans le code de la page (`apps/docs/app/[lang]/page.tsx`, lignes 127–131 au commit `712361b7`, celui qui a ajouté la section ; le commentaire qui les précède dit « verbatim from the maintainer's ruling », c’est-à-dire reprises telles quelles de la décision du mainteneur) :
+
+<blockquote lang="en">
+An enterprise is definition plus execution. When execution is nearly free, it is its definition.
+
+What the model lacks is not intelligence: a world, hands, and a fence.
+
+An ontology written clearly enough is software. Models change; the ontology stays.
+</blockquote>
+
+(Une entreprise, c’est une définition plus une exécution. Quand l’exécution ne coûte presque plus rien, l’entreprise est sa définition. Ce qui manque au modèle n’est pas l’intelligence : un monde, des mains et une clôture. Une ontologie écrite assez clairement est un logiciel. Les modèles changent ; l’ontologie reste.)
+
+Une note sur la provenance, parce que cet article lit toutes ses autres sources à une seule version étiquetée. La refonte qui a fait d’objectstack.ai le site des développeurs (`61c07986`, 2026-10-27) a retiré la section, si bien qu’au tag `@objectstack/cli@18.3.0` les trois phrases ne sont plus dans le dépôt. L’idée reste celle que le reste de cet article vérifie, et la vérification ne dépend pas de l’endroit où la phrase est imprimée.
+
+Lisez la phrase du milieu comme un diagnostic. Chaque pilote d’AI en entreprise connecte un modèle compétent à une société, puis découvre, incident après incident, que le modèle ne savait pas ce qu’était un « compte » dans cette société (pas de monde), qu’il ne pouvait pas réellement en modifier un (pas de mains), ou qu’il en a modifié un qu’il n’aurait pas dû toucher (pas de clôture). La réponse habituelle consiste à acheter chaque pièce manquante séparément : une couche de recherche documentaire pour le monde, une couche de function calling pour les mains, une couche de politiques pour la clôture. C’est une réponse raisonnable, et la seconde moitié de cet article lui rend justice. La première et la troisième phrase disent pourquoi ObjectStack prend un autre chemin : si la définition de l’entreprise est écrite assez précisément pour s’exécuter, alors cette même définition est le monde, déclare les mains et porte la clôture, et elle survit à n’importe quel modèle qui la lit ce trimestre.
+
+## Trois fournitures, un artefact
+
+La définition en une ligne du README d’ObjectStack est « Une ontologie métier exécutable. L’AI l’écrit, le runtime l’exécute, les agents l’opèrent, vous la possédez. » La page des concepts énumère son noyau en six sortes de choses : objets et champs, relations, actions, permissions, flux, et définitions d’agents et d’outils. L’affirmation de cet article est que ces six sortes se rangent dans les trois fournitures, et que le runtime transforme chacune en quelque chose que l’agent peut utiliser sans que personne n’écrive de colle. Voici la correspondance. Chaque source est un fichier de `objectstack-ai/objectstack` au tag `@objectstack/cli@18.3.0` (lu le 2026-11-04, la version que `npm create objectstack@latest` installe ce jour-là), ou une page de sa documentation, construite depuis le même dépôt.
+
+| Ce qui manque au modèle | Fourni par (dans l’ontologie) | Le mécanisme du runtime, et où il est écrit |
+| :--- | :--- | :--- |
+| **Un monde** — les noms : quelles entités existent, comment chacune est typée, comment elles se relient | Objets et champs ; relations (deux des six sortes) | Une définition typée est compilée en `objectstack.json` ; le runtime en dérive le schéma de base de données, l’API REST et temps réel, l’interface de la Console et un serveur MCP (`ontology.mdx:64-70`). L’agent lit ce monde avec `list_objects` et `describe_object` (`connect-mcp.mdx:225-229`). |
+| **Des mains** — les verbes : ce qu’on peut faire de ces noms | Actions, flux, et les enregistrements eux-mêmes | L’application en cours d’exécution est un serveur MCP sur `/api/v1/mcp`, activé par défaut ; les objets sont exposés automatiquement, les actions s’inscrivent avec `ai: { exposed: true }` (`README.md:136-151`). Cette inscription est un champ du schéma dont la valeur par défaut est `false` et qui exige une description destinée au LLM d’au moins 40 caractères (`action.zod.ts:815-822`). |
+| **Une clôture** — qui peut faire quoi, sur quelles lignes et quels champs, vérifié à chaque appel et consigné | Permissions, sécurité au niveau des lignes et des champs, partage, audit | La sécurité est un middleware enregistré sur le moteur ObjectQL, si bien que chaque opération du moteur le traverse (`security-plugin-authz-middleware.ts:4-7`). Les outils MCP s’exécutent sous le principal de l’appelant, par <span lang="en">"the SAME permission/RLS-enforcing path the REST API uses"</span> (le MÊME chemin d’application des permissions et du RLS que l’API REST) (`mcp-http-tools.ts:7-11`). Les lignes d’audit sont écrites par des hooks du moteur à chaque insertion, mise à jour et suppression (`audit-writers.ts:2435-2440`). |
+
+Où se trouvent les fichiers, pour pouvoir ouvrir les citations : `README.md` à la racine du dépôt ; `ontology.mdx` sous `content/docs/concepts/` et `connect-mcp.mdx` sous `content/docs/ai/` ; `action.zod.ts` dans `packages/spec/src/ui/` ; `security-plugin-authz-middleware.ts` dans `packages/plugins/plugin-security/src/` ; `mcp-http-tools.ts` dans `packages/mcp/src/` ; `audit-writers.ts` dans `packages/plugins/plugin-audit/src/`. Les numéros de ligne sont ceux du tag.
+
+La page des concepts condense la colonne de droite en une phrase qui mérite d’être gardée entière : le runtime <span lang="en">"enforces the definition on every call. RBAC, row-level and field-level security, sharing, and audit apply to a REST request, a Console click and an agent's tool call alike. Nothing is reasoned over at runtime: what runs is what was validated."</span> (applique la définition à chaque appel. Le RBAC, la sécurité au niveau des lignes et des champs, le partage et l’audit s’appliquent de la même façon à une requête REST, à un clic dans la Console et à l’appel d’outil d’un agent. Rien n’est inféré à l’exécution : ce qui tourne est ce qui a été validé.)
+
+![Une ontologie métier exécutable, compilée d’objectstack.config.ts en objectstack.json, fournit trois choses : un monde (objets, champs et relations, dont le runtime dérive la base de données, l’API et l’outil describe_object), des mains (actions inscrites avec ai exposed true, flux et enregistrements, servis comme outils MCP sur /api/v1/mcp) et une clôture (jeux de permissions, sécurité au niveau des lignes et des champs, partage et audit, appliqués par le middleware de sécurité à chaque appel du moteur et consignés par les hooks d’audit)](./three-supplies-en.svg)
+
+Le reste de l’article parcourt les trois lignes.
+
+## Le monde : une définition que le runtime lit aussi
+
+Le monde d’un modèle doit satisfaire deux lecteurs à la fois. Le modèle en a besoin assez petit et explicite pour le tenir en entier ; le runtime en a besoin assez précis pour l’exécuter. Les documents satisfont le premier lecteur et pas le second : un PDF de procédure retrouvé par la recherche dit au modèle ce qu’est une opportunité, et rien ne vérifie que la base de données est d’accord.
+
+Le monde d’une ontologie exécutable est la définition typée elle-même. La page des concepts : l’ontologie <span lang="en">"is the definition of your business that the runtime executes: authored as typed metadata in `objectstack.config.ts`, compiled into the `objectstack.json` artifact."</span> (est la définition de votre entreprise que le runtime exécute : rédigée en métadonnées typées dans `objectstack.config.ts`, compilée dans l’artefact `objectstack.json`.) Les objets et les champs déclarent les entités et leurs attributs typés ; les relations déclarent les recherches et les liens maître-détail. Le runtime dérive les tables et les points d’accès de cette définition, et l’outil `describe_object` du serveur MCP répond à partir de la même définition. Le monde que lit l’agent est donc, par construction, le monde qui tourne. Il n’y a pas de seconde description qui puisse dériver.
+
+Deux conséquences s’ensuivent, et toutes deux sont déjà argumentées ailleurs sur ce blog, on les désigne donc plutôt que de les répéter. D’abord, le monde est borné : les vues, les tableaux de bord, les applications et les traductions sont des projections de l’ontologie, pas une partie d’elle, et c’est ce qui permet à un agent de raisonner sur l’entreprise à partir du noyau plutôt qu’à partir de chaque écran ([l’article de définition](/fr/blog/what-does-the-ontology-is-the-software-mean/) contient le test de suppression pour distinguer les deux). Ensuite, le monde est validé avant de tourner : `os validate` rejette une définition qui passe le contrôle de types mais échouerait silencieusement à l’exécution, y compris une posture de sécurité manquante, si bien que le monde remis à un agent a déjà été refusé une fois pour chaque référence pendante qu’il contenait.
+
+## Les mains : des outils que l’auteur a armés, pas des outils que le modèle a devinés
+
+Les mains sont la partie que la plupart des piles d’AI en entreprise ont déjà, sous la forme du function calling. La différence qu’apporte une ontologie exécutable tient à qui décide quelles mains existent.
+
+Les objets viennent avec des mains par défaut. Comme la définition est typée, le runtime la sert comme serveur MCP : <span lang="en">"Objects are tools, actions are tools, permissions decide what an agent may call, and audit records what it did"</span> (Les objets sont des outils, les actions sont des outils, les permissions décident de ce qu’un agent peut appeler, et l’audit consigne ce qu’il a fait) (`README.md:138-139`). La page connect-mcp énumère ce qu’un agent obtient comme <span lang="en">"Twelve tools, generated from your metadata"</span> (douze outils, générés à partir de vos métadonnées) : découverte (`list_objects`, `describe_object`, `validate_expression`), lectures (`query_records`, `get_record`, `aggregate_records`), écritures (`create_record`, `update_record`, `delete_record`) et actions (`list_actions`, `run_action`, `resume_run`). Personne n’écrit de définition d’outil pour un nouvel objet ; l’objet est l’outil.
+
+Les actions ne viennent pas avec des mains par défaut, et c’est la partie délibérée. Une action ne devient appelable par un agent que lorsque son auteur pose `ai: { exposed: true }` et écrit la description d’après laquelle le modèle la choisira. Le commentaire du schéma dans `action.zod.ts` dit pourquoi : <span lang="en">"This is a deliberate governance gate: in an AI-authoring world the platform's value is that a human can govern exactly which capabilities the agent fleet is allowed to invoke — a half-finished or unreviewed action must never be silently armed."</span> (C’est une porte de gouvernance délibérée : dans un monde où l’AI écrit, la valeur de la plateforme est qu’un humain peut gouverner exactement quelles capacités la flotte d’agents a le droit d’invoquer — une action inachevée ou non relue ne doit jamais être armée en silence.) Le plus petit exemple fourni, l’application de tâches, en arme une ainsi (`examples/app-todo/src/actions/task.actions.ts`, les clés propres à l’interface retirées) :
+
+```ts
+export const CompleteTaskAction = defineAction({
+  name: 'complete_task',
+  label: 'Mark Complete',
+  objectName: 'todo_task',
+  type: 'script',
+  target: 'completeTask',
+  ai: {
+    exposed: true,
+    description: 'Mark a todo task as complete. Use when the user says a task is done or finished.',
+  },
+});
+```
+
+Le CRM fourni, lui, n’en arme aucune. Sa seule action, Convert Lead, est une action `flow` sans bloc `ai`, si bien qu’un agent connecté à cette application dispose de tous les outils de données sur ses six objets et reçoit une réponse vide de `list_actions`. Ce n’est pas une lacune de l’exemple ; c’est la règle à l’œuvre. Les mains sur la logique métier sont accordées par une ligne relue dans la définition, jamais supposées du fait qu’un bouton existe.
+
+Pourquoi les opérations d’écriture en particulier exigent cette unique définition gouvernée plutôt qu’un second chemin d’outils à côté de l’interface est le sujet de [l’article sur les actions de l’ontologie](/en/blog/objectos-action-tools/), et n’est pas répété ici.
+
+## La clôture : décidée à chaque appel, par le runtime
+
+Une clôture qui vit dans le prompt est une demande. Une clôture qui vit dans un service de politiques devant les outils est une porte sur les appels. La clôture que porte une ontologie exécutable est sur le chemin des données lui-même, et cette distinction décide jusqu’où une erreur peut atteindre.
+
+Le mécanisme est un middleware. `plugin-security` enregistre son application sur le moteur ObjectQL (`ql.registerMiddleware(...)`, `security-plugin-authz-middleware.ts:2466`, exécuté depuis le `start()` du plugin), qui est le moteur par lequel passent toutes les lectures et écritures, que la requête vienne d’une route REST, d’un clic dans la Console ou d’un outil MCP. Le module des outils MCP dit dans son propre en-tête qu’il ne touche jamais directement le moteur de données : <span lang="en">"all reads/writes go through an injected McpDataBridge that the host wires to the SAME permission/RLS-enforcing path the REST API uses. This module owns the tool shape; the bridge owns execution + security."</span> (Toutes les lectures et écritures passent par un McpDataBridge injecté que l’hôte branche sur le MÊME chemin d’application des permissions et du RLS que l’API REST. Ce module possède la forme des outils ; le pont possède l’exécution et la sécurité.) Il n’y a pas de clôture propre aux agents à garder synchronisée avec la clôture humaine, parce qu’il y a une seule clôture. Où exactement chaque contrôle s’exécute, et pourquoi filtrer la sortie du modèle arrive trop tard, est argumenté dans [où les permissions des agents sont appliquées](/en/blog/objectos-agent-permission-boundaries/).
+
+Trois propriétés de cette clôture méritent d’être nommées, parce qu’il en manque généralement au moins une aux piles alternatives.
+
+**Elle décide sur les lignes et les champs, pas seulement sur les appels.** Les jeux de permissions accordent la création, la lecture, la modification et la suppression au niveau de l’objet ; la sécurité au niveau des lignes filtre les enregistrements qu’un appelant peut voir ; la sécurité au niveau des champs masque les colonnes. Le contrat du service de sécurité énonce clairement la posture d’échec du filtre de lignes : <span lang="en">"Access-narrowing answers fail CLOSED ... a resolution failure returns a DENY filter (zero rows), never `undefined`"</span> (Les réponses qui restreignent l’accès échouent FERMÉES… un échec de résolution renvoie un filtre DENY (zéro ligne), jamais `undefined`) (`packages/spec/src/contracts/security-service.ts:28-31`). Un modèle qui demande tout obtient ce que son utilisateur peut voir.
+
+**Elle garde la logique métier séparément, parce que la logique n’a pas de filet.** Le CRUD des objets est borné par le RLS et le FLS sur chaque ligne. Le corps d’une action ne l’est pas : une fois invoqué, il <span lang="en">"executes as TRUSTED app code,"</span> (s’exécute comme du code applicatif DE CONFIANCE), donc le pont <span lang="en">"gates at invoke time: `ai.exposed` (the author's explicit AI opt-in, ADR-0011) + the ADR-0066 D4 capability gate"</span> (place la porte au moment de l’invocation : `ai.exposed` (l’inscription explicite de l’auteur pour l’AI, ADR-0011) plus la porte de capacités ADR-0066 D4) (`mcp-http-tools.ts:1450-1455`). Les mains et la clôture se rencontrent exactement ici : la ligne qui arme une action est la ligne que la clôture vérifie.
+
+**Elle consigne.** Les rédacteurs d’audit sont des hooks du moteur sur `afterInsert`, `afterUpdate` et `afterDelete` (`audit-writers.ts:2435-2440`), si bien qu’une ligne modifiée par le `update_record` d’un agent arrive dans le journal d’audit de la même façon qu’une ligne modifiée dans la Console, avec l’identité qui a agi. La quatrième porte du README résume la conséquence en une ligne : <span lang="en">"The runtime enforces permissions and audit on every call, so even a wrong app stays inside the fence."</span> (Le runtime applique les permissions et l’audit à chaque appel, de sorte que même une application erronée reste à l’intérieur de la clôture.)
+
+## Mesuré sur le CRM fourni
+
+Un chiffre, pris sur `examples/app-crm` au tag `@objectstack/cli@18.3.0` et compté comme le README compte l’application : le TypeScript sous `src/`, tests exclus. Le chiffre du README lui-même, 1 873 lignes, porte la marque d’un commit antérieur (`95294be3`) ; des 213 lignes gagnées depuis par l’application, 178 sont des traductions :
+
+```bash
+find examples/app-crm/src -name '*.ts' -not -name '*.test.ts' | xargs cat | wc -l
+# 2086
+```
+
+**2 086 lignes dans 30 fichiers**, c’est toute l’application. En rangeant ses répertoires dans les trois fournitures :
+
+| Fourniture | Répertoire | Lignes | Ce qu’il contient |
+| :--- | :--- | ---: | :--- |
+| Monde | `src/objects/` | 516 | Six objets (compte, contact, lead, opportunité, ligne d’opportunité, activité) avec leurs champs et leurs recherches |
+| Mains | `src/actions/` + `src/flows/` | 240 | Une action, Convert Lead, et le flux d’écrans qu’elle lance |
+| Clôture | `src/security/` | 99 | `sales-positions.ts` en fait 89 : deux jeux de permissions, trois positions, chaque position nommant les jeux qu’elle distribue |
+| Plomberie | enregistrement d’outils, middleware d’autorisation, code d’audit | 0 | Une recherche de `registerTool`, `middleware`, `authoriz`, `checkPermission` et `audit` dans `src/` trouve quatre occurrences, toutes dans des commentaires |
+
+Le reste, ce sont des projections (des vues, un tableau de bord, une application, une page, des traductions, un jeu de données analytique) et des données d’amorçage, dont cet article ne traite pas.
+
+Appelons le chiffre principal **89 lignes de clôture**. C’est toute la déclaration d’autorisation d’un CRM à six objets, et ces mêmes 89 lignes gouvernent l’API REST, la Console et les douze outils MCP, parce que les trois atteignent les données par le moteur sur lequel la clôture est montée. Le chiffre complémentaire est le zéro : l’application déclare son monde, ses mains et sa clôture, et ne contient aucun code qui relie l’un d’eux au modèle. Le câblage appartient au runtime, et c’est tout le contenu de l’expression « un artefact ».
+
+Deux notes honnêtes sur la mesure. Les 89 lignes sont la déclaration propre de l’application ; le filtre de lignes et le masquage de champs qu’elles impliquent sont calculés par le runtime à partir du `sharingModel` de chaque objet et de ces jeux de permissions, si bien que « la clôture » du système en fonctionnement est plus grande que sa déclaration, comme il se doit. Et ce CRM, comme dit plus haut, n’expose aucune action à l’AI, si bien que ses mains sur la logique métier sont à zéro tant qu’un auteur n’en arme pas une.
+
+## L’alternative, exposée équitablement
+
+La façon courante de fournir les trois choses est une pile : une recherche documentaire sur les documents et les schémas pour le monde, du function calling (ou un serveur d’outils que vous écrivez) pour les mains, et un moteur de politiques ou une passerelle devant les outils pour la clôture. Elle mérite d’être entendue équitablement, parce que c’est la bonne réponse dans plusieurs situations.
+
+Elle fonctionne avec les systèmes que vous exploitez déjà. Rien n’est migré ; le moteur de recherche indexe ce qui existe et les outils enveloppent des API qui existent déjà. Chaque couche est la meilleure de sa catégorie et interchangeable, si bien qu’un meilleur moteur de recherche ou un moteur de politiques plus strict peut être inséré sans toucher aux autres. Les schémas sont bien compris, les fournisseurs nombreux, et une équipe qui possède déjà une passerelle d’outils a l’essentiel de la clôture en place. Pour un agent dont le travail est de lire à travers une douzaine de systèmes hérités et de n’écrire dans aucun, cette pile est probablement ce que vous voulez, et une ontologie exécutable par-dessus ces systèmes est en lecture seule et encore jeune.
+
+Ce qu’elle ne résout pas, c’est ce dont parle la première phrase de la page d’accueil : les trois fournitures sont trois artefacts, avec trois propriétaires, et rien ne vérifie qu’ils concordent.
+
+| | RAG + function calling + une couche de politiques | Une ontologie exécutable |
+| :--- | :--- | :--- |
+| **Monde** | Un corpus que le modèle lit ; les systèmes ne le lisent pas | La définition que le runtime exécute ; `describe_object` répond à partir d’elle |
+| **Mains** | Des schémas d’outils écrits à la main, un par opération, maintenus à côté des systèmes | Les objets sont des outils automatiquement ; les actions s’inscrivent par une ligne relue |
+| **Clôture** | Une porte sur les appels d’outils, généralement avec l’autorité d’un compte de service derrière chaque outil | Un middleware sur le chemin des données, sous les permissions de l’utilisateur appelant, lignes et champs compris |
+| **Dérive** | Trois descriptions de l’entreprise, chacune pouvant se périmer | Un artefact, validé avant de tourner |
+| **Audit** | L’appel est journalisé ; le changement de ligne est le problème du système en aval | Le changement de ligne est journalisé avec l’identité, sur chaque chemin |
+
+La ligne de la clôture est celle qui compte le plus dans un incident. Une couche de politiques devant un outil `get_customer` peut décider si l’agent a le droit de l’appeler. Elle ne peut généralement pas décider quelles lignes l’utilisateur de l’agent a le droit de voir dans le résultat, parce que l’outil s’exécute avec l’identifiant qu’on a donné à l’intégration. La sécurité au niveau des lignes et des champs sur le chemin des données répond à cette question pour chaque appelant, et y répond de la même façon pour un humain et pour un agent.
+
+## Ce que cela ne résout pas
+
+Un article sur une clôture devrait dire où la clôture s’arrête.
+
+**Elle ne fournit pas le jugement.** La clôture rend un mauvais appel refusable et traçable ; elle ne rend pas l’appel juste. Un modèle peut toujours choisir le mauvais outil, mal lire un champ ou demander une action qu’il ne devrait pas vouloir. Le monde et la clôture bornent les dégâts. L’intelligence, ce que le modèle apporte réellement, reste ce qui choisit.
+
+**La porte d’inscription garde les portes que le runtime possède.** La porte `ai.exposed` est appliquée à la porte des actions atteinte depuis l’outil MCP `run_action`. La note de la spécification elle-même est explicite : <span lang="en">"REST `/actions` is NOT `ai.exposed`-gated and sits OUTSIDE this gate, so a human in front of that route is still yours to arrange"</span> (REST `/actions` n’est PAS gardé par `ai.exposed` et se trouve EN DEHORS de cette porte, si bien que placer un humain devant cette route reste à votre charge) (`packages/spec/src/ai/tool.zod.ts:95-98`). Les permissions s’appliquent toujours sur cette route ; l’inscription AI, non.
+
+**L’audit en lecture est plus étroit que l’audit en écriture.** Chaque insertion, mise à jour et suppression est consignée. Consigner les consultations du détail d’un enregistrement est une inscription par objet, et les résultats de listes et de recherches ne sont pas audités (`packages/plugins/plugin-audit/src/audit-plugin.ts:49-68`). Un agent qui lit largement laisse une trace plus petite qu’un agent qui écrit.
+
+**Le monde, ce sont les applications que le runtime exécute.** Pour les systèmes qu’il n’exécute pas, fédérer une source de données externe est en lecture seule par défaut et décrit comme encore jeune. Les trois fournitures couvrent ce que l’ontologie exécute ; le reste du parc a toujours besoin de la pile ci-dessus, ou d’une migration.
+
+**Une action exposée est du code de confiance.** L’outil `run_action` le dit au modèle dans sa propre description : le corps de l’action <span lang="en">"runs as trusted application code with the app's full data authority."</span> (s’exécute comme du code applicatif de confiance avec toute l’autorité de l’application sur les données.) Armer une action est donc une décision de relecture, pas un interrupteur, et `requiresConfirmation: true` existe pour celles qui devraient d’abord demander à un humain.
+
+## Hébergé, ou sur votre propre infrastructure
+
+Tout ce qui précède est la pile ouverte, Apache-2.0, dans un seul dépôt : la définition est un fichier que vous détenez. Pour l’exécuter, le dépôt ObjectStack fournit ObjectOS Community — l’image ghcr.io/objectstack-ai/objectstack, os start et la Console, gratuite et auto-hébergée — tandis qu’ObjectOS Cloud est l’édition hébergée et ObjectOS Enterprise l’édition autogérée, sous licence. (C’est la traduction de la phrase du README au tag, `README.md:26-31`.) ObjectOS existe en trois éditions : ObjectOS Community, open source et gratuite à auto-héberger ; ObjectOS Cloud, hébergée dans le navigateur, sans rien installer ; et ObjectOS Enterprise, autogérée sur votre propre infrastructure. Votre ontologie est faite de métadonnées ObjectStack ordinaires. Son export depuis ObjectOS Cloud ou ObjectOS Enterprise, pour l’exécuter sur le runtime open source ObjectStack, est prévu. Les trois fournitures font partie de ces métadonnées, et valent donc sur toute édition qui les exécute.
+
+## Pointez votre agent dessus
+
+Rien de tout cela n’exige de prendre la correspondance sur parole ; l’application en cours d’exécution la montrera à n’importe quel client MCP.
+
+1. Créez un projet avec `npm create objectstack@latest my-app`. Le scaffolder écrit un `AGENTS.md` et installe le bundle de skills, si bien qu’un agent de code démarre avec les règles du protocole chargées, et [how to point your agent at ObjectStack](/en/blog/how-to-point-your-agent-at-objectstack/) couvre le fichier de règles et le serveur d’outils.
+2. Demandez le monde à l’agent : quelques objets avec des champs et une recherche entre eux. Demandez-lui d’exécuter `npm run validate`, et lisez le diff avant la Console.
+3. Démarrez l’application avec `npx os dev --ui` et pointez n’importe quel client MCP sur `http://localhost:3000/api/v1/mcp`. L’agent se connecte comme un utilisateur, par le serveur OAuth du déploiement lui-même ou par une clé d’API, et `describe_object` renvoie le monde que vous venez de relire.
+4. Armez une main : donnez à une action `ai: { exposed: true }` avec une description, validez de nouveau, et regardez `list_actions` passer de vide à un.
+5. Testez la clôture avec un second utilisateur à qui manque une permission que le premier possède, et lisez le refus et la ligne d’audit.
+
+La page [Connect an MCP Client](https://objectstack.ai/docs/ai/connect-mcp) a la commande d’une ligne de chaque client, et la page [Business Ontology](https://objectstack.ai/docs/concepts/ontology) fait autorité sur la définition elle-même. Donnez les deux à votre agent. Le monde, les mains et la clôture sont dans le même fichier qu’il s’apprête à écrire.

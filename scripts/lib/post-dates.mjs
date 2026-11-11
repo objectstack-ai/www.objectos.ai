@@ -127,3 +127,47 @@ export function readPostLastmods(root) {
   }
   return lastmods;
 }
+
+/**
+ * The newest published post in `locale`: the first entry of
+ * `getPostsInLocale(locale)` (src/lib/posts.ts) — the first item of that
+ * locale's RSS feed and the first "Latest Articles" card on `/<locale>/blog/`
+ * (the hand-picked "Recommended" cards above it are not ordered by date).
+ *
+ * `scripts/post-deploy-probe.mjs` needs one post URL that a deploy of this
+ * commit must have put live, and it runs after the deploy job, where neither
+ * `dist/` nor the content collection API exists. So it is read here, from the
+ * same files and with the same id derivation as the `lastmod` map above.
+ *
+ * The ordering is the blog index's own (`getPostGroups` in src/lib/posts.ts):
+ * only `status: published` (the schema default when the key is absent), sorted
+ * by `date` descending, ties broken by slug descending with `localeCompare`.
+ * `date`, not `updated`: a revision does not reorder the blog, so it does not
+ * change which post is newest. The result depends only on the checked-out
+ * tree, never on the clock or on the directory listing order.
+ *
+ * @param {string} root Project root (the directory holding `content/`).
+ * @param {string} [locale] Locale whose index to read; English by default.
+ * @returns {{ slug: string, date: Date, path: string } | undefined}
+ *   `path` is "/<locale>/blog/<slug>/"; `undefined` when the locale has no
+ *   published post.
+ */
+export function readNewestPost(root, locale = 'en') {
+  const blogDir = path.join(root, 'content', 'blog');
+  let newest;
+  for (const file of walkMdx(blogDir)) {
+    const relative = path.relative(blogDir, file).split(path.sep).join('/');
+    const parsed = parseEntryId(entryId(relative));
+    if (parsed.locale !== locale) continue;
+    const data = frontmatter(readFileSync(file, 'utf8'), relative);
+    if ((data.status ?? 'published') !== 'published') continue;
+    const date = toDate(data.date, relative, 'date');
+    if (!date) throw new Error(`${relative}: frontmatter has no \`date\``);
+    const newer =
+      !newest ||
+      date.getTime() > newest.date.getTime() ||
+      (date.getTime() === newest.date.getTime() && parsed.slug.localeCompare(newest.slug) > 0);
+    if (newer) newest = { slug: parsed.slug, date };
+  }
+  return newest && { ...newest, path: `/${locale}/blog/${newest.slug}/` };
+}

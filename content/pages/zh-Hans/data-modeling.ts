@@ -11,7 +11,7 @@ const page = {
     lead:
       '以一个订阅计费系统为例：客户、套餐、席位、MRR、续约日、状态。这些对象、它们的字段，以及它们之间的关系，就是你的业务本体的核心；在开源 ObjectStack 运行时上，这个核心就是一份紧凑的定义——表、迁移、查询引擎和 REST 端点由运行时供给；你的 Agent 能写它，你的团队能在对象设计器里逐字段微调它，而在 ObjectOS 上，产品内 AI Builder 能从一句描述起草出同样的对象与字段。',
     primary: { label: '阅读数据建模文档', href: 'https://docs.objectos.ai/docs/build/data' },
-    secondary: { label: '查看流程自动化', href: '/en/automation/' },
+    secondary: { label: '查看应用界面', href: '/en/app-ui/' },
     metrics: [
       { value: '20+', label: '字段类型——文本、货币、百分比、lookup、公式、文件' },
       { value: '0', label: '手写端点——REST API 直接来自元数据' },
@@ -156,7 +156,7 @@ export const Subscription = ObjectSchema.create({
       {
         question: '这里哪些是开源的，ObjectOS 又加了什么？',
         answer:
-          '整个数据层都是开源的：对象、关系、校验、公式、迁移、查询引擎、REST API、文件存储，以及 Console 里的对象设计器、ER 图和数据源同步——Apache-2.0，开发与生产之间没有功能门槛。ObjectOS 加的是产品内 AI Builder：它的内置工具能从一段对话创建包与对象、增删改字段，并在生效前排队等人审批——在 Cloud 与 Enterprise（含单节点入门选项 Business Self-Managed）上提供。',
+          '整个数据层都是开源的：对象、关系、校验、公式、迁移、查询引擎、REST API、文件存储，以及 Console 里的对象设计器、ER 图和数据源同步——Apache-2.0，开发与生产之间没有功能门槛。ObjectOS 加的是产品内 AI Builder：它的内置工具能从一段对话创建包与对象、增删改字段，并在生效前排队等人审批——在 Cloud 与 Enterprise 上提供。',
       },
     ],
   } satisfies MarketingPage;

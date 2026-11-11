@@ -29,6 +29,9 @@ export const refundsPath = (l: Locale): string => `/${l}/refunds/`;
 /** Pricing page URL. */
 export const pricingPath = (l: Locale): string => `/${l}/pricing/`;
 
+/** Changelog page URL: /<locale>/changelog/. */
+export const changelogPath = (l: Locale): string => `/${l}/changelog/`;
+
 /** Article URL: /<locale>/blog/<baseSlug>. */
 export const postPath = (l: Locale, slug: string): string =>
   `/${l}/blog/${slug}/`;
@@ -85,7 +88,11 @@ export const LANG_NATIVE: Record<Locale, string> = {
   ko: '한국어',
 };
 
-type StatusKey = 'published' | 'archived';
+// The statuses a status pill labels. A production build renders only
+// `published` posts (src/lib/posts.ts), so a pill reading "Published" told a
+// reader nothing; only a post that would not ship gets a pill, in `astro dev`
+// or a CONTENT_INCLUDE_ARCHIVED build.
+type StatusKey = 'archived';
 
 interface Strings {
   siteName: string;
@@ -93,12 +100,22 @@ interface Strings {
     product: string;
     developers: string;
     resources: string;
-    docs: string;
+    /** docs.objectos.ai — the product documentation. */
+    productDocs: string;
+    /** objectstack.ai — the developer site: the open protocol, SDK, CLI and docs. */
+    developerDocs: string;
     menu: string;
     productTour: string;
     platform: string;
     aiBuildAsk: string;
+    /**
+     * The "Why ObjectOS" top-level group (its trigger in the bar and the drawer,
+     * and the footer column of the same name). Its entries are `compareFit`,
+     * `security`, `referenceStories`, `useCases` and `aiAdoption`.
+     */
     whyObjectOs: string;
+    /** /[lang]/compare/ — the first entry under Why ObjectOS, and its footer link. */
+    compareFit: string;
     /** The positioning pillar, /[lang]/ontology/ — first entry under Product → Evaluate. */
     ontology: string;
     dataModeling: string;
@@ -109,11 +126,37 @@ interface Strings {
     permissionsSecurity: string;
     groupEvaluate: string;
     groupCapabilities: string;
+    /**
+     * /[lang]/security/, the trust hub: the one menu entry for trust, under
+     * Why ObjectOS, and the footer's link to the same page.
+     */
+    security: string;
+    /**
+     * /[lang]/trust-center/. It has no menu entry of its own (it is a
+     * sub-section linked from `security`); the footer still names it.
+     */
     trustCenter: string;
+    /**
+     * The five Capabilities entries. Each names an existing capability page and
+     * stands for the pages folded under it: `capDataApps` opens data modeling
+     * (app interfaces folds under it), `capAutomationApprovals` opens process
+     * automation (approvals folds under it), `capAnalytics` opens analytics;
+     * `aiBuildAsk` and `toolsMcp` keep their page labels, and permissions sits
+     * under `security`. A folded page keeps its own label (`appInterfaces`,
+     * `approvals`, `permissionsSecurity`) for the footer and its parent page.
+     */
+    capDataApps: string;
+    capAutomationApprovals: string;
+    capAnalytics: string;
     toolsMcp: string;
-    agentGuide: string;
+    /** The Developers entry for /[lang]/agent-developer/ (and its footer link). */
+    startWithAgent: string;
     templates: string;
     referenceStories: string;
+    /** /[lang]/use-cases/ — the fourth entry under Why ObjectOS, and its footer link. */
+    useCases: string;
+    /** /[lang]/enterprise-ai-adoption/ — the fifth entry under Why ObjectOS, and its footer link. */
+    aiAdoption: string;
     glossary: string;
     /** Accessible name of the mobile drawer's close button. */
     close: string;
@@ -127,16 +170,56 @@ interface Strings {
     primaryNav: string;
     browseNav: string;
     mobileNav: string;
-    /** Accessible name of the home page's topic-cluster links. */
-    topicClusters: string;
+    /** Accessible name of the footer's navigation landmark (its four columns). */
+    footerNav: string;
+    /**
+     * Accessible name of the footer's Company & Legal row (Privacy, Terms,
+     * Refunds, llms.txt, RSS and GitHub), beside the brand line.
+     */
+    companyLegal: string;
+    /** /[lang]/blog/ — the first entry under Resources, and its footer link. */
+    blog: string;
+    /** The YouTube channel — an external entry under Resources, and its footer link. */
+    videos: string;
+    /** /[lang]/changelog/ — the release history; a footer link under Resources. */
+    changelog: string;
+    /**
+     * GitHub Discussions on objectstack-ai/objectstack (enabled there:
+     * `has_discussions`) — an external footer link under Resources.
+     */
+    community: string;
+    /**
+     * Label over the five pillar guides: the second column of the Resources
+     * panel, the drawer's sub-label and the footer's sub-label. It is a label,
+     * not a link — the guides have no index page.
+     */
+    guides: string;
+    /**
+     * Accessible name of the home page's own guides strip. It is not `guides`:
+     * two navigation landmarks with one name cannot be told apart (axe
+     * `landmark-unique`), and the footer is on the home page too.
+     */
+    featuredGuides: string;
+    /** /[lang]/forward-deployed-engineers/ — footer only, under Why ObjectOS. */
+    forFde: string;
+    /**
+     * Name and tooltip of a language-switcher option for a locale this article
+     * has no translation in; the option opens that locale's blog instead. It
+     * starts with the language's own name, which is the option's visible text.
+     */
+    langUnavailable: (lang: string) => string;
   };
   getStarted: string;
-  skipToContent: string;
   /**
-   * `platform` is the footer's short label; the header uses the longer
-   * `siteNav.platform`. Every other footer link reuses its `siteNav` label.
+   * The link to /contact/ (`CONTACT_URL`, #397): the footer's Why ObjectOS
+   * entry and the second button of the home page's closing CTA.
    */
-  footer: { terms: string; privacy: string; pricing: string; refunds: string; platform: string };
+  contactUs: string;
+  /** The ObjectOS Cloud sign-in link in the header, drawer and footer. */
+  signIn: string;
+  skipToContent: string;
+  /** The footer reuses every `siteNav` label (Platform overview included) for its links. */
+  footer: { terms: string; privacy: string; pricing: string; refunds: string };
   /** The 404 page (`src/pages/404.astro`, `src/pages/[lang]/404.astro`). */
   notFound: {
     title: string;
@@ -146,7 +229,6 @@ interface Strings {
     blog: string;
     pricing: string;
   };
-  all: string;
   audience: string;
   articlesTitle: string;
   articlesLead: (n: number) => string;
@@ -167,12 +249,14 @@ const en: Strings = {
     product: 'Product',
     developers: 'Developers',
     resources: 'Resources',
-    docs: 'Docs',
+    productDocs: 'Product docs',
+    developerDocs: 'Developer docs & protocol',
     menu: 'Menu',
     productTour: 'Product tour',
     platform: 'Platform overview',
     aiBuildAsk: 'AI Build & Ask',
     whyObjectOs: 'Why ObjectOS',
+    compareFit: 'Comparison & fit',
     ontology: 'Ontology',
     dataModeling: 'Data modeling',
     appInterfaces: 'App interfaces',
@@ -182,11 +266,17 @@ const en: Strings = {
     permissionsSecurity: 'Permissions & security',
     groupEvaluate: 'Evaluate',
     groupCapabilities: 'Capabilities',
+    security: 'Security & trust',
     trustCenter: 'Trust center',
+    capDataApps: 'Data & apps',
+    capAutomationApprovals: 'Automation & approvals',
+    capAnalytics: 'Analytics',
     toolsMcp: 'Tools & MCP',
-    agentGuide: 'Agent guide',
+    startWithAgent: 'Start with your agent',
     templates: 'Templates',
     referenceStories: 'Reference stories',
+    useCases: 'Use cases',
+    aiAdoption: 'AI adoption',
     glossary: 'Glossary',
     close: 'Close',
     theme: 'Theme',
@@ -195,11 +285,22 @@ const en: Strings = {
     primaryNav: 'Primary',
     browseNav: 'Browse',
     mobileNav: 'Mobile',
-    topicClusters: 'Topic clusters',
+    footerNav: 'Footer',
+    companyLegal: 'Company & Legal',
+    blog: 'Blog',
+    videos: 'Videos',
+    changelog: 'Changelog',
+    community: 'Community',
+    guides: 'Guides',
+    featuredGuides: 'Featured guides',
+    forFde: 'For FDE teams',
+    langUnavailable: (lang) => `${lang} — this article is not available in this language; opens the blog`,
   },
   getStarted: 'Get started',
+  contactUs: 'Contact us',
+  signIn: 'Sign in',
   skipToContent: 'Skip to content',
-  footer: { terms: 'Terms & License', privacy: 'Privacy', pricing: 'Pricing', refunds: 'Refunds', platform: 'Platform' },
+  footer: { terms: 'Terms & License', privacy: 'Privacy', pricing: 'Pricing', refunds: 'Refunds' },
   notFound: {
     title: 'Page not found',
     heading: 'This page does not exist.',
@@ -208,7 +309,6 @@ const en: Strings = {
     blog: 'Blog',
     pricing: 'Pricing',
   },
-  all: 'Home',
   audience: 'Audience',
   articlesTitle: 'Articles',
   articlesLead: (n) => `${n} ${n === 1 ? 'article' : 'articles'} on executable business ontologies, runtime governance, and agent-operated applications.`,
@@ -219,7 +319,7 @@ const en: Strings = {
   updated: 'Updated',
   empty: 'No articles yet.',
   relatedTitle: 'Related articles',
-  status: { published: 'Published', archived: 'Archived' },
+  status: { archived: 'Archived' },
 };
 
 const zhHans: Strings = {
@@ -228,12 +328,14 @@ const zhHans: Strings = {
     product: '产品',
     developers: '开发者',
     resources: '资源',
-    docs: '文档',
+    productDocs: '产品文档',
+    developerDocs: '开发者文档与协议',
     menu: '菜单',
     productTour: '产品导览',
     platform: '平台总览',
     aiBuildAsk: 'AI Build & Ask',
     whyObjectOs: '为什么选 ObjectOS',
+    compareFit: '对比与适用边界',
     ontology: '本体',
     dataModeling: '数据建模',
     appInterfaces: '应用界面',
@@ -243,11 +345,17 @@ const zhHans: Strings = {
     permissionsSecurity: '权限与安全',
     groupEvaluate: '评估',
     groupCapabilities: '平台能力',
+    security: '安全与信任',
     trustCenter: '信任中心',
+    capDataApps: '数据与应用',
+    capAutomationApprovals: '自动化与审批',
+    capAnalytics: '报表与分析',
     toolsMcp: '工具与 MCP',
-    agentGuide: 'Agent 开发指南',
+    startWithAgent: '从你的 Agent 开始',
     templates: '模板',
     referenceStories: '参考案例',
+    useCases: '使用场景',
+    aiAdoption: '企业 AI 落地',
     glossary: '术语表',
     close: '关闭',
     theme: '主题',
@@ -256,11 +364,22 @@ const zhHans: Strings = {
     primaryNav: '主导航',
     browseNav: '浏览',
     mobileNav: '移动端导航',
-    topicClusters: '专题导航',
+    footerNav: '页脚',
+    companyLegal: '公司与法律',
+    blog: '博客',
+    videos: '视频',
+    changelog: '更新日志',
+    community: '社区',
+    guides: '专题指南',
+    featuredGuides: '精选专题',
+    forFde: '面向驻场工程（FDE）团队',
+    langUnavailable: (lang) => `${lang}——本文暂无该语言版本，将打开该语言的博客`,
   },
   getStarted: '开始使用',
+  contactUs: '联系我们',
+  signIn: '登录',
   skipToContent: '跳到正文',
-  footer: { terms: '许可协议', privacy: '隐私政策', pricing: '定价', refunds: '退款政策', platform: '平台' },
+  footer: { terms: '条款与许可', privacy: '隐私政策', pricing: '定价', refunds: '退款政策' },
   notFound: {
     title: '页面不存在',
     heading: '这个页面不存在。',
@@ -269,10 +388,9 @@ const zhHans: Strings = {
     blog: '博客',
     pricing: '定价',
   },
-  all: '首页',
   audience: '受众',
   articlesTitle: '文章',
-  articlesLead: (n) => `${n} 篇关于构建 AI-native 软件的文章。`,
+  articlesLead: (n) => `${n} 篇关于可执行业务本体、运行时治理与 Agent 操作应用的文章。`,
   backToList: '全部文章',
   alsoOn: '同步发布于',
   references: '参考链接',
@@ -280,7 +398,7 @@ const zhHans: Strings = {
   updated: '更新于',
   empty: '还没有文章。',
   relatedTitle: '相关文章',
-  status: { published: '已发布', archived: '已归档' },
+  status: { archived: '已归档' },
 };
 
 const ja: Strings = {
@@ -289,12 +407,14 @@ const ja: Strings = {
     product: '製品',
     developers: '開発者',
     resources: 'リソース',
-    docs: 'Docs',
+    productDocs: '製品ドキュメント',
+    developerDocs: '開発者ドキュメントとプロトコル',
     menu: 'メニュー',
     productTour: 'プロダクトツアー',
     platform: 'プラットフォーム概要',
     aiBuildAsk: 'AI Build & Ask',
     whyObjectOs: 'ObjectOS を選ぶ理由',
+    compareFit: '比較と適合性',
     ontology: 'オントロジー',
     dataModeling: 'データモデリング',
     appInterfaces: 'アプリ画面',
@@ -304,11 +424,17 @@ const ja: Strings = {
     permissionsSecurity: '権限とセキュリティ',
     groupEvaluate: '検討',
     groupCapabilities: '機能',
+    security: 'セキュリティと信頼',
     trustCenter: 'トラストセンター',
+    capDataApps: 'データとアプリ',
+    capAutomationApprovals: '自動化と承認',
+    capAnalytics: 'レポートと分析',
     toolsMcp: 'ツールと MCP',
-    agentGuide: 'エージェント開発ガイド',
+    startWithAgent: 'エージェントから始める',
     templates: 'テンプレート',
     referenceStories: '導入事例',
+    useCases: 'ユースケース',
+    aiAdoption: 'AI の導入',
     glossary: '用語集',
     close: '閉じる',
     theme: 'テーマ',
@@ -317,11 +443,22 @@ const ja: Strings = {
     primaryNav: 'メインナビゲーション',
     browseNav: 'ブラウズ',
     mobileNav: 'モバイルナビゲーション',
-    topicClusters: 'トピッククラスター',
+    footerNav: 'フッター',
+    companyLegal: '会社と法務',
+    blog: 'ブログ',
+    videos: '動画',
+    changelog: '更新履歴',
+    community: 'コミュニティ',
+    guides: 'ガイド',
+    featuredGuides: '注目のガイド',
+    forFde: 'FDE チーム向け',
+    langUnavailable: (lang) => `${lang} — この記事にはこの言語の版がありません。ブログ一覧を開きます`,
   },
   getStarted: 'はじめる',
+  contactUs: 'お問い合わせ',
+  signIn: 'ログイン',
   skipToContent: '本文へ移動',
-  footer: { terms: '利用規約・ライセンス', privacy: 'プライバシー', pricing: '料金', refunds: '返金', platform: 'プラットフォーム' },
+  footer: { terms: '利用規約・ライセンス', privacy: 'プライバシー', pricing: '料金', refunds: '返金' },
   notFound: {
     title: 'ページが見つかりません',
     heading: 'このページは存在しません。',
@@ -330,10 +467,9 @@ const ja: Strings = {
     blog: 'ブログ',
     pricing: '料金',
   },
-  all: 'ホーム',
   audience: '読者',
   articlesTitle: '記事',
-  articlesLead: (n) => `AI-native ソフトウェア構築に関する ${n} 本の記事。`,
+  articlesLead: (n) => `実行可能なビジネスオントロジー、ランタイムガバナンス、エージェントが操作するアプリケーションに関する ${n} 本の記事。`,
   backToList: 'すべての記事',
   alsoOn: '同時掲載',
   references: '参考リンク',
@@ -341,7 +477,7 @@ const ja: Strings = {
   updated: '更新日',
   empty: '記事はまだありません。',
   relatedTitle: '関連記事',
-  status: { published: '公開済み', archived: 'アーカイブ済み' },
+  status: { archived: 'アーカイブ済み' },
 };
 
 const de: Strings = {
@@ -350,12 +486,14 @@ const de: Strings = {
     product: 'Produkt',
     developers: 'Entwickler',
     resources: 'Ressourcen',
-    docs: 'Docs',
+    productDocs: 'Produktdokumentation',
+    developerDocs: 'Entwicklerdokumentation & Protokoll',
     menu: 'Menü',
     productTour: 'Produkt-Tour',
     platform: 'Plattform-Überblick',
     aiBuildAsk: 'AI Build & Ask',
     whyObjectOs: 'Warum ObjectOS',
+    compareFit: 'Vergleich & Eignung',
     ontology: 'Ontologie',
     dataModeling: 'Datenmodellierung',
     appInterfaces: 'App-Oberflächen',
@@ -365,11 +503,17 @@ const de: Strings = {
     permissionsSecurity: 'Berechtigungen & Sicherheit',
     groupEvaluate: 'Evaluieren',
     groupCapabilities: 'Funktionen',
+    security: 'Sicherheit & Vertrauen',
     trustCenter: 'Trust Center',
+    capDataApps: 'Daten & Apps',
+    capAutomationApprovals: 'Automatisierung & Freigaben',
+    capAnalytics: 'Analysen',
     toolsMcp: 'Tools & MCP',
-    agentGuide: 'Agent-Leitfaden',
+    startWithAgent: 'Mit Ihrem Agent starten',
     templates: 'Vorlagen',
     referenceStories: 'Referenzberichte',
+    useCases: 'Anwendungsfälle',
+    aiAdoption: 'AI-Einführung',
     glossary: 'Glossar',
     close: 'Schließen',
     theme: 'Darstellung',
@@ -378,11 +522,22 @@ const de: Strings = {
     primaryNav: 'Hauptnavigation',
     browseNav: 'Durchstöbern',
     mobileNav: 'Mobile Navigation',
-    topicClusters: 'Themencluster',
+    footerNav: 'Fußzeile',
+    companyLegal: 'Unternehmen & Rechtliches',
+    blog: 'Blog',
+    videos: 'Videos',
+    changelog: 'Changelog',
+    community: 'Community',
+    guides: 'Leitfäden',
+    featuredGuides: 'Ausgewählte Leitfäden',
+    forFde: 'Für FDE-Teams',
+    langUnavailable: (lang) => `${lang} – dieser Artikel ist in dieser Sprache nicht verfügbar; öffnet den Blog`,
   },
   getStarted: 'Loslegen',
+  contactUs: 'Kontakt',
+  signIn: 'Anmelden',
   skipToContent: 'Zum Inhalt springen',
-  footer: { terms: 'Bedingungen & Lizenz', privacy: 'Datenschutz', pricing: 'Preise', refunds: 'Rückerstattung', platform: 'Plattform' },
+  footer: { terms: 'Bedingungen & Lizenz', privacy: 'Datenschutz', pricing: 'Preise', refunds: 'Rückerstattung' },
   notFound: {
     title: 'Seite nicht gefunden',
     heading: 'Diese Seite gibt es nicht.',
@@ -391,10 +546,9 @@ const de: Strings = {
     blog: 'Blog',
     pricing: 'Preise',
   },
-  all: 'Start',
   audience: 'Zielgruppe',
   articlesTitle: 'Artikel',
-  articlesLead: (n) => `${n} ${n === 1 ? 'Artikel' : 'Artikel'} über den Aufbau AI-nativer Software.`,
+  articlesLead: (n) => `${n} ${n === 1 ? 'Artikel' : 'Artikel'} über ausführbare Geschäftsontologien, Runtime-Governance und von Agents bediente Anwendungen.`,
   backToList: 'Alle Artikel',
   alsoOn: 'Auch veröffentlicht auf',
   references: 'Referenzen',
@@ -402,7 +556,7 @@ const de: Strings = {
   updated: 'Aktualisiert',
   empty: 'Noch keine Artikel.',
   relatedTitle: 'Ähnliche Artikel',
-  status: { published: 'Veröffentlicht', archived: 'Archiviert' },
+  status: { archived: 'Archiviert' },
 };
 
 const es: Strings = {
@@ -411,12 +565,14 @@ const es: Strings = {
     product: 'Producto',
     developers: 'Desarrolladores',
     resources: 'Recursos',
-    docs: 'Docs',
+    productDocs: 'Documentación del producto',
+    developerDocs: 'Documentación para desarrolladores y protocolo',
     menu: 'Menú',
     productTour: 'Recorrido del producto',
     platform: 'Resumen de plataforma',
     aiBuildAsk: 'AI Build & Ask',
     whyObjectOs: 'Por qué ObjectOS',
+    compareFit: 'Comparativa y encaje',
     ontology: 'Ontología',
     dataModeling: 'Modelado de datos',
     appInterfaces: 'Interfaces de la app',
@@ -426,11 +582,17 @@ const es: Strings = {
     permissionsSecurity: 'Permisos y seguridad',
     groupEvaluate: 'Evaluar',
     groupCapabilities: 'Capacidades',
+    security: 'Seguridad y confianza',
     trustCenter: 'Centro de confianza',
+    capDataApps: 'Datos y apps',
+    capAutomationApprovals: 'Automatización y aprobaciones',
+    capAnalytics: 'Analítica',
     toolsMcp: 'Herramientas y MCP',
-    agentGuide: 'Guía para agentes',
+    startWithAgent: 'Empieza con tu agente',
     templates: 'Plantillas',
     referenceStories: 'Casos de referencia',
+    useCases: 'Casos de uso',
+    aiAdoption: 'Adopción de AI',
     glossary: 'Glosario',
     close: 'Cerrar',
     theme: 'Tema',
@@ -439,11 +601,22 @@ const es: Strings = {
     primaryNav: 'Navegación principal',
     browseNav: 'Explorar',
     mobileNav: 'Navegación móvil',
-    topicClusters: 'Grupos temáticos',
+    footerNav: 'Pie de página',
+    companyLegal: 'Empresa y legal',
+    blog: 'Blog',
+    videos: 'Vídeos',
+    changelog: 'Registro de cambios',
+    community: 'Comunidad',
+    guides: 'Guías',
+    featuredGuides: 'Guías destacadas',
+    forFde: 'Para equipos FDE',
+    langUnavailable: (lang) => `${lang}: este artículo no está disponible en este idioma; abre el blog`,
   },
   getStarted: 'Empezar',
+  contactUs: 'Contáctanos',
+  signIn: 'Iniciar sesión',
   skipToContent: 'Saltar al contenido',
-  footer: { terms: 'Términos y licencia', privacy: 'Privacidad', pricing: 'Precios', refunds: 'Reembolsos', platform: 'Plataforma' },
+  footer: { terms: 'Términos y licencia', privacy: 'Privacidad', pricing: 'Precios', refunds: 'Reembolsos' },
   notFound: {
     title: 'Página no encontrada',
     heading: 'Esta página no existe.',
@@ -452,10 +625,9 @@ const es: Strings = {
     blog: 'Blog',
     pricing: 'Precios',
   },
-  all: 'Inicio',
   audience: 'Audiencia',
   articlesTitle: 'Artículos',
-  articlesLead: (n) => `${n} ${n === 1 ? 'artículo' : 'artículos'} sobre crear software AI-native.`,
+  articlesLead: (n) => `${n} ${n === 1 ? 'artículo' : 'artículos'} sobre ontologías de negocio ejecutables, gobernanza del runtime y aplicaciones operadas por agentes.`,
   backToList: 'Todos los artículos',
   alsoOn: 'También publicado en',
   references: 'Referencias',
@@ -463,7 +635,7 @@ const es: Strings = {
   updated: 'Actualizado',
   empty: 'Aún no hay artículos.',
   relatedTitle: 'Artículos relacionados',
-  status: { published: 'Publicado', archived: 'Archivado' },
+  status: { archived: 'Archivado' },
 };
 
 const fr: Strings = {
@@ -472,12 +644,14 @@ const fr: Strings = {
     product: 'Produit',
     developers: 'Développeurs',
     resources: 'Ressources',
-    docs: 'Docs',
+    productDocs: 'Documentation produit',
+    developerDocs: 'Documentation développeur et protocole',
     menu: 'Menu',
     productTour: 'Visite du produit',
     platform: 'Aperçu de la plateforme',
     aiBuildAsk: 'AI Build & Ask',
     whyObjectOs: 'Pourquoi ObjectOS',
+    compareFit: 'Comparatif et adéquation',
     ontology: 'Ontologie',
     dataModeling: 'Modélisation des données',
     appInterfaces: 'Interfaces applicatives',
@@ -487,11 +661,17 @@ const fr: Strings = {
     permissionsSecurity: 'Permissions et sécurité',
     groupEvaluate: 'Évaluer',
     groupCapabilities: 'Capacités',
+    security: 'Sécurité et confiance',
     trustCenter: 'Centre de confiance',
+    capDataApps: 'Données et apps',
+    capAutomationApprovals: 'Automatisation et approbations',
+    capAnalytics: 'Analytique',
     toolsMcp: 'Outils et MCP',
-    agentGuide: 'Guide agent',
+    startWithAgent: 'Commencez avec votre agent',
     templates: 'Modèles',
     referenceStories: 'Cas de référence',
+    useCases: 'Cas d’usage',
+    aiAdoption: 'Adoption de l’AI',
     glossary: 'Glossaire',
     close: 'Fermer',
     theme: 'Thème',
@@ -500,11 +680,22 @@ const fr: Strings = {
     primaryNav: 'Navigation principale',
     browseNav: 'Parcourir',
     mobileNav: 'Navigation mobile',
-    topicClusters: 'Groupes thématiques',
+    footerNav: 'Pied de page',
+    companyLegal: 'Entreprise et mentions légales',
+    blog: 'Blog',
+    videos: 'Vidéos',
+    changelog: 'Journal des versions',
+    community: 'Communauté',
+    guides: 'Guides',
+    featuredGuides: 'Guides à la une',
+    forFde: 'Pour les équipes FDE',
+    langUnavailable: (lang) => `${lang} : cet article n’est pas disponible dans cette langue ; ouvre le blog`,
   },
   getStarted: 'Commencer',
+  contactUs: 'Nous contacter',
+  signIn: 'Se connecter',
   skipToContent: 'Aller au contenu',
-  footer: { terms: 'Conditions et licence', privacy: 'Confidentialité', pricing: 'Tarifs', refunds: 'Remboursements', platform: 'Plateforme' },
+  footer: { terms: 'Conditions et licence', privacy: 'Confidentialité', pricing: 'Tarifs', refunds: 'Remboursements' },
   notFound: {
     title: 'Page introuvable',
     heading: 'Cette page n’existe pas.',
@@ -513,10 +704,9 @@ const fr: Strings = {
     blog: 'Blog',
     pricing: 'Tarifs',
   },
-  all: 'Accueil',
   audience: 'Audience',
   articlesTitle: 'Articles',
-  articlesLead: (n) => `${n} ${n === 1 ? 'article' : 'articles'} sur la construction de logiciels AI-native.`,
+  articlesLead: (n) => `${n} ${n === 1 ? 'article' : 'articles'} sur les ontologies métier exécutables, la gouvernance du runtime et les applications opérées par les agents.`,
   backToList: 'Tous les articles',
   alsoOn: 'Également publié sur',
   references: 'Références',
@@ -524,7 +714,7 @@ const fr: Strings = {
   updated: 'Mis à jour',
   empty: 'Aucun article pour le moment.',
   relatedTitle: 'Articles liés',
-  status: { published: 'Publié', archived: 'Archivé' },
+  status: { archived: 'Archivé' },
 };
 
 const ko: Strings = {
@@ -533,12 +723,14 @@ const ko: Strings = {
     product: '제품',
     developers: '개발자',
     resources: '리소스',
-    docs: '문서',
+    productDocs: '제품 문서',
+    developerDocs: '개발자 문서 및 프로토콜',
     menu: '메뉴',
     productTour: '제품 둘러보기',
     platform: '플랫폼 개요',
     aiBuildAsk: 'AI Build & Ask',
     whyObjectOs: 'ObjectOS를 선택하는 이유',
+    compareFit: '비교와 적합성',
     ontology: '온톨로지',
     dataModeling: '데이터 모델링',
     appInterfaces: '앱 화면',
@@ -548,11 +740,17 @@ const ko: Strings = {
     permissionsSecurity: '권한과 보안',
     groupEvaluate: '평가',
     groupCapabilities: '기능',
+    security: '보안과 신뢰',
     trustCenter: '트러스트 센터',
+    capDataApps: '데이터와 앱',
+    capAutomationApprovals: '자동화와 승인',
+    capAnalytics: '분석',
     toolsMcp: '도구 및 MCP',
-    agentGuide: '에이전트 가이드',
+    startWithAgent: '에이전트로 시작하기',
     templates: '템플릿',
     referenceStories: '레퍼런스 사례',
+    useCases: '활용 사례',
+    aiAdoption: 'AI 도입',
     glossary: '용어집',
     close: '닫기',
     theme: '테마',
@@ -561,11 +759,22 @@ const ko: Strings = {
     primaryNav: '주 메뉴',
     browseNav: '둘러보기',
     mobileNav: '모바일 메뉴',
-    topicClusters: '주제 클러스터',
+    footerNav: '바닥글',
+    companyLegal: '회사 및 법적 고지',
+    blog: '블로그',
+    videos: '동영상',
+    changelog: '변경 이력',
+    community: '커뮤니티',
+    guides: '가이드',
+    featuredGuides: '추천 가이드',
+    forFde: 'FDE 팀용',
+    langUnavailable: (lang) => `${lang} — 이 글은 이 언어로 제공되지 않습니다. 블로그 목록으로 이동합니다`,
   },
   getStarted: '시작하기',
+  contactUs: '문의하기',
+  signIn: '로그인',
   skipToContent: '본문으로 건너뛰기',
-  footer: { terms: '약관 및 라이선스', privacy: '개인정보 보호', pricing: '가격', refunds: '환불', platform: '플랫폼' },
+  footer: { terms: '약관 및 라이선스', privacy: '개인정보 보호', pricing: '가격', refunds: '환불' },
   notFound: {
     title: '페이지를 찾을 수 없습니다',
     heading: '이 페이지는 존재하지 않습니다.',
@@ -574,10 +783,9 @@ const ko: Strings = {
     blog: '블로그',
     pricing: '가격',
   },
-  all: '홈',
   audience: '대상',
   articlesTitle: '글',
-  articlesLead: (n) => `AI-native 소프트웨어 구축에 관한 글 ${n}개.`,
+  articlesLead: (n) => `실행 가능한 비즈니스 온톨로지, 런타임 거버넌스, 에이전트가 운영하는 애플리케이션에 관한 글 ${n}개.`,
   backToList: '전체 글',
   alsoOn: '동시 게시',
   references: '참고 링크',
@@ -585,7 +793,7 @@ const ko: Strings = {
   updated: '업데이트',
   empty: '아직 글이 없습니다.',
   relatedTitle: '관련 글',
-  status: { published: '게시됨', archived: '보관됨' },
+  status: { archived: '보관됨' },
 };
 
 // Traditional UI is auto-derived from Simplified (s2twp) — never hand-kept.
@@ -595,12 +803,14 @@ const toHant = (s: Strings): Strings => ({
     product: s2t(s.siteNav.product),
     developers: s2t(s.siteNav.developers),
     resources: s2t(s.siteNav.resources),
-    docs: s2t(s.siteNav.docs),
+    productDocs: s2t(s.siteNav.productDocs),
+    developerDocs: s2t(s.siteNav.developerDocs),
     menu: s2t(s.siteNav.menu),
     productTour: s2t(s.siteNav.productTour),
     platform: s2t(s.siteNav.platform),
     aiBuildAsk: s2t(s.siteNav.aiBuildAsk),
     whyObjectOs: s2t(s.siteNav.whyObjectOs),
+    compareFit: s2t(s.siteNav.compareFit),
     ontology: s2t(s.siteNav.ontology),
     dataModeling: s2t(s.siteNav.dataModeling),
     appInterfaces: s2t(s.siteNav.appInterfaces),
@@ -610,11 +820,17 @@ const toHant = (s: Strings): Strings => ({
     permissionsSecurity: s2t(s.siteNav.permissionsSecurity),
     groupEvaluate: s2t(s.siteNav.groupEvaluate),
     groupCapabilities: s2t(s.siteNav.groupCapabilities),
+    security: s2t(s.siteNav.security),
     trustCenter: s2t(s.siteNav.trustCenter),
+    capDataApps: s2t(s.siteNav.capDataApps),
+    capAutomationApprovals: s2t(s.siteNav.capAutomationApprovals),
+    capAnalytics: s2t(s.siteNav.capAnalytics),
     toolsMcp: s2t(s.siteNav.toolsMcp),
-    agentGuide: s2t(s.siteNav.agentGuide),
+    startWithAgent: s2t(s.siteNav.startWithAgent),
     templates: s2t(s.siteNav.templates),
     referenceStories: s2t(s.siteNav.referenceStories),
+    useCases: s2t(s.siteNav.useCases),
+    aiAdoption: s2t(s.siteNav.aiAdoption),
     glossary: s2t(s.siteNav.glossary),
     close: s2t(s.siteNav.close),
     theme: s2t(s.siteNav.theme),
@@ -623,16 +839,28 @@ const toHant = (s: Strings): Strings => ({
     primaryNav: s2t(s.siteNav.primaryNav),
     browseNav: s2t(s.siteNav.browseNav),
     mobileNav: s2t(s.siteNav.mobileNav),
-    topicClusters: s2t(s.siteNav.topicClusters),
+    footerNav: s2t(s.siteNav.footerNav),
+    companyLegal: s2t(s.siteNav.companyLegal),
+    blog: s2t(s.siteNav.blog),
+    videos: s2t(s.siteNav.videos),
+    changelog: s2t(s.siteNav.changelog),
+    community: s2t(s.siteNav.community),
+    guides: s2t(s.siteNav.guides),
+    featuredGuides: s2t(s.siteNav.featuredGuides),
+    forFde: s2t(s.siteNav.forFde),
+    // The language name is spliced in after conversion: s2t would rewrite a
+    // Simplified-script name such as 简体中文.
+    langUnavailable: (lang) => s2t(s.siteNav.langUnavailable('{lang}')).replace('{lang}', lang),
   },
   getStarted: s2t(s.getStarted),
+  contactUs: s2t(s.contactUs),
+  signIn: s2t(s.signIn),
   skipToContent: s2t(s.skipToContent),
   footer: {
     terms: s2t(s.footer.terms),
     privacy: s2t(s.footer.privacy),
     pricing: s2t(s.footer.pricing),
     refunds: s2t(s.footer.refunds),
-    platform: s2t(s.footer.platform),
   },
   notFound: {
     title: s2t(s.notFound.title),
@@ -642,7 +870,6 @@ const toHant = (s: Strings): Strings => ({
     blog: s2t(s.notFound.blog),
     pricing: s2t(s.notFound.pricing),
   },
-  all: s2t(s.all),
   audience: s2t(s.audience),
   articlesTitle: s2t(s.articlesTitle),
   articlesLead: (n) => s2t(s.articlesLead(n)),
@@ -653,10 +880,7 @@ const toHant = (s: Strings): Strings => ({
   updated: s2t(s.updated),
   empty: s2t(s.empty),
   relatedTitle: s2t(s.relatedTitle),
-  status: {
-    published: s2t(s.status.published),
-    archived: s2t(s.status.archived),
-  },
+  status: { archived: s2t(s.status.archived) },
 });
 
 export const ui: Record<Locale, Strings> = {
@@ -674,6 +898,5 @@ export const ui: Record<Locale, Strings> = {
 // so one colour cannot clear 4.5:1 in light and dark. Values and ratios live
 // with the tokens in src/layouts/Base.astro.
 export const STATUS_COLOR: Record<StatusKey, string> = {
-  published: 'var(--status-published)',
   archived: 'var(--status-archived)',
 };

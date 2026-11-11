@@ -1,4 +1,5 @@
 import type { Locale } from '../lib/i18n';
+import type { ScenarioReadiness } from './types';
 import { s2t } from '../lib/zhconvert';
 
 interface MarketingPageUi {
@@ -15,6 +16,18 @@ interface MarketingPageUi {
   faqTitle: string;
   nextEyebrow: string;
   nextTitle: string;
+  /** Scenario cards (/use-cases/): the three row labels and the link labels. */
+  scenario: {
+    today: string;
+    withAi: string;
+    approves: string;
+    readPost: string;
+    template: string;
+    guide: string;
+    /** The readiness tag on each card and the legend's lead-in (#370). */
+    readinessLegend: string;
+    readiness: Record<ScenarioReadiness, string>;
+  };
 }
 
 const EN_UI: MarketingPageUi = {
@@ -43,6 +56,20 @@ const EN_UI: MarketingPageUi = {
   faqTitle: 'Frequently asked questions',
   nextEyebrow: 'Next pages',
   nextTitle: 'Keep building the evaluation packet.',
+  scenario: {
+    today: 'Today',
+    withAi: 'With AI',
+    approves: 'A person approves',
+    readPost: 'Read the scenario',
+    template: 'Template',
+    guide: 'Guide',
+    readinessLegend: 'What each scenario needs before it runs:',
+    readiness: {
+      today: 'Works on the platform today',
+      integration: 'Needs a connection to a system you run',
+      rule: 'Needs the business rule written down first',
+    },
+  },
 };
 
 const ZH_HANS_UI: MarketingPageUi = {
@@ -71,6 +98,20 @@ const ZH_HANS_UI: MarketingPageUi = {
   faqTitle: '常见问题',
   nextEyebrow: '下一步',
   nextTitle: '继续完善你的评估材料。',
+  scenario: {
+    today: '现在',
+    withAi: '有了 AI',
+    approves: '由人确认',
+    readPost: '阅读完整场景',
+    template: '模板',
+    guide: '专题',
+    readinessLegend: '每个场景跑起来之前需要什么：',
+    readiness: {
+      today: '平台即可',
+      integration: '需要接现有系统',
+      rule: '需要先写清制度',
+    },
+  },
 };
 
 // Traditional UI is derived from Simplified — never hand-kept.
@@ -88,6 +129,20 @@ const toHant = (s: MarketingPageUi): MarketingPageUi => ({
   faqTitle: s2t(s.faqTitle),
   nextEyebrow: s2t(s.nextEyebrow),
   nextTitle: s2t(s.nextTitle),
+  scenario: {
+    today: s2t(s.scenario.today),
+    withAi: s2t(s.scenario.withAi),
+    approves: s2t(s.scenario.approves),
+    readPost: s2t(s.scenario.readPost),
+    template: s2t(s.scenario.template),
+    guide: s2t(s.scenario.guide),
+    readinessLegend: s2t(s.scenario.readinessLegend),
+    readiness: {
+      today: s2t(s.scenario.readiness.today),
+      integration: s2t(s.scenario.readiness.integration),
+      rule: s2t(s.scenario.readiness.rule),
+    },
+  },
 });
 
 const UI: Partial<Record<Locale, MarketingPageUi>> = {
