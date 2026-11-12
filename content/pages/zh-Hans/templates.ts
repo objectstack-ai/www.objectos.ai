@@ -1,5 +1,4 @@
 import type { MarketingPage } from '../../../src/content-pages/types';
-import { TRY_IN_BROWSER_URL } from '../../../src/lib/home';
 
 const page = {
     slug: 'templates',
@@ -13,7 +12,6 @@ const page = {
       '模板给编码 Agent 一个具体的目标：对象模型、视图、权限、流程、动作与 AI 工具——可以复制、审阅、改造，并直接在 ObjectOS 中运行。',
     primary: { label: '打开模板源码', href: 'https://github.com/objectstack-ai/templates' },
     secondary: { label: '查看产品导览', href: '/en/product-tour/' },
-    outbound: { label: '在浏览器里试用（免注册）', href: TRY_IN_BROWSER_URL },
     metrics: [
       { value: '8 个模板', label: 'todo、contracts、procurement、compliance、helpdesk、content、hr、project' },
       { value: '一层定义', label: '对象、UI、流程、API 与 AI 工具出自同一份定义' },
