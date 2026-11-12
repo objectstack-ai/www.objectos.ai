@@ -18,7 +18,7 @@ const page = {
     metrics: [
       { value: '3 editions', label: `${p.descriptor}: open source and free to self-host; hosted in the browser with nothing to install; self-managed on your own infrastructure` },
       { value: 'User scoped', label: 'Agents inherit the signed-in user permissions' },
-      { value: 'Auditable', label: 'Reads, writes, tool calls, approvals, and schema changes' },
+      { value: 'Auditable', label: 'Record reads and writes, approvals, and schema changes; the in-app AI’s tool calls on Enterprise' },
     ],
     artifact: {
       eyebrow: 'Security review packet',
@@ -54,14 +54,14 @@ const page = {
           },
           {
             meta: 'Gate 3 · Approvals',
-            title: 'Sensitive changes wait for a person',
-            body: 'A structural change, or an action you mark for sign-off such as a refund or a bulk update, waits for a person to approve it.',
+            title: 'Changes to a live app wait for a person',
+            body: 'When an app is live and holds records, an AI Builder change to it waits as a draft until a person publishes it. Flow approval steps put business decisions, such as a refund or a bulk update, in front of an approver.',
             href: '/en/approvals/#ai-gate',
           },
           {
             meta: 'Gate 4 · Audit',
-            title: 'Every AI tool call leaves a trail',
-            body: 'AI tool calls land in the same audit log as people’s actions, so reviewing the AI is the same job as reviewing your team.',
+            title: 'Record reads and writes leave a trail',
+            body: 'Reads and writes of records land in the same audit log whether a person makes them or the AI acting for that person. On Enterprise, the in-app AI’s tool calls are audited too.',
             href: '/en/permissions/#admin',
           },
         ],
