@@ -18,7 +18,7 @@ const page = {
     metrics: [
       { value: '三个版本', label: `${p.descriptor}：开源、可免费自托管；托管在浏览器中、无需安装；自管部署在你自己的基础设施上` },
       { value: '用户级', label: 'Agent 继承登录用户的权限' },
-      { value: '可审计', label: '读、写、工具调用、审批与 schema 变更' },
+      { value: '可审计', label: '记录的读与写、审批与 schema 变更；Enterprise 版还审计界面内 AI 的工具调用' },
     ],
     artifact: {
       eyebrow: '安全评审材料包',
@@ -54,14 +54,14 @@ const page = {
           },
           {
             meta: '第 3 道 · 审批',
-            title: '敏感改动等人批',
-            body: '结构性变更，以及你标为需要签核的动作（比如退款、批量更新），都要等人批准后才执行。',
+            title: '已上线应用的改动等人发布',
+            body: '应用上线并有了记录之后，AI Builder 对它的改动先存为草稿，等人发布后才生效。退款、批量更新这类业务决定，由流程中的审批节点交给审批人。',
             href: '/en/approvals/#ai-gate',
           },
           {
             meta: '第 4 道 · 审计',
-            title: '每次 AI 工具调用都留痕',
-            body: 'AI 的工具调用和人的操作写进同一份审计日志，审 AI 就和审你的团队是同一件事。',
+            title: '记录的读写都留痕',
+            body: '无论是人，还是代表这个人行事的 AI，对记录的读取和写入都写进同一份审计日志。在 Enterprise 版中，界面内 AI 的工具调用也会被审计。',
             href: '/en/permissions/#admin',
           },
         ],
