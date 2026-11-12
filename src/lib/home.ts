@@ -25,6 +25,14 @@ interface HomeCopy {
   description: string;
   eyebrow: string;
   hero: [string, string];
+  /**
+   * The line under the H1 that names the product category in plain words for
+   * a business reader (#392): what ObjectOS is, before T2 says how it works.
+   * It is the lane's wording, not a canonical line, so it is not read from
+   * `./positioning`; it must stay consistent with T2 (AI writes the app, the
+   * runtime governs it) and must not claim anything T1–T4 or E1 do not.
+   */
+  heroCategory: string;
   /** The first screen's one paragraph: T2, nothing else (the CTA row follows it). */
   heroLead: string;
   /**
@@ -150,6 +158,7 @@ const zhHans: HomeCopy = {
   description: `${positioning['zh-Hans'].t2}ObjectOS 有三个版本：${positioning['zh-Hans'].descriptor}。`,
   eyebrow: positioning['zh-Hans'].descriptor,
   hero: positioning['zh-Hans'].t1Hero,
+  heroCategory: '用 AI 构建并治理业务应用的平台。',
   heroLead: positioning['zh-Hans'].t2,
   editionsCopy: positioning['zh-Hans'].e1,
   primaryCta: '开始使用',
@@ -237,6 +246,7 @@ const en: HomeCopy = {
   description: `${positioning.en.t2} ObjectOS comes in three editions, ${positioning.en.descriptor}.`,
   eyebrow: sentenceCase(positioning.en.descriptor),
   hero: positioning.en.t1Hero,
+  heroCategory: 'A platform to build and govern business applications with AI.',
   heroLead: positioning.en.t2,
   editionsCopy: positioning.en.e1,
   primaryCta: 'Get started',
@@ -325,6 +335,7 @@ const ja: HomeCopy = {
   description: `${positioning.ja.t2}ObjectOS には ${positioning.ja.descriptor} の 3 つのエディションがあります。`,
   eyebrow: positioning.ja.descriptor,
   hero: positioning.ja.t1Hero,
+  heroCategory: 'AI で業務アプリケーションを構築し、統制するためのプラットフォーム。',
   heroLead: positioning.ja.t2,
   editionsCopy: positioning.ja.e1,
   primaryCta: 'はじめる',
@@ -413,6 +424,7 @@ const de: HomeCopy = {
   description: `${positioning.de.t2} ObjectOS gibt es in drei Editionen, ${positioning.de.descriptor}.`,
   eyebrow: sentenceCase(positioning.de.descriptor),
   hero: positioning.de.t1Hero,
+  heroCategory: 'Eine Plattform, um Geschäftsanwendungen mit AI zu bauen und zu steuern.',
   heroLead: positioning.de.t2,
   editionsCopy: positioning.de.e1,
   primaryCta: 'Loslegen',
@@ -501,6 +513,7 @@ const es: HomeCopy = {
   description: `${positioning.es.t2} ObjectOS se ofrece en tres ediciones, ${positioning.es.descriptor}.`,
   eyebrow: sentenceCase(positioning.es.descriptor),
   hero: positioning.es.t1Hero,
+  heroCategory: 'Una plataforma para crear y gobernar aplicaciones de negocio con AI.',
   heroLead: positioning.es.t2,
   editionsCopy: positioning.es.e1,
   primaryCta: 'Empezar',
@@ -589,6 +602,7 @@ const fr: HomeCopy = {
   description: `${positioning.fr.t2} ObjectOS existe en trois éditions, ${positioning.fr.descriptor}.`,
   eyebrow: sentenceCase(positioning.fr.descriptor),
   hero: positioning.fr.t1Hero,
+  heroCategory: 'Une plateforme pour créer et gouverner des applications métier avec l’AI.',
   heroLead: positioning.fr.t2,
   editionsCopy: positioning.fr.e1,
   primaryCta: 'Commencer',
@@ -677,6 +691,7 @@ const ko: HomeCopy = {
   description: `${positioning.ko.t2} ObjectOS는 ${positioning.ko.descriptor}의 세 가지 에디션으로 제공됩니다.`,
   eyebrow: positioning.ko.descriptor,
   hero: positioning.ko.t1Hero,
+  heroCategory: 'AI로 업무용 애플리케이션을 구축하고 통제하는 플랫폼.',
   heroLead: positioning.ko.t2,
   editionsCopy: positioning.ko.e1,
   primaryCta: '시작하기',
