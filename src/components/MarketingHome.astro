@@ -5,7 +5,7 @@ import demoVideo from '../assets/objectos-home-demo.mp4';
 import demoScript from '../assets/objectos-home-demo.js?url&no-inline';
 import { getPostsInLocale } from '../lib/posts';
 import { darkCover } from '../lib/cover-variant';
-import { blogPath, formatDate, postPath, securityPath, ui, type Locale } from '../lib/i18n';
+import { blogPath, formatDate, postPath, pricingPath, securityPath, ui, type Locale } from '../lib/i18n';
 import { s2t } from '../lib/zhconvert';
 import { homeCopy } from '../lib/home';
 import { CLOUD_SIGNUP_URL, heroLineJoin, OBJECTSTACK_URL, positioning, YOUTUBE_CHANNEL_URL } from '../lib/positioning';
@@ -34,9 +34,9 @@ interface Props {
 const { locale } = Astro.props;
 const copy = homeCopy[locale];
 // The one protocol link on the page: E1 names the three ObjectOS editions in
-// the paragraph under the CTA row, and this link, right under E1, says what
-// they are built on and sends the developer to objectstack.ai. Nothing else on
-// the home page links that site.
+// the editions block (#411), and this link, right under E1, says what they are
+// built on and sends the developer to objectstack.ai. Nothing else on the home
+// page links that site.
 const protocolLink = positioning[locale].protocol;
 const posterSplit = copy.videoCaption.match(/^(ObjectStack(?: [\u3040-\u309f]+)?) (.+)$/u);
 const posterTitle: [string, string] = posterSplit ? [posterSplit[1], posterSplit[2]] : [copy.videoCaption, ''];
@@ -53,20 +53,25 @@ const agentDeveloperHref = marketingPagePath(locale, 'agent-developer');
 const securityHref = securityPath(locale);
 const ontologyHref = marketingPagePath(locale, 'ontology');
 const compareHref = marketingPagePath(locale, 'compare');
+const mcpHref = marketingPagePath(locale, 'mcp');
+const pricingHref = pricingPath(locale);
 
 // Capability and AI cards deep-link into the capability pages. Index-based:
-// every locale translates the same arrays in the same order.
-const capabilityCardHrefs = [
-  marketingPagePath(locale, 'data-modeling'),
-  marketingPagePath(locale, 'data-modeling'),
-  productTourHref,
-  marketingPagePath(locale, 'permissions'),
-];
-const aiCardHrefs = [
-  marketingPagePath(locale, 'ai'),
-  marketingPagePath(locale, 'ai'),
-  marketingPagePath(locale, 'mcp'),
-];
+// every locale translates the same arrays in the same order. The two
+// capability cards (business model, federation) both land on /data-modeling/;
+// the AI cards land on the AI page's Ask section (Ask, and the record edits
+// Ask proposes) and its Build section.
+const capabilityCardHrefs = [marketingPagePath(locale, 'data-modeling'), marketingPagePath(locale, 'data-modeling')];
+const aiHref = marketingPagePath(locale, 'ai');
+const aiCardHrefs = [`${aiHref}#ask`, `${aiHref}#ask`, `${aiHref}#build`];
+for (const [name, cards, hrefs] of [
+  ['capabilities', copy.capabilities, capabilityCardHrefs],
+  ['aiItems', copy.aiItems, aiCardHrefs],
+] as const) {
+  if (cards.length !== hrefs.length) {
+    throw new Error(`homeCopy[${locale}].${name} has ${cards.length} cards; MarketingHome links ${hrefs.length}`);
+  }
+}
 // `coverDark`: an SVG cover's dark variant (src/lib/cover-variant.ts); the
 // card then draws both images, lazy, one shown per theme.
 const posts = (await getPostsInLocale(locale))
@@ -82,16 +87,12 @@ const useCaseHrefs = ['service', 'finance-procurement', 'sales'].map((id) => `${
 if (useCaseHrefs.length !== copy.useCases.length) {
   throw new Error(`homeCopy[${locale}].useCases has ${copy.useCases.length} cards; MarketingHome links ${useCaseHrefs.length}`);
 }
-const insightTerms = [
-  'app-building',
-  'integration-data',
-  'governance',
-  'crm',
-  'manufacturing',
-]
+// The topic hubs in the insights row. `crm` and `manufacturing` are not here:
+// the row also carries the five guides (CLUSTERS), and "CRM & case
+// management" and "Manufacturing AI" are among them (#411).
+const insightTerms = ['app-building', 'integration-data', 'governance']
   .map((slug) => termBySlug(slug))
   .filter(Boolean);
-const clusterLinks = CLUSTERS;
 // The three "vs" chips land on the comparison page's product-by-product
 // section, where each named product has its post; the section's text link
 // goes to the page itself.
@@ -103,7 +104,7 @@ const compareInDepthHref = `${compareHref}#in-depth`;
 // the phone column at 3x. An SVG cover is a few KB and is served as is.
 const ARTICLE_WIDTHS = [360, 540, 720, 1080];
 const ARTICLE_SIZES = '(max-width: 640px) calc(100vw - 2rem), (max-width: 900px) calc(50vw - 2rem), 360px';
-// The 30-second run recording under the positioning copy: one definition
+// The 30-second run recording at the foot of the "how it connects" block: one definition
 // boots, an agent creates a record over MCP, a read-only identity is refused.
 // It is the objectstack README's own recording
 // (objectstack-ai/objectstack `docs/screenshots/readme-demo.gif`, git blob
@@ -176,32 +177,29 @@ const demoCopy = DEMO_COPY[locale];
 ---
 
 <div class:list={['home', `lang-${locale}`]}>
-  {/* One flat flex column, deliberately: the video, the lead, the CTA row and
-      the edition paragraph have to be siblings for the phone layout to reorder
-      them with CSS `order` alone. Duplicating the hero markup per breakpoint
-      would be a worse defect than the one the reorder fixes.
+  {/* One flat flex column, deliberately: the video, the lead and the CTA row
+      have to be siblings for the phone layout to order them with CSS `order`
+      alone. Duplicating the hero markup per breakpoint would be a worse
+      defect than the one the reorder fixes.
 
       The first screen is one sentence and one action: eyebrow (the three
-      editions' short name), h1 (T1), lead (T2), the CTA row. E1, the edition
-      paragraph, and the protocol link under it come after the CTAs, then the
-      video, then the proof chips. That is the desktop source order; on phones
-      and small tablets the media query below moves only the video, to
-      directly after the CTA row. Before this split the lead ran T2, T4 and E1
-      together (523 characters in en) and the CTA row started at 619px on a
-      1366×625 laptop and at 1114px on a 390px phone. */}
+      editions' short name), h1 (T1), lead (T2), the CTA row; then the video,
+      then the proof chips. E1 and the protocol link that sat under the CTA
+      row moved to the editions block (#411). Before the hero split (#335)
+      the lead ran T2, T4 and E1 together (523 characters in en) and the CTA
+      row started at 619px on a 1366×625 laptop and at 1114px on a 390px
+      phone. */}
   <section class="hero">
     <p class="eyebrow"><span></span> <Fragment set:html={ph(copy.eyebrow)} /></p>
     <h1><span set:html={ph(copy.hero[0])} />{lineJoin}<strong set:html={ph(copy.hero[1])} /></h1>
-    {/* The lead and the edition paragraph take the headings' phrase <wbr>
-        in zh and ja: at 17px, centred, one to two lines, a break inside a
-        word (运/行时, ひと/つ) read as an error where body text would not. */}
+    {/* The lead takes the headings' phrase <wbr> in zh and ja: at 17px,
+        centred, one to two lines, a break inside a word (运/行时, ひと/つ)
+        read as an error where body text would not. */}
     <p class="hero-lead" set:html={ph(copy.heroLead)} />
     <div class="hero-actions">
       <a class="btn btn-primary" href={CLOUD_SIGNUP_URL}>{copy.primaryCta} <span>→</span></a>
       <a class="btn btn-secondary" href={productTourHref}>{copy.secondaryCta}</a>
     </div>
-    <p class="hero-editions" set:html={ph(copy.heroEditions)} />
-    <a class="btn btn-ghost hero-protocol-link" href={OBJECTSTACK_URL}>{protocolLink} <span aria-hidden="true">→</span></a>
     <figure class="hero-video">
       <VideoEmbed
         videoId={OVERVIEW_VIDEO_ID}
@@ -226,14 +224,105 @@ const demoCopy = DEMO_COPY[locale];
     </dl>
   </section>
 
-  <section class="positioning" aria-label={copy.positioningKicker}>
-    <p class="section-kicker">{copy.positioningKicker}</p>
-    <h2><span class="title-line" set:html={ph(copy.positioningTitle[0])} />{lineJoin}<span class="title-line" set:html={ph(copy.positioningTitle[1])} /></h2>
-    <p class="positioning-copy">{copy.positioningCopy}</p>
-    <a class="btn btn-ghost positioning-link" href={ontologyHref}>{copy.positioningLink} <span aria-hidden="true">→</span></a>
+  {/* "How business teams use it" (#359): the block that held three template
+      cards now holds three scenario cards, each landing on its team's section
+      of /use-cases/; the templates catalog stays one link away, under the
+      cards. The old #templates anchor is kept on the section for existing
+      deep links. */}
+  <section class="solution-section" id="templates">
+    <div class="section-head">
+      <div>
+        <p class="section-kicker">{copy.useCasesKicker}</p>
+        <h2><span class="title-line" set:html={ph(copy.useCasesTitle[0])} />{lineJoin}<span class="title-line" set:html={ph(copy.useCasesTitle[1])} /></h2>
+      </div>
+      <a class="btn btn-ghost" href={useCasesHref}>{copy.useCasesLink} <span>→</span></a>
+    </div>
+    <div class="solution-grid">
+      {copy.useCases.map((useCase, index) => (
+        <a class="solution card card-link" href={useCaseHrefs[index]}>
+          <span class="solution-mark"></span>
+          <h3>{useCase.title}</h3>
+          <p>{useCase.copy}</p>
+          <span class="solution-link">{copy.useCaseCardLink}&nbsp;→</span>
+        </a>
+      ))}
+    </div>
+    <p class="solution-more"><a class="btn btn-ghost" href={templatesHref}>{copy.useCasesTemplatesLink} <span>→</span></a></p>
+  </section>
+
+  {/* AI in the product (#411): three cards in business terms, one note
+      carrying the Enterprise preview label (#410), and MCP as the block's
+      one developer link rather than a card. */}
+  <section class="ai-section" id="ai">
+    <div class="ai-copy">
+      <p class="section-kicker">{copy.aiKicker}</p>
+      <h2><span class="title-line" set:html={ph(copy.aiTitle[0])} />{lineJoin}<span class="title-line" set:html={ph(copy.aiTitle[1])} /></h2>
+      <p class="ai-note">{copy.aiNote}</p>
+      <a class="btn btn-ghost" href={mcpHref}>{copy.aiDeveloperLink} <span aria-hidden="true">→</span></a>
+    </div>
+    <div class="ai-grid">
+      {copy.aiItems.map((item, index) => (
+        <div class="ai-card card card-link">
+          <span>{String(index + 1).padStart(2, '0')}</span>
+          <h3>
+            <a href={aiCardHrefs[index] ?? productTourHref}>
+              {item.title}&nbsp;<span class="card-arrow" aria-hidden="true">→</span>
+            </a>
+          </h3>
+          <p>{item.copy}</p>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  {/* How it connects to what you run (#411): the positioning block, the
+      definition-layer diagram, capability cards 01–02 and the run recording,
+      merged. The positioning copy is the one statement of the mechanism; the
+      diagram has no body text, and the cards that restated it are gone. The
+      id is the old capability section's, kept for existing deep links. */}
+  <section class="workflow connect" id="capabilities" aria-labelledby="connect-title">
+    <div class="workflow-intro">
+      <p class="section-kicker">{copy.connectKicker}</p>
+      <h2 id="connect-title"><span class="title-line" set:html={ph(copy.positioningTitle[0])} />{lineJoin}<span class="title-line" set:html={ph(copy.positioningTitle[1])} /></h2>
+      <p class="positioning-copy">{copy.positioningCopy}</p>
+      <a class="btn btn-ghost positioning-link" href={ontologyHref}>{copy.positioningLink} <span aria-hidden="true">→</span></a>
+    </div>
+    <div class="workflow-map card" aria-label={copy.connectKicker}>
+      <div class="map-row">
+        <span class="map-label">{copy.existingSystems}</span>
+        <div class="map-items">
+          {copy.systemLabels.map((label) => <span>{label}</span>)}
+        </div>
+      </div>
+      <div class="connector"><span></span><b>{copy.connectModel}</b><span></span></div>
+      <div class="object-layer">
+        <small>OBJECTSTACK DEFINITION LAYER</small>
+        <strong>{copy.objectLayer}</strong>
+      </div>
+      <div class="connector"><span></span><b>{copy.secureExecution}</b><span></span></div>
+      <div class="map-row outputs">
+        <span class="map-label">{copy.outcomes}</span>
+        <div class="map-items">
+          {copy.outcomeLabels.map((label) => <span>{label}</span>)}
+        </div>
+      </div>
+    </div>
+    <ol class="capability-list">
+      {copy.capabilities.map((item, index) => (
+        <li>
+          <span class="cap-index">{String(index + 1).padStart(2, '0')}</span>
+          <h3>
+            <a href={capabilityCardHrefs[index] ?? productTourHref}>
+              {item.title}&nbsp;<span class="card-arrow" aria-hidden="true">→</span>
+            </a>
+          </h3>
+          <p>{item.copy}</p>
+        </li>
+      ))}
+    </ol>
     {/* The run recording. The overview video is the page's first visual, so
-        this sits below it, showing the positioning it belongs to working.
-        The poster image carries the text alternative; the video over it is
+        this sits at the foot of this block, showing the definition layer it
+        describes working. The poster image carries the text alternative; the video over it is
         the same content in motion, so it is hidden from assistive tech. The
         pause/play toggle sits beside the caption, not over the recording,
         and stays `hidden` until the script runs (no script, no video). */}
@@ -278,79 +367,6 @@ const demoCopy = DEMO_COPY[locale];
     </figure>
   </section>
 
-  <section class="capability-section" id="capabilities">
-    <div class="section-head">
-      <div>
-        <p class="section-kicker">{copy.capabilitiesKicker}</p>
-        <h2><span class="title-line" set:html={ph(copy.capabilitiesTitle[0])} />{lineJoin}<span class="title-line" set:html={ph(copy.capabilitiesTitle[1])} /></h2>
-      </div>
-      <a class="btn btn-ghost" href={agentDeveloperHref}>{copy.capabilitiesLink} <span>→</span></a>
-    </div>
-    <ol class="capability-list">
-      {copy.capabilities.map((item, index) => (
-        <li>
-          <span class="cap-index">{String(index + 1).padStart(2, '0')}</span>
-          <h3>
-            <a href={capabilityCardHrefs[index] ?? productTourHref}>
-              {item.title}&nbsp;<span class="card-arrow" aria-hidden="true">→</span>
-            </a>
-          </h3>
-          <p>{item.copy}</p>
-        </li>
-      ))}
-    </ol>
-  </section>
-
-  <section class="ai-section" id="ai">
-    <div class="ai-copy">
-      <p class="section-kicker">{copy.aiKicker}</p>
-      <h2><span class="title-line" set:html={ph(copy.aiTitle[0])} />{lineJoin}<span class="title-line" set:html={ph(copy.aiTitle[1])} /></h2>
-      <p>{copy.aiCopy}</p>
-      <a class="btn btn-ghost" href={agentDeveloperHref}>{copy.aiLink} <span>→</span></a>
-    </div>
-    <div class="ai-grid">
-      {copy.aiItems.map((item, index) => (
-        <div class="ai-card card card-link">
-          <span>{String(index + 1).padStart(2, '0')}</span>
-          <h3>
-            <a href={aiCardHrefs[index] ?? productTourHref}>
-              {item.title}&nbsp;<span class="card-arrow" aria-hidden="true">→</span>
-            </a>
-          </h3>
-          <p>{item.copy}</p>
-        </div>
-      ))}
-    </div>
-  </section>
-
-  <section class="workflow">
-    <div class="workflow-intro">
-      <p class="section-kicker">{copy.workflowKicker}</p>
-      <h2><span class="title-line" set:html={ph(copy.workflowTitle[0])} />{lineJoin}<span class="title-line" set:html={ph(copy.workflowTitle[1])} /></h2>
-      <p>{copy.workflowCopy}</p>
-    </div>
-    <div class="workflow-map card" aria-label={copy.workflowKicker}>
-      <div class="map-row">
-        <span class="map-label">{copy.existingSystems}</span>
-        <div class="map-items">
-          {copy.systemLabels.map((label) => <span>{label}</span>)}
-        </div>
-      </div>
-      <div class="connector"><span></span><b>{copy.connectModel}</b><span></span></div>
-      <div class="object-layer">
-        <small>OBJECTSTACK DEFINITION LAYER</small>
-        <strong>{copy.objectLayer}</strong>
-      </div>
-      <div class="connector"><span></span><b>{copy.secureExecution}</b><span></span></div>
-      <div class="map-row outputs">
-        <span class="map-label">{copy.outcomes}</span>
-        <div class="map-items">
-          {copy.outcomeLabels.map((label) => <span>{label}</span>)}
-        </div>
-      </div>
-    </div>
-  </section>
-
   <section class="security-section" id="security">
     <div class="security-copy">
       <p class="section-kicker">{copy.securityKicker}</p>
@@ -369,33 +385,9 @@ const demoCopy = DEMO_COPY[locale];
     </div>
   </section>
 
-  {/* "How business teams use it" (#359): the block that held three template
-      cards now holds three scenario cards, each landing on its team's section
-      of /use-cases/; the templates catalog stays one link away, under the
-      cards. The old #templates anchor is kept on the section for existing
-      deep links. */}
-  <section class="solution-section" id="templates">
-    <div class="section-head">
-      <div>
-        <p class="section-kicker">{copy.useCasesKicker}</p>
-        <h2><span class="title-line" set:html={ph(copy.useCasesTitle[0])} />{lineJoin}<span class="title-line" set:html={ph(copy.useCasesTitle[1])} /></h2>
-      </div>
-      <a class="btn btn-ghost" href={useCasesHref}>{copy.useCasesLink} <span>→</span></a>
-    </div>
-    <div class="solution-grid">
-      {copy.useCases.map((useCase, index) => (
-        <a class="solution card card-link" href={useCaseHrefs[index]}>
-          <span class="solution-mark"></span>
-          <h3>{useCase.title}</h3>
-          <p>{useCase.copy}</p>
-          <span class="solution-link">{copy.useCaseCardLink}&nbsp;→</span>
-        </a>
-      ))}
-    </div>
-    <p class="solution-more"><a class="btn btn-ghost" href={templatesHref}>{copy.useCasesTemplatesLink} <span>→</span></a></p>
-  </section>
-
-  {/* id="compare" is the home page's own comparison section. Nav contract: the
+  {/* Editions and comparison (#411): E1, the one place it is on the page,
+      with the pricing link and the protocol link under it, then the three
+      comparison cards. id="compare" is the home page's own comparison section. Nav contract: the
       header's "Why ObjectOS" item points at /compare/, the full comparison page
       (five comparisons, the not-for list and the FAQ), not at this anchor; the
       id stays for in-page links and for the existing /#compare deep links. */}
@@ -406,6 +398,16 @@ const demoCopy = DEMO_COPY[locale];
         <h2><span class="title-line" set:html={ph(copy.compareTitle[0])} />{lineJoin}<span class="title-line" set:html={ph(copy.compareTitle[1])} /></h2>
       </div>
       <a class="btn btn-ghost" href={compareHref}>{copy.compareLink} <span>→</span></a>
+    </div>
+    {/* E1 and the protocol link beside it (src/lib/positioning.ts): the
+        three editions, then what they are built on. Nothing else on the
+        home page links objectstack.ai. */}
+    <div class="editions">
+      <p class="editions-copy">{copy.editionsCopy}</p>
+      <p class="editions-links">
+        <a class="btn btn-ghost" href={pricingHref}>{copy.editionsPricingLink} <span aria-hidden="true">→</span></a>
+        <a class="btn btn-ghost" href={OBJECTSTACK_URL}>{protocolLink} <span aria-hidden="true">→</span></a>
+      </p>
     </div>
     <div class="solution-grid">
       {copy.comparisons.map((c) => (
@@ -428,20 +430,19 @@ const demoCopy = DEMO_COPY[locale];
         </div>
         <a class="btn btn-ghost" href={blogPath(locale)}>{copy.insightsLink} <span>→</span></a>
       </div>
+      {/* One row of topic chips (#411): the three topic hubs, then the five
+          guides. The CRM and manufacturing topics are left out because the
+          guides of the same name are in the row. */}
       <nav class="insight-links" aria-label={copy.insightsTitle}>
         {insightTerms.map((term) => (
           <a class="pill-nav" href={termHref(locale, term!)}>
             {termLabel(term!.slug, locale)}
           </a>
         ))}
+        {CLUSTERS.map((cluster) => (
+          <a class="pill-nav" href={clusterPath(locale, cluster.slug)}>{clusterCopy(cluster, locale).shortTitle}</a>
+        ))}
       </nav>
-      {clusterLinks.length > 0 && (
-        <nav class="cluster-links" aria-label={ui[locale].siteNav.featuredGuides}>
-          {clusterLinks.map((cluster) => (
-            <a href={clusterPath(locale, cluster.slug)}>{clusterCopy(cluster, locale).shortTitle}</a>
-          ))}
-        </nav>
-      )}
       <div class="article-grid">
         {posts.map((post) => (
           <a class="article" href={postPath(locale, post.slug)}>
@@ -507,14 +508,16 @@ const demoCopy = DEMO_COPY[locale];
     <p class="section-kicker">{copy.closingKicker}</p>
     <h2 set:html={ph(copy.closingTitle)} />
     <p>{copy.closingCopy}</p>
-    {/* The closing CTA is the site's two-button pair (#397): start free on
-        ObjectOS Cloud, or talk to someone — /contact/, through CONTACT_URL
-        like every contact CTA. /data-modeling/, the page that federates a
-        database (#361), stays linked from the capability cards above. */}
+    {/* A business reader's three next steps (#411): start free on ObjectOS
+        Cloud, see the use cases, or talk to someone — /contact/, through
+        CONTACT_URL like every contact CTA (#397). The developer path is one
+        text link under the row. */}
     <div class="closing-actions">
       <a class="btn btn-primary" href={CLOUD_SIGNUP_URL}>{copy.closingCta} <span aria-hidden="true">→</span></a>
+      <a class="btn btn-secondary" href={useCasesHref}>{copy.closingUseCasesCta}</a>
       <a class="btn btn-secondary" href={CONTACT_URL[locale]}>{ui[locale].contactUs}</a>
     </div>
+    <p class="closing-dev"><a class="btn btn-ghost" href={agentDeveloperHref}>{copy.closingDeveloperLink} <span aria-hidden="true">→</span></a></p>
   </section>
 </div>
 
@@ -552,8 +555,7 @@ const demoCopy = DEMO_COPY[locale];
   .home :global(h2:lang(ja)),
   .home :global(h2:lang(ko)),
   .home :global(h3:lang(ko)),
-  .hero-lead:is(:lang(zh), :lang(ja)),
-  .hero-editions:is(:lang(zh), :lang(ja)) {
+  .hero-lead:is(:lang(zh), :lang(ja)) {
     word-break: keep-all;
     overflow-wrap: anywhere;
   }
@@ -580,17 +582,8 @@ const demoCopy = DEMO_COPY[locale];
   }
   /* No `justify-content` for the eyebrow: it is inline content now (see the
      `.eyebrow` rule below), centred by the hero's own `text-align: center`. */
-  .hero > .hero-lead,
-  .hero > .hero-editions {
+  .hero > .hero-lead {
     margin-inline: auto;
-  }
-  /* `.home p` zeroes every paragraph's top margin at (0,1,1), which beats a
-     bare class. The edition paragraph is the one hero paragraph that needs a
-     gap above it (the CTA row on desktops, the video on phones), so the gap
-     is set here, at the child selector's (0,2,0). Measured without it: the
-     paragraph's top sat exactly on the CTA row's bottom, 440px on 440px. */
-  .hero > .hero-editions {
-    margin-top: 2rem;
   }
   .hero > .hero-actions {
     justify-content: center;
@@ -674,22 +667,6 @@ const demoCopy = DEMO_COPY[locale];
     /* Balanced like the headline: unbalanced, the zh lead broke after 你拥 at
        35rem and left 有它。 alone on its second line, in the first screen. */
     text-wrap: balance;
-  }
-  /* E1 under the CTA row: the hero's second paragraph, quieter than the lead
-     (smaller type, the same soft ink) and wide enough that its 286 characters
-     run four lines in en on a desktop. The protocol link is its secondary
-     line, right under it; the hero is a centred flex column, so the link
-     centres itself too. */
-  .hero-editions {
-    color: var(--ink-soft);
-    font-size: var(--fs-15);
-    line-height: var(--lh-body);
-    max-width: var(--measure-lead);
-    margin-bottom: 0.6rem;
-  }
-  .hero-protocol-link {
-    align-self: center;
-    margin-bottom: 0;
   }
   .hero-actions {
     display: flex;
@@ -846,22 +823,6 @@ const demoCopy = DEMO_COPY[locale];
     color: var(--ink-soft);
     font-weight: 700;
   }
-  .positioning {
-    max-width: var(--measure-wide);
-    padding: var(--space-section) 0 var(--sp-10);
-    position: relative;
-  }
-  /* A single green rule: the tri-colour bar it replaces used amber as
-     decoration, and amber is a status colour. */
-  .positioning::before {
-    content: '';
-    display: block;
-    width: 96px;
-    height: 5px;
-    margin-bottom: 2.4rem;
-    background: var(--green);
-  }
-  .positioning h2,
   .section-head h2,
   .ai-copy h2,
   .workflow-intro h2,
@@ -873,8 +834,8 @@ const demoCopy = DEMO_COPY[locale];
     margin-bottom: 1.3rem;
   }
   .positioning-copy,
-  .ai-copy > p,
-  .workflow-intro > p:last-child,
+  .editions-copy,
+  .ai-note,
   .security-copy > p:last-child,
   .closing > p {
     max-width: var(--measure-prose);
@@ -882,13 +843,12 @@ const demoCopy = DEMO_COPY[locale];
     font-size: var(--fs-17);
     line-height: var(--lh-prose);
   }
-  /* The positioning section is a block, not a flex head, so the shared
-     text-link needs its own vertical spacing here. */
+  /* The intro column is a block, not a flex head, so the shared text-link
+     needs its own vertical spacing here. */
   .positioning-link {
     display: inline-block;
     margin-top: 0.5rem;
   }
-  .capability-section,
   .ai-section,
   .workflow,
   .security-section,
@@ -1024,6 +984,22 @@ const demoCopy = DEMO_COPY[locale];
   }
   .workflow > * {
     min-width: 0;
+  }
+  /* The "how it connects" block (#411) is the workflow grid with two more
+     rows: the two capability cards and the run recording, each across both
+     columns. The recording keeps the 54rem measure it had as the old
+     positioning block's last child, centred under the cards. */
+  .connect {
+    row-gap: 3.5rem;
+  }
+  .connect > .capability-list,
+  .connect > .hero-media {
+    grid-column: 1 / -1;
+  }
+  .connect > .hero-media {
+    width: 100%;
+    max-width: var(--measure-wide);
+    margin: 0 auto;
   }
   .workflow-map {
     padding: 2rem;
@@ -1179,6 +1155,20 @@ const demoCopy = DEMO_COPY[locale];
   .solution-section > .solution-more {
     margin: 2rem 0 0;
   }
+  /* E1 and its two links (#411), between the section head and the
+     comparison cards. */
+  .editions {
+    margin-bottom: 2.75rem;
+  }
+  .editions > .editions-copy {
+    margin-bottom: 1.1rem;
+  }
+  .editions > .editions-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 1.75rem;
+    margin: 0;
+  }
   .article-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -1189,34 +1179,6 @@ const demoCopy = DEMO_COPY[locale];
     flex-wrap: wrap;
     gap: 0.55rem;
     margin: -1.7rem 0 2rem;
-  }
-  .cluster-links {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 0.6rem;
-    margin: -1rem 0 2.4rem;
-  }
-  .cluster-links a {
-    min-height: 72px;
-    display: flex;
-    align-items: flex-end;
-    color: var(--ink);
-    text-decoration: none;
-    font-size: var(--fs-13);
-    font-weight: 700;
-    line-height: var(--lh-heading);
-    padding: 0.75rem;
-    border: 1px solid var(--line);
-    border-radius: var(--r-card);
-    background:
-      linear-gradient(180deg, transparent, color-mix(in srgb, var(--green) 9%, transparent)),
-      var(--surface);
-    transition: transform 0.16s ease, color 0.16s ease, border-color 0.16s ease;
-  }
-  .cluster-links a:hover {
-    color: var(--brand);
-    border-color: color-mix(in srgb, var(--brand) 40%, var(--line));
-    transform: translateY(-2px);
   }
   .article {
     color: var(--ink);
@@ -1289,17 +1251,30 @@ const demoCopy = DEMO_COPY[locale];
     gap: 0.7rem;
     margin-top: 1rem;
   }
-  /* On phones and small tablets (`max-width: 900px`) the video moves to
-     directly after the CTA row, ahead of the edition paragraph: eyebrow,
-     headline, lead, CTAs, video, editions, protocol link, proof. The markup
-     and the source order are untouched, so this costs no duplicated DOM.
+  /* The developer path, one text link under the buttons (#411). The ghost
+     link is ink on ink here without this: it takes the panel's text tokens. */
+  .closing > .closing-dev {
+    margin: 1.75rem 0 0;
+  }
+  .closing .btn-ghost {
+    color: var(--on-panel);
+    border-color: color-mix(in srgb, var(--on-panel) 45%, transparent);
+  }
+  .closing .btn-ghost:hover {
+    color: var(--on-panel-accent);
+    border-color: var(--on-panel-accent);
+  }
+  /* On phones and small tablets (`max-width: 900px`) the hero's children are
+     ordered explicitly: eyebrow, headline, lead, CTAs, video, proof. Since
+     E1 and the protocol link left the hero for the editions block (#411)
+     that is also the source order; the explicit order stays so the phone
+     layout does not depend on it.
 
      This rule used to move the video up to directly under the headline, ahead
      of the lead, when the lead ran T2, T4 and E1 together — about nine lines
      on a phone — which put the CTA row at 1114px on a 390px phone, 1.3
      screens down. With the lead one sentence the CTA row is in the first
-     screen, the video follows it, and the eight-line edition paragraph comes
-     after both.
+     screen and the video follows it.
 
      A wide but short screen keeps the source order. This rule used to fire on
      `max-height: 1040px` too, to get the video into a laptop's first screen,
@@ -1324,15 +1299,8 @@ const demoCopy = DEMO_COPY[locale];
       margin-top: 1.75rem;
       margin-bottom: 0;
     }
-    .hero > .hero-editions,
-    .hero > .hero-protocol-link {
-      /* Same order value: flex keeps source order within it, so the link
-         stays right under the edition paragraph instead of falling to the
-         top as an unordered child would. */
-      order: 6;
-    }
     .hero > .proof {
-      order: 7;
+      order: 6;
     }
   }
   @media (max-width: 900px) {
@@ -1356,9 +1324,6 @@ const demoCopy = DEMO_COPY[locale];
     .article-grid {
       grid-template-columns: 1fr 1fr;
     }
-    .cluster-links {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
     .solution:last-child {
       grid-column: span 2;
     }
@@ -1378,7 +1343,6 @@ const demoCopy = DEMO_COPY[locale];
      are sized for the narrowest column they sit in: the workflow column is
      372px at 1366, which held 6.5 characters at 3.55rem and broke inside
      オペレーション. 2.5rem holds nine. Phones keep 2rem. */
-  .home.lang-ja .positioning h2,
   .home.lang-ja .section-head h2,
   .home.lang-ja .ai-copy h2,
   .home.lang-ja .workflow-intro h2,
@@ -1424,8 +1388,6 @@ const demoCopy = DEMO_COPY[locale];
       grid-template-columns: 1fr;
       gap: 0.9rem;
     }
-    .positioning,
-    .capability-section,
     .ai-section,
     .workflow,
     .security-section,
@@ -1463,9 +1425,6 @@ const demoCopy = DEMO_COPY[locale];
     .solution-grid,
     .article-grid {
       grid-template-columns: 1fr;
-    }
-    .cluster-links {
-      grid-template-columns: minmax(0, 1fr);
     }
     .solution,
     .solution:last-child {
