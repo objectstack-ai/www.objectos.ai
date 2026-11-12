@@ -32,6 +32,9 @@ export const pricingPath = (l: Locale): string => `/${l}/pricing/`;
 /** Changelog page URL: /<locale>/changelog/. */
 export const changelogPath = (l: Locale): string => `/${l}/changelog/`;
 
+/** Enterprise roadmap page URL: /<locale>/roadmap/ (src/lib/roadmap.ts). */
+export const roadmapPath = (l: Locale): string => `/${l}/roadmap/`;
+
 /** Article URL: /<locale>/blog/<baseSlug>. */
 export const postPath = (l: Locale, slug: string): string =>
   `/${l}/blog/${slug}/`;
@@ -183,6 +186,8 @@ interface Strings {
     videos: string;
     /** /[lang]/changelog/ — the release history; a footer link under Resources. */
     changelog: string;
+    /** /[lang]/roadmap/ — the Enterprise roadmap; a footer link under Resources, after Changelog. */
+    roadmap: string;
     /**
      * GitHub Discussions on objectstack-ai/objectstack (enabled there:
      * `has_discussions`) — an external footer link under Resources.
@@ -290,6 +295,7 @@ const en: Strings = {
     blog: 'Blog',
     videos: 'Videos',
     changelog: 'Changelog',
+    roadmap: 'Roadmap',
     community: 'Community',
     guides: 'Guides',
     featuredGuides: 'Featured guides',
@@ -369,6 +375,7 @@ const zhHans: Strings = {
     blog: '博客',
     videos: '视频',
     changelog: '更新日志',
+    roadmap: '路线图',
     community: '社区',
     guides: '专题指南',
     featuredGuides: '精选专题',
@@ -448,6 +455,7 @@ const ja: Strings = {
     blog: 'ブログ',
     videos: '動画',
     changelog: '更新履歴',
+    roadmap: 'ロードマップ',
     community: 'コミュニティ',
     guides: 'ガイド',
     featuredGuides: '注目のガイド',
@@ -527,6 +535,7 @@ const de: Strings = {
     blog: 'Blog',
     videos: 'Videos',
     changelog: 'Changelog',
+    roadmap: 'Roadmap',
     community: 'Community',
     guides: 'Leitfäden',
     featuredGuides: 'Ausgewählte Leitfäden',
@@ -606,6 +615,7 @@ const es: Strings = {
     blog: 'Blog',
     videos: 'Vídeos',
     changelog: 'Registro de cambios',
+    roadmap: 'Hoja de ruta',
     community: 'Comunidad',
     guides: 'Guías',
     featuredGuides: 'Guías destacadas',
@@ -685,6 +695,7 @@ const fr: Strings = {
     blog: 'Blog',
     videos: 'Vidéos',
     changelog: 'Journal des versions',
+    roadmap: 'Feuille de route',
     community: 'Communauté',
     guides: 'Guides',
     featuredGuides: 'Guides à la une',
@@ -764,6 +775,7 @@ const ko: Strings = {
     blog: '블로그',
     videos: '동영상',
     changelog: '변경 이력',
+    roadmap: '로드맵',
     community: '커뮤니티',
     guides: '가이드',
     featuredGuides: '추천 가이드',
@@ -844,6 +856,7 @@ const toHant = (s: Strings): Strings => ({
     blog: s2t(s.siteNav.blog),
     videos: s2t(s.siteNav.videos),
     changelog: s2t(s.siteNav.changelog),
+    roadmap: s2t(s.siteNav.roadmap),
     community: s2t(s.siteNav.community),
     guides: s2t(s.siteNav.guides),
     featuredGuides: s2t(s.siteNav.featuredGuides),
