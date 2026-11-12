@@ -116,7 +116,7 @@ export const Order = ObjectSchema.create({
           },
           {
             title: 'The review loop',
-            body: 'Structural changes land as compact diffs in an approval queue, so a person signs off before the runtime ships anything.',
+            body: 'Your agent’s structural change is a compact metadata diff that a person reviews before it merges; on ObjectOS Cloud, an AI Builder change to a live app that already holds records waits as a draft for a person to publish.',
             meta: 'Guide',
             href: '/en/product-tour/',
           },
