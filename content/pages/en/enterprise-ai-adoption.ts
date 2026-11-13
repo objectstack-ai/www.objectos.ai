@@ -106,7 +106,7 @@ travel_claim: { allowRead: true, allowCreate: false,
             meta: 'The AI, under the same rule',
             title: 'The assistant is the employee, not a superuser',
             href: '/en/permissions/',
-            body: 'The assistant that filed the claim acted as the signed-in employee, inside that employee’s permissions. The auditor’s edit is refused the same way. AI tool calls appear in the same audit log as people’s actions.',
+            body: 'The assistant that filed the claim acted as the signed-in employee, inside that employee’s permissions. The auditor’s edit is refused the same way. The records the assistant reads and changes appear in the same audit log as people’s actions; on Enterprise, AI governance also audits each tool call the in-app AI makes.',
           },
         ],
       },
@@ -198,7 +198,7 @@ travel_claim: { allowRead: true, allowCreate: false,
       {
         question: 'Does the AI act on its own?',
         answer:
-          'Only inside the authority you give it. An agent acts as the signed-in user, inside that user’s permissions; actions that need approval wait for a person; and its tool calls land in the same audit log as people’s actions.',
+          'Only inside the authority you give it. An agent acts as the signed-in user, inside that user’s permissions; a business decision that needs approval waits for a person at a flow approval step; and the records it reads and changes land in the same audit log as people’s actions. Per-call audit of the in-app AI’s tool calls is part of AI governance on Enterprise.',
       },
       {
         question: 'Can we take the ontology with us?',

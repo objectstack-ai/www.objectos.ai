@@ -116,7 +116,7 @@ export const Order = ObjectSchema.create({
           },
           {
             title: '审阅闭环',
-            body: '结构性变更以紧凑 diff 的形式进入审批队列，人签核之后运行时才会发布任何东西。',
+            body: '你的 Agent 做出的结构性变更是一份紧凑的元数据 diff，由人审阅后再合并；在 ObjectOS Cloud 中，AI Builder 对已上线且已有记录的应用所做的变更存为草稿，由人来发布。',
             meta: '指南',
             href: '/en/product-tour/',
           },
