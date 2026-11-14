@@ -267,9 +267,11 @@ $ python3 sql.py erp.db "SELECT c.cust_region, round(sum(o.amount),2), count(*) 
 
 ObjectStack 關於虛擬物件的指南用一句話劃了線：「Make the object virtual when a copy would be **wrong**, and real when a copy is merely **convenient**」（複製會出錯時，讓物件保持虛擬；複製只是方便時，讓它成為真實物件）。遠端在請求時才算出答案、資料不能落地（資料駐留、許可、審計），或者變化快過任何同步，複製就是錯的。變化緩慢的參考資料、要關聯很多來源的報表，複製只是方便。前一類直通讀取，後一類複製。對一個已經停用的系統，剩下的只有一份匯出檔案，[一份匯入對映和它的試執行](/zh-Hant/blog/how-to-import-a-spreadsheet-from-an-old-system/)就是讓那份檔案落進模型、又不把舊編碼一起帶進來的辦法。
 
-## 開發中：從資料庫複製
+複製進來是另一條路，它的核心已經隨 18.4.0 釋出。一個 `job` 的 `pull` 指向一份帶 `datasourceSource` 的 `mapping`，就會按視窗讀取一個聯邦物件（比如上面那兩個），把行 upsert 進一個宣告為 `managedBy: 'synced'` 的物件：成員可以讀，引擎會以 `403` 拒絕他們的寫入。每次執行都會留下一行 `sys_sync_run`，記錄讀了什麼、讀到了哪個位置，下一次執行從那裡接著讀。釋出說明用一句話概括：「A mapping's `datasourceSource` now does what it declares」（對映的 `datasourceSource` 現在會做它宣告的事）。應用裡宣告的作業，只在把 `OS_AUTOMATION_SCHEDULED_WORK_ENABLED` 設為 `true` 的部署上執行，這個開關預設關閉。本文沒有實測這條拉取。ADR-0153 的經驗法則把「Reports, analysis, AI question answering, joins across sources; a slow or fragile legacy system」（報表、分析、AI 問答、跨源關聯；慢或脆弱的老系統）分給 sync-in，把「Live data, one table at a time; the legacy system must not be touched; data that must not land」（即時資料、一次一張表；不能碰老系統；不能落地的資料）分給聯邦。[對接現有系統](/zh-Hant/connect-existing-systems/)把三條路並排擺開：即時讀取、複製進來，或者通過宣告的動作修改源系統。
 
-把聯邦表的行按計劃複製進普通的 ObjectStack 物件（「sync-in」）已經有了設計，但不在 18.4.0 裡。它的記錄 ADR-0153 處於 Proposed 狀態，自己這樣寫：「This record declares; it implements nothing」（本記錄只做宣告，不實現任何東西）。它描述的是：「A remote table or API collection becomes an ordinary object whose rows were **copied** by a pull」（遠端表或 API 集合成為一個普通物件，它的行由一次拉取複製而來）；它的經驗法則把「Reports, analysis, AI question answering, joins across sources; a slow or fragile legacy system」（報表、分析、AI 問答、跨源關聯；慢或脆弱的老系統）分給 sync-in，把「Live data, one table at a time; the legacy system must not be touched; data that must not land」（即時資料、一次一張表；不能碰老系統；不能落地的資料）分給聯邦。本節內容都沒有實測。
+## 開發中：sync-in 的其餘部分
+
+不在 18.4.0 裡的有：標記源系統已刪除的行（作業指南的原話是「The delete keys change nothing yet」，刪除相關的鍵暫時什麼都不改變）；聯結器來源的分頁，它的鍵已經可以宣告，但「nothing reads it yet」（還沒有任何東西讀取它）；以及 sync-in 的指南和技能。本節內容都沒有實測。
 
 ## 在 diff 裡該看什麼
 

@@ -266,9 +266,11 @@ $ python3 sql.py erp.db "SELECT c.cust_region, round(sum(o.amount),2), count(*) 
 
 ObjectStack의 가상 객체 가이드는 한 문장으로 선을 긋습니다. "Make the object virtual when a copy would be **wrong**, and real when a copy is merely **convenient**"(복사가 틀린 일이면 객체를 가상으로, 복사가 단지 편할 뿐이면 실체로). 원격이 요청 시점에 답을 계산할 때, 데이터가 착지하면 안 될 때(데이터 거주성, 라이선스, 감사), 어떤 동기화보다 빨리 바뀔 때 복사는 틀린 일입니다. 천천히 바뀌는 참조 데이터와 여러 원본을 조인하는 보고서에는 복사가 편할 뿐입니다. 앞의 것은 통과해 읽고, 뒤의 것은 복사하세요. 이미 꺼 버린 시스템이라면 남은 건 내보내기 파일뿐이고, [가져오기 매핑과 그 시험 실행](/ko/blog/how-to-import-a-spreadsheet-from-an-old-system/)이 그 파일을 옛 코드 없이 모델에 착지시키는 방법입니다.
 
-## 개발 중: 데이터베이스에서 복사하기
+복사해 들여오는 것이 다른 길이고, 그 핵심은 18.4.0에 들어 있습니다. `pull`이 `datasourceSource`를 가진 `mapping`을 가리키는 `job`은 위의 두 객체 같은 페더레이션 객체를 구간 단위로 읽어, 그 행을 `managedBy: 'synced'`로 선언한 객체에 upsert합니다. 멤버는 읽을 수 있고, 쓰기는 엔진이 `403`으로 거부합니다. 실행마다 무엇을 읽었고 어느 위치까지 왔는지 담은 `sys_sync_run` 행이 남고, 다음 실행은 거기서 이어 읽습니다. 릴리스 노트는 한 줄로 말합니다. "A mapping's `datasourceSource` now does what it declares"(매핑의 `datasourceSource`가 이제 선언한 대로 동작한다). 앱에 선언한 작업은 `OS_AUTOMATION_SCHEDULED_WORK_ENABLED`를 `true`로 설정한 배포에서만 실행되며, 이 설정은 기본적으로 꺼져 있습니다. 이 글에서는 이 풀을 측정하지 않았습니다. ADR-0153의 경험칙은 "Reports, analysis, AI question answering, joins across sources; a slow or fragile legacy system"(보고서, 분석, AI 질의응답, 원본 간 조인, 느리거나 취약한 레거시 시스템)을 sync-in에, "Live data, one table at a time; the legacy system must not be touched; data that must not land"(실시간 데이터, 한 번에 한 테이블, 레거시를 건드리면 안 됨, 착지하면 안 되는 데이터)를 페더레이션에 배정합니다. [Connect existing systems](/en/connect-existing-systems/) 페이지는 실시간으로 읽기, 복사해 들여오기, 선언된 액션으로 원본 바꾸기라는 세 길을 나란히 놓습니다.
 
-페더레이션된 테이블의 행을 일정에 따라 일반 ObjectStack 객체로 복사하는 기능("sync-in")은 설계되어 있지만 18.4.0에는 없습니다. 그 기록인 ADR-0153은 Proposed 상태이며 스스로를 이렇게 말합니다. "This record declares; it implements nothing"(이 기록은 선언만 하고 아무것도 구현하지 않는다). 그것이 설명하는 내용은 "A remote table or API collection becomes an ordinary object whose rows were **copied** by a pull"(원격 테이블이나 API 컬렉션이, 풀로 복사된 행을 가진 일반 객체가 된다)이고, 그 경험칙은 "Reports, analysis, AI question answering, joins across sources; a slow or fragile legacy system"(보고서, 분석, AI 질의응답, 원본 간 조인, 느리거나 취약한 레거시 시스템)을 sync-in에, "Live data, one table at a time; the legacy system must not be touched; data that must not land"(실시간 데이터, 한 번에 한 테이블, 레거시를 건드리면 안 됨, 착지하면 안 되는 데이터)를 페더레이션에 배정합니다. 이 절의 내용은 하나도 측정하지 않았습니다.
+## 개발 중: sync-in의 나머지
+
+18.4.0에 없는 것: 원본에서 삭제된 행 표시(작업 가이드의 표현으로 "The delete keys change nothing yet", 삭제 키는 아직 아무것도 바꾸지 않는다), 커넥터 원본의 페이징(키는 선언할 수 있지만 "nothing reads it yet", 아직 아무것도 읽지 않는다), 그리고 sync-in 가이드와 스킬. 이 절의 내용은 하나도 측정하지 않았습니다.
 
 ## diff에서 읽을 곳
 

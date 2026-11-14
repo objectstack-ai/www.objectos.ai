@@ -266,9 +266,11 @@ $ python3 sql.py erp.db "SELECT c.cust_region, round(sum(o.amount),2), count(*) 
 
 ObjectStack の仮想オブジェクトのガイドは一文で線を引いている。「Make the object virtual when a copy would be **wrong**, and real when a copy is merely **convenient**」（コピーが誤りになるならオブジェクトを仮想に、コピーが単に便利なだけなら実体に）。リモートが要求の時点で答えを計算する場合、データを着地させてはならない場合（データ所在、ライセンス、監査）、どんな同期よりも速く変わる場合、コピーは誤りだ。ゆっくり変わる参照データや、多くのソースを結合するレポートなら、コピーは便利なだけだ。前者は読み通し、後者はコピーする。すでに止めたシステムなら、残っているのはエクスポートだけで、[インポートマッピングとそのドライラン](/ja/blog/how-to-import-a-spreadsheet-from-an-old-system/)がそのファイルを古いコードごと持ち込まずにモデルへ着地させる方法になる。
 
-## 開発中：データベースからのコピー
+コピーして取り込むのがもう一つの道で、その中核は 18.4.0 で出荷されている。`pull` が `datasourceSource` を持つ `mapping` を指す `job` は、上の二つのようなフェデレーションされたオブジェクトをウィンドウ単位で読み、その行を `managedBy: 'synced'` と宣言したオブジェクトへ upsert する。メンバーは読めるが、書き込みはエンジンが `403` で拒否する。実行ごとに `sys_sync_run` の行が残り、何を読んだか、どの位置まで進んだかが記録され、次の実行はそこから読み進める。リリースノートは一行でこう言う。「A mapping's `datasourceSource` now does what it declares」（マッピングの `datasourceSource` が宣言どおりに動くようになった）。アプリで宣言したジョブは `OS_AUTOMATION_SCHEDULED_WORK_ENABLED` を `true` にしたデプロイでのみ動き、この設定は既定でオフだ。この記事ではこのプルを実測していない。ADR-0153 の目安は「Reports, analysis, AI question answering, joins across sources; a slow or fragile legacy system」（レポート、分析、AI による質問応答、ソース横断の結合、遅いか脆いレガシーシステム）を sync-in に、「Live data, one table at a time; the legacy system must not be touched; data that must not land」（ライブデータ、一度に一テーブル、レガシーに触れてはならない、着地させてはならないデータ）をフェデレーションに割り当てる。[Connect existing systems](/en/connect-existing-systems/) のページは、ライブで読む、コピーして取り込む、宣言したアクションでソースを変える、の三つの道を並べている。
 
-フェデレーションされたテーブルの行を定期的に普通の ObjectStack オブジェクトへコピーする仕組み（「sync-in」）は設計されているが、18.4.0 にはない。その記録である ADR-0153 は Proposed の状態で、自らについてこう書く。「This record declares; it implements nothing」（この記録は宣言するのみで、何も実装しない）。そこに書かれているのは「A remote table or API collection becomes an ordinary object whose rows were **copied** by a pull」（リモートのテーブルや API のコレクションが、プルでコピーされた行を持つ普通のオブジェクトになる）ということで、その目安は「Reports, analysis, AI question answering, joins across sources; a slow or fragile legacy system」（レポート、分析、AI による質問応答、ソース横断の結合、遅いか脆いレガシーシステム）を sync-in に、「Live data, one table at a time; the legacy system must not be touched; data that must not land」（ライブデータ、一度に一テーブル、レガシーに触れてはならない、着地させてはならないデータ）をフェデレーションに割り当てる。この節の内容はどれも実測していない。
+## 開発中：sync-in の残り
+
+18.4.0 にないもの：ソース側で削除された行の印付け（ジョブのガイドの言葉では「The delete keys change nothing yet」、削除のキーはまだ何も変えない）、コネクターソースのページング（キーは宣言できるが「nothing reads it yet」、まだ何も読まない）、そして sync-in のガイドとスキル。この節の内容はどれも実測していない。
 
 ## diff で読むところ
 
