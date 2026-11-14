@@ -15,7 +15,7 @@ const page = {
     metrics: [
       { value: '3 layers', label: 'Object, record, and field-level control in one model' },
       { value: 'Per user', label: 'AI agents inherit the signed-in user’s permissions' },
-      { value: 'Immutable', label: 'Audit trail for reads, writes, grants, and tool calls' },
+      { value: 'Immutable', label: 'Audit trail for record reads, writes, and grants; AI tool calls on Enterprise' },
     ],
     artifact: {
       eyebrow: 'Authority as metadata',
@@ -98,8 +98,8 @@ const page = {
             body: 'Filter by action, object, actor, and date; open any entry and a side drawer shows the full event with old → new value diffs — “who changed that discount” is three clicks to an answer.',
           },
           {
-            title: 'AI calls, side by side',
-            body: 'AI tool calls appear in the same log as human activity — same filters, same diffs — so reviewing the AI is the same job as reviewing people.',
+            title: 'AI activity, side by side',
+            body: 'The AI acts as the signed-in user, so the records it reads and changes appear in the same log as human activity — same filters, same diffs. On Enterprise, AI governance also audits each tool call the in-app AI makes.',
           },
         ],
       },
@@ -115,12 +115,12 @@ const page = {
             body: 'A rep asks the AI “which of my accounts are likely to renew” — the AI sees that rep’s team’s accounts, with cost still masked. Nothing more.',
           },
           {
-            title: 'Approval-gated writes',
-            body: 'Structural changes and sensitive actions queue for human sign-off before they execute, with the full diff attached.',
+            title: 'A person in the loop where it matters',
+            body: 'On ObjectOS Cloud, an AI Builder change to a live app that already holds records waits as a draft for a person to publish; flow approval steps hold business decisions, such as a refund, for an approver.',
           },
           {
-            title: 'Everything audited',
-            body: 'Record changes, permission grants, session revocations, approval decisions, and AI tool calls all land in the immutable audit log.',
+            title: 'Record activity audited',
+            body: 'Record changes, permission grants, session revocations, and approval decisions all land in the immutable audit log. Per-call audit of the in-app AI’s tool calls is part of AI governance on Enterprise.',
           },
         ],
       },
@@ -140,7 +140,7 @@ const page = {
       'Row rules match the org hierarchy, not a copy of it.',
       'Sensitive fields are masked for every consumer, including AI.',
       'Structural changes cannot ship without an approval record.',
-      'The audit log captures tool calls, not just record writes.',
+      'On Enterprise, the audit log captures the in-app AI’s tool calls, not just record writes.',
     ],
     faqs: [
       {
@@ -151,7 +151,7 @@ const page = {
       {
         question: 'What is open source here, and what does ObjectOS add?',
         answer:
-          'Roles and permission sets, row-level rules, field security, sharing, tenant isolation, the audit log, and the permission matrix editor and audit log viewer in the Console are all open-source ObjectStack, Apache-2.0, and apply equally to MCP tool access. ObjectOS adds AI governance for its in-app AI on Enterprise — action audit, guardrails, and permission scoping — and makes approving the AI Builder’s changes its own permission, one you can scope per package in a permission set.',
+          'Roles and permission sets, row-level rules, field security, sharing, tenant isolation, the audit log, and the permission matrix editor and audit log viewer in the Console are all open-source ObjectStack, Apache-2.0, and apply equally to MCP tool access. ObjectOS adds AI governance for its in-app AI on Enterprise — per-call audit of its tool calls, guardrails, and permission scoping. An external agent over MCP is covered by the open-source rules above, not by that per-call audit.',
       },
     ],
   } satisfies MarketingPage;

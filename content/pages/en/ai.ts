@@ -25,8 +25,8 @@ const page = {
       steps: [
         'Describe: “Track vendor contracts with renewal reminders and an approval for anything over $50k.”',
         'Your AI — a coding agent in source, or the in-app builder — drafts the objects, fields, views, and renewal flow.',
-        'Structural changes land in the approval queue as a compact, readable diff.',
-        'You approve — the ObjectStack runtime derives and ships tables, APIs, screens, automations, and audit.',
+        'In source, the change is a compact git diff you review; on ObjectOS Cloud, a change to a live app that already holds records is saved as a draft for a person to publish.',
+        'Once it is merged or published, the ObjectStack runtime derives and ships tables, APIs, screens, automations, and audit.',
         'AI Ask now answers contract questions for each user, scoped to what they may see.',
       ],
     },
@@ -51,8 +51,8 @@ const page = {
             body: 'Objects, views, flows, and dashboards each have a designer — drag-to-reorder fields, a flow canvas, kanban column config — and review mode diffs the draft against the published version, so tuning what the AI drafted never touches a file.',
           },
           {
-            title: 'Approval before structure changes',
-            body: 'Anything that changes the shape of the system queues for human sign-off with the full diff — on either path.',
+            title: 'A person publishes changes to a live app',
+            body: 'In source, your agent’s change is a git diff you review and merge. On ObjectOS Cloud, the builder publishes a first build right away; once the app is live and holds records, a change is saved as a draft until a person publishes it.',
           },
         ],
       },
@@ -68,12 +68,54 @@ const page = {
             body: '“Which contracts renew this quarter?” “Which vendors slipped SLA twice?” — answered from live objects with permissions applied.',
           },
           {
-            title: 'Run approved actions',
-            body: 'Ask can trigger actions that metadata explicitly exposes — assign, escalate, generate a summary — within the user’s rights.',
+            title: 'Run actions exposed to AI',
+            body: 'Ask can run actions an admin has exposed to AI — assign, escalate, generate a summary — within the user’s permissions.',
           },
           {
             title: 'Everything on the record',
             body: 'On ObjectOS Enterprise, Ask queries and actions land in the audit log alongside human activity, so review works the same for both.',
+          },
+        ],
+      },
+      {
+        id: 'ask-sources',
+        eyebrow: 'AI Ask',
+        title: 'Ask: every number shows its source',
+        copy:
+          'Ask about the business in plain language, then check any figure in the answer. Ask is built into ObjectOS Cloud and Enterprise (a preview on Enterprise).',
+        items: [
+          {
+            title: 'A source line with every figure',
+            body: 'Each answer says where its numbers come from: the object, the filters, what was measured, and how it was grouped.',
+          },
+          {
+            title: 'Links to the records',
+            body: 'A record the answer names comes with a link to it, so you can open what sits behind a figure.',
+          },
+          {
+            title: 'Only what you may see',
+            body: 'Ask reads with the permissions of the person asking, so an answer never draws on records or fields that person cannot see.',
+          },
+        ],
+      },
+      {
+        id: 'record-edits',
+        eyebrow: 'AI record edits',
+        title: 'AI edits wait for you',
+        copy:
+          'When you ask the in-product AI to add or change a record, nothing is saved until you confirm. Built into ObjectOS Cloud and Enterprise (a preview on Enterprise).',
+        items: [
+          {
+            title: 'Old and new values first',
+            body: 'The AI proposes the change on a card that lists each field, and on an update shows the stored value beside the new one.',
+          },
+          {
+            title: 'Runs as you, after you confirm',
+            body: 'Only the person who asked can confirm the change. It then runs with that person’s permissions, under the same record, field, and validation rules as saving the form.',
+          },
+          {
+            title: 'One record at a time',
+            body: 'The in-product AI changes one record per confirmation. It cannot delete records or edit them in bulk; for those it points you to the record or the list.',
           },
         ],
       },
@@ -94,7 +136,7 @@ const page = {
           },
           {
             title: 'Same runtime, governance by edition',
-            body: 'On the open-source runtime, MCP tool calls run inside the caller’s permissions and land in the audit log. ObjectOS adds in-app AI by edition: a taste on Free, in-app AI Build and Ask on Team, and AI governance — action audit, guardrails, permission scoping — on Enterprise.',
+            body: 'On the open-source runtime, MCP tool calls run inside the caller’s permissions, and the record reads and writes they make are audited. ObjectOS adds in-app AI by edition: a taste on Free, in-app AI Build and Ask on Team, and on Enterprise the same AI as a preview plus AI governance — per-call audit of the in-app AI’s tool calls, guardrails, permission scoping.',
           },
         ],
       },
@@ -104,15 +146,15 @@ const page = {
       rows: [
         ['Open-source ObjectStack', 'Your coding agent edits metadata source files; review as git diffs', 'Any MCP client queries governed objects with your own model'],
         ['ObjectOS Cloud Free', 'A taste of in-app AI Build', 'A taste of in-app AI Ask'],
-        ['ObjectOS Cloud Team', 'In-app AI Build drafts changes; approvals gate structure', 'In-app AI Ask answers and runs approved actions'],
-        ['ObjectOS Enterprise (self-managed or by contract)', 'Same, plus AI governance: action audit, guardrails, permission scoping; on your own infrastructure with bring-your-own-model', 'Same, with Ask queries and actions audited and guardrailed, plus local models and internal identity'],
+        ['ObjectOS Cloud Team', 'In-app AI Build drafts changes; a change to a live app that holds records waits as a draft for a person to publish', 'In-app AI Ask answers with a source line and proposes record changes the user confirms'],
+        ['ObjectOS Enterprise (self-managed or by contract)', 'Same, as a preview, plus AI governance: per-call audit of the in-app AI’s tool calls, guardrails, permission scoping; on your own infrastructure with bring-your-own-model', 'Same, as a preview, with Ask’s tool calls audited and guardrailed, plus local models and internal identity'],
       ],
     },
     faqs: [
       {
         question: 'What stops AI from breaking production?',
         answer:
-          'The ObjectStack runtime enforces two guarantees for any agent working over MCP: structural changes require human approval, and every tool call runs inside the requesting user’s permissions and is audited. ObjectOS Enterprise adds AI governance for the in-app AI — action audit, guardrails, permission scoping — so AI can draft quickly but cannot ship silently.',
+          'For any agent working over MCP, the ObjectStack runtime runs each tool call inside the requesting user’s permissions and audits the record reads and writes it makes. In the product, an AI record change runs only after the user confirms it, and on ObjectOS Cloud a change to a live app that already holds records waits as a draft for a person to publish. ObjectOS Enterprise adds AI governance for the in-app AI — per-call audit of its tool calls, guardrails, permission scoping; an external MCP agent is outside that per-call audit.',
       },
       {
         question: 'Which models does it use?',
