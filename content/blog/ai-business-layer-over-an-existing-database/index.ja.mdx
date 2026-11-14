@@ -1,0 +1,292 @@
+---
+title: データを移さずに、稼働中のデータベースへ AI が使えるビジネス層をどう載せるか？
+description: 稼働中のデータベースのテーブルをオブジェクトとして束ねる。読み取りはソースへライブで届き、書き込みは既定で拒否、メンバーの権限は REST でも MCP でも効く。ObjectStack 18.4.0 で限界まで実測。
+author: ObjectStack Team
+date: 2026-11-18
+status: published
+topic: integration-data
+audience: it
+solutions: []
+industries: []
+cover: ./cover.svg
+tags:
+  - フェデレーション
+  - 既存データベース
+  - データモデリング
+---
+
+**答えから。** データベースを `external` データソースとして宣言し、必要なテーブルを一つずつオブジェクトに束ね、古い列名を業務上の名前に対応づける。それだけで、そのテーブルは人もレポートも AI エージェントも、ほかのオブジェクトと同じ REST と MCP の入口から、同じ権限のもとで問い合わせられるオブジェクトになる。何もコピーされない。ObjectStack 18.4.0（今日 `npm create objectstack@latest` が入れるバージョン）では、ソースのデータベースで直接行った更新が次の読み取りでそのまま見え、ObjectStack 自身のデータベースには、提供していた **2,400 件の注文が 1 件もなかった（0 件）**。データソースとオブジェクトの両方がオプトインするまで、書き込みは拒否される。これを**リードスルー・オントロジー**（read-through ontology）と呼ぶことにする。自分が所有していないテーブルの上に、名前、関係、権限、AI ツールを重ね、読み取りはすべて本来の持ち主であるシステムへ通す。以下、まず実測の記録、次にそれが止まる五つの地点を示す。
+
+## 稼働中のデータベースを使えるようにする三つの道
+
+「データを AI 対応にしてほしい」と頼まれる会社の多くは、データをすでに持っている。別のシステムが書き込むデータベースの中に。その上に統制の効いたビジネス層を置く誠実な方法は三つあり、それぞれ代償が違う。
+
+| | 作り直す | コピーする | 読み通す |
+|:--|:--|:--|:--|
+| 動くもの | データとシステム | データ（定期的に） | 何も動かない |
+| 鮮度 | 新システムが正 | 最後の同期の時点 | 読んだ瞬間のソース |
+| スキーマの持ち主 | 自分 | 自分（コピー側） | ソースのシステム |
+| 初日のコスト | 移行プロジェクト | 作って見張るパイプライン | データソース一つとテーブルごとに一ファイル |
+| ソースをまたぐ結合 | できる | できる（コピーの主な理由） | 二回読んでメモリで結合 |
+| ソースへの負荷 | 切り替え後はゼロ | 同期のたびに一回 | 読むたびに毎回 |
+
+コピーを選ぶ理由は本物で、藁人形ではない。コピーなら索引を張れるし、何とでも結合でき、検索でき、ソースが遅くても止まっていてもレポートが出せる。しかもダッシュボードのクエリを本番の受注システムに載せずに済む。それが必要ならコピーすればいい。読み通す理由はもっと狭いが、当てはまる場面ではもっと強い。つないだその日にビジネス層が正しい。同期を保つべきものがそもそも存在しないからだ。この仕組みを定める ADR は目標として「Register existing remote tables as ObjectStack objects **without touching the remote schema**」（既存のリモートテーブルを、リモートのスキーマに触れずに ObjectStack のオブジェクトとして登録する）と、「Default to read-only; require **two explicit opt-ins** (datasource level + object level) to enable writes」（既定は読み取り専用。書き込みにはデータソースとオブジェクトの二か所での明示的なオプトインを要する）を挙げている。
+
+![ObjectStack 18.4.0 でのリードスルー・オントロジー。左に三つの呼び出し元：REST を使うメンバーの Mia、Mia としてサインインして MCP を使う AI エージェント、そして管理者。中央の ObjectStack 層には三つのもの：旧列名からの列マップを持つオブジェクト sales_customer と sales_order、顧客の読み取りを許し credit_limit を隠して注文には何も与えない権限セット sales_reader、allowWrites が false の書き込みゲート。右は受注システム自身のデータベースで、顧客 5 件と注文 2,400 件。読み取りはすべてここでライブに実行される。結果：Mia は 200 で EU の顧客 2 件、与信額なし、注文は 403。エージェントの list_objects は一つのオブジェクトだけを返す。挿入・更新・削除はすべて 403 EXTERNAL_WRITE_FORBIDDEN。下段の ObjectStack 自身のデータベースにはユーザー、付与、ネイティブオブジェクトがあり、顧客と注文の行は 0。](./read-through-en.svg)
+
+## ObjectStack が一度も触れていない受注システム
+
+ソースは、古い受注システムの代役として短い Python スクリプトが書いた SQLite ファイルだ。`customers` と `orders` の二つのテーブル、顧客 5 件と注文 2,400 件。列名は古いシステムにありがちなものにした。
+
+```sql
+CREATE TABLE customers (
+  cust_no      TEXT PRIMARY KEY,
+  cust_name    TEXT NOT NULL,
+  cust_region  TEXT,
+  credit_limit REAL
+);
+CREATE TABLE orders (
+  order_no   TEXT PRIMARY KEY,
+  cust_no    TEXT NOT NULL REFERENCES customers(cust_no),
+  amount     REAL,
+  status     TEXT,
+  placed_on  TEXT
+);
+```
+
+SQLite は、新しいスキャフォールドが何も追加せずに開ける方言だ。最初に Postgres を試したら、起動がはっきりそう言った。「The database client package `pg` is not installed, so no connection was attempted. It is an OPTIONAL install of @objectstack/driver-sql … `npm install pg` (pnpm add pg / yarn add pg)」（データベースクライアントのパッケージ `pg` が入っていないので接続は試みていない。@objectstack/driver-sql の任意インストールである……）。ガイドは Oracle と SQL Server をフェデレーション専用の方言として記しており（「ObjectStack reads an existing Oracle schema live … but it never owns one」、既存の Oracle スキーマをライブで読むが、決して所有はしない）、SAP S/4HANA や Dynamics 365 のような OData v4 サービスも同梱のドライバーで扱う。この三つはここでは動かしていない。
+
+`npm create objectstack@latest` で作ったスキャフォールド（パッケージ名は `sales`）では、三つのファイルで済んだ。まずデータソース：
+
+```ts
+export const Erp = defineDatasource({
+  name: 'erp',
+  label: 'Order system (SQLite)',
+  driver: 'sqlite',
+  schemaMode: 'external',            // ObjectStack never runs DDL here
+  config: { filename: '/…/legacy/erp.db' },   // absolute path, trimmed
+  external: {
+    allowWrites: false,
+    validation: { onMismatch: 'fail', checkOnBoot: true },
+  },
+});
+```
+
+テーブルごとに一つのオブジェクト。`external.columnMap`（リモート列 → ローカルのフィールド）で `cust_no`、`cust_name`、`cust_region` を `id`、`name`、`region` に変える：
+
+```ts
+export const Customer = ObjectSchema.create({
+  name: 'sales_customer',
+  label: 'Customer',
+  sharingModel: 'public_read',
+  datasource: 'erp',
+  external: {
+    remoteName: 'customers',
+    columnMap: { cust_no: 'id', cust_name: 'name', cust_region: 'region' },
+  },
+  fields: {
+    name: Field.text({ label: 'Name', searchable: true }),
+    region: Field.text({ label: 'Region' }),
+    credit_limit: Field.currency({ label: 'Credit limit' }),
+  },
+});
+```
+
+`sales_order` は `orders` の上に同じ形で、`cust_no` を `customer` ルックアップに対応づける。そして、顧客は見えてよいが与信額は見えてはいけない人たちのための権限セットを一つ：
+
+```ts
+export const SalesReader = definePermissionSet({
+  name: 'sales_reader',
+  objects: { sales_customer: { allowRead: true } },
+  fields: { 'sales_customer.credit_limit': { readable: false, editable: false } },
+});
+```
+
+オブジェクトを手で打つ必要はない。管理者向けのルート `GET …/datasources/erp/external/tables` は `customers`（4 列）と `orders`（5 列）を返し、`POST …/external/tables/customers/draft` はそのテーブルのオブジェクト草案を返した。草案はリモートの列名をそのままフィールド名にし、`sharingModel: 'private'` で始まる。これは後で効いてくる。私は `columnMap` で名前を付け替え、`public_read` を意図して選んだ。
+
+`sales_order` の最初の版では `placed_on` を `date` フィールドとして宣言した。起動はそれを拒否した：
+
+```text
+✗ Object 'sales_order' does not match its remote table on datasource 'erp':
+✗ type_mismatch: orders.placed_on (expected date, actual text)
+```
+
+これは `schemaMode: 'external'` が役目を果たしているところだ。ガイドの言い方では「A mature external DB — **DDL forbidden**; a schema mismatch **fails** boot」（成熟した外部 DB では DDL 禁止。スキーマの不一致は起動を失敗させる）。ObjectStack は列を合わせに行かなかった。私はフィールドを、受注システムが実際に格納している `text` に変えた。
+
+## 動いているアプリが答える五つの問い
+
+以下はすべて 18.4.0 の `objectstack dev` の実際の出力で、省略は明記した箇所だけだ。`$B` は開発サーバーのアドレス、`sql.py` はファイルに一文を実行する三行の Python ヘルパーで、このマシンに `sqlite3` コマンドがなかったので使った。
+
+### ライブか、コピーか？
+
+顧客を一件読み、受注システム自身のデータベースで書き換え、もう一度読む：
+
+```bash
+curl -s -b admin.cookies "$B/api/v1/data/sales_customer/C-1002"
+```
+
+```json
+{"object":"sales_customer","id":"C-1002","record":{"credit_limit":180000,"id":"C-1002","name":"Borealis GmbH","region":"EU"}}
+```
+
+```bash
+python3 sql.py erp.db "UPDATE customers SET credit_limit = 95000 WHERE cust_no = 'C-1002'"
+curl -s -b admin.cookies "$B/api/v1/data/sales_customer/C-1002"
+```
+
+```json
+{"object":"sales_customer","id":"C-1002","record":{"credit_limit":95000,"id":"C-1002","name":"Borealis GmbH","region":"EU"}}
+```
+
+同期は走っていない。そもそも存在しないからだ。その時点で ObjectStack 自身のデータベースには 84 のテーブルがあり、名前を `customer` や `order` で探しても一つも出てこなかった。絞り込みはソースへ押し下げられ、ルックアップは二つのリモートテーブルをまたいで展開できる：
+
+```bash
+curl -s -b admin.cookies "$B/api/v1/data/sales_order?status=pending&top=2&expand=customer"
+```
+
+```json
+{"object":"sales_order","records":[
+  {"amount":7020.73,"status":"pending","placed_on":"2026-04-04","id":"SO-00003",
+   "customer":{"credit_limit":60000,"id":"C-1003","name":"Cyan Pacific","region":"APAC"}},
+  … one more row, trimmed …],
+ "total":480,"hasMore":true}
+```
+
+### 何かが書き込めるか？
+
+既定では書き込めない。プラットフォーム管理者でも、どの入口からでも：
+
+```bash
+curl -s -b admin.cookies -X POST "$B/api/v1/data/sales_customer" \
+  -H "content-type: application/json" -d '{"id":"C-9999","name":"Test Co","region":"EU"}'
+```
+
+```json
+HTTP 403
+{"error":"Write 'insert' blocked on object 'sales_customer': datasource 'erp' is external (schemaMode=external). Requires datasource.external.allowWrites=true (got false) AND object.external.writable=true (got false).","code":"EXTERNAL_WRITE_FORBIDDEN","object":"sales_customer"}
+```
+
+`C-1002` への `PATCH` と注文 `SO-00001` の `DELETE` も同じ `403` で、それぞれ `update` と `delete` を名指しした。受注システムには顧客 5 件、注文 2,400 件、そして受注システム自身が設定した与信額がそのまま残っていた。エラーは二つのスイッチを名指ししており、ガイドも規則を書いている。「With either gate off, insert/update/delete on the federated object is rejected」（どちらかのゲートが閉じていれば、フェデレーションされたオブジェクトへの挿入・更新・削除は拒否される）。
+
+### メンバーには何が見えるか？
+
+Mia は管理者が `POST /api/v1/auth/admin/create-user` で作ったメンバーだ。何も付与されていなければ、二つのオブジェクトはどちらも `403 PERMISSION_DENIED` を返す。フェデレーションされたオブジェクトも、ほかと同様に既定で拒否される。管理者が `sales_reader` を付与した後：
+
+```bash
+curl -s -b member.cookies "$B/api/v1/data/sales_customer?region=EU"
+```
+
+```json
+HTTP 200
+{"object":"sales_customer","records":[{"id":"C-1002","name":"Borealis GmbH","region":"EU"},{"id":"C-1004","name":"Delta Freight","region":"EU"}],"total":2,"hasMore":false}
+```
+
+彼女の答えに `credit_limit` はない。注文は相変わらず `403`。そして、隠された数字を周りから聞き出すこともできない：
+
+```bash
+curl -s -b member.cookies "$B/api/v1/data/sales_customer?credit_limit=95000"
+```
+
+```json
+HTTP 403
+{"error":"[Security] Access denied: query on 'sales_customer' references field(s) not readable by the caller: credit_limit. Filtering, sorting, grouping, or aggregating by a hidden field would leak its values (filter oracle) — remove these predicates or grant field read access.","code":"PERMISSION_DENIED","object":"sales_customer"}
+```
+
+それで並べ替えても答えは同じだった。ソースのデータベースは Mia が誰かを知らない。権限はこの層で、毎回の読み取りで、行が彼女に届く前に執行される。
+
+### AI エージェントはそれをすり抜けられるか？
+
+ObjectStack のアプリはどれも `/api/v1/mcp` にある MCP サーバーだ。Mia としてサインインしたエージェントの `list_objects` は `sales_customer` の一つだけを返した。注文が存在することさえ見えない。残りをツールの結果だけに削ると：
+
+```text
+query_records  sales_customer  where {"region":"NA"}  → 2 records: Aurora Labs, Ember Foods (no credit_limit)
+query_records  sales_order     limit 1                → {"code":"PERMISSION_DENIED","status":403}
+query_records  sales_customer  limit 51               → Too big: expected number to be <=50 at limit
+create_record  sales_customer  {"id":"C-9998",…}      → {"code":"EXTERNAL_WRITE_FORBIDDEN","status":403}
+```
+
+エージェントが得るのはちょうど Mia の視界で、一回の呼び出しで最大 50 行、書き込みはない。データベースがどれほど古くても、どこの製品でも、それは変わらない。エージェントはデータベースと直接話さないからだ。
+
+### レポートはテーブルをまたげるか？
+
+データセットは、レポートと AI への質問が読むセマンティック層だ。このデータセットは注文の売上を顧客の地域でまとめる。地域の列はもう一方のテーブルにある：
+
+```ts
+export const OrderRevenue: Dataset = {
+  name: 'sales_order_revenue',
+  label: 'Order revenue',
+  object: 'sales_order',
+  include: ['customer'],
+  dimensions: [{ name: 'region', label: 'Region', field: 'customer.region', type: 'string' }],
+  measures: [
+    { name: 'revenue', label: 'Revenue', aggregate: 'sum', field: 'amount' },
+    { name: 'orders', label: 'Orders', aggregate: 'count' },
+  ],
+};
+```
+
+MCP の `query_dataset` ツールで尋ね、受注システムの中で直接実行した `JOIN` と突き合わせた：
+
+| 地域 | 売上（データセット） | 注文数 |
+|:--|--:|--:|
+| APAC | 6,127,544.10 | 480 |
+| EU | 11,995,588.50 | 960 |
+| NA | 12,470,792.17 | 960 |
+
+```text
+$ python3 sql.py erp.db "SELECT c.cust_region, round(sum(o.amount),2), count(*) FROM orders o JOIN customers c ON c.cust_no=o.cust_no GROUP BY 1 ORDER BY 1"
+('APAC', 6127544.1, 480)
+('EU', 11995588.5, 960)
+('NA', 12470792.17, 960)
+```
+
+小数点以下二桁まで一致する。どうやってそこに着くのかが、最初の限界だ。
+
+## リードスルー層が止まるところ
+
+以下は私が実測した境界と、私が動かしていないドライバーについてドキュメントが述べている二点だ。
+
+**1. データソースをまたいで結合するクエリはない。** 上のデータセットは SQLite に送られた一本の `JOIN` ではない。分析コンパイラ自身のコメントによれば、フェデレーションされたオブジェクトのデータセットは「the ObjectQL FK-expand path (two reads, joined in memory)」（ObjectQL の外部キー展開経路：二回読んでメモリで結合）で処理される。関係が ObjectStack のデータベースから受注システムへまたがる場合も同じだ。`sales_customer` へのルックアップを持つネイティブオブジェクト `sales_visit` は、顧客を展開でき（`?expand=customer`）、ネストした形 `{"customer":{"region":"EU"}}` で顧客の地域による絞り込みもできた。どちらも別々の読み取りとして動く。存在しないのは、二つのデータベースにまたがる一つの文だ。ランタイムの ADR の非目標にはこうある。「cross-datasource JOINs in one query (federated objects are queried per-datasource)」（一つのクエリでのデータソース横断 JOIN。フェデレーションされたオブジェクトはデータソースごとに問い合わせる）。私が当たった二つの拒否はフェデレーションの限界ではないので、層を取り違えないよう名指ししておく。`?customer.region=EU` のようなドット付きの絞り込みと、`customer.region` でグループ化した `aggregate_records` は、ネイティブの `sales_visit` でも `sales_order` とまったく同じく `400 INVALID_FIELD` を返した。
+
+**2. 行数の上限はプラグインドライバーのもので、SQL のものではない。** 組み込みの SQLite ドライバーには上限がない。注文に対する `?top=5000` は 2,400 行すべてを返した。そのデータソースに上限を付けると、検証で拒否される：
+
+```text
+✗ external.rowCap: `external.rowCap` caps the rows the engine reads from a plugin driver, which it holds behind its correctness floor; the 'sqlite' driver is built in, runs the whole query itself and is never capped, so the key would do nothing here. Remove `rowCap`.
+```
+
+プラグインドライバー（OData を含む）では、ガイドが上限を定めている。「A read that matches more rows than the datasource's row cap is refused with `422 EXTERNAL_ROW_CAP_EXCEEDED` rather than answered from a partial set」（データソースの上限を超える行に一致する読み取りは、部分集合で答えずに 422 で拒否する）、「The default is 1000 rows」（既定は 1000 行）、最大 10,000。ここでは動かしていない。
+
+**3. 親が制御する共有はドライバー次第。** プラグインドライバーでは「A read whose scope composes a `ReadableIds` leaf, such as an object `controlled_by_parent`, is refused」（`controlled_by_parent` のオブジェクトのように、スコープが `ReadableIds` の葉を含む読み取りは拒否される）。SQL では逆を実測した。`sales_order` を `controlled_by_parent` にして `master_detail` で顧客にぶら下げると、Mia は注文を読めた。そして親が彼女から見えなくなると、子も一緒に見えなくなった（次項）。
+
+**4. 所有者ベースの共有には所有者の列が要る。** 所有者の列がないテーブルの上で `sales_customer` を `private`（草案の既定）にすると、Mia の答えは顧客についても、親が制御する注文についても `{"records":[],"total":0}` だった。一方、管理者は 5 件すべてと 2,400 件すべてを読めた。ガイドはこれを警告している。「only an `owner_id` declared in `fields`, or named by an `external.columnMap` entry, counts as one. Without it a member reads no row」（`fields` で宣言されたか `external.columnMap` の項目が名指しした `owner_id` だけが所有者と見なされる。それがなければメンバーは一行も読めない）。ソースの所有者列を対応づけるか、上のように `public_read` を選んで権限セットで絞り込む。
+
+**5. 性能はソースの性能だ。** 読み取りはすべて、その瞬間に受注システムへ落ちる。一覧ページは行と合計件数を読み、誰かが開きっぱなしにしたダッシュボードは本番データベースへのクエリだ。この層はソースにない索引を足さない。上の更新が次の読み取りで見えたのは、間に古い行を保持するものが何もなかったからだ。ソースが負荷に耐えられないなら、すでに運用しているレプリカにデータソースを向けるか、データをコピーする。
+
+## コピーのほうがよい道具になるとき
+
+ObjectStack の仮想オブジェクトのガイドは一文で線を引いている。「Make the object virtual when a copy would be **wrong**, and real when a copy is merely **convenient**」（コピーが誤りになるならオブジェクトを仮想に、コピーが単に便利なだけなら実体に）。リモートが要求の時点で答えを計算する場合、データを着地させてはならない場合（データ所在、ライセンス、監査）、どんな同期よりも速く変わる場合、コピーは誤りだ。ゆっくり変わる参照データや、多くのソースを結合するレポートなら、コピーは便利なだけだ。前者は読み通し、後者はコピーする。すでに止めたシステムなら、残っているのはエクスポートだけで、[インポートマッピングとそのドライラン](/ja/blog/how-to-import-a-spreadsheet-from-an-old-system/)がそのファイルを古いコードごと持ち込まずにモデルへ着地させる方法になる。
+
+コピーして取り込むのがもう一つの道で、その中核は 18.4.0 で出荷されている。`pull` が `datasourceSource` を持つ `mapping` を指す `job` は、上の二つのようなフェデレーションされたオブジェクトをウィンドウ単位で読み、その行を `managedBy: 'synced'` と宣言したオブジェクトへ upsert する。メンバーは読めるが、書き込みはエンジンが `403` で拒否する。実行ごとに `sys_sync_run` の行が残り、何を読んだか、どの位置まで進んだかが記録され、次の実行はそこから読み進める。リリースノートは一行でこう言う。「A mapping's `datasourceSource` now does what it declares」（マッピングの `datasourceSource` が宣言どおりに動くようになった）。アプリで宣言したジョブは `OS_AUTOMATION_SCHEDULED_WORK_ENABLED` を `true` にしたデプロイでのみ動き、この設定は既定でオフだ。この記事ではこのプルを実測していない。ADR-0153 の目安は「Reports, analysis, AI question answering, joins across sources; a slow or fragile legacy system」（レポート、分析、AI による質問応答、ソース横断の結合、遅いか脆いレガシーシステム）を sync-in に、「Live data, one table at a time; the legacy system must not be touched; data that must not land」（ライブデータ、一度に一テーブル、レガシーに触れてはならない、着地させてはならないデータ）をフェデレーションに割り当てる。[Connect existing systems](/en/connect-existing-systems/) のページは、ライブで読む、コピーして取り込む、宣言したアクションでソースを変える、の三つの道を並べている。
+
+## 開発中：sync-in の残り
+
+18.4.0 にないもの：ソース側で削除された行の印付け（ジョブのガイドの言葉では「The delete keys change nothing yet」、削除のキーはまだ何も変えない）、コネクターソースのページング（キーは宣言できるが「nothing reads it yet」、まだ何も読まない）、そして sync-in のガイドとスキル。この節の内容はどれも実測していない。
+
+## diff で読むところ
+
+エージェントが束ねを書いたなら、レビューは短い。決定はどれも一行だからだ：
+
+| diff の行 | 何を決めるか |
+|:--|:--|
+| `schemaMode: 'external'` | ObjectStack はソースを変えない。ずれは起動を失敗させる |
+| `allowWrites` / `writable` | 両方が `true` のときだけ書き込みがソースに届く |
+| `columnMap` | ソースの列がどの業務名で現れるか |
+| `sharingModel` | `private` には所有者列の対応づけが要る。なければメンバーは何も読めない |
+| 権限セットの `fields` | メンバーが決して見られず、絞り込みにも使えないソースの列 |
+| `rowCap` | プラグインドライバー専用。組み込み SQL ドライバーでは拒否される |
+
+[オントロジー](/ja/glossary/ontology/)は業務に名前を与える層だ。オブジェクト、関係、権限、アクション。フェデレーションとは、それが自分で作っていないデータベースにも初日から名前を与えられ、手前に移行プロジェクトを挟まずに済み、しかも[権限モデル](/en/glossary/permission-model/)が人でもエージェントでもすべての読み手に適用される、ということだ。
+
+## エージェントに任せる
+
+コーディングエージェントに渡すべきは、この記事ではなく規則だ。`external` データソースが一つ、テーブルごとに `remoteName` と `columnMap` を持つオブジェクトが一つ、明示した `sharingModel`、二つの書き込みスイッチはどちらもオフ、そして読み手の種類ごとに権限セットが一つ。[コーディングエージェントの設定方法](/en/blog/how-to-point-your-agent-at-objectstack/)は、ルールファイル、動いているアプリが公開する MCP エンドポイント、仕様を扱っている。[外部データソースのガイド](https://objectstack.ai/docs/data-modeling/external-datasources)はエージェントが読むべきリファレンスだ。`npm create objectstack@latest` が入れるのは 18.4.0 で、上の実測記録はすべてこのバージョンで動かした。
