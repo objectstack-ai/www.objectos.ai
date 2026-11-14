@@ -100,6 +100,7 @@ export const Subscription = ObjectSchema.create({
           },
           {
             title: '数据源同步',
+            href: '/en/connect-existing-systems/',
             body: '连接表单按驱动自动生成，点"测试连接"验证，再从远程表清单里勾选——introspect 现有 ERP/CRM 数据库，外部表直接生成受治理对象，默认只读；写权限按对象有意开启。',
           },
         ],

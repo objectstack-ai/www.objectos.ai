@@ -100,6 +100,7 @@ export const Subscription = ObjectSchema.create({
           },
           {
             title: 'Datasource sync',
+            href: '/en/connect-existing-systems/',
             body: 'Connection forms generate from the driver’s schema, “Test connection” verifies it, then pick from the remote table list — introspect an existing ERP or CRM database and mount its tables as governed objects, read-only by default; writes are enabled deliberately, per object.',
           },
         ],
