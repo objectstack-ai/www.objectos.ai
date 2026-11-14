@@ -39,20 +39,22 @@
 - Do not insert the same cover image again in the MDX body. In other words, if frontmatter has `cover: ./cover.png`, `cover: ./cover.jpg`, or `cover: ./cover.svg`, the article body must not contain `![...](./cover.png)`, `![...](./cover.jpg)`, or `![...](./cover.svg)`.
 - Body images should add information that the cover does not already provide: architecture diagrams, workflow diagrams, object models, screenshots, or examples that support a specific section.
 - Do not repeat the same body image in one article unless the user explicitly asks for repetition.
-- Translated locales reuse one English-text cover/diagram (`cover-en.svg`, `*-en.svg`); only the `zh-Hans`/`zh-Hant` pair uses the Chinese-text assets. Keep `title`/`description`/`tags` translated; keep `topic`/`audience`/`date`/`status` unchanged. Keep `description` ≤ 230 characters (one punchy sentence) so it reads cleanly in cards and search snippets.
+- One `cover.svg` serves every locale: a cover carries no text to translate (its one label, if any, is a code token such as `dryRun`, the same in every language), so every locale's `cover` is `./cover.svg` and there is no `cover-en.svg`. Body diagrams that carry text keep the pair: translated locales reuse one English-text diagram (`*-en.svg`); only the `zh-Hans`/`zh-Hant` pair uses the Chinese-text assets. Posts dated before 2026-11-17 keep their `cover-en.svg` until their cover is redrawn. Keep `title`/`description`/`tags` translated; keep `topic`/`audience`/`date`/`status` unchanged. Keep `description` ≤ 230 characters (one punchy sentence) so it reads cleanly in cards and search snippets.
 - When adding or editing published articles, run `pnpm content:lint`, `pnpm check`, and `pnpm build`.
 - For visual/content changes, verify at least one affected article and the blog list in the in-app browser. Check ordering, cover rendering, body image duplication, and obvious layout issues.
 
 ### Cover spec
 
-Ruled on #340 (maintainer, 2026-11-02). A new post's cover SVG is drawn on the 1200 canvas and:
+Ruled on #430 (maintainer, 2026-11-14); it replaces the cover part of the #340 ruling. The detail, the six samples, the topic tints and the kit are on [docs/cover-style.md](docs/cover-style.md). A new post's cover is one `cover.svg` on the 1200×675 canvas and:
 
-- uses at most 2 font sizes; the title is at least 56px and no text is under 28px;
-- has at most 8 `<text>` runs;
-- uses at most 6 colours, drawn from the palette roles: indigo is identity and interaction, green is emphasis, ink is action, amber and red are status only;
-- shows product screenshots or monochrome line art. No new AI 3D renders; the existing 10 are being phased out.
+- carries **no title, subtitle or sentence**: the title lives in the page;
+- is **one mechanism picture in line art**: at most about 5 objects, ink, stroke 9, round caps and joins, large radii; no product screenshots and no AI 3D renders;
+- has **one solid hero** in brand indigo or green, about 22–35% of the art box, optionally over an offset same-hue tint; only tiles tilt (2–3°), never walls or doors;
+- is drawn on **its topic's tint** (`--topic-SLUG`), the colour of the card's topic chip;
+- has **no label by default, at most one**: a code token of at most 8 characters, monospace bold, at least 28px;
+- uses red **for status only** (a thin refused path and a stop bar), puts faces only on people or agents where people are the subject, and has **no overlapping strokes**.
 
-Draw the light cover only: dark variants are generated at build time. The cover gate in `pnpm build` (#343) enforces this spec for new posts and grandfathers existing covers by date.
+Assemble it with the kit in `scripts/covers/`, not by hand, and draw the light cover only: dark variants are generated at build time. The cover gate in `pnpm build` enforces what a machine can check for posts dated on or after 2026-11-17 and grandfathers earlier covers by date.
 
 ## Publishing cadence
 
