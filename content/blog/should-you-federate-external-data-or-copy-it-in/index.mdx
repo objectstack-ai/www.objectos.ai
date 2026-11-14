@@ -1,0 +1,229 @@
+---
+title: "Should You Federate External Data or Copy It In? One-Way Sync, One Writer per Row"
+description: "Federation reads an external table live; one-way sync-in copies it into an object only the pull may write. Measured on ObjectStack 18.4.0: a pull job, its run record, a refused edit, a 3-of-7 incremental run, action write-back."
+author: ObjectStack Team
+date: 2026-11-20
+status: published
+topic: integration-data
+audience: it
+solutions: []
+industries: []
+cover: ./cover.svg
+tags:
+  - Data sync
+  - Federation
+  - External data
+---
+
+**Federate when the data must stay live or must not land. Copy it in when people, reports and AI need to join it, filter it and ask questions of it at platform speed.** If you copy, make it a copy with **one writer per row**: a scheduled pull is the only thing that writes a copied row, nobody edits it, and a change to the data goes back to the source through one declared action, after which the next pull brings it home. Two writers need a conflict merge. One writer never does. On the published `@objectstack/cli` 18.4.0 that copy runs today: in the transcript below, the second pull read **3 of the source's 7 rows** — the three that had changed, or that shared the point where the last run stopped — and wrote nothing else.
+
+## Two ways in, and the third thing that is neither
+
+ObjectStack's design record for this, ADR-0153, starts from what federation cannot do. Federation leaves rows where they live and forwards each query, which is right for live or must-not-land data, but "Reports, analysis, AI question answering and joins across sources hit those limits first. Copying the rows into an ordinary object removes them: the platform then owns the indexes, the query operators, the permissions and the uptime." It then gives the rule its guide and skills are to teach:
+
+| The need | Choose |
+|:--|:--|
+| Live data, one table at a time; the legacy system must not be touched; data that must not land | **federation**: a virtual object |
+| Reports, analysis, AI question answering, joins across sources; a slow or fragile legacy system; a warehouse's results | **sync-in**: a `synced` object, a sourced `mapping` and a `job` |
+| Trigger something in an external system; no rows land | **a connector action**: a flow `connector_action` node, or a declared action |
+
+The case for federation is strong and worth stating at full strength. A federated object is always current; there is no lag between a change at the source and what a member sees. Nothing is duplicated, so there is no second copy of personal data to secure, retain or delete. And the source keeps being the only place data is written. A [companion post](/en/blog/ai-business-layer-over-an-existing-database/) walks through federation on its own terms, and the [Connect existing systems](/en/connect-existing-systems/) page sets federation, sync-in and connector actions side by side. If those properties are what you need, stop here: a copy is the wrong tool.
+
+A copy earns its place when the federated limits bite. The engine cannot join across datasources, every read pays the remote system's latency, and a plugin driver's reads are capped. A copy turns the remote table into an ordinary object, so every existing permission, report, dataset, flow and MCP tool reads it with no change.
+
+## One writer per row
+
+The copy is safe only if it cannot drift into a second system of record. That is what "one writer per row" means, and on 18.4.0 it is four rules the runtime enforces:
+
+1. **The pull writes the rows.** A `mapping` with a `datasourceSource` names a federated object and a watermark field. A `job` whose `pull` names that mapping runs it on a schedule and writes through the import runner as the system.
+2. **Nobody else does.** The target is declared `managedBy: 'synced'`. The 18.4.0 spec changelog lists what that turns on: "The engine write guard refuses a member's generic write (403), the `apiMethods` reconciliation strips every write method, the `/me/permissions` clamp answers the closed row".
+3. **A change goes to the source, through a declared action.** ADR-0153 D5: "A change to source data is made in the source, through a declared action … The local row is not edited by the write-back; **the next pull reconciles it**."
+4. **There is no other direction.** "No bidirectional sync, no conflict merge, no Writeback-Dataset-style edits overlay".
+
+Rule 4 is the point. A two-way sync has two writers for every row, so it needs a policy for the row both sides changed since the last sync: last-writer-wins, field-level merge, a conflict queue someone has to work. Each one is a place where data is lost quietly. With one writer there is no such row, so there is no merge to get wrong.
+
+![The one-writer loop, measured on 18.4.0: a pull job copies the ERP's PARTS table into the synced object syncdemo_part (run 1 read 6, run 2 read 3 of 7, run 3 read 3); a member's or an admin's edit of a copied row answers 403; a change goes back only through the declared action, whose flow calls the ERP's API, and the next pull brings it home.](./one-writer-loop-en.svg)
+
+## The build: five declarations and nothing else
+
+The test bed is a fresh `npm create objectstack@latest` scaffold, which installed `@objectstack/cli` 18.4.0, the version `npm view @objectstack/cli dist-tags` reported as `latest` on 2026-11-14. The "old ERP" is a SQLite file the app does not own, with one table, `PARTS`, holding six parts and an `UPDATED_AT` column. Five declarations connect them.
+
+```ts
+// 1. The ERP's database: external, so no DDL ever runs there.
+export const Erp = defineDatasource({
+  name: 'erp', driver: 'sqlite', schemaMode: 'external',
+  config: { filename: './legacy/erp.db' },
+  external: { allowWrites: false, validation: { onMismatch: 'fail', checkOnBoot: true } },
+});
+
+// 2. The PARTS table, federated. PART_NO is mapped onto `id`: that is the source key.
+export const ErpPart = ObjectSchema.create({
+  name: 'syncdemo_erp_part', datasource: 'erp', sharingModel: 'private',
+  external: {
+    remoteName: 'PARTS',
+    columnMap: { PART_NO: 'id', DESCRIPTION: 'description', UNIT_PRICE: 'unit_price', UPDATED_AT: 'updated_at' },
+  },
+  fields: {
+    description: Field.text({ label: 'Description' }),
+    unit_price: Field.number({ label: 'Unit price', scale: 2 }),
+    updated_at: Field.datetime({ label: 'Updated at (ERP)' }),
+  },
+});
+
+// 3. The local copy: an ordinary object that only the pull writes.
+export const Part = ObjectSchema.create({
+  name: 'syncdemo_part', managedBy: 'synced', sharingModel: 'public_read',
+  fields: {
+    part_no: Field.text({ label: 'Part no', required: true }),
+    description: Field.text({ label: 'Description' }),
+    unit_price: Field.number({ label: 'Unit price', scale: 2 }),
+    source_updated_at: Field.datetime({ label: 'Updated at (ERP)' }),
+  },
+});
+
+// 4. The sync, defined on its target: where rows come from, how they map, how one matches.
+export const ErpPartsPull = defineMapping({
+  name: 'erp_parts_pull', targetObject: 'syncdemo_part',
+  mode: 'upsert', upsertKey: ['part_no'],
+  fieldMapping: [
+    { source: 'id', target: 'part_no' },
+    { source: 'description', target: 'description' },
+    { source: 'unit_price', target: 'unit_price' },
+    { source: 'updated_at', target: 'source_updated_at' },
+  ],
+  datasourceSource: { object: 'syncdemo_erp_part', watermark: { field: 'updated_at', start: '2026-01-01' } },
+});
+
+// 5. When. No code: `pull` names the mapping.
+export const ErpPartsPullJob = defineJob({
+  name: 'erp_parts_pull_job',
+  schedule: { type: 'interval', intervalMs: 30000 },
+  pull: { mapping: 'erp_parts_pull' },
+});
+```
+
+`objectstack validate` passed it. The build is strict about the parts that make a copy honest. With `managedBy: 'synced'` removed from the target, the same command exited 1:
+
+```text
+✗ Mapping 'erp_parts_pull' pulls rows into object 'syncdemo_part' through its datasourceSource,
+  but that object is not managedBy: 'synced' (it is unset). A pulled copy is read-only to members,
+  so a member's edit is never kept or lost silently by the next pull; declare managedBy: 'synced'
+  on the target object (ADR-0153 D4).
+```
+
+The changelog lists the other refusals that run at build and again before the first read: a sourced mapping must be `mode: 'upsert'` with an `upsertKey`, the source must be a federated object whose `columnMap` maps a column onto `id` (`source_key_missing`), the watermark must be a `datetime`, `date` or integer field, and a `fieldMapping` entry must copy it unchanged into the target (`watermark_field_unmapped`).
+
+One switch is easy to miss: a package's jobs are scheduled only where the variable `OS_AUTOMATION_SCHEDULED_WORK_ENABLED` is `true`, a switch the jobs guide says "is **off by default in every tenancy posture and every kernel**". I booted `objectstack dev --fresh` with it on, created a member (Mia) with a permission set granting read and, on purpose, edit on `syncdemo_part`, and recorded every answer.
+
+## The run log
+
+Seven readings, in the order they happened. Times are UTC on 2026-11-14.
+
+| # | What happened | What came back |
+|:--|:--|:--|
+| 1 | The job's first tick, 04:42:41 | `sys_sync_run`: read 6, created 6, `completed` |
+| 2 | Mia lists `syncdemo_part` | `200`, 6 rows |
+| 3 | Mia patches P-2001's price; an admin tries the same | `403 PERMISSION_DENIED`, both |
+| 4 | Someone edits P-1003 and adds P-3002 inside the ERP | the next run, 04:43:11: read 3, created 1, updated 2 |
+| 5 | Mia runs the action "Change price in ERP" on P-2001 | `200`; the ERP's API logs one `PATCH` |
+| 6 | Mia reads P-2001 right away | still `3.8` |
+| 7 | The next run, 04:43:41 | read 3, updated 3; P-2001 reads `4.1` |
+
+**Reading 1: the run record.** Every pull leaves one `sys_sync_run` row in the job's organization. Trimmed to the fields that matter:
+
+```json
+{ "mapping": "erp_parts_pull", "mapping_package": "com.example.syncdemo",
+  "target_object": "syncdemo_part", "source_kind": "datasource", "source": "syncdemo_erp_part",
+  "datasource": "erp", "read_path": "builtin", "trigger": "schedule", "status": "completed",
+  "read_count": 6, "created_count": 6, "updated_count": 0, "refused_count": 0,
+  "watermark_field": "updated_at",
+  "watermark_from": "2026-01-01T00:00:00.000Z",
+  "watermark_committed": "2026-11-09T16:05:00.000Z",
+  "holds_position": true, "job_run_id": "run_a02e22c1-…", "failure_reason": null }
+```
+
+`watermark_committed` is the newest `UPDATED_AT` the run wrote, and `holds_position: true` marks this as the row the next run starts from. The ledger link is `job_run_id`, the `sys_job_run` row of the tick that drove it. The service changelog sets retention: rows are "telemetry kept 30 days, the job ledger's window, except the one row per mapping (package and name) and organization that holds the read position".
+
+**Reading 3: the refused edit.** Mia holds `allowEdit: true` on the object. The answer does not care:
+
+```json
+HTTP 403
+{ "error": "[Security] Access denied: 'syncdemo_part' is synced (managedBy:'synced', ADR-0153) — direct update via the data API is disabled. Its rows are copied from their source by a pull, which would keep or overwrite the change; change the source through a declared action instead, and the next pull brings it home.",
+  "code": "PERMISSION_DENIED", "object": "syncdemo_part" }
+```
+
+The admin's `PATCH` got the same body. Mia's `POST` and `DELETE` answered `403` with "direct insert" and "direct delete" in the same sentence. The refusal also names the way out, which is the shape you want when an agent is the one making the call.
+
+**Reading 4: the incremental run, 3 of 7.** I changed the ERP directly, as its own users would: P-1003's price from 0.05 to 0.06 and a new part, P-3002, both stamped `2026-11-14T04:42:41.487Z`. The next tick:
+
+```json
+{ "read_count": 3, "created_count": 1, "updated_count": 2,
+  "watermark_from": "2026-11-09T16:05:00.000Z",
+  "watermark_committed": "2026-11-14T04:42:41.487Z", "status": "completed" }
+```
+
+Three rows read of the seven the ERP then held: P-1003, P-3002, and P-3001, which shares the position the last run committed. The jobs guide states that re-read: a run "reads only rows written since, plus those sharing that last position, which the upsert writes again harmlessly". So `updated_count` counts the unchanged P-3001 too. Read it as "rows written", not "rows that changed".
+
+**Readings 5 to 7: write-back.** The action is a `type: 'flow'` action on `syncdemo_part`. Its flow has one working node, a `connector_action` calling a `rest` connector pointed at the ERP's own HTTP API (here a 20-line stand-in that updates `PARTS` and stamps `UPDATED_AT`):
+
+```ts
+{ id: 'patch_erp', type: 'connector_action',
+  connectorConfig: {
+    connectorId: 'erp_api', actionId: 'request',
+    input: {
+      method: 'PATCH',
+      path: { dialect: 'cel', source: "'/parts/' + record.part_no" },
+      body: { dialect: 'cel', source: '{ "unit_price": new_price }' },
+    },
+  },
+}
+```
+
+Mia called it over REST, the door the record page's button also goes through ("the Console button and the API call run the same gate and handler"):
+
+```bash
+curl -s -b mia.cookies -X POST http://localhost:49921/api/v1/actions/syncdemo_part/syncdemo_send_price \
+  -H 'content-type: application/json' \
+  -d '{"recordId":"07580e75-…","params":{"new_price":4.1}}'
+```
+
+```text
+HTTP 200  { "success": true, "data": { "success": true, "flowLabel": "Send price to ERP", … } }
+ERP API:  2026-11-14T04:43:12.035Z PATCH /parts/P-2001 {"unit_price":4.1} -> changes=1
+```
+
+Read straight after, the copy still said `"unit_price": 3.8`, because the write-back changed the ERP and nothing else. Thirty seconds later the next run read 3 rows (P-1003 and P-3002 at the shared position, and P-2001), updated 3, committed `2026-11-14T04:43:12.035Z`, and P-2001 read `"unit_price": 4.1, "source_updated_at": "2026-11-14T04:43:12.035Z"`. The value in the copy is the value the ERP accepted, not the one the user typed. If the ERP had rejected or rounded it, the copy would show that.
+
+## What the copy does not inherit
+
+- **The source's permissions.** Nothing about who may read a row in the ERP travels with it. ADR-0153: "Object permissions stay configured locally from zero, as the ruling says: a member reads synced rows only through a grant." In the run, Mia read the copy through her permission set, and the same session got `403` on the federated source object, on which she holds no grant. That is the setup to aim for: members read the copy, and nobody but the pull reads the source. A copied row has no owner (the rows above carry no `owner_id`), so the spec changelog's lint advice for a synced object is "`sharingModel: 'public_read'` … or `'private'` with a sharing rule that grants read".
+- **The run history, for members.** `sys_sync_run` is open to the data API, but Mia's read of it answered `403`: like any object, it needs a grant.
+- **An organization, in a multi-organization deployment.** Under a walled posture the platform will not guess. Booted with `OS_TENANCY_POSTURE=isolated`, this same app refused to start until the federated source stated its organization scope ("Stating nothing: 'syncdemo_erp_part'"). With the source declared shared, the boot logged at `error`: "NOT SCHEDULED — job 'erp_parts_pull_job' declares no `organization`" (it then stopped on an unrelated walled-posture setting, the membership policy, which a real multi-organization deployment declares anyway). The fix is `organization` on the job, one job per organization. The 18.4.0 changelog names the refusals a pull itself answers in that posture: `source_organization_scope_unstated` and `job_organization_missing`.
+- **A pipeline.** The copy is one source table, one mapping, one target. ADR-0153: "ObjectStack does not build pipelines or transforms. Joining, cleaning and aggregating across sources is the warehouse's or the ETL vendor's job; ObjectStack syncs the result in." If you need a cleaned, joined view, build it in the warehouse and pull the result.
+
+The kernel all of this runs on is open source. ADR-0153 D9: the sync kernel "ships in this repository under Apache-2.0, as federation does".
+
+## In development
+
+The parts below are designed in ADR-0153 (status *Proposed* at the 18.4.0 tag) and are not in 18.4.0. Nothing in this section was run.
+
+- **The delete policy.** A row that disappears from the source will be marked, never deleted: "`deletePolicy: 'mark' | 'ignore'`, default `mark`, stamping `_sync_deleted_at`", and "A pull never deletes a row physically." An incremental pull will see deletes through a source soft-delete field, `deletedField`. On 18.4.0 the keys parse, and the changelog says they "still warn their author that they change nothing yet". Today a row deleted in the source stays in the copy.
+- **Provenance columns on every row.** Five platform columns under a reserved prefix: "`_sync_source`", "`_sync_external_id`", "`_sync_pulled_at`", "`_sync_run_id`" and "`_sync_deleted_at`". The 18.4.0 pull says so in its header: "Delete marking (D3), the provenance columns (D4) and drift (D6) are later changes". Today the run record is the provenance; the prefix is already reserved, so a field named `_sync_…` is refused.
+- **The Studio sync wizard.** "The Studio sync wizard creates the `synced` object, the `mapping` and that `job`." It needs a job that can be created at runtime, which the record designs as the one exception to jobs being code-only: "the runtime door accepts a `job` whose only run form is `pull`". Studio is also to show "the run history on the synced object and on its source's page".
+- **Warehouse sources.** "Amendment `6731744658` makes a warehouse a first-class pull source"; the Snowflake and BigQuery drivers are "plugin packages outside this repository", verified by the plugin-driver conformance kit, and a floored plugin driver is read "in windows bounded on both sides" and "halved" while a window comes back over the row cap.
+- **The sync guide and skills.** "The three-way rule and the partner stance (D10), the write-back answer (D5), and `SYNC_ARCHITECTURE.md` and the skills pointing at `mapping` / `job`". Until then the jobs guide's "Pulling a mapping" section and the mapping reference are the documentation.
+
+## How to review it when an agent writes it
+
+If an agent adds a sync to your app, the diff is the five declarations above, plus an action and a flow if write-back is in scope. Read four lines first:
+
+1. `managedBy: 'synced'` on the target. Without it the build refuses the mapping, so if the build is green, it is there.
+2. The `sharingModel` and the permission sets on the target. They start from zero; nothing was inherited.
+3. `watermark.field` and the source key. ADR-0153 asks of the watermark that "Every write at the source stamps the row's watermark with a value at or above every value the source already holds", and of the key that it is unique and never NULL, "a requirement on the source, like invariant 2, which the pull cannot check". A column that is not bumped on every write loses changes silently.
+4. The action and its flow, if any. That is the only path back to the source, so review it as you would any outbound call: what it sends, to whom, and who may run it.
+
+Then read the first `sys_sync_run` row the deployment writes. `read_count` against the source's row count is the review of the run.
+
+## Point your agent at it
+
+Hand your coding agent the jobs guide (`objectstack.ai/docs/automation/jobs`, "Pulling a mapping") and the mapping reference, and give it the rule in one line: copy into a `managedBy: 'synced'` object through a `mapping` with a `datasourceSource` and a `job` whose `pull` names it; never write the copy; change the source through a declared action. The [guide to configuring a coding agent for ObjectStack](/en/blog/how-to-point-your-agent-at-objectstack/) covers the rule file and the MCP endpoint that carry that rule. The mapping here has the same `fieldMapping` and `upsertKey` you would use to [import a spreadsheet from an old system](/en/blog/how-to-import-a-spreadsheet-from-an-old-system/); a pull is that import, run by a job against a live source. And the copy is one more object in the [ontology](/en/glossary/ontology/), which is why every report and AI tool reads it with no extra work. Everything above ran on `@objectstack/cli` 18.4.0.
