@@ -1,6 +1,7 @@
 // Comprehension debt: the reviewer cannot get into a tall pile of generated
 // code nobody has read (refused), but can read the whole definition (the
 // indigo hero tile) and change it.
+export const topic = 'app-building';
 export const aria = 'A person is stopped before a tall grey column of unread code, and reads a short blue definition instead.';
 
 export default ({ C, box, line, person, arrow, stopBar, tile }) => {

@@ -1,6 +1,7 @@
 // Three homes for a business rule around the record being written (the
 // indigo hero tile): a predicate checks it (validation rule), a loop rewrites
 // it before save (hook), and an arrow writes another object (flow).
+export const topic = 'app-building';
 export const aria = 'A blue record being written: a green check tests it, a loop rewrites it before save, and an arrow writes another record.';
 
 export default ({ C, tile, line, ring, arrow, box }) => {

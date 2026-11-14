@@ -1,6 +1,7 @@
 // One executable business ontology (the indigo hero tile, its six kinds as
 // white cells) is the software: the database, the API and the agent's tools
 // are read straight from it.
+export const topic = 'app-building';
 export const aria = 'A blue definition with six kinds feeds a database, an API and an AI agent directly.';
 
 export default ({ C, tile, fill, arrow, cylinder, box, line, agent }) => {

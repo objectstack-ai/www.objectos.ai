@@ -1,6 +1,7 @@
 // What a model lacks, supplied by one ontology: a world to stand on (the
 // indigo hero tile of linked objects), hands (a tool it may call) and a fence
 // (a call outside the grant is stopped).
+export const topic = 'ai-agents';
 export const aria = 'An AI agent stands on a blue world of linked objects, calls one tool, and is stopped at a fence.';
 
 export default ({ C, tile, fill, line, agent, arrow, box, stopBar }) => {

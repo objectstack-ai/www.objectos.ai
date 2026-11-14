@@ -1,5 +1,6 @@
 // The business definition leaves the vendor's locked platform (grey, padlock
 // shut) for an open definition you own (the indigo hero tile, padlock open).
+export const topic = 'governance';
 export const aria = 'A business definition moves out of a grey locked platform into a blue open definition with an unlocked padlock.';
 
 export default ({ C, box, line, arrow, tile, fill }) => {

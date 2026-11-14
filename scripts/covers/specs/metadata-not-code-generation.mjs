@@ -1,5 +1,6 @@
 // One request, two outputs: generated code drifts apart as a loose grey pile;
 // generated metadata (the indigo hero tile) is one connected model.
+export const topic = 'app-building';
 export const aria = 'One request forks: one way to a loose grey pile of code, the other to a blue connected model.';
 
 export default ({ C, box, line, dot, arrow, tile, fill }) => {
