@@ -71,6 +71,19 @@ const shareImage = share
   ? { url: absoluteUrl(share.urlPath), width: OG_IMAGE.width, height: OG_IMAGE.height, alt: data.title }
   : undefined;
 const topic = termBySlug(data.topic)!;
+// Ties in the related score are broken by a stable hash of the (this post,
+// candidate) pair, not by date. Newest-first sent every tie to the latest
+// posts, so the posts published together on 2026-06-03/04/05/16 rarely
+// appeared in a related list: in the build at `ea20640`, 15 of the 25
+// least-linked English posts were from those days, and Search Console listed
+// several of them as "Crawled - currently not indexed". A per-pair hash still
+// gives each page a fixed list (no churn between builds) but spreads the
+// inbound links across the corpus.
+const pairRank = (other: string): number => {
+  let h = 0x811c9dc5;
+  for (const ch of `${slug}|${other}`) h = Math.imul(h ^ ch.charCodeAt(0), 0x01000193);
+  return h >>> 0;
+};
 const relatedPosts = (await getPostsInLocale(locale))
   .filter((post) => post.slug !== slug && post.entry.data.status !== 'archived')
   .map((post) => {
@@ -83,7 +96,7 @@ const relatedPosts = (await getPostsInLocale(locale))
     return { ...post, score };
   })
   .filter((post) => post.score > 0)
-  .sort((a, b) => b.score - a.score || b.entry.data.date.getTime() - a.entry.data.date.getTime())
+  .sort((a, b) => b.score - a.score || pairRank(a.slug) - pairRank(b.slug))
   .slice(0, 3);
 // The pillar pages that list this post in their reading path. Each links the
 // post; the post links back, so a reader who lands on one article from search
