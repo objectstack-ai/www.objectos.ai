@@ -38,6 +38,11 @@
 //   Noto Sans SC          Chinese. The zh-Hans and zh-Hant posts share one
 //                         Simplified-Chinese cover per post (AGENTS.md); the
 //                         other locales use the English cover.
+//   Noto Sans JP          Japanese titles in the share image: the Japanese
+//                         forms of the kanji, and the ones Noto Sans SC lacks
+//                         (捗).
+//   Noto Sans KR          Korean titles in the share image: Hangul, which no
+//                         other face has.
 //   Noto Sans Symbols 2   ✓ ✗ ⛔ and the other dingbats in the diagrams.
 //   Noto Sans Math        the arrows and operators the others lack (↶ ⊘).
 //   Noto Emoji            the emoji (💥 🤔), in monochrome: the COLRv1
@@ -63,6 +68,8 @@ export const OG_FACES = [
   { family: 'Arimo', pkg: '@fontsource-variable/arimo', files: /^arimo-latin(-ext)?-wght-normal\.woff2$/ },
   { family: 'Cousine', pkg: '@fontsource/cousine', files: /^cousine-latin(-ext)?-(400|700)-normal\.woff2$/ },
   { family: 'Noto Sans SC', pkg: '@fontsource-variable/noto-sans-sc', files: /^noto-sans-sc-.*-wght-normal\.woff2$/ },
+  { family: 'Noto Sans JP', pkg: '@fontsource-variable/noto-sans-jp', files: /^noto-sans-jp-.*-wght-normal\.woff2$/ },
+  { family: 'Noto Sans KR', pkg: '@fontsource-variable/noto-sans-kr', files: /^noto-sans-kr-.*-wght-normal\.woff2$/ },
   { family: 'Noto Sans Symbols 2', pkg: '@fontsource/noto-sans-symbols-2', files: /^noto-sans-symbols-2-.*-400-normal\.woff2$/ },
   { family: 'Noto Sans Math', pkg: '@fontsource/noto-sans-math', files: /^noto-sans-math-.*-400-normal\.woff2$/ },
   { family: 'Noto Emoji', pkg: '@fontsource-variable/noto-emoji', files: /^noto-emoji-.*-wght-normal\.woff2$/ },
@@ -74,9 +81,12 @@ const SANS_NAMES = ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'system-u
 const MONO_NAMES = ['ui-monospace', 'SFMono-Regular', 'SF Mono', 'Menlo', 'Monaco', 'Consolas', 'Courier New', 'monospace'];
 // The symbol faces come before the CJK face: Noto Sans SC also has ✓ and the
 // arrows, but as full-width CJK glyphs, which sit badly in a Latin line; a
-// Chinese line reads fine with the Latin-proportioned ones.
-const SANS_CHAIN = ['Arimo', 'Noto Sans Symbols 2', 'Noto Sans Math', 'Noto Sans SC', 'Noto Emoji'];
-const MONO_CHAIN = ['Cousine', 'Noto Sans Symbols 2', 'Noto Sans Math', 'Noto Sans SC', 'Noto Emoji', 'Arimo'];
+// Chinese line reads fine with the Latin-proportioned ones. The Japanese and
+// Korean faces come after the Chinese one, so a cover's text resolves exactly
+// as it did before they were added; they serve the share-image titles, which
+// name them first (`titleFont`), and anything only they have.
+const SANS_CHAIN = ['Arimo', 'Noto Sans Symbols 2', 'Noto Sans Math', 'Noto Sans SC', 'Noto Sans JP', 'Noto Sans KR', 'Noto Emoji'];
+const MONO_CHAIN = ['Cousine', 'Noto Sans Symbols 2', 'Noto Sans Math', 'Noto Sans SC', 'Noto Sans JP', 'Noto Sans KR', 'Noto Emoji', 'Arimo'];
 
 const xml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -292,19 +302,19 @@ export function uncoveredText(text, faces) {
 // ─── Titles ─────────────────────────────────────────────────────────────────
 //
 // The share image sets the post's title in its locale
-// (scripts/lib/og-composite.mjs). A Chinese or Japanese title names the CJK
-// face first, so the Latin words inside it (AI, ObjectStack) take that face's
-// proportions and baseline instead of switching faces mid-line; any other
-// title names Arimo. Either way fontconfig falls back through the sans-serif
+// (scripts/lib/og-composite.mjs). A Chinese, Japanese or Korean title names
+// its CJK face first, so the Latin words inside it (AI, ObjectStack) take that
+// face's proportions and baseline instead of switching faces mid-line; any
+// other title names Arimo. Either way fontconfig falls back through the sans-serif
 // chain for a character the named face lacks, so `uncoveredText` against
 // every face is exactly "this title can be drawn".
 //
-// Japanese is drawn with the Simplified-Chinese face: it has the kana, and
-// its kanji are the Chinese forms of the same characters. Korean has no face:
-// none of the bundled ones has Hangul, so the title check names every Korean
-// title until a face with Hangul is added to OG_FACES and named here.
+// Japanese has its own face, Noto Sans JP: the Simplified-Chinese face has the
+// kana, but draws the Chinese forms of the kanji and lacks some (捗, in 進捗).
+// Korean needs Noto Sans KR, the only face with Hangul. zh-Hant uses the
+// Simplified-Chinese face, which covers every Traditional title the site has.
 
-const TITLE_FAMILY = { 'zh-Hans': 'Noto Sans SC', 'zh-Hant': 'Noto Sans SC', ja: 'Noto Sans SC' };
+const TITLE_FAMILY = { 'zh-Hans': 'Noto Sans SC', 'zh-Hant': 'Noto Sans SC', ja: 'Noto Sans JP', ko: 'Noto Sans KR' };
 
 /**
  * The Pango font description a share-image title is set in, bold, at `size`
