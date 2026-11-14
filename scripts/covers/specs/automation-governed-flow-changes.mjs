@@ -19,7 +19,7 @@ export default ({ C, line, arrow, tile, box, ring, DOTTED }) => {
         line('M518 395h28M532 381v28', W, 12), line('M576 395H700', W, 18),
       ],
     }),
-    arrow('M856 315H890'),
+    arrow('M852 315H884'),
     // the live flow
     box(916, 175, 124, 280, C.ink, 40),
     ring(978, 240, 22), ring(978, 315, 22), ring(978, 390, 22),
