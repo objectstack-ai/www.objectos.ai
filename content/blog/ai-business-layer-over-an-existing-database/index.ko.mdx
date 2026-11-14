@@ -1,0 +1,290 @@
+---
+title: 데이터를 옮기지 않고, 이미 운영 중인 데이터베이스 위에 AI가 쓸 수 있는 비즈니스 계층을 어떻게 올릴까?
+description: 운영 중인 데이터베이스의 테이블을 객체로 묶습니다. 읽기는 원본으로 실시간 전달되고, 쓰기는 기본적으로 거부되며, 멤버 권한은 REST와 MCP 모두에 적용됩니다. ObjectStack 18.4.0에서 한계까지 실측했습니다.
+author: ObjectStack Team
+date: 2026-11-18
+status: published
+topic: integration-data
+audience: it
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - 페더레이션
+  - 기존 데이터베이스
+  - 데이터 모델링
+---
+
+**답부터.** 데이터베이스를 `external` 데이터 소스로 선언하고, 필요한 테이블마다 객체로 묶고, 오래된 열 이름을 업무 이름에 매핑하면, 그 테이블은 사람과 보고서와 AI 에이전트가 다른 객체와 똑같은 REST·MCP 입구로, 똑같은 권한 아래에서 조회하는 객체가 됩니다. 아무것도 복사되지 않습니다. ObjectStack 18.4.0(오늘 `npm create objectstack@latest`가 설치하는 버전)에서, 원본 데이터베이스에 직접 한 수정은 바로 다음 읽기에 보였고, ObjectStack 자신의 데이터베이스에는 그것이 제공하던 **주문 2,400건 중 0건**이 있었습니다. 데이터 소스와 객체가 둘 다 명시적으로 허용하기 전까지 쓰기는 거부됩니다. 저는 이것을 **리드스루 온톨로지**(read-through ontology)라고 부르겠습니다. 내가 소유하지 않은 테이블 위에 이름, 관계, 권한, AI 도구를 얹고, 모든 읽기는 그 테이블을 소유한 시스템으로 그대로 통과시킵니다. 아래에 먼저 실측 기록을, 이어서 그것이 멈추는 다섯 지점을 적습니다.
+
+## 운영 중인 데이터베이스를 쓸 수 있게 만드는 세 가지 길
+
+"우리 데이터를 AI에 맞게 준비해 달라"는 요청을 받는 회사 대부분은 이미 데이터를 갖고 있습니다. 다른 시스템이 쓰는 데이터베이스 안에요. 그 위에 통제되는 비즈니스 계층을 올리는 정직한 방법은 세 가지이고, 각각 치르는 대가가 다릅니다.
+
+| | 다시 만들기 | 복사하기 | 통과해 읽기 |
+|:--|:--|:--|:--|
+| 무엇이 옮겨지나 | 데이터와 시스템 | 데이터, 일정에 따라 | 아무것도 |
+| 신선도 | 새 시스템이 기준 | 마지막 동기화 시점 | 읽는 순간의 원본 |
+| 스키마의 주인 | 나 | 나(사본에 대해) | 원본 시스템 |
+| 첫날 비용 | 마이그레이션 프로젝트 | 만들고 지켜볼 파이프라인 | 데이터 소스 하나, 테이블마다 파일 하나 |
+| 원본 간 조인 | 가능 | 가능, 복사의 주된 이유 | 두 번 읽고 메모리에서 결합 |
+| 원본의 부하 | 전환 후 없음 | 동기화할 때마다 한 번 | 읽을 때마다 |
+
+복사를 택할 이유는 진짜이고, 허수아비가 아닙니다. 사본은 인덱스를 걸 수 있고, 무엇과도 조인할 수 있고, 검색할 수 있고, 원본이 느리거나 멈춰도 보고서를 낼 수 있으며, 대시보드의 쿼리를 운영 중인 주문 시스템에 얹지 않습니다. 그게 필요하다면 복사하세요. 통과해 읽을 이유는 더 좁지만, 맞는 곳에서는 더 강합니다. 연결한 그날 비즈니스 계층이 정확합니다. 동기화해서 맞춰 둘 것이 애초에 없으니까요. 이 메커니즘을 규정한 ADR은 목표로 "Register existing remote tables as ObjectStack objects **without touching the remote schema**"(원격 스키마를 건드리지 않고 기존 원격 테이블을 ObjectStack 객체로 등록한다)와 "Default to read-only; require **two explicit opt-ins** (datasource level + object level) to enable writes"(기본은 읽기 전용, 쓰기를 켜려면 데이터 소스와 객체 두 곳의 명시적 허용이 필요하다)를 꼽습니다.
+
+![ObjectStack 18.4.0의 리드스루 온톨로지. 왼쪽에 세 호출자: REST를 쓰는 멤버 Mia, Mia로 로그인해 MCP를 쓰는 AI 에이전트, 그리고 관리자. 가운데 ObjectStack 계층에는 세 가지가 있습니다. 옛 열 이름에서 매핑한 객체 sales_customer와 sales_order, 고객 읽기를 허용하되 credit_limit을 숨기고 주문에는 아무것도 주지 않는 권한 세트 sales_reader, allowWrites가 false인 쓰기 게이트. 오른쪽은 주문 시스템 자신의 데이터베이스로 고객 5건과 주문 2,400건이 있고, 모든 읽기가 여기서 실시간으로 실행됩니다. 결과: Mia는 200과 EU 고객 두 건, 신용 한도 없음, 주문은 403. 에이전트의 list_objects는 객체 하나만 보여 줍니다. 모든 삽입·수정·삭제는 403 EXTERNAL_WRITE_FORBIDDEN. 아래쪽 ObjectStack 자신의 데이터베이스에는 사용자, 권한 부여, 네이티브 객체가 있고 고객·주문 행은 0입니다.](./read-through-en.svg)
+
+## ObjectStack이 한 번도 건드리지 않은 주문 시스템
+
+원본은 오래된 주문 시스템을 대신해 짧은 Python 스크립트가 쓴 SQLite 파일입니다. `customers`와 `orders` 두 테이블, 고객 5건과 주문 2,400건, 그리고 오래된 시스템에 흔한 열 이름입니다.
+
+```sql
+CREATE TABLE customers (
+  cust_no      TEXT PRIMARY KEY,
+  cust_name    TEXT NOT NULL,
+  cust_region  TEXT,
+  credit_limit REAL
+);
+CREATE TABLE orders (
+  order_no   TEXT PRIMARY KEY,
+  cust_no    TEXT NOT NULL REFERENCES customers(cust_no),
+  amount     REAL,
+  status     TEXT,
+  placed_on  TEXT
+);
+```
+
+SQLite는 새 스캐폴드가 아무것도 더하지 않고 열 수 있는 방언입니다. 먼저 Postgres를 시도했더니 부팅이 분명하게 말해 주었습니다. "The database client package `pg` is not installed, so no connection was attempted. It is an OPTIONAL install of @objectstack/driver-sql … `npm install pg` (pnpm add pg / yarn add pg)"(데이터베이스 클라이언트 패키지 `pg`가 설치되어 있지 않아 연결을 시도하지 않았다. @objectstack/driver-sql의 선택 설치다…). 가이드는 Oracle과 SQL Server를 페더레이션 전용 방언으로 문서화하고("ObjectStack reads an existing Oracle schema live … but it never owns one", 기존 Oracle 스키마를 실시간으로 읽지만 절대 소유하지 않는다), SAP S/4HANA와 Dynamics 365 같은 OData v4 서비스도 함께 배포되는 드라이버로 다룹니다. 이 셋은 여기서 실행하지 않았습니다.
+
+`npm create objectstack@latest`로 만든 스캐폴드(패키지 이름 `sales`)에서는 파일 세 개로 끝났습니다. 데이터 소스:
+
+```ts
+export const Erp = defineDatasource({
+  name: 'erp',
+  label: 'Order system (SQLite)',
+  driver: 'sqlite',
+  schemaMode: 'external',            // ObjectStack never runs DDL here
+  config: { filename: '/…/legacy/erp.db' },   // absolute path, trimmed
+  external: {
+    allowWrites: false,
+    validation: { onMismatch: 'fail', checkOnBoot: true },
+  },
+});
+```
+
+테이블마다 객체 하나. `external.columnMap`(원격 열 → 로컬 필드)이 `cust_no`, `cust_name`, `cust_region`을 `id`, `name`, `region`으로 바꿉니다.
+
+```ts
+export const Customer = ObjectSchema.create({
+  name: 'sales_customer',
+  label: 'Customer',
+  sharingModel: 'public_read',
+  datasource: 'erp',
+  external: {
+    remoteName: 'customers',
+    columnMap: { cust_no: 'id', cust_name: 'name', cust_region: 'region' },
+  },
+  fields: {
+    name: Field.text({ label: 'Name', searchable: true }),
+    region: Field.text({ label: 'Region' }),
+    credit_limit: Field.currency({ label: 'Credit limit' }),
+  },
+});
+```
+
+`sales_order`는 `orders` 위에 같은 모양이고, `cust_no`를 `customer` 조회 필드에 매핑합니다. 그리고 고객은 봐도 되지만 신용 한도는 보면 안 되는 사람들을 위한 권한 세트 하나:
+
+```ts
+export const SalesReader = definePermissionSet({
+  name: 'sales_reader',
+  objects: { sales_customer: { allowRead: true } },
+  fields: { 'sales_customer.credit_limit': { readable: false, editable: false } },
+});
+```
+
+객체를 손으로 칠 필요는 없습니다. 관리자 경로 `GET …/datasources/erp/external/tables`는 `customers`(4열)와 `orders`(5열)를 돌려주었고, `POST …/external/tables/customers/draft`는 그 테이블의 객체 초안을 돌려주었습니다. 초안은 원격 열 이름을 필드 이름으로 그대로 쓰고 `sharingModel: 'private'`로 시작합니다. 이건 아래에서 중요해집니다. 저는 `columnMap`으로 이름을 바꾸고 `public_read`를 의도적으로 골랐습니다.
+
+`sales_order` 첫 초안에서 `placed_on`을 `date` 필드로 선언했습니다. 부팅이 거부했습니다.
+
+```text
+✗ Object 'sales_order' does not match its remote table on datasource 'erp':
+✗ type_mismatch: orders.placed_on (expected date, actual text)
+```
+
+`schemaMode: 'external'`이 제 일을 하는 장면입니다. 가이드의 표현으로는 "A mature external DB — **DDL forbidden**; a schema mismatch **fails** boot"(성숙한 외부 DB: DDL 금지, 스키마 불일치는 부팅 실패). ObjectStack은 열을 맞추러 가지 않았습니다. 저는 필드를 주문 시스템이 실제로 저장하는 `text`로 바꿨습니다.
+
+## 실행 중인 앱이 답하는 다섯 가지 질문
+
+아래는 모두 18.4.0의 `objectstack dev` 실제 출력이고, 표시한 곳만 줄였습니다. `$B`는 개발 서버 주소이고, `sql.py`는 파일에 문장 하나를 실행하는 세 줄짜리 Python 도우미입니다. 이 머신에 `sqlite3` 명령이 없어서 썼습니다.
+
+### 실시간인가, 사본인가?
+
+고객 한 명을 읽고, 주문 시스템 자신의 데이터베이스에서 바꾸고, 다시 읽습니다.
+
+```bash
+curl -s -b admin.cookies "$B/api/v1/data/sales_customer/C-1002"
+```
+
+```json
+{"object":"sales_customer","id":"C-1002","record":{"credit_limit":180000,"id":"C-1002","name":"Borealis GmbH","region":"EU"}}
+```
+
+```bash
+python3 sql.py erp.db "UPDATE customers SET credit_limit = 95000 WHERE cust_no = 'C-1002'"
+curl -s -b admin.cookies "$B/api/v1/data/sales_customer/C-1002"
+```
+
+```json
+{"object":"sales_customer","id":"C-1002","record":{"credit_limit":95000,"id":"C-1002","name":"Borealis GmbH","region":"EU"}}
+```
+
+동기화는 돌지 않았습니다. 애초에 없으니까요. 그 시점에 ObjectStack 자신의 데이터베이스에는 테이블이 84개 있었고, 이름에서 `customer`나 `order`를 찾아도 하나도 없었습니다. 필터는 원본으로 내려가고, 조회 필드는 두 원격 테이블을 가로질러 펼쳐집니다.
+
+```bash
+curl -s -b admin.cookies "$B/api/v1/data/sales_order?status=pending&top=2&expand=customer"
+```
+
+```json
+{"object":"sales_order","records":[
+  {"amount":7020.73,"status":"pending","placed_on":"2026-04-04","id":"SO-00003",
+   "customer":{"credit_limit":60000,"id":"C-1003","name":"Cyan Pacific","region":"APAC"}},
+  … one more row, trimmed …],
+ "total":480,"hasMore":true}
+```
+
+### 무엇이든 쓸 수 있나?
+
+기본적으로는 아닙니다. 플랫폼 관리자도, 어느 입구로도요.
+
+```bash
+curl -s -b admin.cookies -X POST "$B/api/v1/data/sales_customer" \
+  -H "content-type: application/json" -d '{"id":"C-9999","name":"Test Co","region":"EU"}'
+```
+
+```json
+HTTP 403
+{"error":"Write 'insert' blocked on object 'sales_customer': datasource 'erp' is external (schemaMode=external). Requires datasource.external.allowWrites=true (got false) AND object.external.writable=true (got false).","code":"EXTERNAL_WRITE_FORBIDDEN","object":"sales_customer"}
+```
+
+`C-1002`에 대한 `PATCH`와 주문 `SO-00001`에 대한 `DELETE`도 같은 `403`을 돌려주며 각각 `update`와 `delete`를 지목했습니다. 주문 시스템에는 여전히 고객 5건, 주문 2,400건, 그리고 시스템이 스스로 설정한 신용 한도가 그대로였습니다. 오류는 두 스위치를 모두 지목하고, 가이드도 규칙을 적어 둡니다. "With either gate off, insert/update/delete on the federated object is rejected"(어느 한 게이트라도 꺼져 있으면 페더레이션 객체의 삽입·수정·삭제는 거부된다).
+
+### 멤버에게는 무엇이 보이나?
+
+Mia는 관리자가 `POST /api/v1/auth/admin/create-user`로 만든 멤버입니다. 아무 권한이 없을 때 두 객체 모두 `403 PERMISSION_DENIED`를 돌려줍니다. 페더레이션 객체도 다른 객체처럼 기본 거부입니다. 관리자가 `sales_reader`를 부여한 뒤:
+
+```bash
+curl -s -b member.cookies "$B/api/v1/data/sales_customer?region=EU"
+```
+
+```json
+HTTP 200
+{"object":"sales_customer","records":[{"id":"C-1002","name":"Borealis GmbH","region":"EU"},{"id":"C-1004","name":"Delta Freight","region":"EU"}],"total":2,"hasMore":false}
+```
+
+그녀의 응답에 `credit_limit`은 없습니다. 주문은 여전히 `403`입니다. 그리고 숨겨진 숫자를 우회 질문으로 알아낼 수도 없습니다.
+
+```bash
+curl -s -b member.cookies "$B/api/v1/data/sales_customer?credit_limit=95000"
+```
+
+```json
+HTTP 403
+{"error":"[Security] Access denied: query on 'sales_customer' references field(s) not readable by the caller: credit_limit. Filtering, sorting, grouping, or aggregating by a hidden field would leak its values (filter oracle) — remove these predicates or grant field read access.","code":"PERMISSION_DENIED","object":"sales_customer"}
+```
+
+그 필드로 정렬해도 같은 답이었습니다. 원본 데이터베이스는 Mia가 누군지 모릅니다. 권한은 이 계층에서, 매번의 읽기에서, 행이 그녀에게 닿기 전에 집행됩니다.
+
+### AI 에이전트는 그걸 우회할 수 있나?
+
+모든 ObjectStack 앱은 `/api/v1/mcp`에 있는 MCP 서버입니다. Mia로 로그인한 에이전트의 `list_objects`는 `sales_customer` 하나만 답했습니다. 주문이 있다는 사실조차 보지 못합니다. 나머지를 도구 결과만 남기고 줄이면:
+
+```text
+query_records  sales_customer  where {"region":"NA"}  → 2 records: Aurora Labs, Ember Foods (no credit_limit)
+query_records  sales_order     limit 1                → {"code":"PERMISSION_DENIED","status":403}
+query_records  sales_customer  limit 51               → Too big: expected number to be <=50 at limit
+create_record  sales_customer  {"id":"C-9998",…}      → {"code":"EXTERNAL_WRITE_FORBIDDEN","status":403}
+```
+
+에이전트는 정확히 Mia의 시야를 얻고, 호출당 최대 50행, 쓰기는 없습니다. 데이터베이스가 얼마나 오래됐든 어느 제품이든 이건 바뀌지 않습니다. 에이전트는 데이터베이스와 직접 말하지 않으니까요.
+
+### 보고서는 테이블을 넘나들 수 있나?
+
+데이터셋은 보고서와 AI 질문이 읽는 시맨틱 계층입니다. 이 데이터셋은 주문 매출을 고객의 지역별로 묶는데, 지역 열은 다른 테이블에 있습니다.
+
+```ts
+export const OrderRevenue: Dataset = {
+  name: 'sales_order_revenue',
+  label: 'Order revenue',
+  object: 'sales_order',
+  include: ['customer'],
+  dimensions: [{ name: 'region', label: 'Region', field: 'customer.region', type: 'string' }],
+  measures: [
+    { name: 'revenue', label: 'Revenue', aggregate: 'sum', field: 'amount' },
+    { name: 'orders', label: 'Orders', aggregate: 'count' },
+  ],
+};
+```
+
+MCP의 `query_dataset` 도구로 묻고, 주문 시스템 안에서 직접 실행한 `JOIN`과 대조했습니다.
+
+| 지역 | 매출(데이터셋) | 주문 수 |
+|:--|--:|--:|
+| APAC | 6,127,544.10 | 480 |
+| EU | 11,995,588.50 | 960 |
+| NA | 12,470,792.17 | 960 |
+
+```text
+$ python3 sql.py erp.db "SELECT c.cust_region, round(sum(o.amount),2), count(*) FROM orders o JOIN customers c ON c.cust_no=o.cust_no GROUP BY 1 ORDER BY 1"
+('APAC', 6127544.1, 480)
+('EU', 11995588.5, 960)
+('NA', 12470792.17, 960)
+```
+
+소수점 둘째 자리까지 같습니다. 어떻게 거기에 이르는지가 첫 번째 한계입니다.
+
+## 리드스루 계층이 멈추는 곳
+
+아래는 제가 실측한 경계와, 제가 실행하지 않은 드라이버에 대해 문서가 밝힌 두 가지입니다.
+
+**1. 데이터 소스를 가로질러 조인하는 쿼리는 없습니다.** 위 데이터셋은 SQLite로 보낸 하나의 `JOIN`이 아니었습니다. 분석 컴파일러의 주석에 따르면 페더레이션 객체의 데이터셋은 "the ObjectQL FK-expand path (two reads, joined in memory)"(ObjectQL 외래 키 확장 경로: 두 번 읽고 메모리에서 결합)로 처리됩니다. 관계가 ObjectStack의 데이터베이스에서 주문 시스템으로 넘어갈 때도 같습니다. `sales_customer`를 조회하는 네이티브 객체 `sales_visit`은 고객을 펼칠 수 있었고(`?expand=customer`), 중첩 형태 `{"customer":{"region":"EU"}}`로 고객 지역에 따라 필터링도 됐습니다. 둘 다 별도의 읽기로 동작합니다. 존재하지 않는 것은 두 데이터베이스에 걸친 하나의 문장입니다. 런타임 ADR의 비목표가 그렇게 말합니다. "cross-datasource JOINs in one query (federated objects are queried per-datasource)"(한 쿼리 안의 데이터 소스 간 JOIN, 페더레이션 객체는 데이터 소스별로 조회한다). 제가 만난 두 거부는 페더레이션의 한계가 아니어서, 엉뚱한 계층을 탓하지 않도록 밝혀 둡니다. `?customer.region=EU` 같은 점 표기 필터와 `customer.region`으로 그룹화한 `aggregate_records`는 네이티브 `sales_visit`에서도 `sales_order`와 똑같이 `400 INVALID_FIELD`를 돌려주었습니다.
+
+**2. 행 상한은 플러그인 드라이버의 것이지 SQL의 것이 아닙니다.** 내장 SQLite 드라이버에는 상한이 없습니다. 주문에 대한 `?top=5000`은 2,400행 전부를 돌려주었습니다. 그 데이터 소스에 상한을 걸면 검증에서 거부됩니다.
+
+```text
+✗ external.rowCap: `external.rowCap` caps the rows the engine reads from a plugin driver, which it holds behind its correctness floor; the 'sqlite' driver is built in, runs the whole query itself and is never capped, so the key would do nothing here. Remove `rowCap`.
+```
+
+플러그인 드라이버(OData 포함)에서는 가이드가 상한을 정합니다. "A read that matches more rows than the datasource's row cap is refused with `422 EXTERNAL_ROW_CAP_EXCEEDED` rather than answered from a partial set"(데이터 소스의 상한보다 많은 행과 일치하는 읽기는 일부만 답하지 않고 422로 거부된다), "The default is 1000 rows"(기본값은 1000행), 최대 10,000. 여기서는 실행하지 않았습니다.
+
+**3. 부모가 제어하는 공유는 드라이버에 달렸습니다.** 플러그인 드라이버에서는 "A read whose scope composes a `ReadableIds` leaf, such as an object `controlled_by_parent`, is refused"(`controlled_by_parent` 객체처럼 범위에 `ReadableIds` 잎이 들어간 읽기는 거부된다). SQL에서는 반대를 측정했습니다. `sales_order`를 `controlled_by_parent`로 두고 `master_detail`로 고객에 매달자 Mia는 주문을 읽었고, 부모가 그녀에게 보이지 않게 되자 자식도 함께 사라졌습니다(다음 항목).
+
+**4. 소유자 기반 공유에는 소유자 열이 필요합니다.** 소유자 열이 없는 테이블 위에서 `sales_customer`를 `private`(초안의 기본값)으로 두자, Mia의 응답은 고객에 대해서도, 부모가 제어하는 주문에 대해서도 `{"records":[],"total":0}`였습니다. 관리자는 여전히 5건 전부와 2,400건 전부를 읽었습니다. 가이드가 이를 경고합니다. "only an `owner_id` declared in `fields`, or named by an `external.columnMap` entry, counts as one. Without it a member reads no row"(`fields`에 선언했거나 `external.columnMap` 항목이 지목한 `owner_id`만 소유자로 친다. 그게 없으면 멤버는 한 행도 읽지 못한다). 원본의 소유자 열을 매핑하거나, 위처럼 `public_read`를 고르고 권한 세트로 좁히세요.
+
+**5. 성능은 원본의 성능입니다.** 모든 읽기는 그 순간 주문 시스템으로 떨어집니다. 목록 페이지는 행과 총건수를 읽고, 누군가 열어 둔 대시보드는 운영 데이터베이스에 대한 쿼리입니다. 이 계층은 원본에 없는 인덱스를 더하지 않습니다. 위의 수정이 다음 읽기에 보인 것은 중간에 옛 행을 붙잡고 있는 것이 없었기 때문입니다. 원본이 부하를 감당하지 못하면 이미 운영 중인 복제본으로 데이터 소스를 향하게 하거나, 데이터를 복사하세요.
+
+## 복사가 더 나은 도구일 때
+
+ObjectStack의 가상 객체 가이드는 한 문장으로 선을 긋습니다. "Make the object virtual when a copy would be **wrong**, and real when a copy is merely **convenient**"(복사가 틀린 일이면 객체를 가상으로, 복사가 단지 편할 뿐이면 실체로). 원격이 요청 시점에 답을 계산할 때, 데이터가 착지하면 안 될 때(데이터 거주성, 라이선스, 감사), 어떤 동기화보다 빨리 바뀔 때 복사는 틀린 일입니다. 천천히 바뀌는 참조 데이터와 여러 원본을 조인하는 보고서에는 복사가 편할 뿐입니다. 앞의 것은 통과해 읽고, 뒤의 것은 복사하세요. 이미 꺼 버린 시스템이라면 남은 건 내보내기 파일뿐이고, [가져오기 매핑과 그 시험 실행](/ko/blog/how-to-import-a-spreadsheet-from-an-old-system/)이 그 파일을 옛 코드 없이 모델에 착지시키는 방법입니다.
+
+## 개발 중: 데이터베이스에서 복사하기
+
+페더레이션된 테이블의 행을 일정에 따라 일반 ObjectStack 객체로 복사하는 기능("sync-in")은 설계되어 있지만 18.4.0에는 없습니다. 그 기록인 ADR-0153은 Proposed 상태이며 스스로를 이렇게 말합니다. "This record declares; it implements nothing"(이 기록은 선언만 하고 아무것도 구현하지 않는다). 그것이 설명하는 내용은 "A remote table or API collection becomes an ordinary object whose rows were **copied** by a pull"(원격 테이블이나 API 컬렉션이, 풀로 복사된 행을 가진 일반 객체가 된다)이고, 그 경험칙은 "Reports, analysis, AI question answering, joins across sources; a slow or fragile legacy system"(보고서, 분석, AI 질의응답, 원본 간 조인, 느리거나 취약한 레거시 시스템)을 sync-in에, "Live data, one table at a time; the legacy system must not be touched; data that must not land"(실시간 데이터, 한 번에 한 테이블, 레거시를 건드리면 안 됨, 착지하면 안 되는 데이터)를 페더레이션에 배정합니다. 이 절의 내용은 하나도 측정하지 않았습니다.
+
+## diff에서 읽을 곳
+
+에이전트가 바인딩을 썼다면 리뷰는 짧습니다. 결정 하나가 한 줄이니까요.
+
+| diff의 줄 | 무엇을 정하나 |
+|:--|:--|
+| `schemaMode: 'external'` | ObjectStack은 원본을 바꾸지 않음. 어긋남은 부팅을 실패시킴 |
+| `allowWrites` / `writable` | 둘 다 `true`여야 쓰기가 원본에 닿음 |
+| `columnMap` | 원본의 열이 어떤 업무 이름으로 보이는지 |
+| `sharingModel` | `private`는 소유자 열 매핑이 필요함. 없으면 멤버는 아무것도 못 읽음 |
+| 권한 세트의 `fields` | 멤버가 절대 보지 못하고 필터에도 쓰지 못하는 원본 열 |
+| `rowCap` | 플러그인 드라이버 전용. 내장 SQL 드라이버에서는 거부됨 |
+
+[온톨로지](/en/glossary/ontology/)는 업무에 이름을 붙이는 계층입니다. 객체, 관계, 권한, 액션. 페더레이션이란 그것이 내가 만들지 않은 데이터베이스에도 첫날부터 이름을 붙일 수 있고, 그 앞에 마이그레이션 프로젝트를 세우지 않아도 되며, [권한 모델](/en/glossary/permission-model/)이 사람이든 에이전트든 모든 독자에게 적용된다는 뜻입니다.
+
+## 에이전트에게 맡기기
+
+코딩 에이전트에게 건넬 것은 이 글이 아니라 규칙입니다. `external` 데이터 소스 하나, 테이블마다 `remoteName`과 `columnMap`을 가진 객체 하나, 명시한 `sharingModel`, 두 쓰기 스위치는 모두 끔, 그리고 독자 유형마다 권한 세트 하나. [코딩 에이전트를 설정하는 방법](/en/blog/how-to-point-your-agent-at-objectstack/)은 규칙 파일, 실행 중인 앱이 노출하는 MCP 엔드포인트, 스펙을 다룹니다. [외부 데이터 소스 가이드](https://objectstack.ai/docs/data-modeling/external-datasources)는 에이전트가 읽어야 할 참조입니다. `npm create objectstack@latest`가 설치하는 것은 18.4.0이고, 위의 실측 기록은 모두 이 버전에서 실행했습니다.

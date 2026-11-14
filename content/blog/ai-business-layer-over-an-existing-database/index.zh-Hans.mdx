@@ -1,0 +1,290 @@
+---
+title: 不搬数据，怎样给已经在跑的数据库加一层 AI 能用的业务层？
+description: 把在跑数据库的表绑定成对象：读取实时落到源库，写入默认拒绝，成员权限在 REST 和 MCP 上同样生效。在 ObjectStack 18.4.0 上实测，边界也一并测了。
+author: ObjectStack Team
+date: 2026-11-18
+status: published
+topic: integration-data
+audience: it
+solutions: []
+industries: []
+cover: ./cover.svg
+tags:
+  - 联邦查询
+  - 现有数据库
+  - 数据建模
+---
+
+**先给答案**：把数据库声明为一个 `external` 数据源，把需要的每张表绑定成一个对象，把旧列名映射成业务名，这些表就成了对象——人、报表和 AI Agent 通过和其他对象一样的 REST 与 MCP 入口查询它们，权限也一样。没有任何复制。在 ObjectStack 18.4.0（也就是今天 `npm create objectstack@latest` 装上的版本）上，直接在源数据库里改的一行，下一次读取就看到了；而 ObjectStack 自己的数据库里，它正在提供的 **2,400 条订单一条都没有（0 条）**。在数据源和对象都显式开启之前，写入一律拒绝。我把这叫作**直通式本体**（read-through ontology）：名字、关系、权限和 AI 工具叠在你并不拥有的表之上，每一次读取都穿过去，交给真正拥有它们的那个系统。下面先给实测记录，再讲它止步的五个地方。
+
+## 让在跑的数据库可用，有三条路
+
+大多数被要求「让数据为 AI 做好准备」的公司，数据早就有了，躺在某个别的系统写入的数据库里。要在上面加一层受治理的业务层，诚实地说有三条路，每条的代价不一样。
+
+| | 重建 | 复制 | 直通读取 |
+|:--|:--|:--|:--|
+| 搬动什么 | 数据和系统 | 数据，按计划同步 | 什么都不搬 |
+| 新鲜度 | 新系统就是真相 | 停在上一次同步 | 读取那一刻的源库 |
+| 谁拥有 schema | 你 | 你（对副本而言） | 源系统 |
+| 第一天的成本 | 一个迁移项目 | 一条要建、要盯的管道 | 一个数据源，每张表一个文件 |
+| 跨源关联 | 可以 | 可以，这正是复制的主要理由 | 两次读取，在内存里拼接 |
+| 源库的负载 | 切换后为零 | 同步时一次 | 每一次读取 |
+
+复制的理由是真实的，不是稻草人：副本可以建索引、和任何东西关联、被搜索，源库慢了或宕了也照样能出报表，而且永远不会把仪表盘的查询压到生产订单系统上。如果你要的是这些，就复制。直通读取的理由更窄，但在适用的地方更硬：接上的那一天，业务层就是对的，因为根本没有需要保持同步的东西。规定这套机制的 ADR 在目标里写着「Register existing remote tables as ObjectStack objects **without touching the remote schema**」（把现有远程表注册成 ObjectStack 对象，而不碰远程 schema），以及「Default to read-only; require **two explicit opt-ins** (datasource level + object level) to enable writes」（默认只读；要开启写入，需要两处显式开启：数据源级和对象级）。
+
+![ObjectStack 18.4.0 上的直通式本体。左边三个调用方：成员 Mia 走 REST；以 Mia 身份登录的 AI Agent 走 MCP；还有管理员。中间是 ObjectStack 层，里面有三样东西：带旧列名映射的对象 sales_customer 和 sales_order；sales_reader 权限集，允许读客户但隐藏 credit_limit，对订单不授权；以及 allowWrites 为 false 的写入闸门。右边是订单系统自己的数据库，5 个客户、2,400 条订单，每次读取都在这里实时执行。结果：Mia 拿到 200、两个 EU 客户、没有信用额度，订单 403；Agent 的 list_objects 只列出一个对象；任何插入、更新、删除都回 403 EXTERNAL_WRITE_FORBIDDEN。下方，ObjectStack 自己的数据库只有用户、授权和原生对象，客户和订单数据为 0 行。](./read-through.svg)
+
+## 一个 ObjectStack 从没碰过的订单系统
+
+源库是一个 SQLite 文件，由一段很短的 Python 脚本写入，扮演一个老订单系统：一张 `customers` 表、一张 `orders` 表，5 个客户、2,400 条订单，列名也是老系统常见的那种。
+
+```sql
+CREATE TABLE customers (
+  cust_no      TEXT PRIMARY KEY,
+  cust_name    TEXT NOT NULL,
+  cust_region  TEXT,
+  credit_limit REAL
+);
+CREATE TABLE orders (
+  order_no   TEXT PRIMARY KEY,
+  cust_no    TEXT NOT NULL REFERENCES customers(cust_no),
+  amount     REAL,
+  status     TEXT,
+  placed_on  TEXT
+);
+```
+
+SQLite 是一个全新脚手架不加任何东西就能打开的方言。我先试了 Postgres，启动直接说清楚了原因：「The database client package `pg` is not installed, so no connection was attempted. It is an OPTIONAL install of @objectstack/driver-sql … `npm install pg` (pnpm add pg / yarn add pg)」（数据库客户端包 `pg` 没有安装，所以没有尝试连接。它是 @objectstack/driver-sql 的可选安装……）。指南还把 Oracle 和 SQL Server 记为只做联邦的方言（「ObjectStack reads an existing Oracle schema live … but it never owns one」，ObjectStack 实时读取现有的 Oracle schema……但从不拥有它），并通过自带的驱动支持 SAP S/4HANA、Dynamics 365 这类 OData v4 服务。这三者我在这里都没有跑。
+
+在 `npm create objectstack@latest` 生成的脚手架上（包名叫 `sales`），三个文件干完了活。数据源：
+
+```ts
+export const Erp = defineDatasource({
+  name: 'erp',
+  label: 'Order system (SQLite)',
+  driver: 'sqlite',
+  schemaMode: 'external',            // ObjectStack never runs DDL here
+  config: { filename: '/…/legacy/erp.db' },   // absolute path, trimmed
+  external: {
+    allowWrites: false,
+    validation: { onMismatch: 'fail', checkOnBoot: true },
+  },
+});
+```
+
+每张表一个对象，用 `external.columnMap`（远程列 → 本地字段）把 `cust_no`、`cust_name`、`cust_region` 变成 `id`、`name`、`region`：
+
+```ts
+export const Customer = ObjectSchema.create({
+  name: 'sales_customer',
+  label: 'Customer',
+  sharingModel: 'public_read',
+  datasource: 'erp',
+  external: {
+    remoteName: 'customers',
+    columnMap: { cust_no: 'id', cust_name: 'name', cust_region: 'region' },
+  },
+  fields: {
+    name: Field.text({ label: 'Name', searchable: true }),
+    region: Field.text({ label: 'Region' }),
+    credit_limit: Field.currency({ label: 'Credit limit' }),
+  },
+});
+```
+
+`sales_order` 在 `orders` 上是同样的形状，`cust_no` 映射到一个 `customer` 查找字段。再加一个权限集，给那些应该看到客户、但不该看到客户能欠多少钱的人：
+
+```ts
+export const SalesReader = definePermissionSet({
+  name: 'sales_reader',
+  objects: { sales_customer: { allowRead: true } },
+  fields: { 'sales_customer.credit_limit': { readable: false, editable: false } },
+});
+```
+
+对象不必手敲。管理员路由 `GET …/datasources/erp/external/tables` 回答了 `customers`（4 列）和 `orders`（5 列），`POST …/external/tables/customers/draft` 为这张表返回了一个对象草稿。草稿保留远程列名作为字段名，并且以 `sharingModel: 'private'` 开头——这一点下面很要紧：我通过 `columnMap` 改了名，并且有意选了 `public_read`。
+
+我给 `sales_order` 写的第一版，把 `placed_on` 声明成了 `date` 字段。启动拒绝了它：
+
+```text
+✗ Object 'sales_order' does not match its remote table on datasource 'erp':
+✗ type_mismatch: orders.placed_on (expected date, actual text)
+```
+
+这正是 `schemaMode: 'external'` 在尽职：按指南的说法，「A mature external DB — **DDL forbidden**; a schema mismatch **fails** boot」（成熟的外部数据库——禁止 DDL；schema 不匹配则启动失败）。ObjectStack 没有为了迁就去改列。我把字段改成了 `text`，也就是订单系统实际存的类型。
+
+## 五个问题，由运行中的应用来回答
+
+下面每一段都是 18.4.0 上 `objectstack dev` 的真实输出，只在标明处做了删节。`$B` 是开发服务器的地址；`sql.py` 是一个三行的 Python 小工具，对这个文件执行一条语句，因为这台机器上没有 `sqlite3` 命令。
+
+### 是实时的，还是副本？
+
+读一个客户，在订单系统自己的数据库里改掉它，再读一次：
+
+```bash
+curl -s -b admin.cookies "$B/api/v1/data/sales_customer/C-1002"
+```
+
+```json
+{"object":"sales_customer","id":"C-1002","record":{"credit_limit":180000,"id":"C-1002","name":"Borealis GmbH","region":"EU"}}
+```
+
+```bash
+python3 sql.py erp.db "UPDATE customers SET credit_limit = 95000 WHERE cust_no = 'C-1002'"
+curl -s -b admin.cookies "$B/api/v1/data/sales_customer/C-1002"
+```
+
+```json
+{"object":"sales_customer","id":"C-1002","record":{"credit_limit":95000,"id":"C-1002","name":"Borealis GmbH","region":"EU"}}
+```
+
+没有任何同步在跑，因为根本没有同步。那时 ObjectStack 自己的数据库里有 84 张表，按名字搜 `customer` 或 `order`，一张都没有。筛选条件下推到源库，查找字段可以跨两张远程表展开：
+
+```bash
+curl -s -b admin.cookies "$B/api/v1/data/sales_order?status=pending&top=2&expand=customer"
+```
+
+```json
+{"object":"sales_order","records":[
+  {"amount":7020.73,"status":"pending","placed_on":"2026-04-04","id":"SO-00003",
+   "customer":{"credit_limit":60000,"id":"C-1003","name":"Cyan Pacific","region":"APAC"}},
+  … one more row, trimmed …],
+ "total":480,"hasMore":true}
+```
+
+### 有什么能写进去吗？
+
+默认不能，平台管理员也不能，走哪个入口都不能：
+
+```bash
+curl -s -b admin.cookies -X POST "$B/api/v1/data/sales_customer" \
+  -H "content-type: application/json" -d '{"id":"C-9999","name":"Test Co","region":"EU"}'
+```
+
+```json
+HTTP 403
+{"error":"Write 'insert' blocked on object 'sales_customer': datasource 'erp' is external (schemaMode=external). Requires datasource.external.allowWrites=true (got false) AND object.external.writable=true (got false).","code":"EXTERNAL_WRITE_FORBIDDEN","object":"sales_customer"}
+```
+
+对 `C-1002` 的 `PATCH` 和对订单 `SO-00001` 的 `DELETE` 回的是同样的 `403`，分别点名 `update` 和 `delete`。订单系统里仍是 5 个客户、2,400 条订单，以及它自己设的那个信用额度。错误里点名了两个开关，指南也写明了规则：「With either gate off, insert/update/delete on the federated object is rejected」（任一闸门关闭，联邦对象上的插入、更新、删除都会被拒绝）。
+
+### 成员看到什么？
+
+Mia 是管理员通过 `POST /api/v1/auth/admin/create-user` 创建的成员。没有任何授权时，两个对象都回 `403 PERMISSION_DENIED`：联邦对象和其他对象一样，默认拒绝。管理员把 `sales_reader` 授予她之后：
+
+```bash
+curl -s -b member.cookies "$B/api/v1/data/sales_customer?region=EU"
+```
+
+```json
+HTTP 200
+{"object":"sales_customer","records":[{"id":"C-1002","name":"Borealis GmbH","region":"EU"},{"id":"C-1004","name":"Delta Freight","region":"EU"}],"total":2,"hasMore":false}
+```
+
+她的答案里没有 `credit_limit`。订单仍然回 `403`。而且她没法绕着问出那个被隐藏的数字：
+
+```bash
+curl -s -b member.cookies "$B/api/v1/data/sales_customer?credit_limit=95000"
+```
+
+```json
+HTTP 403
+{"error":"[Security] Access denied: query on 'sales_customer' references field(s) not readable by the caller: credit_limit. Filtering, sorting, grouping, or aggregating by a hidden field would leak its values (filter oracle) — remove these predicates or grant field read access.","code":"PERMISSION_DENIED","object":"sales_customer"}
+```
+
+按它排序，回答相同。源数据库根本不知道 Mia 是谁；权限在这一层执行，在每一次读取上、在行交到她手里之前。
+
+### AI Agent 能绕过去吗？
+
+每个 ObjectStack 应用都是一个 MCP 服务器，地址是 `/api/v1/mcp`。以 Mia 身份登录后，Agent 的 `list_objects` 只回答了一个对象 `sales_customer`：它连订单存在都看不到。其余的，删节到只剩工具结果：
+
+```text
+query_records  sales_customer  where {"region":"NA"}  → 2 records: Aurora Labs, Ember Foods (no credit_limit)
+query_records  sales_order     limit 1                → {"code":"PERMISSION_DENIED","status":403}
+query_records  sales_customer  limit 51               → Too big: expected number to be <=50 at limit
+create_record  sales_customer  {"id":"C-9998",…}      → {"code":"EXTERNAL_WRITE_FORBIDDEN","status":403}
+```
+
+Agent 拿到的恰好是 Mia 的视图，每次调用最多 50 行，不能写。数据库有多老、是哪家的，都改变不了这一点，因为 Agent 从不直接和数据库说话。
+
+### 报表能跨表吗？
+
+数据集（dataset）是报表和 AI 提问读取的语义层。这个数据集按客户所在区域汇总订单收入，而区域这一列在另一张表里：
+
+```ts
+export const OrderRevenue: Dataset = {
+  name: 'sales_order_revenue',
+  label: 'Order revenue',
+  object: 'sales_order',
+  include: ['customer'],
+  dimensions: [{ name: 'region', label: 'Region', field: 'customer.region', type: 'string' }],
+  measures: [
+    { name: 'revenue', label: 'Revenue', aggregate: 'sum', field: 'amount' },
+    { name: 'orders', label: 'Orders', aggregate: 'count' },
+  ],
+};
+```
+
+通过 MCP 的 `query_dataset` 工具提问，再和在订单系统里直接跑的 `JOIN` 对照：
+
+| 区域 | 收入（数据集） | 订单数 |
+|:--|--:|--:|
+| APAC | 6,127,544.10 | 480 |
+| EU | 11,995,588.50 | 960 |
+| NA | 12,470,792.17 | 960 |
+
+```text
+$ python3 sql.py erp.db "SELECT c.cust_region, round(sum(o.amount),2), count(*) FROM orders o JOIN customers c ON c.cust_no=o.cust_no GROUP BY 1 ORDER BY 1"
+('APAC', 6127544.1, 480)
+('EU', 11995588.5, 960)
+('NA', 12470792.17, 960)
+```
+
+分毫不差。它是怎么算出来的，正是第一条边界。
+
+## 直通层止步于哪里
+
+下面是我实测到的边界，外加文档为我没有跑的驱动写明的两条。
+
+**1. 没有跨数据源关联的单条查询。** 上面的数据集并不是发给 SQLite 的一条 `JOIN`。按分析编译器自己的注释，联邦对象上的数据集走的是「the ObjectQL FK-expand path (two reads, joined in memory)」（ObjectQL 外键展开路径：两次读取，在内存里拼接）。关系从 ObjectStack 的数据库跨进订单系统时也一样：一个原生对象 `sales_visit` 带着指向 `sales_customer` 的查找字段，能展开客户（`?expand=customer`），也能用嵌套写法 `{"customer":{"region":"EU"}}` 按客户区域筛选。两者都是分开的读取。不存在的是一条横跨两个数据库的语句。运行时 ADR 的非目标就这么写：「cross-datasource JOINs in one query (federated objects are queried per-datasource)」（单条查询里的跨数据源 JOIN——联邦对象按数据源分别查询）。我碰到的两处拒绝并不是联邦的限制，这里点名，免得有人怪错了层：像 `?customer.region=EU` 这样的点路径筛选，以及按 `customer.region` 分组的 `aggregate_records`，在原生的 `sales_visit` 上和在 `sales_order` 上一样，都回 `400 INVALID_FIELD`。
+
+**2. 行数上限属于插件驱动，不属于 SQL。** 在内置的 SQLite 驱动上没有上限：订单上 `?top=5000` 返回了全部 2,400 行。给这个数据源加上限，校验时会被拒绝：
+
+```text
+✗ external.rowCap: `external.rowCap` caps the rows the engine reads from a plugin driver, which it holds behind its correctness floor; the 'sqlite' driver is built in, runs the whole query itself and is never capped, so the key would do nothing here. Remove `rowCap`.
+```
+
+在插件驱动（包括 OData）上，指南规定了上限：「A read that matches more rows than the datasource's row cap is refused with `422 EXTERNAL_ROW_CAP_EXCEEDED` rather than answered from a partial set」（匹配行数超过数据源上限的读取会以 422 拒绝，而不是只回一部分），「The default is 1000 rows」（默认 1000 行），最多 10,000。这里没有跑。
+
+**3. 由父记录控制的共享取决于驱动。** 在插件驱动上，「A read whose scope composes a `ReadableIds` leaf, such as an object `controlled_by_parent`, is refused」（作用域组合了 `ReadableIds` 叶子的读取，比如 `controlled_by_parent` 的对象，会被拒绝）。在 SQL 上我测到的正相反：把 `sales_order` 设成 `controlled_by_parent`、通过 `master_detail` 挂到客户上之后，Mia 能读订单；当主记录对她不可见时，子记录也跟着不可见（见下一条）。
+
+**4. 按所有者划分的共享需要一个所有者列。** 把 `sales_customer` 设成 `private`（也就是草稿的默认值），而底层表没有所有者列，Mia 拿到的客户和由父记录控制的订单都是 `{"records":[],"total":0}`，管理员却仍能读到全部 5 个客户和 2,400 条订单。指南对此有警告：「only an `owner_id` declared in `fields`, or named by an `external.columnMap` entry, counts as one. Without it a member reads no row」（只有在 `fields` 里声明、或由 `external.columnMap` 条目点名的 `owner_id` 才算数；没有它，成员一行都读不到）。要么映射源库的所有者列，要么像上面那样选 `public_read`，再用权限集收窄。
+
+**5. 性能是源库的性能。** 每一次读取都在那一刻落到订单系统上：一个列表页要读行和总数，有人一直开着的仪表盘就是压在你生产数据库上的查询。这一层不会给源库添加它没有的索引；上面的修改下一次读取就看到了，正因为中间没有任何东西留着旧行。如果源库扛不住，就把数据源指向一个你已经在运维的副本库，或者干脆复制数据。
+
+## 什么时候复制才是更好的工具
+
+ObjectStack 关于虚拟对象的指南用一句话划了线：「Make the object virtual when a copy would be **wrong**, and real when a copy is merely **convenient**」（复制会出错时，让对象保持虚拟；复制只是方便时，让它成为真实对象）。远端在请求时才算出答案、数据不能落地（数据驻留、许可、审计），或者变化快过任何同步，复制就是错的。变化缓慢的参考数据、要关联很多来源的报表，复制只是方便。前一类直通读取，后一类复制。对一个已经停用的系统，剩下的只有一份导出文件，[一份导入映射和它的试运行](/zh-Hans/blog/how-to-import-a-spreadsheet-from-an-old-system/)就是让那份文件落进模型、又不把旧编码一起带进来的办法。
+
+## 开发中：从数据库复制
+
+把联邦表的行按计划复制进普通的 ObjectStack 对象（「sync-in」）已经有了设计，但不在 18.4.0 里。它的记录 ADR-0153 处于 Proposed 状态，自己这样写：「This record declares; it implements nothing」（本记录只做声明，不实现任何东西）。它描述的是：「A remote table or API collection becomes an ordinary object whose rows were **copied** by a pull」（远程表或 API 集合成为一个普通对象，它的行由一次拉取复制而来）；它的经验法则把「Reports, analysis, AI question answering, joins across sources; a slow or fragile legacy system」（报表、分析、AI 问答、跨源关联；慢或脆弱的老系统）分给 sync-in，把「Live data, one table at a time; the legacy system must not be touched; data that must not land」（实时数据、一次一张表；不能碰老系统；不能落地的数据）分给联邦。本节内容都没有实测。
+
+## 在 diff 里该看什么
+
+如果是 Agent 写的绑定，审阅很短，因为每个决定只占一行：
+
+| diff 里的这一行 | 它决定什么 |
+|:--|:--|
+| `schemaMode: 'external'` | ObjectStack 永不改动源库；漂移会让启动失败 |
+| `allowWrites` / `writable` | 两者都为 `true`，写入才能到达源库 |
+| `columnMap` | 源库的列以什么业务名出现 |
+| `sharingModel` | `private` 需要映射所有者列，否则成员什么都读不到 |
+| 权限集的 `fields` | 成员永远看不到、也不能拿来筛选的源库列 |
+| `rowCap` | 只用于插件驱动；在内置 SQL 驱动上会被拒绝 |
+
+[本体](/zh-Hans/glossary/ontology/)是为你的业务命名的那一层：对象、关系、权限、动作。联邦意味着它可以在第一天就为一个不是你建的数据库命名，前面不必先挡一个迁移项目，而且[权限模型](/zh-Hans/glossary/permission-model/)作用于每一个读者，人也好，Agent 也好。
+
+## 让你的 Agent 来做
+
+交给你的编码 Agent 的，应该是一条规则，而不是这篇文章：一个 `external` 数据源；每张表一个对象，带 `remoteName` 和 `columnMap`；一个明确写出的 `sharingModel`；两个写入开关都关闭；每类受众一个权限集。[怎样配置编码 Agent](/en/blog/how-to-point-your-agent-at-objectstack/) 讲了规则文件、运行中的应用暴露的 MCP 端点和规范；[外部数据源指南](https://objectstack.ai/docs/data-modeling/external-datasources)是 Agent 该读的参考。`npm create objectstack@latest` 装上的是 18.4.0，上面每一段实测记录都跑在这个版本上。

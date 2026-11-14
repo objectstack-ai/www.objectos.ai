@@ -1,0 +1,291 @@
+---
+# @generated zh-Hant from zh-Hans (s2twp) — edit the zh-Hans file; delete this line to hand-maintain.
+title: 不搬資料，怎樣給已經在跑的資料庫加一層 AI 能用的業務層？
+description: 把在跑資料庫的表繫結成物件：讀取即時落到源庫，寫入預設拒絕，成員權限在 REST 和 MCP 上同樣生效。在 ObjectStack 18.4.0 上實測，邊界也一併測了。
+author: ObjectStack Team
+date: 2026-11-18
+status: published
+topic: integration-data
+audience: it
+solutions: []
+industries: []
+cover: ./cover.svg
+tags:
+  - 聯邦查詢
+  - 現有資料庫
+  - 資料建模
+---
+
+**先給答案**：把資料庫宣告為一個 `external` 資料來源，把需要的每張表繫結成一個物件，把舊列名對映成業務名，這些表就成了物件——人、報表和 AI Agent 通過和其他物件一樣的 REST 與 MCP 入口查詢它們，權限也一樣。沒有任何複製。在 ObjectStack 18.4.0（也就是今天 `npm create objectstack@latest` 裝上的版本）上，直接在源資料庫裡改的一行，下一次讀取就看到了；而 ObjectStack 自己的資料庫裡，它正在提供的 **2,400 條訂單一條都沒有（0 條）**。在資料來源和物件都顯式開啟之前，寫入一律拒絕。我把這叫作**直通式本體**（read-through ontology）：名字、關係、權限和 AI 工具疊在你並不擁有的表之上，每一次讀取都穿過去，交給真正擁有它們的那個系統。下面先給實測記錄，再講它止步的五個地方。
+
+## 讓在跑的資料庫可用，有三條路
+
+大多數被要求「讓資料為 AI 做好準備」的公司，資料早就有了，躺在某個別的系統寫入的資料庫裡。要在上面加一層受治理的業務層，誠實地說有三條路，每條的代價不一樣。
+
+| | 重建 | 複製 | 直通讀取 |
+|:--|:--|:--|:--|
+| 搬動什麼 | 資料和系統 | 資料，按計劃同步 | 什麼都不搬 |
+| 新鮮度 | 新系統就是真相 | 停在上一次同步 | 讀取那一刻的源庫 |
+| 誰擁有 schema | 你 | 你（對副本而言） | 源系統 |
+| 第一天的成本 | 一個遷移專案 | 一條要建、要盯的管道 | 一個數據源，每張表一個檔案 |
+| 跨源關聯 | 可以 | 可以，這正是複製的主要理由 | 兩次讀取，在記憶體裡拼接 |
+| 源庫的負載 | 切換後為零 | 同步時一次 | 每一次讀取 |
+
+複製的理由是真實的，不是稻草人：副本可以建索引、和任何東西關聯、被搜尋，源庫慢了或宕了也照樣能出報表，而且永遠不會把儀表盤的查詢壓到生產訂單系統上。如果你要的是這些，就複製。直通讀取的理由更窄，但在適用的地方更硬：接上的那一天，業務層就是對的，因為根本沒有需要保持同步的東西。規定這套機制的 ADR 在目標裡寫著「Register existing remote tables as ObjectStack objects **without touching the remote schema**」（把現有遠端表註冊成 ObjectStack 物件，而不碰遠端 schema），以及「Default to read-only; require **two explicit opt-ins** (datasource level + object level) to enable writes」（預設只讀；要開啟寫入，需要兩處顯式開啟：資料來源級和物件級）。
+
+![ObjectStack 18.4.0 上的直通式本體。左邊三個呼叫方：成員 Mia 走 REST；以 Mia 身份登入的 AI Agent 走 MCP；還有管理員。中間是 ObjectStack 層，裡面有三樣東西：帶舊列名對映的物件 sales_customer 和 sales_order；sales_reader 權限集，允許讀客戶但隱藏 credit_limit，對訂單不授權；以及 allowWrites 為 false 的寫入閘門。右邊是訂單系統自己的資料庫，5 個客戶、2,400 條訂單，每次讀取都在這裡即時執行。結果：Mia 拿到 200、兩個 EU 客戶、沒有信用額度，訂單 403；Agent 的 list_objects 只列出一個物件；任何插入、更新、刪除都回 403 EXTERNAL_WRITE_FORBIDDEN。下方，ObjectStack 自己的資料庫只有使用者、授權和原生物件，客戶和訂單資料為 0 行。](./read-through.svg)
+
+## 一個 ObjectStack 從沒碰過的訂單系統
+
+源庫是一個 SQLite 檔案，由一段很短的 Python 腳本寫入，扮演一個老訂單系統：一張 `customers` 表、一張 `orders` 表，5 個客戶、2,400 條訂單，列名也是老系統常見的那種。
+
+```sql
+CREATE TABLE customers (
+  cust_no      TEXT PRIMARY KEY,
+  cust_name    TEXT NOT NULL,
+  cust_region  TEXT,
+  credit_limit REAL
+);
+CREATE TABLE orders (
+  order_no   TEXT PRIMARY KEY,
+  cust_no    TEXT NOT NULL REFERENCES customers(cust_no),
+  amount     REAL,
+  status     TEXT,
+  placed_on  TEXT
+);
+```
+
+SQLite 是一個全新腳手架不加任何東西就能開啟的方言。我先試了 Postgres，啟動直接說清楚了原因：「The database client package `pg` is not installed, so no connection was attempted. It is an OPTIONAL install of @objectstack/driver-sql … `npm install pg` (pnpm add pg / yarn add pg)」（資料庫客戶端包 `pg` 沒有安裝，所以沒有嘗試連線。它是 @objectstack/driver-sql 的可選安裝……）。指南還把 Oracle 和 SQL Server 記為只做聯邦的方言（「ObjectStack reads an existing Oracle schema live … but it never owns one」，ObjectStack 即時讀取現有的 Oracle schema……但從不擁有它），並通過自帶的驅動支援 SAP S/4HANA、Dynamics 365 這類 OData v4 服務。這三者我在這裡都沒有跑。
+
+在 `npm create objectstack@latest` 生成的腳手架上（包名叫 `sales`），三個檔案幹完了活。資料來源：
+
+```ts
+export const Erp = defineDatasource({
+  name: 'erp',
+  label: 'Order system (SQLite)',
+  driver: 'sqlite',
+  schemaMode: 'external',            // ObjectStack never runs DDL here
+  config: { filename: '/…/legacy/erp.db' },   // absolute path, trimmed
+  external: {
+    allowWrites: false,
+    validation: { onMismatch: 'fail', checkOnBoot: true },
+  },
+});
+```
+
+每張表一個物件，用 `external.columnMap`（遠端列 → 本地欄位）把 `cust_no`、`cust_name`、`cust_region` 變成 `id`、`name`、`region`：
+
+```ts
+export const Customer = ObjectSchema.create({
+  name: 'sales_customer',
+  label: 'Customer',
+  sharingModel: 'public_read',
+  datasource: 'erp',
+  external: {
+    remoteName: 'customers',
+    columnMap: { cust_no: 'id', cust_name: 'name', cust_region: 'region' },
+  },
+  fields: {
+    name: Field.text({ label: 'Name', searchable: true }),
+    region: Field.text({ label: 'Region' }),
+    credit_limit: Field.currency({ label: 'Credit limit' }),
+  },
+});
+```
+
+`sales_order` 在 `orders` 上是同樣的形狀，`cust_no` 對映到一個 `customer` 查詢欄位。再加一個權限集，給那些應該看到客戶、但不該看到客戶能欠多少錢的人：
+
+```ts
+export const SalesReader = definePermissionSet({
+  name: 'sales_reader',
+  objects: { sales_customer: { allowRead: true } },
+  fields: { 'sales_customer.credit_limit': { readable: false, editable: false } },
+});
+```
+
+物件不必手敲。管理員路由 `GET …/datasources/erp/external/tables` 回答了 `customers`（4 列）和 `orders`（5 列），`POST …/external/tables/customers/draft` 為這張表返回了一個物件草稿。草稿保留遠端列名作為欄位名，並且以 `sharingModel: 'private'` 開頭——這一點下面很要緊：我通過 `columnMap` 改了名，並且有意選了 `public_read`。
+
+我給 `sales_order` 寫的第一版，把 `placed_on` 宣告成了 `date` 欄位。啟動拒絕了它：
+
+```text
+✗ Object 'sales_order' does not match its remote table on datasource 'erp':
+✗ type_mismatch: orders.placed_on (expected date, actual text)
+```
+
+這正是 `schemaMode: 'external'` 在盡職：按指南的說法，「A mature external DB — **DDL forbidden**; a schema mismatch **fails** boot」（成熟的外部資料庫——禁止 DDL；schema 不匹配則啟動失敗）。ObjectStack 沒有為了遷就去改列。我把欄位改成了 `text`，也就是訂單系統實際存的型別。
+
+## 五個問題，由執行中的應用來回答
+
+下面每一段都是 18.4.0 上 `objectstack dev` 的真實輸出，只在標明處做了刪節。`$B` 是開發伺服器的地址；`sql.py` 是一個三行的 Python 小工具，對這個檔案執行一條語句，因為這臺機器上沒有 `sqlite3` 命令。
+
+### 是即時的，還是副本？
+
+讀一個客戶，在訂單系統自己的資料庫裡改掉它，再讀一次：
+
+```bash
+curl -s -b admin.cookies "$B/api/v1/data/sales_customer/C-1002"
+```
+
+```json
+{"object":"sales_customer","id":"C-1002","record":{"credit_limit":180000,"id":"C-1002","name":"Borealis GmbH","region":"EU"}}
+```
+
+```bash
+python3 sql.py erp.db "UPDATE customers SET credit_limit = 95000 WHERE cust_no = 'C-1002'"
+curl -s -b admin.cookies "$B/api/v1/data/sales_customer/C-1002"
+```
+
+```json
+{"object":"sales_customer","id":"C-1002","record":{"credit_limit":95000,"id":"C-1002","name":"Borealis GmbH","region":"EU"}}
+```
+
+沒有任何同步在跑，因為根本沒有同步。那時 ObjectStack 自己的資料庫裡有 84 張表，按名字搜 `customer` 或 `order`，一張都沒有。篩選條件下推到源庫，查詢欄位可以跨兩張遠端表展開：
+
+```bash
+curl -s -b admin.cookies "$B/api/v1/data/sales_order?status=pending&top=2&expand=customer"
+```
+
+```json
+{"object":"sales_order","records":[
+  {"amount":7020.73,"status":"pending","placed_on":"2026-04-04","id":"SO-00003",
+   "customer":{"credit_limit":60000,"id":"C-1003","name":"Cyan Pacific","region":"APAC"}},
+  … one more row, trimmed …],
+ "total":480,"hasMore":true}
+```
+
+### 有什麼能寫進去嗎？
+
+預設不能，平台管理員也不能，走哪個入口都不能：
+
+```bash
+curl -s -b admin.cookies -X POST "$B/api/v1/data/sales_customer" \
+  -H "content-type: application/json" -d '{"id":"C-9999","name":"Test Co","region":"EU"}'
+```
+
+```json
+HTTP 403
+{"error":"Write 'insert' blocked on object 'sales_customer': datasource 'erp' is external (schemaMode=external). Requires datasource.external.allowWrites=true (got false) AND object.external.writable=true (got false).","code":"EXTERNAL_WRITE_FORBIDDEN","object":"sales_customer"}
+```
+
+對 `C-1002` 的 `PATCH` 和對訂單 `SO-00001` 的 `DELETE` 回的是同樣的 `403`，分別點名 `update` 和 `delete`。訂單系統裡仍是 5 個客戶、2,400 條訂單，以及它自己設的那個信用額度。錯誤裡點名了兩個開關，指南也寫明瞭規則：「With either gate off, insert/update/delete on the federated object is rejected」（任一閘門關閉，聯邦物件上的插入、更新、刪除都會被拒絕）。
+
+### 成員看到什麼？
+
+Mia 是管理員通過 `POST /api/v1/auth/admin/create-user` 建立的成員。沒有任何授權時，兩個物件都回 `403 PERMISSION_DENIED`：聯邦物件和其他物件一樣，預設拒絕。管理員把 `sales_reader` 授予她之後：
+
+```bash
+curl -s -b member.cookies "$B/api/v1/data/sales_customer?region=EU"
+```
+
+```json
+HTTP 200
+{"object":"sales_customer","records":[{"id":"C-1002","name":"Borealis GmbH","region":"EU"},{"id":"C-1004","name":"Delta Freight","region":"EU"}],"total":2,"hasMore":false}
+```
+
+她的答案裡沒有 `credit_limit`。訂單仍然回 `403`。而且她沒法繞著問出那個被隱藏的數字：
+
+```bash
+curl -s -b member.cookies "$B/api/v1/data/sales_customer?credit_limit=95000"
+```
+
+```json
+HTTP 403
+{"error":"[Security] Access denied: query on 'sales_customer' references field(s) not readable by the caller: credit_limit. Filtering, sorting, grouping, or aggregating by a hidden field would leak its values (filter oracle) — remove these predicates or grant field read access.","code":"PERMISSION_DENIED","object":"sales_customer"}
+```
+
+按它排序，回答相同。源資料庫根本不知道 Mia 是誰；權限在這一層執行，在每一次讀取上、在行交到她手裡之前。
+
+### AI Agent 能繞過去嗎？
+
+每個 ObjectStack 應用都是一個 MCP 伺服器，地址是 `/api/v1/mcp`。以 Mia 身份登入後，Agent 的 `list_objects` 只回答了一個物件 `sales_customer`：它連訂單存在都看不到。其餘的，刪節到只剩工具結果：
+
+```text
+query_records  sales_customer  where {"region":"NA"}  → 2 records: Aurora Labs, Ember Foods (no credit_limit)
+query_records  sales_order     limit 1                → {"code":"PERMISSION_DENIED","status":403}
+query_records  sales_customer  limit 51               → Too big: expected number to be <=50 at limit
+create_record  sales_customer  {"id":"C-9998",…}      → {"code":"EXTERNAL_WRITE_FORBIDDEN","status":403}
+```
+
+Agent 拿到的恰好是 Mia 的檢視，每次呼叫最多 50 行，不能寫。資料庫有多老、是哪家的，都改變不了這一點，因為 Agent 從不直接和資料庫說話。
+
+### 報表能跨表嗎？
+
+資料集（dataset）是報表和 AI 提問讀取的語義層。這個資料集按客戶所在區域彙總訂單收入，而區域這一列在另一張表裡：
+
+```ts
+export const OrderRevenue: Dataset = {
+  name: 'sales_order_revenue',
+  label: 'Order revenue',
+  object: 'sales_order',
+  include: ['customer'],
+  dimensions: [{ name: 'region', label: 'Region', field: 'customer.region', type: 'string' }],
+  measures: [
+    { name: 'revenue', label: 'Revenue', aggregate: 'sum', field: 'amount' },
+    { name: 'orders', label: 'Orders', aggregate: 'count' },
+  ],
+};
+```
+
+通過 MCP 的 `query_dataset` 工具提問，再和在訂單系統裡直接跑的 `JOIN` 對照：
+
+| 區域 | 收入（資料集） | 訂單數 |
+|:--|--:|--:|
+| APAC | 6,127,544.10 | 480 |
+| EU | 11,995,588.50 | 960 |
+| NA | 12,470,792.17 | 960 |
+
+```text
+$ python3 sql.py erp.db "SELECT c.cust_region, round(sum(o.amount),2), count(*) FROM orders o JOIN customers c ON c.cust_no=o.cust_no GROUP BY 1 ORDER BY 1"
+('APAC', 6127544.1, 480)
+('EU', 11995588.5, 960)
+('NA', 12470792.17, 960)
+```
+
+分毫不差。它是怎麼算出來的，正是第一條邊界。
+
+## 直通層止步於哪裡
+
+下面是我實測到的邊界，外加文件為我沒有跑的驅動寫明的兩條。
+
+**1. 沒有跨資料來源關聯的單條查詢。** 上面的資料集並不是發給 SQLite 的一條 `JOIN`。按分析編譯器自己的註釋，聯邦物件上的資料集走的是「the ObjectQL FK-expand path (two reads, joined in memory)」（ObjectQL 外部索引鍵展開路徑：兩次讀取，在記憶體裡拼接）。關係從 ObjectStack 的資料庫跨進訂單系統時也一樣：一個原生物件 `sales_visit` 帶著指向 `sales_customer` 的查詢欄位，能展開客戶（`?expand=customer`），也能用巢狀寫法 `{"customer":{"region":"EU"}}` 按客戶區域篩選。兩者都是分開的讀取。不存在的是一條橫跨兩個資料庫的語句。執行環境 ADR 的非目標就這麼寫：「cross-datasource JOINs in one query (federated objects are queried per-datasource)」（單條查詢裡的跨資料來源 JOIN——聯邦物件按資料來源分別查詢）。我碰到的兩處拒絕並不是聯邦的限制，這裡點名，免得有人怪錯了層：像 `?customer.region=EU` 這樣的點路徑篩選，以及按 `customer.region` 分組的 `aggregate_records`，在原生的 `sales_visit` 上和在 `sales_order` 上一樣，都回 `400 INVALID_FIELD`。
+
+**2. 行數上限屬於外掛驅動，不屬於 SQL。** 在內建的 SQLite 驅動上沒有上限：訂單上 `?top=5000` 返回了全部 2,400 行。給這個資料來源加上限，校驗時會被拒絕：
+
+```text
+✗ external.rowCap: `external.rowCap` caps the rows the engine reads from a plugin driver, which it holds behind its correctness floor; the 'sqlite' driver is built in, runs the whole query itself and is never capped, so the key would do nothing here. Remove `rowCap`.
+```
+
+在外掛驅動（包括 OData）上，指南規定了上限：「A read that matches more rows than the datasource's row cap is refused with `422 EXTERNAL_ROW_CAP_EXCEEDED` rather than answered from a partial set」（匹配行數超過資料來源上限的讀取會以 422 拒絕，而不是隻回一部分），「The default is 1000 rows」（預設 1000 行），最多 10,000。這裡沒有跑。
+
+**3. 由父記錄控制的共享取決於驅動。** 在外掛驅動上，「A read whose scope composes a `ReadableIds` leaf, such as an object `controlled_by_parent`, is refused」（作用域組合了 `ReadableIds` 葉子的讀取，比如 `controlled_by_parent` 的物件，會被拒絕）。在 SQL 上我測到的正相反：把 `sales_order` 設成 `controlled_by_parent`、通過 `master_detail` 掛到客戶上之後，Mia 能讀訂單；當主記錄對她不可見時，子記錄也跟著不可見（見下一條）。
+
+**4. 按所有者劃分的共享需要一個所有者列。** 把 `sales_customer` 設成 `private`（也就是草稿的預設值），而底層表沒有所有者列，Mia 拿到的客戶和由父記錄控制的訂單都是 `{"records":[],"total":0}`，管理員卻仍能讀到全部 5 個客戶和 2,400 條訂單。指南對此有警告：「only an `owner_id` declared in `fields`, or named by an `external.columnMap` entry, counts as one. Without it a member reads no row」（只有在 `fields` 裡宣告、或由 `external.columnMap` 條目點名的 `owner_id` 才算數；沒有它，成員一行都讀不到）。要麼對映源庫的所有者列，要麼像上面那樣選 `public_read`，再用權限集收窄。
+
+**5. 效能是源庫的效能。** 每一次讀取都在那一刻落到訂單系統上：一個列表頁要讀行和總數，有人一直開著的儀表盤就是壓在你生產資料庫上的查詢。這一層不會給源庫新增它沒有的索引；上面的修改下一次讀取就看到了，正因為中間沒有任何東西留著舊行。如果源庫扛不住，就把資料來源指向一個你已經在運維的副本庫，或者乾脆複製資料。
+
+## 什麼時候複製才是更好的工具
+
+ObjectStack 關於虛擬物件的指南用一句話劃了線：「Make the object virtual when a copy would be **wrong**, and real when a copy is merely **convenient**」（複製會出錯時，讓物件保持虛擬；複製只是方便時，讓它成為真實物件）。遠端在請求時才算出答案、資料不能落地（資料駐留、許可、審計），或者變化快過任何同步，複製就是錯的。變化緩慢的參考資料、要關聯很多來源的報表，複製只是方便。前一類直通讀取，後一類複製。對一個已經停用的系統，剩下的只有一份匯出檔案，[一份匯入對映和它的試執行](/zh-Hant/blog/how-to-import-a-spreadsheet-from-an-old-system/)就是讓那份檔案落進模型、又不把舊編碼一起帶進來的辦法。
+
+## 開發中：從資料庫複製
+
+把聯邦表的行按計劃複製進普通的 ObjectStack 物件（「sync-in」）已經有了設計，但不在 18.4.0 裡。它的記錄 ADR-0153 處於 Proposed 狀態，自己這樣寫：「This record declares; it implements nothing」（本記錄只做宣告，不實現任何東西）。它描述的是：「A remote table or API collection becomes an ordinary object whose rows were **copied** by a pull」（遠端表或 API 集合成為一個普通物件，它的行由一次拉取複製而來）；它的經驗法則把「Reports, analysis, AI question answering, joins across sources; a slow or fragile legacy system」（報表、分析、AI 問答、跨源關聯；慢或脆弱的老系統）分給 sync-in，把「Live data, one table at a time; the legacy system must not be touched; data that must not land」（即時資料、一次一張表；不能碰老系統；不能落地的資料）分給聯邦。本節內容都沒有實測。
+
+## 在 diff 裡該看什麼
+
+如果是 Agent 寫的繫結，審閱很短，因為每個決定只佔一行：
+
+| diff 裡的這一行 | 它決定什麼 |
+|:--|:--|
+| `schemaMode: 'external'` | ObjectStack 永不改動源庫；漂移會讓啟動失敗 |
+| `allowWrites` / `writable` | 兩者都為 `true`，寫入才能到達源庫 |
+| `columnMap` | 源庫的列以什麼業務名出現 |
+| `sharingModel` | `private` 需要對映所有者列，否則成員什麼都讀不到 |
+| 權限集的 `fields` | 成員永遠看不到、也不能拿來篩選的源庫列 |
+| `rowCap` | 只用於外掛驅動；在內建 SQL 驅動上會被拒絕 |
+
+[本體](/zh-Hant/glossary/ontology/)是為你的業務命名的那一層：物件、關係、權限、動作。聯邦意味著它可以在第一天就為一個不是你建的資料庫命名，前面不必先擋一個遷移專案，而且[權限模型](/zh-Hant/glossary/permission-model/)作用於每一個讀者，人也好，Agent 也好。
+
+## 讓你的 Agent 來做
+
+交給你的編碼 Agent 的，應該是一條規則，而不是這篇文章：一個 `external` 資料來源；每張表一個物件，帶 `remoteName` 和 `columnMap`；一個明確寫出的 `sharingModel`；兩個寫入開關都關閉；每類受眾一個權限集。[怎樣配置編碼 Agent](/en/blog/how-to-point-your-agent-at-objectstack/) 講了規則檔案、執行中的應用暴露的 MCP 端點和規範；[外部資料來源指南](https://objectstack.ai/docs/data-modeling/external-datasources)是 Agent 該讀的參考。`npm create objectstack@latest` 裝上的是 18.4.0，上面每一段實測記錄都跑在這個版本上。

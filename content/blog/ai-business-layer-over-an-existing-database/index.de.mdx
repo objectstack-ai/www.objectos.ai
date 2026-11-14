@@ -1,0 +1,290 @@
+---
+title: "Wie legt man eine AI-taugliche Geschäftsschicht über eine laufende Datenbank, ohne die Daten zu bewegen?"
+description: "Binden Sie die Tabellen einer laufenden Datenbank als Objekte: Lesezugriffe gehen live an die Quelle, Schreiben ist standardmäßig gesperrt, Rechte gelten über REST wie MCP. Gemessen auf ObjectStack 18.4.0, samt Grenzen."
+author: ObjectStack Team
+date: 2026-11-18
+status: published
+topic: integration-data
+audience: it
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Föderation
+  - Bestehende Datenbank
+  - Datenmodellierung
+---
+
+**Die Antwort.** Deklarieren Sie die Datenbank als `external`-Datenquelle, binden Sie jede benötigte Tabelle an ein Objekt, bilden Sie die alten Spaltennamen auf Geschäftsnamen ab, und diese Tabellen werden zu Objekten, die Menschen, Berichte und AI-Agents über dieselben REST- und MCP-Zugänge abfragen wie jedes andere Objekt, unter denselben Berechtigungen. Nichts wird kopiert. Auf ObjectStack 18.4.0, der Version, die `npm create objectstack@latest` heute installiert, war eine direkt in der Quelldatenbank vorgenommene Änderung beim nächsten Lesen sichtbar, und die eigene Datenbank von ObjectStack enthielt **0 der 2.400 Bestellungen**, die es auslieferte. Schreibzugriffe werden abgelehnt, bis Datenquelle und Objekt beide zustimmen. Ich nenne das eine **Durchlese-Ontologie** (read-through ontology): Namen, Beziehungen, Berechtigungen und AI-Werkzeuge über Tabellen, die Ihnen nicht gehören, und jeder Lesezugriff wird an das System durchgereicht, dem sie gehören. Unten zuerst das Protokoll, dann die fünf Stellen, an denen es aufhört.
+
+## Drei Wege, eine laufende Datenbank nutzbar zu machen
+
+Die meisten Firmen, die ihre Daten „AI-fähig“ machen sollen, haben die Daten längst, in einer Datenbank, die ein anderes System schreibt. Es gibt drei ehrliche Wege, eine kontrollierte Geschäftsschicht darauf zu setzen, und jeder kostet etwas anderes.
+
+| | Neu bauen | Kopieren | Durchlesen |
+|:--|:--|:--|:--|
+| Was wandert | Daten und System | Daten, nach Plan | nichts |
+| Aktualität | neues System gilt | Stand des letzten Syncs | die Quelle beim Lesen |
+| Wem das Schema gehört | Ihnen | Ihnen, für die Kopie | dem Quellsystem |
+| Kosten am ersten Tag | eine Migration | eine Pipeline, gebaut und überwacht | eine Datenquelle, eine Datei je Tabelle |
+| Joins über Quellen | ja | ja, der Hauptgrund für die Kopie | zwei Lesezugriffe, im Speicher verbunden |
+| Last auf der Quelle | keine nach dem Umstieg | ein Lauf je Sync | jeder Lesezugriff |
+
+Das Argument für die Kopie ist echt und kein Strohmann: Eine Kopie lässt sich indizieren, mit allem verbinden, durchsuchen und auswerten, während die Quelle langsam ist oder steht, und sie legt nie die Abfragen eines Dashboards auf ein produktives Bestellsystem. Wenn Sie das brauchen, kopieren Sie. Das Argument fürs Durchlesen ist enger und dort, wo es passt, stärker: Am Tag der Verbindung ist die Geschäftsschicht korrekt, weil es nichts gibt, was synchron gehalten werden müsste. Das ADR, das den Mechanismus festlegt, nennt als Ziele „Register existing remote tables as ObjectStack objects **without touching the remote schema**“ (bestehende entfernte Tabellen als ObjectStack-Objekte registrieren, ohne das entfernte Schema anzufassen) und „Default to read-only; require **two explicit opt-ins** (datasource level + object level) to enable writes“ (standardmäßig nur lesend; Schreiben verlangt zwei ausdrückliche Zustimmungen, auf Ebene der Datenquelle und des Objekts).
+
+![Eine Durchlese-Ontologie auf ObjectStack 18.4.0. Links drei Aufrufer: Mia, ein Mitglied, über REST; ein AI-Agent über MCP, angemeldet als Mia; und ein Admin. In der Mitte hält die ObjectStack-Schicht drei Dinge: die Objekte sales_customer und sales_order mit einer Spaltenzuordnung von den alten Namen, den Berechtigungssatz sales_reader, der Kunden lesen lässt, credit_limit verbirgt und auf Bestellungen nichts gewährt, und ein Schreibtor mit allowWrites false. Rechts die eigene Datenbank des Bestellsystems mit 5 Kunden und 2.400 Bestellungen, wo jeder Lesezugriff live läuft. Ergebnisse: Mia erhält 200 mit zwei EU-Kunden und ohne Kreditlimit, Bestellungen 403; list_objects des Agents nennt ein Objekt; jedes Einfügen, Ändern oder Löschen antwortet 403 EXTERNAL_WRITE_FORBIDDEN. Darunter enthält die eigene Datenbank von ObjectStack Benutzer, Zuweisungen und native Objekte und 0 Kunden- oder Bestellzeilen.](./read-through-en.svg)
+
+## Das Bestellsystem, das ObjectStack nie angefasst hat
+
+Die Quelle ist eine SQLite-Datei, geschrieben von einem kurzen Python-Skript, das ein altes Bestellsystem vertritt: eine Tabelle `customers` und eine Tabelle `orders`, fünf Kunden und 2.400 Bestellungen, mit den Spaltennamen, die alte Systeme eben haben.
+
+```sql
+CREATE TABLE customers (
+  cust_no      TEXT PRIMARY KEY,
+  cust_name    TEXT NOT NULL,
+  cust_region  TEXT,
+  credit_limit REAL
+);
+CREATE TABLE orders (
+  order_no   TEXT PRIMARY KEY,
+  cust_no    TEXT NOT NULL REFERENCES customers(cust_no),
+  amount     REAL,
+  status     TEXT,
+  placed_on  TEXT
+);
+```
+
+SQLite ist der Dialekt, den ein frisches Gerüst ohne Zusatz öffnen kann. Ich habe zuerst Postgres versucht, und der Start sagte es deutlich: „The database client package `pg` is not installed, so no connection was attempted. It is an OPTIONAL install of @objectstack/driver-sql … `npm install pg` (pnpm add pg / yarn add pg)“ (das Client-Paket `pg` ist nicht installiert, also wurde keine Verbindung versucht; es ist eine optionale Installation von @objectstack/driver-sql). Der Leitfaden dokumentiert außerdem Oracle und SQL Server als reine Föderations-Dialekte („ObjectStack reads an existing Oracle schema live … but it never owns one“, ObjectStack liest ein bestehendes Oracle-Schema live, besitzt es aber nie) sowie OData-v4-Dienste wie SAP S/4HANA und Dynamics 365 über einen mitgelieferten Treiber. Keinen dieser drei habe ich hier ausgeführt.
+
+Auf einem Gerüst aus `npm create objectstack@latest` (das Paket heißt `sales`) erledigten drei Dateien die Arbeit. Die Datenquelle:
+
+```ts
+export const Erp = defineDatasource({
+  name: 'erp',
+  label: 'Order system (SQLite)',
+  driver: 'sqlite',
+  schemaMode: 'external',            // ObjectStack never runs DDL here
+  config: { filename: '/…/legacy/erp.db' },   // absolute path, trimmed
+  external: {
+    allowWrites: false,
+    validation: { onMismatch: 'fail', checkOnBoot: true },
+  },
+});
+```
+
+Ein Objekt je Tabelle, wobei `external.columnMap` (entfernte Spalte → lokales Feld) aus `cust_no`, `cust_name` und `cust_region` die Felder `id`, `name` und `region` macht:
+
+```ts
+export const Customer = ObjectSchema.create({
+  name: 'sales_customer',
+  label: 'Customer',
+  sharingModel: 'public_read',
+  datasource: 'erp',
+  external: {
+    remoteName: 'customers',
+    columnMap: { cust_no: 'id', cust_name: 'name', cust_region: 'region' },
+  },
+  fields: {
+    name: Field.text({ label: 'Name', searchable: true }),
+    region: Field.text({ label: 'Region' }),
+    credit_limit: Field.currency({ label: 'Credit limit' }),
+  },
+});
+```
+
+`sales_order` hat dieselbe Form über `orders`, mit `cust_no` auf ein Lookup-Feld `customer` abgebildet. Dazu ein Berechtigungssatz für alle, die Kunden sehen sollen, aber nicht, wie viel Kredit sie haben:
+
+```ts
+export const SalesReader = definePermissionSet({
+  name: 'sales_reader',
+  objects: { sales_customer: { allowRead: true } },
+  fields: { 'sales_customer.credit_limit': { readable: false, editable: false } },
+});
+```
+
+Die Objekte muss niemand von Hand tippen. Die Admin-Route `GET …/datasources/erp/external/tables` antwortete mit `customers` (4 Spalten) und `orders` (5), und `POST …/external/tables/customers/draft` lieferte einen Objektentwurf für die Tabelle. Der Entwurf behält die entfernten Namen als Feldnamen und beginnt mit `sharingModel: 'private'`, was weiter unten wichtig wird: Ich habe über `columnMap` umbenannt und `public_read` bewusst gewählt.
+
+Mein erster Entwurf von `sales_order` deklarierte `placed_on` als `date`-Feld. Der Start lehnte ab:
+
+```text
+✗ Object 'sales_order' does not match its remote table on datasource 'erp':
+✗ type_mismatch: orders.placed_on (expected date, actual text)
+```
+
+Das ist `schemaMode: 'external'` bei der Arbeit, laut Leitfaden: „A mature external DB — **DDL forbidden**; a schema mismatch **fails** boot“ (eine reife externe DB: DDL verboten, eine Schema-Abweichung lässt den Start scheitern). ObjectStack hat die Spalte nicht passend gemacht. Ich habe das Feld auf `text` geändert, also auf das, was das Bestellsystem speichert.
+
+## Fünf Fragen, beantwortet von der laufenden App
+
+Alles Folgende ist echte Ausgabe von `objectstack dev` auf 18.4.0, gekürzt nur, wo vermerkt. `$B` ist die Adresse des Dev-Servers, und `sql.py` ist ein dreizeiliger Python-Helfer, der eine Anweisung gegen die Datei ausführt, weil auf der Maschine kein `sqlite3`-Befehl lag.
+
+### Live oder Kopie?
+
+Einen Kunden lesen, ihn in der eigenen Datenbank des Bestellsystems ändern, erneut lesen:
+
+```bash
+curl -s -b admin.cookies "$B/api/v1/data/sales_customer/C-1002"
+```
+
+```json
+{"object":"sales_customer","id":"C-1002","record":{"credit_limit":180000,"id":"C-1002","name":"Borealis GmbH","region":"EU"}}
+```
+
+```bash
+python3 sql.py erp.db "UPDATE customers SET credit_limit = 95000 WHERE cust_no = 'C-1002'"
+curl -s -b admin.cookies "$B/api/v1/data/sales_customer/C-1002"
+```
+
+```json
+{"object":"sales_customer","id":"C-1002","record":{"credit_limit":95000,"id":"C-1002","name":"Borealis GmbH","region":"EU"}}
+```
+
+Keine Synchronisierung lief, weil es keine gibt. Die eigene Datenbank von ObjectStack hatte zu diesem Zeitpunkt 84 Tabellen, und eine Suche ihrer Namen nach `customer` oder `order` ergab nichts. Filter werden an die Quelle durchgereicht, und ein Lookup lässt sich über die beiden entfernten Tabellen hinweg auflösen:
+
+```bash
+curl -s -b admin.cookies "$B/api/v1/data/sales_order?status=pending&top=2&expand=customer"
+```
+
+```json
+{"object":"sales_order","records":[
+  {"amount":7020.73,"status":"pending","placed_on":"2026-04-04","id":"SO-00003",
+   "customer":{"credit_limit":60000,"id":"C-1003","name":"Cyan Pacific","region":"APAC"}},
+  … one more row, trimmed …],
+ "total":480,"hasMore":true}
+```
+
+### Kann irgendetwas hineinschreiben?
+
+Standardmäßig nicht, auch nicht der Plattform-Administrator, und durch keine Tür:
+
+```bash
+curl -s -b admin.cookies -X POST "$B/api/v1/data/sales_customer" \
+  -H "content-type: application/json" -d '{"id":"C-9999","name":"Test Co","region":"EU"}'
+```
+
+```json
+HTTP 403
+{"error":"Write 'insert' blocked on object 'sales_customer': datasource 'erp' is external (schemaMode=external). Requires datasource.external.allowWrites=true (got false) AND object.external.writable=true (got false).","code":"EXTERNAL_WRITE_FORBIDDEN","object":"sales_customer"}
+```
+
+Ein `PATCH` auf `C-1002` und ein `DELETE` der Bestellung `SO-00001` antworteten mit demselben `403`, mit `update` und `delete` im Text. Das Bestellsystem hatte danach weiter 5 Kunden, 2.400 Bestellungen und das Kreditlimit, das es selbst gesetzt hatte. Der Fehler nennt beide Schalter, und der Leitfaden formuliert die Regel: „With either gate off, insert/update/delete on the federated object is rejected“ (ist eines der beiden Tore zu, wird Einfügen, Ändern und Löschen am föderierten Objekt abgelehnt).
+
+### Was sieht ein Mitglied?
+
+Mia ist ein Mitglied, das der Admin über `POST /api/v1/auth/admin/create-user` angelegt hat. Ohne Zuweisung antworten beide Objekte mit `403 PERMISSION_DENIED`: Ein föderiertes Objekt ist standardmäßig gesperrt wie jedes andere. Nachdem der Admin ihr `sales_reader` zugewiesen hat:
+
+```bash
+curl -s -b member.cookies "$B/api/v1/data/sales_customer?region=EU"
+```
+
+```json
+HTTP 200
+{"object":"sales_customer","records":[{"id":"C-1002","name":"Borealis GmbH","region":"EU"},{"id":"C-1004","name":"Delta Freight","region":"EU"}],"total":2,"hasMore":false}
+```
+
+`credit_limit` steht nicht in ihrer Antwort. Bestellungen antworten weiter mit `403`. Und sie kann die verborgene Zahl auch nicht durch geschickte Fragen herausfinden:
+
+```bash
+curl -s -b member.cookies "$B/api/v1/data/sales_customer?credit_limit=95000"
+```
+
+```json
+HTTP 403
+{"error":"[Security] Access denied: query on 'sales_customer' references field(s) not readable by the caller: credit_limit. Filtering, sorting, grouping, or aggregating by a hidden field would leak its values (filter oracle) — remove these predicates or grant field read access.","code":"PERMISSION_DENIED","object":"sales_customer"}
+```
+
+Danach zu sortieren ergab dieselbe Antwort. Die Quelldatenbank weiß nicht, wer Mia ist; die Berechtigung wird in der Schicht durchgesetzt, bei jedem Lesezugriff, bevor die Zeile bei ihr ankommt.
+
+### Kann ein AI-Agent das umgehen?
+
+Jede ObjectStack-App ist ein MCP-Server unter `/api/v1/mcp`. Als Mia angemeldet, antwortete `list_objects` des Agents mit einem einzigen Objekt, `sales_customer`: Er sieht nicht einmal, dass es Bestellungen gibt. Der Rest, gekürzt auf die Werkzeugergebnisse:
+
+```text
+query_records  sales_customer  where {"region":"NA"}  → 2 records: Aurora Labs, Ember Foods (no credit_limit)
+query_records  sales_order     limit 1                → {"code":"PERMISSION_DENIED","status":403}
+query_records  sales_customer  limit 51               → Too big: expected number to be <=50 at limit
+create_record  sales_customer  {"id":"C-9998",…}      → {"code":"EXTERNAL_WRITE_FORBIDDEN","status":403}
+```
+
+Der Agent bekommt genau Mias Sicht, höchstens 50 Zeilen pro Aufruf, und keine Schreibzugriffe. Alter oder Hersteller der Datenbank ändern daran nichts, denn der Agent spricht nie direkt mit der Datenbank.
+
+### Funktionieren Berichte über Tabellen hinweg?
+
+Ein Dataset ist die semantische Schicht, die Berichte und AI-Fragen lesen. Dieses gruppiert den Bestellumsatz nach der Region des Kunden, einer Spalte aus der anderen Tabelle:
+
+```ts
+export const OrderRevenue: Dataset = {
+  name: 'sales_order_revenue',
+  label: 'Order revenue',
+  object: 'sales_order',
+  include: ['customer'],
+  dimensions: [{ name: 'region', label: 'Region', field: 'customer.region', type: 'string' }],
+  measures: [
+    { name: 'revenue', label: 'Revenue', aggregate: 'sum', field: 'amount' },
+    { name: 'orders', label: 'Orders', aggregate: 'count' },
+  ],
+};
+```
+
+Abgefragt über das MCP-Werkzeug `query_dataset` und gegen einen `JOIN` im Bestellsystem selbst geprüft:
+
+| Region | Umsatz (Dataset) | Bestellungen |
+|:--|--:|--:|
+| APAC | 6,127,544.10 | 480 |
+| EU | 11,995,588.50 | 960 |
+| NA | 12,470,792.17 | 960 |
+
+```text
+$ python3 sql.py erp.db "SELECT c.cust_region, round(sum(o.amount),2), count(*) FROM orders o JOIN customers c ON c.cust_no=o.cust_no GROUP BY 1 ORDER BY 1"
+('APAC', 6127544.1, 480)
+('EU', 11995588.5, 960)
+('NA', 12470792.17, 960)
+```
+
+Auf den Cent dasselbe. Wie es dahin kommt, ist die erste der Grenzen.
+
+## Wo die Durchlese-Schicht aufhört
+
+Das sind die Ränder, die ich gemessen habe, dazu zwei, die die Dokumentation für Treiber nennt, die ich nicht ausgeführt habe.
+
+**1. Keine Abfrage verbindet Datenquellen.** Das Dataset oben war kein einzelner `JOIN`, der an SQLite ging. Für ein föderiertes Objekt läuft das Dataset laut dem Kommentar im Analytics-Compiler über „the ObjectQL FK-expand path (two reads, joined in memory)“ (den ObjectQL-Pfad der Fremdschlüssel-Auflösung: zwei Lesezugriffe, im Speicher verbunden). Dasselbe gilt, wenn die Beziehung von der Datenbank von ObjectStack ins Bestellsystem reicht: Ein natives Objekt `sales_visit` mit einem Lookup auf `sales_customer` löste den Kunden auf (`?expand=customer`) und filterte nach der Kundenregion in der verschachtelten Form `{"customer":{"region":"EU"}}`. Beides funktioniert als getrennte Lesezugriffe. Was es nicht gibt, ist eine Anweisung über zwei Datenbanken. Die Nicht-Ziele des Runtime-ADR sagen es: „cross-datasource JOINs in one query (federated objects are queried per-datasource)“ (quellübergreifende JOINs in einer Abfrage; föderierte Objekte werden je Datenquelle abgefragt). Zwei Ablehnungen, auf die ich stieß, sind keine Grenzen der Föderation, und ich nenne sie, damit niemand die falsche Schicht beschuldigt: ein Filter mit Punktpfad wie `?customer.region=EU` und `aggregate_records`, gruppiert nach `customer.region`, antworteten auf dem nativen `sales_visit` genau wie auf `sales_order` mit `400 INVALID_FIELD`.
+
+**2. Die Zeilenobergrenze gehört Plugin-Treibern, nicht SQL.** Über den eingebauten SQLite-Treiber gibt es keine Obergrenze: `?top=5000` auf Bestellungen lieferte alle 2.400 Zeilen. Eine Obergrenze auf dieser Datenquelle wird schon bei der Validierung abgelehnt:
+
+```text
+✗ external.rowCap: `external.rowCap` caps the rows the engine reads from a plugin driver, which it holds behind its correctness floor; the 'sqlite' driver is built in, runs the whole query itself and is never capped, so the key would do nothing here. Remove `rowCap`.
+```
+
+Über einen Plugin-Treiber, OData eingeschlossen, setzt der Leitfaden die Grenze: „A read that matches more rows than the datasource's row cap is refused with `422 EXTERNAL_ROW_CAP_EXCEEDED` rather than answered from a partial set“ (ein Lesezugriff, der mehr Zeilen trifft als die Obergrenze der Datenquelle, wird mit 422 abgelehnt statt aus einer Teilmenge beantwortet), „The default is 1000 rows“ (Standard sind 1000 Zeilen), höchstens 10.000. Hier nicht ausgeführt.
+
+**3. Elterngesteuerte Freigabe hängt vom Treiber ab.** Auf einem Plugin-Treiber gilt: „A read whose scope composes a `ReadableIds` leaf, such as an object `controlled_by_parent`, is refused“ (ein Lesezugriff, dessen Bereich ein `ReadableIds`-Blatt enthält, etwa bei einem Objekt `controlled_by_parent`, wird abgelehnt). Auf SQL habe ich das Gegenteil gemessen: Mit `sales_order` auf `controlled_by_parent`, über ein `master_detail` an Kunden gehängt, las Mia Bestellungen, und als der Elterndatensatz für sie unsichtbar wurde, verschwanden die Kinder mit (nächster Punkt).
+
+**4. Besitzerbezogene Freigabe braucht eine Besitzerspalte.** Mit `sales_customer` auf `private`, dem Standard des Entwurfs, über einer Tabelle ohne Besitzerspalte lautete Mias Antwort `{"records":[],"total":0}` für Kunden und für die elterngesteuerten Bestellungen, während der Admin weiter alle 5 und alle 2.400 las. Der Leitfaden warnt davor: „only an `owner_id` declared in `fields`, or named by an `external.columnMap` entry, counts as one. Without it a member reads no row“ (nur ein in `fields` deklariertes oder von einem `external.columnMap`-Eintrag benanntes `owner_id` zählt als Besitzer; ohne ihn liest ein Mitglied keine Zeile). Bilden Sie die Besitzerspalte der Quelle ab, oder wählen Sie wie oben `public_read` und schränken Sie mit Berechtigungssätzen ein.
+
+**5. Die Leistung ist die der Quelle.** Jeder Lesezugriff läuft in diesem Moment auf dem Bestellsystem: Eine Listenseite liest die Zeilen und die Gesamtzahl, und ein Dashboard, das jemand offen lässt, ist eine Abfrage auf Ihrer Produktionsdatenbank. Die Schicht fügt keinen Index hinzu, den die Quelle nicht hat, und die Änderung oben war beim nächsten Lesen sichtbar, weil dazwischen nichts die alte Zeile hielt. Verkraftet die Quelle die Last nicht, richten Sie die Datenquelle auf ein Replikat, das Sie bereits betreiben, oder kopieren Sie die Daten.
+
+## Wann eine Kopie das bessere Werkzeug ist
+
+Der ObjectStack-Leitfaden zu virtuellen Objekten zieht die Linie in einem Satz: „Make the object virtual when a copy would be **wrong**, and real when a copy is merely **convenient**“ (machen Sie das Objekt virtuell, wenn eine Kopie falsch wäre, und real, wenn eine Kopie bloß bequem ist). Falsch ist eine Kopie, wenn die Gegenstelle die Antwort erst bei der Anfrage berechnet, wenn die Daten nicht landen dürfen (Datenresidenz, Lizenz, Prüfung) oder wenn sie sich schneller ändern, als eine Synchronisierung folgen kann. Bequem ist sie für langsam veränderliche Referenzdaten und für Berichte, die viele Quellen verbinden. Die erste Sorte lesen Sie durch, die zweite kopieren Sie. Bei einem bereits abgeschalteten System bleibt nur ein Export, und [ein Import-Mapping mit Probelauf](/de/blog/how-to-import-a-spreadsheet-from-an-old-system/) ist der Weg, diese Datei ohne ihre alten Codes ins Modell zu holen.
+
+## In Entwicklung: aus einer Datenbank kopieren
+
+Zeilen aus einer föderierten Tabelle nach Plan in ein gewöhnliches ObjectStack-Objekt zu kopieren („sync-in“) ist entworfen, aber nicht in 18.4.0. Sein Dokument, ADR-0153, steht auf Proposed und sagt über sich: „This record declares; it implements nothing“ (dieses Dokument legt fest, es implementiert nichts). Was es beschreibt: „A remote table or API collection becomes an ordinary object whose rows were **copied** by a pull“ (eine entfernte Tabelle oder API-Sammlung wird zu einem gewöhnlichen Objekt, dessen Zeilen durch einen Abruf kopiert wurden), und seine Faustregel weist „Reports, analysis, AI question answering, joins across sources; a slow or fragile legacy system“ (Berichte, Analyse, AI-Fragen, Joins über Quellen; ein langsames oder fragiles Altsystem) dem Sync-in zu und „Live data, one table at a time; the legacy system must not be touched; data that must not land“ (Live-Daten, eine Tabelle zur Zeit; das Altsystem darf nicht angefasst werden; Daten, die nicht landen dürfen) der Föderation. Nichts in diesem Abschnitt wurde gemessen.
+
+## Was man im Diff liest
+
+Schreibt ein Agent die Bindung, ist die Prüfung kurz, weil jede Entscheidung eine Zeile ist:
+
+| Zeile im Diff | Was sie entscheidet |
+|:--|:--|
+| `schemaMode: 'external'` | ObjectStack ändert die Quelle nie; Abweichungen lassen den Start scheitern |
+| `allowWrites` / `writable` | beide müssen `true` sein, damit ein Schreibzugriff die Quelle erreicht |
+| `columnMap` | unter welchen Geschäftsnamen die Spalten der Quelle erscheinen |
+| `sharingModel` | `private` braucht eine abgebildete Besitzerspalte, sonst lesen Mitglieder nichts |
+| Feldrechte (`fields`) | welche Spalten der Quelle ein Mitglied nie sieht oder filtert |
+| `rowCap` | nur für Plugin-Treiber; auf einem eingebauten SQL-Treiber abgelehnt |
+
+Die [Ontologie](/en/glossary/ontology/) ist die Schicht, die Ihr Geschäft benennt: Objekte, Beziehungen, Berechtigungen, Aktionen. Föderation heißt, dass sie eine Datenbank benennen kann, die Sie nicht gebaut haben, am ersten Tag, ohne vorgeschaltetes Migrationsprojekt, und mit dem [Berechtigungsmodell](/en/glossary/permission-model/) auf jedem Leser, Mensch oder Agent.
+
+## Richten Sie Ihren Agent darauf aus
+
+Geben Sie Ihrem Coding-Agent die Bindung als Regel, nicht diesen Artikel: eine `external`-Datenquelle, ein Objekt je Tabelle mit `remoteName` und `columnMap`, ein ausdrücklich gesetztes `sharingModel`, beide Schreibschalter aus und ein Berechtigungssatz je Zielgruppe. [Wie man den Coding-Agent konfiguriert](/en/blog/how-to-point-your-agent-at-objectstack/) behandelt die Regeldatei, den MCP-Endpunkt der laufenden App und die Spezifikation; der [Leitfaden zu externen Datenquellen](https://objectstack.ai/docs/data-modeling/external-datasources) ist die Referenz, die der Agent lesen sollte. `npm create objectstack@latest` installiert 18.4.0, die Version, auf der jedes Protokoll oben lief.

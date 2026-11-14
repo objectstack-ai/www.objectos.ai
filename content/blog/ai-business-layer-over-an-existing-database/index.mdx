@@ -1,0 +1,290 @@
+---
+title: "How Do You Put an AI-Ready Business Layer Over a Database You Already Run, Without Moving the Data?"
+description: "Bind the tables of a database you already run as objects: reads go live to the source, writes are refused by default, and member permissions apply over REST and MCP alike. Measured on ObjectStack 18.4.0, limits included."
+author: ObjectStack Team
+date: 2026-11-18
+status: published
+topic: integration-data
+audience: it
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Federation
+  - Existing database
+  - Data modeling
+---
+
+**The answer.** Declare the database as an `external` datasource, bind each table you need to an object, map the old column names onto business names, and those tables become objects that people, reports and AI agents query through the same REST and MCP doors as any other — under the same permissions. Nothing is copied. On ObjectStack 18.4.0, the version `npm create objectstack@latest` installs today, an edit made directly in the source database showed on the very next read, and ObjectStack's own database held **0 of the 2,400 orders** it was serving. Writes are refused until both the datasource and the object opt in. I will call this a **read-through ontology**: names, relationships, permissions and AI tools laid over tables you do not own, with every read passed through to the system that does. Below is the transcript, then the five places it stops.
+
+## Three ways to make a running database usable
+
+Most companies asked to "make our data AI-ready" already have the data, in a database some other system writes. There are three honest ways to put a governed business layer on it, and each one costs something different.
+
+| | Rebuild it | Copy it | Read through it |
+|:--|:--|:--|:--|
+| What moves | the data and the system | the data, on a schedule | nothing |
+| Freshness | the new system is the truth | as old as the last sync | the source, at read time |
+| Who owns the schema | you | you, for the copy | the source system |
+| First-day cost | a migration project | a pipeline to build and watch | a datasource and one file per table |
+| Joins across sources | yes | yes, the main reason to copy | two reads, joined in memory |
+| Load on the source | none after cutover | one sync at a time | every read |
+
+The case for copying is real, and it is not a straw man: a copy can be indexed, joined with anything, searched and reported on while the source is slow or down, and it never puts a dashboard's queries on a production order system. If those are the needs, copy. The case for reading through is narrower and stronger where it applies: the day you connect, the business layer is correct, because there is nothing to keep in step. The ADR that specifies the mechanism lists among its goals to "Register existing remote tables as ObjectStack objects **without touching the remote schema**" and to "Default to read-only; require **two explicit opt-ins** (datasource level + object level) to enable writes."
+
+![A read-through ontology on ObjectStack 18.4.0. Three callers on the left: Mia, a member, over REST; an AI agent over MCP signed in as Mia; and an admin. In the middle, the ObjectStack layer holds three things: the objects sales_customer and sales_order with a column map from the old names, the sales_reader permission set that grants read on customers with credit_limit hidden and nothing on orders, and a write gate with allowWrites false. On the right, the order system's own database with 5 customers and 2,400 orders, where every read runs live. Outcomes: Mia gets 200 with two EU customers and no credit limit, orders 403; the agent's list_objects names one object; any insert, update or delete answers 403 EXTERNAL_WRITE_FORBIDDEN. Below, ObjectStack's own database holds users, grants and native objects, and 0 customer or order rows.](./read-through-en.svg)
+
+## The order system ObjectStack never touched
+
+The source is a SQLite file written by a short Python script standing in for a legacy order system: a `customers` table and an `orders` table, five customers and 2,400 orders, with the kind of column names old systems have.
+
+```sql
+CREATE TABLE customers (
+  cust_no      TEXT PRIMARY KEY,
+  cust_name    TEXT NOT NULL,
+  cust_region  TEXT,
+  credit_limit REAL
+);
+CREATE TABLE orders (
+  order_no   TEXT PRIMARY KEY,
+  cust_no    TEXT NOT NULL REFERENCES customers(cust_no),
+  amount     REAL,
+  status     TEXT,
+  placed_on  TEXT
+);
+```
+
+SQLite is the dialect a fresh scaffold can open with nothing added. I tried Postgres first and the boot said so plainly: "The database client package `pg` is not installed, so no connection was attempted. It is an OPTIONAL install of @objectstack/driver-sql … `npm install pg` (pnpm add pg / yarn add pg)". The guide also documents Oracle and SQL Server as federation-only dialects ("ObjectStack reads an existing Oracle schema live … but it never owns one"), and OData v4 services such as SAP S/4HANA and Dynamics 365 through a shipped driver. I ran none of those three here.
+
+On a scaffold from `npm create objectstack@latest` (the package is called `sales`), three files did the work. The datasource:
+
+```ts
+export const Erp = defineDatasource({
+  name: 'erp',
+  label: 'Order system (SQLite)',
+  driver: 'sqlite',
+  schemaMode: 'external',            // ObjectStack never runs DDL here
+  config: { filename: '/…/legacy/erp.db' },   // absolute path, trimmed
+  external: {
+    allowWrites: false,
+    validation: { onMismatch: 'fail', checkOnBoot: true },
+  },
+});
+```
+
+One object per table, with `external.columnMap` (remote column → local field) turning `cust_no`, `cust_name` and `cust_region` into `id`, `name` and `region`:
+
+```ts
+export const Customer = ObjectSchema.create({
+  name: 'sales_customer',
+  label: 'Customer',
+  sharingModel: 'public_read',
+  datasource: 'erp',
+  external: {
+    remoteName: 'customers',
+    columnMap: { cust_no: 'id', cust_name: 'name', cust_region: 'region' },
+  },
+  fields: {
+    name: Field.text({ label: 'Name', searchable: true }),
+    region: Field.text({ label: 'Region' }),
+    credit_limit: Field.currency({ label: 'Credit limit' }),
+  },
+});
+```
+
+`sales_order` is the same shape over `orders`, with `cust_no` mapped onto a `customer` lookup. And one permission set for the people who should see customers but not what they may owe:
+
+```ts
+export const SalesReader = definePermissionSet({
+  name: 'sales_reader',
+  objects: { sales_customer: { allowRead: true } },
+  fields: { 'sales_customer.credit_limit': { readable: false, editable: false } },
+});
+```
+
+You need not type the objects by hand. The admin route `GET …/datasources/erp/external/tables` answered `customers` (4 columns) and `orders` (5), and `POST …/external/tables/customers/draft` returned a draft object for the table. The draft keeps the remote names as field names and opens with `sharingModel: 'private'`, which matters below: I renamed through `columnMap` and chose `public_read` deliberately.
+
+My first draft of `sales_order` declared `placed_on` as a `date` field. The boot refused it:
+
+```text
+✗ Object 'sales_order' does not match its remote table on datasource 'erp':
+✗ type_mismatch: orders.placed_on (expected date, actual text)
+```
+
+That is `schemaMode: 'external'` doing its job: per the guide, "A mature external DB — **DDL forbidden**; a schema mismatch **fails** boot." ObjectStack did not alter the column to fit. I changed the field to `text`, which is what the order system stores.
+
+## Five questions, answered by the running app
+
+Everything below is real output from `objectstack dev` on 18.4.0, trimmed only where marked. `$B` is the dev server's address, and `sql.py` is a three-line Python helper that runs one statement against the file, because the machine had no `sqlite3` command.
+
+### Is it live, or a copy?
+
+Read a customer, change it in the order system's own database, read it again:
+
+```bash
+curl -s -b admin.cookies "$B/api/v1/data/sales_customer/C-1002"
+```
+
+```json
+{"object":"sales_customer","id":"C-1002","record":{"credit_limit":180000,"id":"C-1002","name":"Borealis GmbH","region":"EU"}}
+```
+
+```bash
+python3 sql.py erp.db "UPDATE customers SET credit_limit = 95000 WHERE cust_no = 'C-1002'"
+curl -s -b admin.cookies "$B/api/v1/data/sales_customer/C-1002"
+```
+
+```json
+{"object":"sales_customer","id":"C-1002","record":{"credit_limit":95000,"id":"C-1002","name":"Borealis GmbH","region":"EU"}}
+```
+
+No sync ran, because there is none. ObjectStack's own database held 84 tables at that point, and a search of their names for `customer` or `order` returned nothing. Filters push down to the source, and a lookup expands across the two remote tables:
+
+```bash
+curl -s -b admin.cookies "$B/api/v1/data/sales_order?status=pending&top=2&expand=customer"
+```
+
+```json
+{"object":"sales_order","records":[
+  {"amount":7020.73,"status":"pending","placed_on":"2026-04-04","id":"SO-00003",
+   "customer":{"credit_limit":60000,"id":"C-1003","name":"Cyan Pacific","region":"APAC"}},
+  … one more row, trimmed …],
+ "total":480,"hasMore":true}
+```
+
+### Can anything write to it?
+
+Not by default, not even the platform administrator, and not through any door:
+
+```bash
+curl -s -b admin.cookies -X POST "$B/api/v1/data/sales_customer" \
+  -H "content-type: application/json" -d '{"id":"C-9999","name":"Test Co","region":"EU"}'
+```
+
+```json
+HTTP 403
+{"error":"Write 'insert' blocked on object 'sales_customer': datasource 'erp' is external (schemaMode=external). Requires datasource.external.allowWrites=true (got false) AND object.external.writable=true (got false).","code":"EXTERNAL_WRITE_FORBIDDEN","object":"sales_customer"}
+```
+
+A `PATCH` of `C-1002` and a `DELETE` of order `SO-00001` answered the same `403`, naming `update` and `delete`. The order system still held 5 customers, 2,400 orders and the credit limit it had set itself. The error names both switches, and the guide states the rule: "With either gate off, insert/update/delete on the federated object is rejected."
+
+### What does a member see?
+
+Mia is a member the admin created through `POST /api/v1/auth/admin/create-user`. With no grant, both objects answer `403 PERMISSION_DENIED`: a federated object is denied by default like any other. After the admin grants her `sales_reader`:
+
+```bash
+curl -s -b member.cookies "$B/api/v1/data/sales_customer?region=EU"
+```
+
+```json
+HTTP 200
+{"object":"sales_customer","records":[{"id":"C-1002","name":"Borealis GmbH","region":"EU"},{"id":"C-1004","name":"Delta Freight","region":"EU"}],"total":2,"hasMore":false}
+```
+
+`credit_limit` is not in her answer. Orders still answer `403`. And she cannot recover the hidden figure by asking around it:
+
+```bash
+curl -s -b member.cookies "$B/api/v1/data/sales_customer?credit_limit=95000"
+```
+
+```json
+HTTP 403
+{"error":"[Security] Access denied: query on 'sales_customer' references field(s) not readable by the caller: credit_limit. Filtering, sorting, grouping, or aggregating by a hidden field would leak its values (filter oracle) — remove these predicates or grant field read access.","code":"PERMISSION_DENIED","object":"sales_customer"}
+```
+
+Sorting by it answered the same. The source database has no idea who Mia is; the permission is enforced in the layer, on every read, before the row reaches her.
+
+### Can an AI agent get around that?
+
+Every ObjectStack app is an MCP server at `/api/v1/mcp`. Signed in as Mia, an agent's `list_objects` answered with one object, `sales_customer`: it cannot even see that orders exist. The rest, trimmed to the tool results:
+
+```text
+query_records  sales_customer  where {"region":"NA"}  → 2 records: Aurora Labs, Ember Foods (no credit_limit)
+query_records  sales_order     limit 1                → {"code":"PERMISSION_DENIED","status":403}
+query_records  sales_customer  limit 51               → Too big: expected number to be <=50 at limit
+create_record  sales_customer  {"id":"C-9998",…}      → {"code":"EXTERNAL_WRITE_FORBIDDEN","status":403}
+```
+
+The agent gets exactly Mia's view, at most 50 rows per call, and no writes. Nothing about the database's age or vendor changes that, because the agent never talks to the database.
+
+### Do reports work across the tables?
+
+A dataset is the semantic layer reports and AI questions read. This one groups order revenue by the customer's region, a column that lives in the other table:
+
+```ts
+export const OrderRevenue: Dataset = {
+  name: 'sales_order_revenue',
+  label: 'Order revenue',
+  object: 'sales_order',
+  include: ['customer'],
+  dimensions: [{ name: 'region', label: 'Region', field: 'customer.region', type: 'string' }],
+  measures: [
+    { name: 'revenue', label: 'Revenue', aggregate: 'sum', field: 'amount' },
+    { name: 'orders', label: 'Orders', aggregate: 'count' },
+  ],
+};
+```
+
+Asked through the MCP `query_dataset` tool, and checked against a `JOIN` run in the order system itself:
+
+| Region | Revenue (dataset) | Orders |
+|:--|--:|--:|
+| APAC | 6,127,544.10 | 480 |
+| EU | 11,995,588.50 | 960 |
+| NA | 12,470,792.17 | 960 |
+
+```text
+$ python3 sql.py erp.db "SELECT c.cust_region, round(sum(o.amount),2), count(*) FROM orders o JOIN customers c ON c.cust_no=o.cust_no GROUP BY 1 ORDER BY 1"
+('APAC', 6127544.1, 480)
+('EU', 11995588.5, 960)
+('NA', 12470792.17, 960)
+```
+
+Same answer to the cent. How it gets there is the first of the limits.
+
+## Where the read-through layer stops
+
+These are the edges I measured, plus two the docs state for drivers I did not run.
+
+**1. No query joins across datasources.** The dataset above was not one `JOIN` sent to SQLite. For a federated object, the analytics compiler's own comment says, the dataset is served by "the ObjectQL FK-expand path (two reads, joined in memory)". The same holds when the relationship crosses from ObjectStack's database into the order system: a native `sales_visit` object with a lookup to `sales_customer` expanded the customer (`?expand=customer`) and filtered by the customer's region in the nested form `{"customer":{"region":"EU"}}`. Both work as separate reads. What does not exist is one statement spanning two databases. The runtime ADR's non-goals say so: "cross-datasource JOINs in one query (federated objects are queried per-datasource)". Two refusals I hit are not federation limits, and I name them so nobody blames the wrong layer: a dotted filter like `?customer.region=EU`, and `aggregate_records` grouped by `customer.region`, answered `400 INVALID_FIELD` on the native `sales_visit` exactly as on `sales_order`.
+
+**2. The row cap belongs to plugin drivers, not SQL.** Over the built-in SQLite driver there is no cap: `?top=5000` on orders returned all 2,400 rows. Putting a cap on that datasource is refused when you validate:
+
+```text
+✗ external.rowCap: `external.rowCap` caps the rows the engine reads from a plugin driver, which it holds behind its correctness floor; the 'sqlite' driver is built in, runs the whole query itself and is never capped, so the key would do nothing here. Remove `rowCap`.
+```
+
+Over a plugin driver, OData included, the guide sets the cap: "A read that matches more rows than the datasource's row cap is refused with `422 EXTERNAL_ROW_CAP_EXCEEDED` rather than answered from a partial set", "The default is 1000 rows", at most 10,000. Not run here.
+
+**3. Parent-controlled sharing depends on the driver.** On a plugin driver, "A read whose scope composes a `ReadableIds` leaf, such as an object `controlled_by_parent`, is refused". On SQL I measured the opposite: with `sales_order` set to `controlled_by_parent` through a `master_detail` to customers, Mia read orders, and when the master went dark to her the children went with it (next point).
+
+**4. Owner-scoped sharing needs an owner column.** Set `sales_customer` to `private`, the draft's default, over a table with no owner column, and Mia's answer was `{"records":[],"total":0}` for customers and for the parent-controlled orders, while the admin still read all 5 and all 2,400. The guide warns about this: "only an `owner_id` declared in `fields`, or named by an `external.columnMap` entry, counts as one. Without it a member reads no row." Map the source's owner column, or choose `public_read` and narrow with permission sets, as above.
+
+**5. Performance is the source's.** Every read runs on the order system at that moment: a list page reads the rows and the total, and a dashboard someone leaves open is a query on your production database. The layer adds no index the source does not have, and the edit above showed on the next read because nothing in between held the old row. If the source cannot take the load, point the datasource at a replica you already operate, or copy the data.
+
+## When a copy is the better tool
+
+The ObjectStack guide on virtual objects draws the line in one sentence: "Make the object virtual when a copy would be **wrong**, and real when a copy is merely **convenient**". A copy is wrong when the remote computes the answer at request time, when the data must not land (residency, licence, audit), or when it changes faster than any sync. A copy is convenient for slow-changing reference data, and for reports that join many sources. Read through the first kind; copy the second kind. For a system already switched off, all that is left is an export, and [an import mapping and its dry run](/en/blog/how-to-import-a-spreadsheet-from-an-old-system/) is how that file lands without its old codes.
+
+## In development: copying from a database
+
+Copying rows from a federated table into an ordinary ObjectStack object on a schedule ("sync-in") is designed but not on 18.4.0. Its record, ADR-0153, is Proposed and says of itself: "This record declares; it implements nothing". What it describes: "A remote table or API collection becomes an ordinary object whose rows were **copied** by a pull", and its rule of thumb assigns "Reports, analysis, AI question answering, joins across sources; a slow or fragile legacy system" to sync-in and "Live data, one table at a time; the legacy system must not be touched; data that must not land" to federation. Nothing in this section was measured.
+
+## What to read in the diff
+
+If an agent writes the binding, the review is short, because each decision is one line:
+
+| Line in the diff | What it decides |
+|:--|:--|
+| `schemaMode: 'external'` | ObjectStack never alters the source; drift fails boot |
+| `allowWrites` / `writable` | both must be `true` for any write to reach the source |
+| `columnMap` | the business names the source's columns appear under |
+| `sharingModel` | `private` needs a mapped owner column, or members read nothing |
+| permission set `fields` | which source columns a member never sees, or filters on |
+| `rowCap` | plugin drivers only; refused on a built-in SQL driver |
+
+The [ontology](/en/glossary/ontology/) is the layer that names your business: objects, relationships, permissions, actions. Federation means it can name a database you did not build, on the first day, without a migration project in front of it, and with the [permission model](/en/glossary/permission-model/) applied to every reader, human or agent.
+
+## Point your agent at it
+
+Hand your coding agent the binding as a rule rather than this article: an `external` datasource, one object per table with `remoteName` and `columnMap`, an authored `sharingModel`, both write switches off, and a permission set per audience. [How to configure the coding agent](/en/blog/how-to-point-your-agent-at-objectstack/) covers the rule file, the MCP endpoint the running app exposes, and the spec; the [external datasources guide](https://objectstack.ai/docs/data-modeling/external-datasources) is the reference the agent should read. `npm create objectstack@latest` installs 18.4.0, the version every transcript above ran on.
