@@ -60,6 +60,15 @@ export interface MarketingPageSection {
   title: string;
   copy: string;
   items: MarketingPageItem[];
+  /**
+   * `in-development` marks a section of capabilities that are not in the
+   * current release (pre-announcing ruling of 2026-11-14, recorded on #267):
+   * they sit in their own visibly separate section, never mixed into shipped
+   * prose, with no dates and no "no schedule" wording. The section renders
+   * dashed cards with the item label in the status colour. Absent, the section
+   * describes what ships.
+   */
+  status?: 'in-development';
 }
 
 export interface MarketingPageTable {
