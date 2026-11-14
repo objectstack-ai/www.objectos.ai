@@ -175,7 +175,7 @@ async function frontmatters(dir, names) {
 const dateOf = (d) => (d instanceof Date ? d.toISOString().slice(0, 10) : typeof d === 'string' && /^\d{4}-\d{2}-\d{2}/.test(d) ? d.slice(0, 10) : undefined);
 
 /** A post folder: its date (the earliest), its topic (index.mdx first), and its locales' `cover` values. */
-async function readPost(dir, names) {
+export async function readPost(dir, names) {
   const fms = await frontmatters(dir, names);
   return {
     dir,
