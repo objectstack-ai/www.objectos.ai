@@ -1,6 +1,6 @@
 ---
 title: 不写测试，怎么测 AI 写的应用？os verify 分两个阶段证明了什么
-description: 在已发布的 18.3.0 上，os verify 分两个阶段运行——先跑编写期规则，再真的在进程内启动应用——第一阶段拒绝，第二阶段就不会开始。三段真实转录，其中一段故意失败，以及一次绿色运行自己承认没有证明的 18 次探测。
+description: 在已发布的 18.4.0 上，os verify 分两个阶段运行——先跑编写期规则，再真的在进程内启动应用——第一阶段拒绝，第二阶段就不会开始。三段真实转录，其中一段故意失败，以及一次绿色运行自己承认没有证明的 18 次探测。
 author: ObjectStack Team
 date: 2026-10-24
 status: published
@@ -25,7 +25,7 @@ npx os verify --json > report.json; echo $?
 0
 ```
 
-**先给结论**：不写测试，你测不了 AI 写的应用的业务逻辑，下文也没有一句话会这么宣称。你能做的，是用一条命令证明两件更窄、但运行时有资格证明的事：定义是**可强制执行的**——也就是 `os validate` 跑的那套编写期规则——以及应用**行为正常**：它能启动，并且每个对象都能经真实 HTTP 栈把一条记录写进去再读回来。在 ObjectStack **18.3.0**——今天 `npm create objectstack@latest` 装的就是这个版本——这条命令叫 `os verify`。它按顺序跑这两个阶段，**第一阶段拒绝，第二阶段就永远不会开始**，退出码只从一个计数 `hardFailures` 读出。本文其余部分是它的三次真实运行——空白脚手架，带三个声明岗位的 CRM 示例，以及一次故意失败的运行——外加一次运行，跑它按需提供的另外五种证明。因为验证器最有用的地方是它拒绝了什么，其次是它承认自己没有证明什么。
+**先给结论**：不写测试，你测不了 AI 写的应用的业务逻辑，下文也没有一句话会这么宣称。你能做的，是用一条命令证明两件更窄、但运行时有资格证明的事：定义是**可强制执行的**——也就是 `os validate` 跑的那套编写期规则——以及应用**行为正常**：它能启动，并且每个对象都能经真实 HTTP 栈把一条记录写进去再读回来。在 ObjectStack **18.4.0**——今天 `npm create objectstack@latest` 装的就是这个版本——这条命令叫 `os verify`。它按顺序跑这两个阶段，**第一阶段拒绝，第二阶段就永远不会开始**，退出码只从一个计数 `hardFailures` 读出。本文其余部分是它的三次真实运行——空白脚手架，带三个声明岗位的 CRM 示例，以及一次故意失败的运行——外加一次运行，跑它按需提供的另外五种证明。因为验证器最有用的地方是它拒绝了什么，其次是它承认自己没有证明什么。
 
 ## 两个阶段，一个计数
 
@@ -33,17 +33,18 @@ CLI 参考文档用一句话定下契约：「完成线（done-bar）：`os veri
 
 | 阶段 | 跑什么 | 失败长什么样 |
 | :--- | :--- | :--- |
-| **1 · 编写期规则** | `os validate` 跑的那套规则表——18.3.0 上是 63 条——作用于按 `os validate` 的方式准备好的栈 | 退出 1，stdout 上一份带 `error` 与 `errors[]` 的 JSON 文档；运行时阶段未执行 |
-| **2 · 运行时** | 在进程内启动应用，对每个对象从它的字段派生一条记录，经真实 HTTP 栈创建、读回、比对 | `createFailed`、`readFailed`、`fidelityGaps` 各自累加进 `hardFailures` |
+| **1 · 编写期规则** | `os validate` 跑的那套规则表——18.4.0 上是 65 条——作用于按 `os validate` 的方式准备好的栈 | 退出 1，stdout 上一份带 `error` 与 `errors[]` 的 JSON 文档；运行时阶段未执行 |
+| **2 · 运行时** | 在进程内启动应用，先判定启动时落库的种子数据，再对每个对象从它的字段派生一条记录，经真实 HTTP 栈创建、读回、比对 | `seed.hardFailures`、`createFailed`、`readFailed`、`fidelityGaps` 各自累加进 `hardFailures` |
 | **按需 · `--rls`** | 第二次全新启动，证明跨所有者不变量——「成员不能写它读不到的记录」——用一个探测身份，再加每个声明岗位各一个身份 | 一个 `hole`、一个降级的探测身份、或一个运行无法配置出来的声明岗位，各自累加进 `hardFailures` |
 | **按需 · 另外五种证明** | `--reference-shapes`、`--delete-behaviors`、`--unique-scopes`、`--parent-write-reach`、`--dashboard-windows`：各自再起一个全新的栈，经 REST 门与系统门证明一项声明过的行为 | 每个证明族自己的 `summary.hardFailures` 累加进 `hardFailures`；无法定论与被排除的分支只报告、不计数 |
 
-![18.3.0 上的 os verify 逐阶段：先跑编写期规则，拒绝即以退出码 1 结束、什么都不启动；再在进程内启动，对每个对象创建、读回、比对一条记录；然后按需跑跨所有者 RLS 探测，每个声明岗位各一个身份，以及另外五个按需证明族；组成 hardFailures 的十一项、由它读出的退出码，以及计数不包含的那些状态](./two-stages.svg)
+![18.4.0 上的 os verify 逐阶段：先跑编写期规则，拒绝即以退出码 1 结束、什么都不启动；再在进程内启动，判定种子数据，并对每个对象创建、读回、比对一条记录；然后按需跑跨所有者 RLS 探测，每个声明岗位各一个身份，以及另外五个按需证明族；组成 hardFailures 的十二项、由它读出的退出码，以及计数不包含的那些状态](./two-stages.svg)
 
-退出码读的那个计数由十一项组成——往返三项、`--rls` 三项、每个按需证明族各一项——源码写得比任何转述都清楚（18.3.0 标签下的 `packages/cli/src/commands/verify.ts:426-452`，注释已删去）：
+退出码读的那个计数由十二项组成——种子一项、往返三项、`--rls` 三项、每个按需证明族各一项——源码写得比任何转述都清楚（18.4.0 标签下 `packages/cli/src/commands/verify.ts` 的第 460-492 行，注释已删去）：
 
 ```ts
 const hardFailures =
+  seed.hardFailures +
   crud.summary.createFailed +
   crud.summary.readFailed +
   crud.summary.fidelityGaps +
@@ -65,7 +66,7 @@ const hardFailures =
 
 > 一个带有指向不存在对象的 lookup、一个 `visible` 表达式引用字段时没写 `record.` 的动作、或一个没指定字段的列表列的栈，照样启动、照样往返它的记录、照样以退出码 0 打印 `✓ verify passed`，而 `os validate`、`os build` 和 `os lint` 全都拒绝它。文档里的完成线（「`objectstack verify` 是绿的」）在一个构建拒绝发布的栈上是绿的。
 
-把这种形态叫作**假绿**：一个放行了构建所拒绝之物的验证器。这是验证器能有的最坏缺陷，因为跑验证器的全部意义就是让它成为注意到问题的那一个。从 17.7.0 起门禁先跑，到 18.3.0 依然如此。看清这个封堵最快的办法，是故意把洞打开。拿脚手架唯一的对象，给它加一个指向不存在对象的 lookup——四行，正是 Agent 先起名、后建对象时会写出的东西：
+把这种形态叫作**假绿**：一个放行了构建所拒绝之物的验证器。这是验证器能有的最坏缺陷，因为跑验证器的全部意义就是让它成为注意到问题的那一个。从 17.7.0 起门禁先跑，到 18.4.0 依然如此。看清这个封堵最快的办法，是故意把洞打开。拿脚手架唯一的对象，给它加一个指向不存在对象的 lookup——四行，正是 Agent 先起名、后建对象时会写出的东西：
 
 ```diff
      body: Field.textarea({
@@ -79,11 +80,11 @@ const hardFailures =
    },
 ```
 
-然后在 18.3.0 上再跑一次完成线：
+然后在 18.4.0 上再跑一次完成线：
 
 ```text
 $ npx os verify; echo $?
-  → Running author-time rules (63)...
+  → Running author-time rules (65)...
 
   ✗ Author-time rules failed (1 issue) — the runtime stage did not run
   • object "verify_demo_note" · field "project": lookup target "verify_demo_project"
@@ -110,7 +111,7 @@ $ cat report.json
    "hint":"Point it at one of this stack's objects, or at a platform object by its full name …"}]}
 ```
 
-这段输出中有三处就是机制本身。*the runtime stage did not run* 这句话是字面意思：这次运行往 stderr 写了 **0 行**，而一次真正启动的运行会写 600 行（见下一节）——没有加载任何插件、没有起服务器、没有碰数据库。这条发现与 `os validate` 对同一个栈打印的是同一条：同一规则名、同一路径、同一提示，所以无论 Agent 读的是哪一个，拿到的都是同一句纠正指令，带着一句 *Did you mean*、一行 `fix:`，以及说明这个缺失为何要紧的 `os explain` 命令。退出码是 1、文档在 stdout 上——这正是 CI 步骤和脚本都能直接处理、不必解析散文的形态。
+这段输出中有三处就是机制本身。*the runtime stage did not run* 这句话是字面意思：这次运行往 stderr 写了 **0 行**，而一次真正启动的运行会写 2 行（见下一节）——没有加载任何插件、没有起服务器、没有碰数据库。这条发现与 `os validate` 对同一个栈打印的是同一条：同一规则名、同一路径、同一提示，所以无论 Agent 读的是哪一个，拿到的都是同一句纠正指令，带着一句 *Did you mean*、一行 `fix:`，以及说明这个缺失为何要紧的 `os explain` 命令。退出码是 1、文档在 stdout 上——这正是 CI 步骤和脚本都能直接处理、不必解析散文的形态。
 
 ## 第二阶段：每个对象一条记录，走真实 HTTP 栈
 
@@ -121,6 +122,11 @@ $ cat report.json
   "app": "com.example.verify-demo",
   "config": "/…/verify-demo/objectstack.config.ts",
   "multiTenant": false,
+  "seed": {
+    "status": "none", "suppressed": [], "inFlight": 0, "sources": [],
+    "totals": { "inserted": 0, "updated": 0, "skipped": 0, "rejected": 0, "droppedRefs": 0 },
+    "hardFailures": 0
+  },
   "crud": {
     "app": "com.example.verify-demo",
     "results": [
@@ -135,9 +141,9 @@ $ cat report.json
 }
 ```
 
-`checked: 2` 是验证器写入并读回的两个字段；`mismatchTotal: 0` 说每个值都原样回来了。文件中没有的东西和有的东西一样是刻意的：被启动的栈自己的日志——插件加载、安全引导、服务器停止——都去了 stderr，在这个单对象应用上有 **600 行**，而 stdout 恰好只承载一份 JSON 文档。这条契约同样始于 17.7.0；那一版的变更日志测量过之前的行为：在一个双对象栈上，318 行日志落在 stdout 上、排在报告之前，于是 `os verify --json > report.json`「过去以退出码 0 结束，留下一个任何 JSON 解析器都不接受的文件」。现在 `JSON.parse` 能整个读下这个文件，这正是让 `report.json` 成为可以附在 Pull Request 上的工件、而不是一张截图的原因。
+`checked: 2` 是验证器写入并读回的两个字段；`mismatchTotal: 0` 说每个值都原样回来了；`seed.status: "none"` 说脚手架没有声明任何需要在启动时落库的种子记录。文件中没有的东西和有的东西一样是刻意的：被启动的栈自己的日志——这里是开发态元数据端点的注册和服务器停止——都去了 stderr，在这个单对象应用上只有 **2 行**，而 stdout 恰好只承载一份 JSON 文档。这条契约同样始于 17.7.0；那一版的变更日志测量过之前的行为：在一个双对象栈上，318 行日志落在 stdout 上、排在报告之前，于是 `os verify --json > report.json`「过去以退出码 0 结束，留下一个任何 JSON 解析器都不接受的文件」。现在 `JSON.parse` 能整个读下这个文件，这正是让 `report.json` 成为可以附在 Pull Request 上的工件、而不是一张截图的原因。
 
-「从它的字段派生」出来的记录是验证器的记录，不是你的，这会带来一个脚手架太小而显示不出的后果。下面是 CRM 示例——`@objectstack/cli@18.3.0` 标签下的 `examples/app-crm`，六个对象，用已发布的 18.3.0 包跑——的文本面，验证器引用应用的拒绝时会在 code 处截断：
+「从它的字段派生」出来的记录是验证器的记录，不是你的，这会带来一个脚手架太小而显示不出的后果。下面是 CRM 示例——`@objectstack/cli@18.4.0` 标签下的 `examples/app-crm`，六个对象，用已发布的 18.4.0 包跑——的文本面，验证器引用应用的拒绝时会在 code 处截断：
 
 ```text
 === objectstack verify — com.example.crm ===
@@ -151,13 +157,14 @@ $ cat report.json
   – crm_opportunity_line_item  skipped: required relation "opportunity" → no created
     "crm_opportunity" record
   ── 4 verified, 0 gaps, 0 FAILED, 1 needs-fixture, 1 skipped (0 mismatches)
+  ✓ seed: 28 records landed (28 inserted, 0 updated, 0 already present)
 ```
 
-六个对象中四个完成了往返。第五个 `crm_opportunity` 带着两条它自己的校验规则——折扣上限和成交日期下限——验证器派生出的记录两条都不满足，于是应用用 `400` 拒绝了它。这被报告为 **`needs-fixture`**，并引用了应用自己的拒绝理由，而它*不是*失败：验证器在告诉你，它构造不出一条能通过你的规则的记录，而不是这个对象坏了。第六个是 **`skipped`**，因为明细行要求一个商机，而商机没有被创建。这两个词都不在 `hardFailures` 的求和项中，所以这次运行以 0 退出——诚实，因为它真正演练过的东西没有一样是错的；清晰，因为它没演练的两个对象都被点了名并附上原因。先读汇总行，再读退出码。
+六个对象中四个完成了往返。第五个 `crm_opportunity` 带着两条它自己的校验规则——折扣上限和成交日期下限——验证器派生出的记录两条都不满足，于是应用用 `400` 拒绝了它。这被报告为 **`needs-fixture`**，并引用了应用自己的拒绝理由，而它*不是*失败：验证器在告诉你，它构造不出一条能通过你的规则的记录，而不是这个对象坏了。第六个是 **`skipped`**，因为明细行要求一个商机，而商机没有被创建。这两个词都不在 `hardFailures` 的求和项中，所以这次运行以 0 退出——诚实，因为它真正演练过的东西没有一样是错的；清晰，因为它没演练的两个对象都被点了名并附上原因。汇总行下面那行是种子：启动时 CRM 声明的 28 条记录全部落库；若丢掉一条，它就会成为 `hardFailures` 中的一项。先读汇总行，再读退出码。
 
 ## 按需：跨所有者不变量，每个声明岗位各一个身份
 
-往返证明的是保真。它对谁能写什么一无所知，而 `os verify` 默认也不假装知道。加上 `--rls`，它会启动第二个全新的栈，证明一条不变量——参考文档的措辞是「成员不能写它读不到的记录」——用它自己配置的一个探测身份，并且在 18.3.0 上，还用应用声明的每个岗位各一个身份。从 18.0 起，探测身份的权限集是在本次运行中注册进应用的安全目录，而不是写成一行数据；启动若提供不了它，就报告一个降级的探测身份——这是 `hardFailures` 中的一项——而不是换一个更弱的身份去探测。CRM 在 `src/security/sales-positions.ts` 中声明了三个：`sales_rep`、`sales_manager` 和 `finance_approver`。所以 `npx os verify --rls --json` 铸造了四个身份，报告的 `rls` 块说明了每一个各自确立了什么：
+往返证明的是保真。它对谁能写什么一无所知，而 `os verify` 默认也不假装知道。加上 `--rls`，它会启动第二个全新的栈，证明一条不变量——参考文档的措辞是「成员不能写它读不到的记录」——用它自己配置的一个探测身份，并且在 18.4.0 上，还用应用声明的每个岗位各一个身份。从 18.0 起，探测身份的权限集是在本次运行中注册进应用的安全目录，而不是写成一行数据；启动若提供不了它，就报告一个降级的探测身份——这是 `hardFailures` 中的一项——而不是换一个更弱的身份去探测。CRM 在 `src/security/sales-positions.ts` 中声明了三个：`crm_sales_rep`、`crm_sales_manager` 和 `crm_finance_approver`。所以 `npx os verify --rls --json` 铸造了四个身份，报告的 `rls` 块说明了每一个各自确立了什么：
 
 ```json
 "rls": {
@@ -173,8 +180,8 @@ $ cat report.json
                "probeBlocked": 0, "skipped": 0, "proven": 6, "unproven": 0 },
   "positionRuns": [ … ],
   "positionCoverage": {
-    "declared": ["sales_rep", "sales_manager", "finance_approver"],
-    "ran":      ["sales_rep", "sales_manager", "finance_approver"],
+    "declared": ["crm_sales_rep", "crm_sales_manager", "crm_finance_approver"],
+    "ran":      ["crm_sales_rep", "crm_sales_manager", "crm_finance_approver"],
     "notRun":   []
   },
   "totals":  { "objects": 24, "consistent": 6, "holes": 0, "memberVisible": 18,
@@ -189,11 +196,11 @@ $ cat report.json
 
 ```text
   ── position personas (each holds one declared position and nothing else) — 3 of 3 declared position(s) probed
-  ▸ sales_rep  (verify-rls-pos-sales_rep@objectstack.test)  0 PROVEN (0 consistent, 0 HOLES) · 6 NOT PROVEN (6 member-visible, 0 probe-blocked, 0 skipped)
+  ▸ crm_sales_rep  (verify-rls-pos-crm_sales_rep@objectstack.test)  0 PROVEN (0 consistent, 0 HOLES) · 6 NOT PROVEN (6 member-visible, 0 probe-blocked, 0 skipped)
       ⚠ this persona proved NOTHING — every object was member-visible, probe-blocked or skipped.
-  ▸ sales_manager  …  0 PROVEN · 6 NOT PROVEN (6 member-visible, …)
+  ▸ crm_sales_manager  …  0 PROVEN · 6 NOT PROVEN (6 member-visible, …)
       ⚠ this persona proved NOTHING — every object was member-visible, probe-blocked or skipped.
-  ▸ finance_approver  …  0 PROVEN · 6 NOT PROVEN (6 member-visible, …)
+  ▸ crm_finance_approver  …  0 PROVEN · 6 NOT PROVEN (6 member-visible, …)
       ⚠ this persona proved NOTHING — every object was member-visible, probe-blocked or skipped.
   ══ all personas: 6 PROVEN (6 consistent, 0 HOLES) · 18 NOT PROVEN (18 member-visible, 0 probe-blocked, 0 skipped)   [unit: one object × persona probe]
 ✓ verify passed — no runtime failures
@@ -262,4 +269,4 @@ node -e "const r=require('./verify-report.json'); console.log('hardFailures', r.
 
 ---
 
-*在 ObjectStack 18.3.0 上验证——`create-objectstack` 18.3.0 与 `@objectstack/cli` 18.3.0，正是 2026-11-11 `npm create objectstack@latest` 安装的版本，Node 22。CRM 是 `@objectstack/cli@18.3.0` 标签下的 `examples/app-crm`，用已发布的 18.3.0 包运行；源码引用也出自同一标签。上文每条命令、每段输出都是真实运行，不是复述；标了省略号的地方做了裁剪，没有任何地方被改写。*
+*在 ObjectStack 18.4.0 上验证——`create-objectstack` 18.4.0 与 `@objectstack/cli` 18.4.0，正是 2026-11-14 `npm create objectstack@latest` 安装的版本，Node 22。CRM 是 `@objectstack/cli@18.4.0` 标签下的 `examples/app-crm`，用已发布的 18.4.0 包运行；源码引用也出自同一标签。上文每条命令、每段输出都是真实运行，不是复述；标了省略号的地方做了裁剪，没有任何地方被改写。*
