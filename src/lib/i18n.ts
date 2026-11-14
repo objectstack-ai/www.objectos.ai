@@ -137,7 +137,7 @@ interface Strings {
      */
     trustCenter: string;
     /**
-     * The five Capabilities entries. Each names an existing capability page and
+     * The Capabilities entries (with `connectExisting`, six). Each names an existing capability page and
      * stands for the pages folded under it: `capDataApps` opens data modeling
      * (app interfaces folds under it), `capAutomationApprovals` opens process
      * automation (approvals folds under it), `capAnalytics` opens analytics;
@@ -146,6 +146,12 @@ interface Strings {
      * `approvals`, `permissionsSecurity`) for the footer and its parent page.
      */
     capDataApps: string;
+    /**
+     * /[lang]/connect-existing-systems/ (#419): federation, one-way sync-in
+     * and write-back through actions. A Capabilities entry under Product, and
+     * the footer's Product link to the same page.
+     */
+    connectExisting: string;
     capAutomationApprovals: string;
     capAnalytics: string;
     toolsMcp: string;
@@ -269,6 +275,7 @@ const en: Strings = {
     security: 'Security & trust',
     trustCenter: 'Trust center',
     capDataApps: 'Data & apps',
+    connectExisting: 'Connect existing systems',
     capAutomationApprovals: 'Automation & approvals',
     capAnalytics: 'Analytics',
     toolsMcp: 'Tools & MCP',
@@ -348,6 +355,7 @@ const zhHans: Strings = {
     security: '安全与信任',
     trustCenter: '信任中心',
     capDataApps: '数据与应用',
+    connectExisting: '对接现有系统',
     capAutomationApprovals: '自动化与审批',
     capAnalytics: '报表与分析',
     toolsMcp: '工具与 MCP',
@@ -427,6 +435,7 @@ const ja: Strings = {
     security: 'セキュリティと信頼',
     trustCenter: 'トラストセンター',
     capDataApps: 'データとアプリ',
+    connectExisting: '既存システムとの連携',
     capAutomationApprovals: '自動化と承認',
     capAnalytics: 'レポートと分析',
     toolsMcp: 'ツールと MCP',
@@ -506,6 +515,7 @@ const de: Strings = {
     security: 'Sicherheit & Vertrauen',
     trustCenter: 'Trust Center',
     capDataApps: 'Daten & Apps',
+    connectExisting: 'Bestehende Systeme anbinden',
     capAutomationApprovals: 'Automatisierung & Freigaben',
     capAnalytics: 'Analysen',
     toolsMcp: 'Tools & MCP',
@@ -585,6 +595,7 @@ const es: Strings = {
     security: 'Seguridad y confianza',
     trustCenter: 'Centro de confianza',
     capDataApps: 'Datos y apps',
+    connectExisting: 'Conectar sistemas existentes',
     capAutomationApprovals: 'Automatización y aprobaciones',
     capAnalytics: 'Analítica',
     toolsMcp: 'Herramientas y MCP',
@@ -664,6 +675,7 @@ const fr: Strings = {
     security: 'Sécurité et confiance',
     trustCenter: 'Centre de confiance',
     capDataApps: 'Données et apps',
+    connectExisting: 'Connecter les systèmes existants',
     capAutomationApprovals: 'Automatisation et approbations',
     capAnalytics: 'Analytique',
     toolsMcp: 'Outils et MCP',
@@ -743,6 +755,7 @@ const ko: Strings = {
     security: '보안과 신뢰',
     trustCenter: '트러스트 센터',
     capDataApps: '데이터와 앱',
+    connectExisting: '기존 시스템 연동',
     capAutomationApprovals: '자동화와 승인',
     capAnalytics: '분석',
     toolsMcp: '도구 및 MCP',
@@ -823,6 +836,7 @@ const toHant = (s: Strings): Strings => ({
     security: s2t(s.siteNav.security),
     trustCenter: s2t(s.siteNav.trustCenter),
     capDataApps: s2t(s.siteNav.capDataApps),
+    connectExisting: s2t(s.siteNav.connectExisting),
     capAutomationApprovals: s2t(s.siteNav.capAutomationApprovals),
     capAnalytics: s2t(s.siteNav.capAnalytics),
     toolsMcp: s2t(s.siteNav.toolsMcp),
