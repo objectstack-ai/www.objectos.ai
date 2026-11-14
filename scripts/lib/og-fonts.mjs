@@ -1,5 +1,6 @@
-// The fonts `scripts/og-images.mjs` rasterizes SVG cover text with, and the
-// check that every character a cover draws is in one of them.
+// The fonts `scripts/og-images.mjs` rasterizes SVG cover text and share-image
+// titles with, and the check that every character a cover or a title draws is
+// in one of them.
 //
 // ─── Why the fonts are bundled, not taken from the machine ─────────────────
 //
@@ -252,6 +253,16 @@ export function svgTextChars(svg) {
   return chars;
 }
 
+/** The characters of `chars` (code point -> context) that no face can draw. */
+function uncovered(chars, faces) {
+  const missing = [];
+  for (const [cp, text] of chars) {
+    if (faces.some((face) => face.cmap.has(cp))) continue;
+    missing.push({ char: String.fromCodePoint(cp), codePoint: `U+${cp.toString(16).toUpperCase().padStart(4, '0')}`, text });
+  }
+  return missing;
+}
+
 /**
  * The characters of an SVG that no bundled face can draw.
  *
@@ -260,10 +271,46 @@ export function svgTextChars(svg) {
  * @returns {{ char: string, codePoint: string, text: string }[]}
  */
 export function uncoveredChars(svg, faces) {
-  const missing = [];
-  for (const [cp, text] of svgTextChars(svg)) {
-    if (faces.some((face) => face.cmap.has(cp))) continue;
-    missing.push({ char: String.fromCodePoint(cp), codePoint: `U+${cp.toString(16).toUpperCase().padStart(4, '0')}`, text });
-  }
-  return missing;
+  return uncovered(svgTextChars(svg), faces);
 }
+
+/**
+ * The characters of a plain text (a post title) that no bundled face can draw.
+ *
+ * @param {string} text
+ * @param {{ cmap: Cmap }[]} faces
+ * @returns {{ char: string, codePoint: string, text: string }[]}
+ */
+export function uncoveredText(text, faces) {
+  const chars = new Map();
+  for (const ch of text) {
+    if (!NOT_DRAWN.test(ch)) chars.set(ch.codePointAt(0), text);
+  }
+  return uncovered(chars, faces);
+}
+
+// ─── Titles ─────────────────────────────────────────────────────────────────
+//
+// The share image sets the post's title in its locale
+// (scripts/lib/og-composite.mjs). A Chinese or Japanese title names the CJK
+// face first, so the Latin words inside it (AI, ObjectStack) take that face's
+// proportions and baseline instead of switching faces mid-line; any other
+// title names Arimo. Either way fontconfig falls back through the sans-serif
+// chain for a character the named face lacks, so `uncoveredText` against
+// every face is exactly "this title can be drawn".
+//
+// Japanese is drawn with the Simplified-Chinese face: it has the kana, and
+// its kanji are the Chinese forms of the same characters. Korean has no face:
+// none of the bundled ones has Hangul, so the title check names every Korean
+// title until a face with Hangul is added to OG_FACES and named here.
+
+const TITLE_FAMILY = { 'zh-Hans': 'Noto Sans SC', 'zh-Hant': 'Noto Sans SC', ja: 'Noto Sans SC' };
+
+/**
+ * The Pango font description a share-image title is set in, bold, at `size`
+ * pixels (the renderer draws at 72 dpi, where a point is a pixel).
+ *
+ * @param {string} locale
+ * @param {number} size
+ */
+export const titleFont = (locale, size) => `${TITLE_FAMILY[locale] ?? 'Arimo'} Bold ${size}`;
