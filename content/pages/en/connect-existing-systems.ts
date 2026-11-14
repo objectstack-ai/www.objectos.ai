@@ -150,7 +150,7 @@ export const OrdersPullJob = defineJob({
         eyebrow: 'Write back',
         title: 'Change the source through a declared action; the next pull brings it home',
         copy:
-          'A change to source data is made in the source. The action that makes it is declared metadata a person reviews as a diff, started through the same action door as any other action, and it calls the source with the connector’s own credential — not a database login handed to an agent.',
+          'A change to source data is made in the source. The action that makes it is declared metadata: in source it reaches a person as a diff, and on ObjectOS Cloud a change to a live app that already holds records waits as a draft for a person to publish. It runs through the same action door as any other action and calls the source with the connector’s own credential — the agent never gets a database account.',
         items: [
           {
             title: 'A declared action calls the source',
