@@ -101,9 +101,11 @@ export function rewriteLinks(html, targets, site) {
     const pathname = cut === -1 ? local : local.slice(0, cut);
     const target = targets.get(pathname);
     if (!target) return tag;
-    count += 1;
     const next = `${absolute ? site : ''}${target}${cut === -1 ? '' : local.slice(cut)}`;
-    return tag.replace(` href="${href}"`, ` href="${next}"`);
+    // A replacer function, so a `$` in an href is never read as a pattern.
+    const rewritten = tag.replace(` href="${href}"`, () => ` href="${next}"`);
+    if (rewritten !== tag) count += 1;
+    return rewritten;
   });
   return { html: html.slice(0, bodyStart) + body, count };
 }
