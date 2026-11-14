@@ -3,6 +3,7 @@ import Base from '../../../layouts/Base.astro';
 import GlossaryIndex from '../../../components/GlossaryIndex.astro';
 import {
   getGlossaryIndexSourceLocale,
+  getGlossaryTermSourceLocale,
   getGlossaryTerms,
   glossaryIndexAlternates,
   glossaryIndexNavTargets,
@@ -17,15 +18,22 @@ export function getStaticPaths() {
 }
 
 const locale = segToLocale(Astro.params.lang!)!;
-const ui = glossaryUi(locale);
 const t = siteUi[locale];
-const terms = getGlossaryTerms(locale);
 
 // Same rule as marketing pages: a locale with no authored content renders the
 // English copy, canonicalizes to the English URL, and is not indexed.
 const sourceLocale = getGlossaryIndexSourceLocale(locale);
 const isFallback = sourceLocale !== locale;
 const canonical = glossaryIndexPath(sourceLocale);
+const ui = glossaryUi(sourceLocale);
+
+// The set lists only terms that exist in its own language. A partly translated
+// locale (#428) shows English stand-ins on the page, but those URLs are
+// noindexed and canonicalize to /en/, so naming them as members of a ja set
+// would point structured data at pages that are not ja and not indexable.
+const terms = getGlossaryTerms(locale).filter(
+  (term) => getGlossaryTermSourceLocale(sourceLocale, term.slug) === sourceLocale
+);
 
 const site = Astro.site?.toString().replace(/\/$/, '') ?? '';
 const absoluteUrl = (href: string): string =>

@@ -1,8 +1,9 @@
 ---
-title: "Retool vs. KI-native App-Plattform: Es regelt, wer die App öffnet, nicht, was die Logik tut"
-description: "Retool hat die beste Zugriffs-Governance im Low-Code: RBAC, Audit-Logs, SSO, Self-Hosting. Doch die Geschäftslogik ist verstreutes JavaScript, das kein Mensch als Diff prüft und keine KI auditiert. Das ist die Lücke."
+title: "Retool RBAC und Audit-Logs: Retool für KI-App-Entwicklung mit Governance bewerten"
+description: "Retool RBAC, Audit-Logs und Zugriffsrichtlinien, geprüft an Retools Dokumentation: was sie in KI-generierten Apps regeln, wie Retool sich mit Lovable für Enterprise-Apps vergleicht und welche Autoritätslücke bleibt."
 author: ObjectStack Team
 date: 2026-06-24
+updated: 2026-11-14T10:00:00+08:00
 status: published
 topic: app-building
 audience: developer
@@ -11,9 +12,12 @@ industries: []
 cover: ./cover-en.svg
 tags:
   - Retool
+  - RBAC
+  - Audit-Log
+  - Lovable
 ---
 
-**TL;DR:** Retools Zugriffs-Governance ist die beste im Low-Code-Bereich — RBAC bis hinunter zur Query, Sicherheit auf Zeilenebene, Audit-Logs, SSO, Self-Hosting in der Enterprise-Variante. Nichts davon ist das Problem, und Sie sollten nicht so tun, als wäre es das. Das Problem ist die *Schicht*, die es regelt. RBAC steuert, welche Ressourcen eine Rolle erreichen kann; die eigentliche geschäftliche **Autorität** — darf diese Person eine Rückerstattung über 12.000 $ ausstellen? — lebt in handgeschriebenem JavaScript, verstreut über die `Hidden`-Eigenschaft eines Buttons, die `disabled`-Bindung eines Eingabefelds und den Transformer einer Query. Es ist nicht garantiert, dass zwei davon übereinstimmen, ein Nicht-Entwickler kann keines davon lesen, und eine KI, die diese Ausdrücke schreibt, produziert Autoritätsentscheidungen schneller, als irgendein Pull Request sie prüfen kann. Die Lücke ist nicht die Sicherheit. Sie besteht darin, dass Autorität *Code* ist und kein deklarierter, prüfbarer Fakt.
+**TL;DR:** Wenn Sie Retool für KI-App-Entwicklung mit Governance bewerten, besteht seine Zugriffsschicht die Prüfung, und Sie sollten nicht so tun, als wäre es anders. Retool hat RBAC über Berechtigungsgruppen, rollenbasierte Kontrolle darüber, wer seinen KI-Builder nutzen darf, Audit-Logs, die jede Query-Ausführung protokollieren, SSO, Self-Hosting und (seit Oktober 2026, als Public Beta für Postgres) Ressourcen-Zugriffsrichtlinien, denen sich keine Query entziehen kann. Seit Juni 2026 wendet es diese Kontrollen auch auf Apps an, die in Lovable, Cursor oder Claude Code gebaut wurden. Was es Ihnen nicht gibt, ist geschäftliche **Autorität** als deklarierter Fakt. „Darf diese Person eine Rückerstattung über 12.000 $ ausstellen?" lebt weiterhin meist in JavaScript, verteilt über Komponenteneigenschaften und Query-Logik, und eine KI schreibt diese Ausdrücke schneller, als irgendein Pull Request sie prüfen kann. Die Lücke ist nicht die grundlegende Sicherheit. Sie besteht darin, dass Autorität *Code* ist und keine Regel, die ein Prüfer an einem Ort lesen kann.
 
 Stellen Sie sich die gewöhnlichste Retool-App der Welt vor: eine Rückerstattungs-Konsole. Ein Entwickler baut sie an einem Nachmittag — eine Tabelle mit Bestellungen, ein „Rückerstattung"-Button, ein paar Queries. Der Support nutzt sie. Sie ist großartig. Das ist Retool in seiner besten Form, und Retool ist darin wirklich das Beste der Kategorie.
 
@@ -27,14 +31,14 @@ So sieht „wo wird es durchgesetzt" in einer echten Retool-App tatsächlich aus
 
 ```js
 // 1. refundButton → "Hidden"-Eigenschaft
-{{ currentUser.groups.includes('admin') ||
-   (currentUser.groups.includes('support_lead') && refundAmount.value <= 10000) }}
+{{ current_user.groups.map(g => g.name).includes('admin') ||
+   (current_user.groups.map(g => g.name).includes('support_lead') && refundAmount.value <= 10000) }}
 
 // 2. refundAmount input → "disabled"-Eigenschaft
-{{ !currentUser.groups.includes('support_lead') }}
+{{ !current_user.groups.map(g => g.name).includes('support_lead') }}
 
 // 3. issueRefund query → transformer (das ist der Teil, der tatsächlich schreibt)
-if (refundAmount.value > 10000 && !currentUser.groups.includes('finance')) {
+if (refundAmount.value > 10000 && !current_user.groups.map(g => g.name).includes('finance')) {
   throw new Error('Refunds over $10k require finance');
 }
 ```
@@ -56,6 +60,27 @@ action: issue_refund
 
 Ein Ort zum Lesen. Ein Ort zum Ändern. Eine Sache, über die ein Prüfer — oder eine KI — nachdenken muss. Der Unterschied zwischen drei handgepflegten Ausdrücken und einer deklarierten Regel ist der ganze Unterschied zwischen „die App ist codiert" und „die Autorität der App wird regiert".
 
+## Retool RBAC und Audit-Logs: Was jede Kontrolle tatsächlich abdeckt
+
+Der grep-Test ist nur fair, wenn die Kontrollen, die Retool *tatsächlich* hat, exakt benannt werden. Hier sind sie, im November 2026 an Retools eigener Dokumentation geprüft:
+
+| Kontrolle | Was sie regelt | Wo sie aufhört |
+| --- | --- | --- |
+| **Berechtigungsgruppen (RBAC)** | Gruppen „vergeben Rollen und steuern den Zugriff auf Apps, Ressourcen, Workflows und Agents" ([Retool-Leitfäden zu Berechtigungen](https://docs.retool.com/permissions/guides)) | Wer öffnen, bearbeiten oder abfragen darf, nicht, was eine bestimmte Aktion tun darf, sobald jemand drin ist |
+| **Assist RBAC** (Feb. 2026, Business und Enterprise) | Pro Rolle: Ask- und Build-Modus, nur Ask-Modus oder kein Zugriff auf den KI-Builder ([Changelog](https://docs.retool.com/changelog/assist-rbac)) | Wer Änderungen *generieren* darf, nicht, was eine generierte Änderung gewährt |
+| **Audit-Logs** | Nutzeraktionen „wie Query-Ausführungen und Passwort-Resets", mit exakter Query, Parametern, IP-Adresse und Antwortzeit; ein Jahr Aufbewahrung in der Cloud, CSV-Export in Business und Enterprise, Streaming zu Datadog oder Splunk in Enterprise ([Audit-Logs](https://docs.retool.com/org-users/guides/audit-logs)) | Detektivisch: Sie protokollieren, was lief, nachdem es lief |
+| **`current_user`-Zeilenfilter** | Werte, die „serverseitig aus der authentifizierten Sitzung berechnet" und in jede Query eingefügt werden ([Sicherheit auf Zeilenebene](https://docs.retool.com/docs/user-permissions)) | Pro Query, von Hand: „Eine Query, die den Filter weglässt, liefert ungefilterte Daten." |
+| **Ressourcen-Zugriffsrichtlinien** | Tabellen-, Spalten- und Zeilenzugriff auf eine Ressource, durchgesetzt bei jeder Query aus Apps, der Query Library, rohem SQL und Agents ([Zugriffsrichtlinien](https://docs.retool.com/data-sources/concepts/access-policies)) | Nur PostgreSQL, [Public Beta seit Oktober 2026](https://community.retool.com/t/new-public-beta-data-access-enforcement-for-postgres-resources/67615); Zeilenfilter „validieren weder die Zeilen, die ein Nutzer anlegt, noch die Werte, die ein Nutzer schreibt" |
+| **Governance für KI-codierte Apps** (Juni 2026) | Apps, die in Lovable, Replit, Cursor oder Claude Code gebaut wurden, „erben bestehende Berechtigungen und Audit-Trails"; „Berechtigungen hängen an Datenquellen" ([Retool-Newsroom](https://retool.com/newsroom/retool-extends-enterprise-governance-to-vibe-coded-apps)) | Dieselbe Schicht: Datenquellen-Berechtigungen, keine Geschäftsregeln auf Aktionsebene |
+
+Zwei dieser Zeilen zählen mehr als der Rest, denn in ihnen bewegt sich Retool genau in die Richtung, für die dieser Artikel argumentiert.
+
+**Zugriffsrichtlinien sind eine deklarierte Regel, nicht drei Ausdrücke.** Eine Richtlinie auf der Ressource gilt für jede Query, „sodass sich keine Query entziehen kann" — das Gegenteil des `current_user`-Filters pro Query. Für *Daten*-Autorität — welche Zeilen ein Support-Lead lesen oder löschen darf — erledigt das auf Postgres den Großteil des grep-Tests. Das ehrliche Update gegenüber der Juni-Fassung dieses Beitrags: Retool hat für diese Schicht jetzt eine echte Antwort.
+
+**Was Richtlinien nicht ausdrücken, ist die Rückerstattungsregel.** Die Dokumentation zu Zugriffsrichtlinien beschreibt Lese-, Schreib- und Löschzugriff auf Tabellen, Spalten und Zeilen. Sie beschreibt keine Betragsschwellen, keine Genehmigungs-Gates und keine Bedingungen an den geschriebenen Wert; und Zeilenfilter prüfen ausdrücklich nicht, was ein Nutzer schreibt. „Support-Leads bis 10.000 $, Finance darüber, Genehmigung oberhalb der Grenze" ist eine Regel über eine *Aktion und ihre Argumente*, also lebt sie weiterhin im Button, im Eingabefeld und im Transformer von oben. Richtlinien holen Daten-Autorität an einen Ort. Geschäftliche Autorität bleibt in JavaScript.
+
+Lesen Sie die Tabelle als Scorecard, und Retool besteht jede Frage zur Zugriffs-Governance, die ein Security-Review stellen wird. Die Frage, die es nicht von einem Ort aus beantworten kann, ist die vom Anfang dieses Beitrags: Welche Rollen können eine Rückerstattung über 10.000 $ ausstellen, und wo wird das durchgesetzt?
+
 ## Warum Versionskontrolle das nicht schließt
 
 Der Einwand des versierten Retool-Entwicklers ist fair, und Sie müssen ihn präzise beantworten: *„Wir haben Git-gestützte Versionskontrolle, Audit-Logs und RBAC. Änderungen werden in PRs geprüft. Der Zugriff wird regiert. Was fehlt?"*
@@ -75,6 +100,22 @@ Jahrelang war der grep-Test überlebbar, weil ein Mensch das JavaScript schrieb 
 Richten Sie eine KI auf dieselbe App, und die Ökonomie kehrt sich in beide Richtungen um. Die KI kann fünfzig Bindungen und ein Dutzend Transformer in einer Minute erzeugen — sie produziert *Autoritätsentscheidungen* schneller, als irgendein Prüfer sie nachverfolgen kann. Und um zu prüfen, was sie produziert hat, sind Sie wieder beim Lesen von JavaScript über Screens hinweg, denn es gibt immer noch keine einzige strukturierte Repräsentation von Autorität, gegen die man diffen könnte. „Retool AI" und Agents (2025) sind real und nützlich, aber sie automatisieren *auf demselben handgebauten Substrat*: Der Agent wird regiert (Retool kann eingrenzen, was er aufruft), aber die **App, die der Agent bearbeitet, ist es nicht** — nicht autoritäts-regiert in irgendeiner Form, die eine KI — oder ein Mensch — als Fakt statt als Code prüfen kann.
 
 Das, was KI am schnellsten produziert, ist genau das, was Retool am schwersten zu prüfen macht.
+
+## Retool vs. Lovable für Enterprise-Apps
+
+Der andere Vergleich, den viele anstellen, ist Retool gegen Lovable, meist gerahmt als „Builder für interne Tools vs. KI-App-Generator". Für eine Enterprise-App ist die nützlichere Rahmung: *Wessen Nutzer regelt die jeweilige Kontrolle?*
+
+| | Retool | Lovable |
+| --- | --- | --- |
+| **Was die KI erzeugt** | Eine App auf Retools Komponenten-Laufzeit, verdrahtet mit Ihren bestehenden Ressourcen | Full-Stack-Projektcode; standardmäßig „liegt er in Lovables verwalteter Infrastruktur", mit Synchronisierung zu GitHub, GitLab oder Bitbucket ([Lovable for Enterprise](https://docs.lovable.dev/introduction/lovable-for-enterprise)) |
+| **Rollen** | Berechtigungsgruppen steuern den Zugriff auf die App und auf die Ressourcen, Workflows und Agents dahinter | Owner, Admin, Editor, Viewer und externe Mitarbeiter regeln den *Workspace*, der die App baut ([dieselbe Seite](https://docs.lovable.dev/introduction/lovable-for-enterprise)) |
+| **Datenzugriff der Endnutzer** | Datenquellen-Berechtigungen, `current_user`-Filter, Zugriffsrichtlinien | Sicherheit auf Zeilenebene im integrierten Backend „für nutzerbezogene Daten", Teil des generierten Projekts; ein Quick Scan „läuft bei jeder Veröffentlichung und prüft die Datenbank-Zugriffsregeln" |
+| **Audit** | Audit-Log auf Query-Ebene, ein Jahr in der Cloud | Workspace-Audit-Log, „13 Wochen aufbewahrt", mit geplantem Export in ein SIEM oder einen Storage-Bucket |
+| **Self-Hosting** | Von Retool verwaltete oder selbst verwaltete Self-Hosted-Instanzen ([Self-Hosted Retool](https://docs.retool.com/self-hosted)) | Backend und Datenbank können auf Infrastruktur umziehen, die Sie betreiben, „einschließlich selbst gehostetem Supabase"; der Builder selbst bleibt SaaS |
+
+Die Unterscheidung in der zweiten und dritten Zeile ist diejenige, die über die Enterprise-Tauglichkeit entscheidet. Lovables Rollen und Audit-Log regeln die Menschen, die die App *bauen*; die Menschen, die sie *nutzen*, werden durch die Zugriffsregeln im eigenen Backend des generierten Projekts geschützt, die ein Scan bei jeder Veröffentlichung prüft. Retool regelt die Menschen, die die App nutzen, weil die App in Retool läuft. Deshalb besteht Retools Schritt vom Juni 2026 darin, in Lovable und ähnlichen Tools gebaute Apps unter seinen eigenen Datenquellen-Berechtigungen zu *hosten*, statt mit ihnen bei der Generierung zu konkurrieren.
+
+Das realistische Enterprise-Muster ist also nicht „Retool oder Lovable", sondern „überall generieren, an einem regierten Ort betreiben". Keines von beiden ändert den grep-Test: Die Rückerstattungsschwelle einer Lovable-App lebt in ihrem generierten Code, die einer Retool-App in ihren Bindungen und Transformern, und in beiden Fällen rekonstruiert ein Prüfer geschäftliche Autorität, indem er Code liest.
 
 ## Wo Retool die richtige Wahl ist — und wo das Metadaten-Modell Sie etwas kostet
 
