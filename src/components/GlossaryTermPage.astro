@@ -1,10 +1,20 @@
 ---
-import { getMarketingPage, marketingPagePath } from '../content-pages/registry';
-import { getGlossaryTerm, glossaryIndexPath, glossaryTermPath } from '../glossary/registry';
+import {
+  getMarketingPage,
+  getMarketingPageSourceLocale,
+  marketingPagePath,
+} from '../content-pages/registry';
+import {
+  getGlossaryTerm,
+  getGlossaryTermSourceLocale,
+  glossaryIndexPath,
+  glossaryTermPath,
+} from '../glossary/registry';
 import { glossaryUi } from '../glossary/ui';
 import type { GlossaryTerm } from '../glossary/types';
 import { htmlLang, postPath, type Locale } from '../lib/i18n';
 import { getPostsInLocale } from '../lib/posts';
+import { phraseHtml } from '../../scripts/lib/cjk-phrases.mjs';
 
 interface Props {
   term: GlossaryTerm;
@@ -12,7 +22,16 @@ interface Props {
 }
 
 const { term, locale } = Astro.props;
-const ui = glossaryUi(locale);
+// Chrome follows the copy, not the URL: a fallback page renders the English
+// term inside <main lang="en"> (Base `contentLocale`), so its labels stay
+// English too. Since #428 ja/ko/de/es/fr have chrome of their own, and keying
+// on `locale` would put Japanese labels around an English definition.
+const sourceLocale = getGlossaryTermSourceLocale(locale, term.slug) ?? locale;
+const ui = glossaryUi(sourceLocale);
+// A card whose copy is in another language than the page around it says so,
+// for screen readers and for search engines reading a partly translated locale.
+const cardLang = (cardLocale: Locale | undefined): string | undefined =>
+  cardLocale && cardLocale !== sourceLocale ? htmlLang(cardLocale) : undefined;
 
 // Cross-links resolve in the reader's locale and silently drop anything that
 // does not exist there — an untranslated article is not a broken promise.
@@ -40,7 +59,7 @@ const hasUsage = pages.length > 0 || articles.length > 0;
 
   <header class="term-head">
     <p class="eyebrow">{ui.termEyebrow}</p>
-    <h1>{term.term}</h1>
+    <h1 set:html={phraseHtml(term.term, sourceLocale)} />
     <p class="definition">{term.definition}</p>
     {
       term.alsoKnownAs && term.alsoKnownAs.length > 0 && (
@@ -66,7 +85,10 @@ const hasUsage = pages.length > 0 || articles.length > 0;
         <ul class="link-grid">
           {related.map((entry) => (
             <li>
-              <a class="card card-link" href={glossaryTermPath(locale, entry.slug)}>
+              <a
+                class="card card-link"
+                href={glossaryTermPath(locale, entry.slug)}
+                lang={cardLang(getGlossaryTermSourceLocale(locale, entry.slug))}>
                 <strong>{entry.term}</strong>
                 <span>{entry.definition}</span>
               </a>
@@ -88,7 +110,10 @@ const hasUsage = pages.length > 0 || articles.length > 0;
             <ul class="link-grid">
               {pages.map((page) => (
                 <li>
-                  <a class="card card-link" href={marketingPagePath(locale, page.slug)}>
+                  <a
+                    class="card card-link"
+                    href={marketingPagePath(locale, page.slug)}
+                    lang={cardLang(getMarketingPageSourceLocale(locale, page.slug))}>
                     <strong>{page.navLabel}</strong>
                     <span>{page.description}</span>
                   </a>
@@ -151,6 +176,27 @@ const hasUsage = pages.length > 0 || articles.length > 0;
     line-height: var(--lh-display);
     letter-spacing: -0.01em;
     overflow-wrap: break-word;
+  }
+  /* zh and ja: break only at the <wbr> between phrases (scripts/lib/cjk-phrases.mjs),
+     as the index heading does. Without it a phone split 行レベルセキュリテ / ィ,
+     leaving one small kana on its own line (#428). ko: break at its own spaces. */
+  /* On a phone, Latin-script headings hyphenate a word wider than the line by
+     the <html lang> dictionary, as post titles do (BlogPost.astro): at 360 a
+     German term split Genehmigungswor / kflow (#428). 12+ letters only, 5 kept
+     on each side; `overflow-wrap` stays the last resort. Wider screens fit
+     every word, and hyphenating there only served text-wrap: balance. */
+  @media (max-width: 640px) {
+    h1:is(:lang(en), :lang(de), :lang(fr), :lang(es)) {
+      -webkit-hyphens: auto;
+      hyphens: auto;
+      hyphenate-limit-chars: 12 5 5;
+    }
+  }
+  h1:lang(zh),
+  h1:lang(ja),
+  h1:lang(ko) {
+    word-break: keep-all;
+    overflow-wrap: anywhere;
   }
   .definition {
     margin: 0;

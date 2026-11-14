@@ -1,8 +1,9 @@
 ---
-title: "Retool vs. plateforme native IA : gouverne qui ouvre l'appli, pas ce que fait la logique"
-description: "Retool offre une gouvernance d'accès solide : RBAC, audit, SSO, auto-hébergement. Mais la logique métier reste du JavaScript éparpillé qu'un humain ou une IA ne relit pas facilement comme un diff d'autorité."
+title: "Retool RBAC et journaux d'audit : évaluer Retool pour des applis IA gouvernées"
+description: "RBAC, journaux d'audit et politiques d'accès de Retool, vérifiés dans sa documentation : ce qu'ils gouvernent dans les applis générées par IA, Retool face à Lovable pour les applis d'entreprise, et la faille d'autorité qui reste."
 author: ObjectStack Team
 date: 2026-06-24
+updated: 2026-11-14T10:00:00+08:00
 status: published
 topic: app-building
 audience: developer
@@ -11,9 +12,12 @@ industries: []
 cover: ./cover-en.svg
 tags:
   - Retool
+  - RBAC
+  - Journal d'audit
+  - Lovable
 ---
 
-**TL;DR :** La gouvernance d'accès de Retool est la meilleure du low-code — RBAC jusqu'à la requête, sécurité au niveau des lignes, journaux d'audit, SSO, auto-hébergement en Enterprise. Rien de tout cela n'est le problème, et il ne faut pas faire semblant que ça l'est. Le problème, c'est la *couche* qu'elle gouverne. Le RBAC contrôle quelles ressources un rôle peut atteindre ; l'**autorité** métier réelle — cette personne peut-elle émettre un remboursement de 12 000 $ ? — vit dans du JavaScript écrit à la main, éparpillé entre la propriété `Hidden` d'un bouton, le binding `disabled` d'un champ et le transformer d'une requête. Rien ne garantit que deux d'entre eux concordent, un non-ingénieur n'en lit aucun, et une IA qui écrit ces expressions produit des décisions d'autorité plus vite qu'aucune pull request ne peut les relire. La faille n'est pas la sécurité. C'est que l'autorité est du *code*, et non un fait déclaré et relisible.
+**TL;DR :** Si vous évaluez Retool pour le développement d'applis IA gouvernées, sa couche d'accès passe l'examen, et il ne faut pas faire semblant du contraire. Retool propose du RBAC via des groupes de permissions, un contrôle par rôle de qui peut utiliser son constructeur IA, des journaux d'audit qui enregistrent chaque exécution de requête, le SSO, l'auto-hébergement et (depuis octobre 2026, en bêta publique pour Postgres) des politiques d'accès aux ressources auxquelles aucune requête ne peut se soustraire. Depuis juin 2026, il applique aussi ces contrôles aux applis construites dans Lovable, Cursor ou Claude Code. Ce qu'il ne vous donne pas, c'est l'**autorité** métier comme fait déclaré. « Cette personne peut-elle émettre un remboursement de 12 000 $ ? » vit encore le plus souvent dans du JavaScript éparpillé entre les propriétés des composants et la logique des requêtes, et une IA écrit ces expressions plus vite qu'aucune pull request ne peut les relire. La faille n'est pas la sécurité de base. C'est que l'autorité est du *code*, et non une règle qu'un relecteur peut lire en un seul endroit.
 
 Imaginez l'appli Retool la plus banale du monde : une console de remboursement. Un ingénieur la construit en un après-midi — une table de commandes, un bouton « Rembourser », quelques requêtes. Le support s'en sert. C'est formidable. C'est Retool au sommet de son art, et Retool est vraiment le meilleur de la catégorie là-dessus.
 
@@ -27,14 +31,14 @@ Voici ce à quoi ressemble réellement « où est-ce appliqué » dans une vraie
 
 ```js
 // 1. refundButton → propriété "Hidden"
-{{ currentUser.groups.includes('admin') ||
-   (currentUser.groups.includes('support_lead') && refundAmount.value <= 10000) }}
+{{ current_user.groups.map(g => g.name).includes('admin') ||
+   (current_user.groups.map(g => g.name).includes('support_lead') && refundAmount.value <= 10000) }}
 
 // 2. refundAmount input → propriété "disabled"
-{{ !currentUser.groups.includes('support_lead') }}
+{{ !current_user.groups.map(g => g.name).includes('support_lead') }}
 
 // 3. issueRefund query → transformer (c'est la partie qui écrit réellement)
-if (refundAmount.value > 10000 && !currentUser.groups.includes('finance')) {
+if (refundAmount.value > 10000 && !current_user.groups.map(g => g.name).includes('finance')) {
   throw new Error('Refunds over $10k require finance');
 }
 ```
@@ -56,6 +60,27 @@ action: issue_refund
 
 Un seul endroit à lire. Un seul endroit à modifier. Une seule chose sur laquelle un relecteur — ou une IA — doit raisonner. La différence entre trois expressions entretenues à la main et une règle déclarée, c'est toute la différence entre « l'appli est codée » et « l'autorité de l'appli est gouvernée ».
 
+## Retool RBAC et journaux d'audit : ce que couvre réellement chaque contrôle
+
+Le test du grep n'est équitable que si les contrôles que Retool possède *bel et bien* sont énoncés exactement. Les voici, vérifiés dans la documentation de Retool elle-même en novembre 2026 :
+
+| Contrôle | Ce qu'il gouverne | Où il s'arrête |
+| --- | --- | --- |
+| **Groupes de permissions (RBAC)** | Les groupes « attribuent des rôles et contrôlent l'accès aux applis, ressources, workflows et agents » ([guides des permissions Retool](https://docs.retool.com/permissions/guides)) | Qui peut ouvrir, modifier ou interroger, pas ce qu'une action donnée peut faire une fois quelqu'un à l'intérieur |
+| **Assist RBAC** (févr. 2026, Business et Enterprise) | Par rôle : modes Ask et Build, mode Ask seul, ou aucun accès au constructeur IA ([changelog](https://docs.retool.com/changelog/assist-rbac)) | Qui peut *générer* des changements, pas ce qu'un changement généré accorde |
+| **Journaux d'audit** | Les actions des utilisateurs, « telles que les exécutions de requêtes et les réinitialisations de mot de passe », avec la requête exacte, les paramètres, l'adresse IP et le temps de réponse ; un an de rétention sur Cloud, export CSV en Business et Enterprise, streaming vers Datadog ou Splunk en Enterprise ([journaux d'audit](https://docs.retool.com/org-users/guides/audit-logs)) | Détective : ils enregistrent ce qui s'est exécuté, une fois exécuté |
+| **Filtres de lignes `current_user`** | Des valeurs « calculées côté serveur à partir de la session authentifiée » et injectées dans chaque requête ([sécurité au niveau des lignes](https://docs.retool.com/docs/user-permissions)) | Requête par requête, à la main : « Une requête qui omet le filtre renvoie des données non filtrées. » |
+| **Politiques d'accès aux ressources** | Accès aux tables, colonnes et lignes d'une ressource, appliqué à chaque requête venant des applis, de la bibliothèque de requêtes, du SQL brut et des agents ([politiques d'accès](https://docs.retool.com/data-sources/concepts/access-policies)) | PostgreSQL uniquement, [en bêta publique depuis octobre 2026](https://community.retool.com/t/new-public-beta-data-access-enforcement-for-postgres-resources/67615) ; les filtres de lignes « ne valident ni les lignes qu'un utilisateur crée, ni les valeurs qu'un utilisateur écrit » |
+| **Gouvernance des applis codées par IA** (juin 2026) | Les applis construites dans Lovable, Replit, Cursor ou Claude Code « héritent des permissions et des pistes d'audit existantes » ; « Les permissions sont rattachées aux sources de données » ([salle de presse Retool](https://retool.com/newsroom/retool-extends-enterprise-governance-to-vibe-coded-apps)) | Même couche : permissions sur les sources de données, pas des règles métier au niveau de l'action |
+
+Deux de ces lignes comptent plus que les autres, parce qu'on y voit Retool aller exactement dans la direction que défend cet article.
+
+**Les politiques d'accès sont une règle déclarée, pas trois expressions.** Une politique sur la ressource s'applique à chaque requête, « si bien qu'aucune requête ne peut s'y soustraire », soit l'inverse du filtre `current_user` posé requête par requête. Pour l'autorité sur les *données* — quelles lignes un support lead peut lire ou supprimer —, cela règle l'essentiel du test du grep sur Postgres. La mise à jour honnête par rapport à la version de juin de cet article, c'est que Retool a désormais une vraie réponse pour cette couche.
+
+**Ce que les politiques n'expriment pas, c'est la règle de remboursement.** La documentation des politiques d'accès décrit l'accès en lecture, écriture et suppression aux tables, colonnes et lignes. Elle ne décrit ni seuils de montant, ni barrières d'approbation, ni conditions sur la valeur écrite ; et les filtres de lignes ne vérifient explicitement pas ce qu'un utilisateur écrit. « Les support leads jusqu'à 10 000 $, la finance au-delà, une approbation au-dessus du seuil » est une règle sur une *action et ses arguments* : elle vit donc toujours dans le bouton, le champ et le transformer ci-dessus. Les politiques ramènent l'autorité sur les données en un seul endroit. L'autorité métier reste dans le JavaScript.
+
+Lisez le tableau comme une grille d'évaluation, et Retool réussit chaque question de gouvernance d'accès qu'une revue de sécurité posera. Celle à laquelle il ne peut pas répondre depuis un seul endroit, c'est celle du début de cet article : quels rôles peuvent émettre un remboursement de plus de 10 000 $, et où est-ce appliqué ?
+
 ## Pourquoi le contrôle de version ne comble pas cette faille
 
 L'objection de l'ingénieur Retool averti est juste, et il faut y répondre précisément : *« Nous avons un contrôle de version adossé à Git, des journaux d'audit et du RBAC. Les changements sont relus en PR. L'accès est gouverné. Que manque-t-il ? »*
@@ -75,6 +100,22 @@ Pendant des années, le test du grep était survivable parce qu'un humain écriv
 Pointez une IA sur la même appli et l'économie s'inverse dans les deux sens. L'IA peut générer cinquante bindings et une douzaine de transformers en une minute — elle produit des *décisions d'autorité* plus vite qu'aucun relecteur ne peut les tracer. Et pour relire ce qu'elle a produit, vous revoilà à lire du JavaScript à travers les écrans, parce qu'il n'existe toujours aucune représentation structurée unique de l'autorité à comparer en diff. « Retool AI » et les Agents (2025) sont réels et utiles, mais ils automatisent *par-dessus le même substrat bâti à la main* : l'agent est gouverné (Retool peut cadrer ce qu'il appelle), mais l'**appli que l'agent modifie ne l'est pas** — pas gouvernée en autorité sous une forme qu'une IA — ou un humain — puisse relire comme un fait plutôt que comme du code.
 
 Ce que l'IA produit le plus vite est précisément ce que Retool rend le plus difficile à relire.
+
+## Retool vs. Lovable pour les applis d'entreprise
+
+L'autre comparaison que l'on fait souvent oppose Retool à Lovable, généralement présentée comme « constructeur d'outils internes vs. générateur d'applis IA ». Pour une appli d'entreprise, le cadrage le plus utile est : *les utilisateurs de qui chaque contrôle gouverne-t-il ?*
+
+| | Retool | Lovable |
+| --- | --- | --- |
+| **Ce que l'IA produit** | Une appli sur le runtime de composants de Retool, branchée sur vos ressources existantes | Du code de projet full-stack ; par défaut, il « vit dans l'infrastructure managée de Lovable », avec synchronisation vers GitHub, GitLab ou Bitbucket ([Lovable for Enterprise](https://docs.lovable.dev/introduction/lovable-for-enterprise)) |
+| **Rôles** | Les groupes de permissions contrôlent l'accès à l'appli et aux ressources, workflows et agents qui se trouvent derrière | Propriétaire, admin, éditeur, lecteur et collaborateur externe gouvernent l'*espace de travail* qui construit l'appli ([même page](https://docs.lovable.dev/introduction/lovable-for-enterprise)) |
+| **Accès des utilisateurs finaux aux données** | Permissions des sources de données, filtres `current_user`, politiques d'accès | Sécurité au niveau des lignes dans le backend intégré « pour les données par utilisateur », intégrée au projet généré ; un Quick scan « s'exécute à chaque publication et vérifie les règles d'accès à la base de données » |
+| **Audit** | Journal d'audit au niveau des requêtes, un an sur Cloud | Journal d'audit de l'espace de travail « conservé 13 semaines », avec export planifié vers un SIEM ou un bucket de stockage |
+| **Auto-hébergement** | Instances auto-hébergées gérées par Retool ou autogérées ([Retool auto-hébergé](https://docs.retool.com/self-hosted)) | Le backend et la base de données peuvent passer sur une infrastructure que vous exploitez, « y compris Supabase auto-hébergé » ; le constructeur lui-même reste en SaaS |
+
+La distinction des deuxième et troisième lignes est celle qui décide de l'adéquation à l'entreprise. Les rôles et le journal d'audit de Lovable gouvernent les personnes qui *construisent* l'appli ; les personnes qui l'*utilisent* sont protégées par les règles d'accès du backend propre au projet généré, qu'un scan vérifie à chaque publication. Retool gouverne les personnes qui utilisent l'appli, parce que l'appli tourne dans Retool. C'est pourquoi le mouvement de Retool en juin 2026 consiste à *héberger* les applis construites dans Lovable et des outils similaires sous ses propres permissions de sources de données, plutôt qu'à les concurrencer sur la génération.
+
+Le schéma réaliste en entreprise n'est donc pas « Retool ou Lovable », mais « générer n'importe où, exécuter dans un lieu gouverné ». Aucun des deux ne change le test du grep : le seuil de remboursement d'une appli Lovable vit dans son code généré, celui d'une appli Retool dans ses bindings et ses transformers, et dans les deux cas un relecteur reconstitue l'autorité métier en lisant du code.
 
 ## Là où Retool est le bon choix — et là où le modèle de métadonnées vous coûte
 
