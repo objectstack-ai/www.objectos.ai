@@ -1,0 +1,229 @@
+---
+title: "¿Federar datos externos o copiarlos dentro? Sincronización unidireccional, un escritor por fila"
+description: "La federación lee una tabla externa en vivo; la sincronización la copia en un objeto que solo el pull escribe. Medido en ObjectStack 18.4.0: job de pull, registro, edición rechazada, 3 de 7 filas, escritura de vuelta por acción."
+author: ObjectStack Team
+date: 2026-11-20
+status: published
+topic: integration-data
+audience: it
+solutions: []
+industries: []
+cover: ./cover-en.svg
+tags:
+  - Sincronización de datos
+  - Federación
+  - Datos externos
+---
+
+**Federe cuando los datos deban seguir en vivo o no deban aterrizar. Cópielos dentro cuando personas, informes e IA necesiten unirlos, filtrarlos y preguntarles a la velocidad de la plataforma.** Si copia, hágalo con **un escritor por fila**: un pull programado es lo único que escribe una fila copiada, nadie la edita, y un cambio en los datos vuelve a la fuente a través de una sola acción declarada, tras lo cual el siguiente pull trae el resultado. Dos escritores necesitan una fusión de conflictos. Uno nunca la necesita. En el `@objectstack/cli` 18.4.0 publicado, esa copia funciona hoy: en la transcripción de abajo, el segundo pull leyó **3 de las 7 filas** de la fuente —las que habían cambiado y la que comparte el punto donde se detuvo la última ejecución— y no escribió nada más.
+
+## Dos formas de entrar, y una tercera que no es ninguna
+
+El registro de diseño de ObjectStack para esto, ADR-0153, parte de lo que la federación no puede hacer. La federación deja las filas donde están y reenvía cada consulta, lo que es correcto para datos en vivo o que no deben aterrizar, pero «los informes, el análisis, las preguntas a la IA y los joins entre fuentes chocan primero con esos límites. Copiar las filas en un objeto ordinario los elimina: la plataforma pasa a ser dueña de los índices, los operadores de consulta, los permisos y la disponibilidad». Luego da la regla que deben enseñar su guía y sus skills:
+
+| La necesidad | Elija |
+|:--|:--|
+| Datos en vivo, una tabla cada vez; no se puede tocar el sistema heredado; datos que no deben aterrizar | **federación**: un objeto virtual |
+| Informes, análisis, preguntas a la IA, joins entre fuentes; un sistema heredado lento o frágil; los resultados de un data warehouse | **sincronización entrante**: un objeto `synced`, un `mapping` con fuente y un `job` |
+| Disparar algo en un sistema externo; no aterrizan filas | **una acción de conector**: un nodo `connector_action` de flujo, o una acción declarada |
+
+El argumento a favor de la federación es fuerte y merece exponerse con toda su fuerza. Un objeto federado siempre está al día; no hay desfase entre un cambio en la fuente y lo que ve un miembro. Nada se duplica, así que no hay una segunda copia de datos personales que proteger, conservar o borrar. Y la fuente sigue siendo el único lugar donde se escribe. Un artículo complementario trata la federación en sus propios términos. Si esas propiedades son lo que necesita, deténgase aquí: una copia es la herramienta equivocada.
+
+Una copia se gana su lugar cuando los límites de la federación aprietan. El motor no puede hacer joins entre fuentes de datos, cada lectura paga la latencia del sistema remoto y las lecturas de un driver de plugin tienen tope. Una copia convierte la tabla remota en un objeto ordinario, y todo permiso, informe, dataset, flujo y herramienta MCP existente la lee sin cambios.
+
+## Un escritor por fila
+
+La copia solo es segura si no puede derivar en un segundo sistema de registro. Eso significa «un escritor por fila», y en 18.4.0 son cuatro reglas que el runtime hace cumplir:
+
+1. **El pull escribe las filas.** Un `mapping` con `datasourceSource` nombra un objeto federado y un campo de marca de agua. Un `job` cuyo `pull` nombra ese mapping lo ejecuta según una programación y escribe a través del importador como el sistema.
+2. **Nadie más lo hace.** El destino se declara `managedBy: 'synced'`. El changelog de spec de 18.4.0 enumera lo que eso activa: «La guarda de escritura del motor rechaza la escritura genérica de un miembro (403), la reconciliación de `apiMethods` retira todo método de escritura, el ajuste de `/me/permissions` responde la fila cerrada».
+3. **Un cambio va a la fuente, mediante una acción declarada.** ADR-0153 D5: «Un cambio en los datos de origen se hace en el origen, mediante una acción declarada … La escritura de vuelta no edita la fila local; **el siguiente pull la reconcilia**».
+4. **No hay otra dirección.** «Sin sincronización bidireccional, sin fusión de conflictos, sin capa de ediciones al estilo Writeback-Dataset».
+
+La regla 4 es lo esencial. Una sincronización bidireccional tiene dos escritores por fila, así que necesita una política para la fila que ambos lados cambiaron desde la última sincronización: gana el último, fusión por campo, una cola de conflictos que alguien tiene que atender. Cada una es un lugar donde los datos se pierden en silencio. Con un escritor no existe esa fila, así que no hay fusión que salga mal.
+
+![El bucle de un solo escritor, medido en 18.4.0: un job de pull copia la tabla PARTS del ERP en el objeto synced syncdemo_part (la ejecución 1 lee 6, la 2 lee 3 de 7, la 3 lee 3); la edición de una fila copiada por un miembro o un administrador responde 403; un cambio vuelve solo por la acción declarada, cuyo flujo llama a la API del ERP, y el siguiente pull lo trae.](./one-writer-loop-en.svg)
+
+## La construcción: cinco declaraciones y nada más
+
+El banco de pruebas es un scaffold nuevo de `npm create objectstack@latest`, que instaló `@objectstack/cli` 18.4.0, la versión que `npm view @objectstack/cli dist-tags` reportaba como `latest` el 2026-11-14. El «ERP antiguo» es un archivo SQLite que la aplicación no posee, con una tabla, `PARTS`, que guarda seis piezas y una columna `UPDATED_AT`. Cinco declaraciones los conectan.
+
+```ts
+// 1. The ERP's database: external, so no DDL ever runs there.
+export const Erp = defineDatasource({
+  name: 'erp', driver: 'sqlite', schemaMode: 'external',
+  config: { filename: './legacy/erp.db' },
+  external: { allowWrites: false, validation: { onMismatch: 'fail', checkOnBoot: true } },
+});
+
+// 2. The PARTS table, federated. PART_NO is mapped onto `id`: that is the source key.
+export const ErpPart = ObjectSchema.create({
+  name: 'syncdemo_erp_part', datasource: 'erp', sharingModel: 'private',
+  external: {
+    remoteName: 'PARTS',
+    columnMap: { PART_NO: 'id', DESCRIPTION: 'description', UNIT_PRICE: 'unit_price', UPDATED_AT: 'updated_at' },
+  },
+  fields: {
+    description: Field.text({ label: 'Description' }),
+    unit_price: Field.number({ label: 'Unit price', scale: 2 }),
+    updated_at: Field.datetime({ label: 'Updated at (ERP)' }),
+  },
+});
+
+// 3. The local copy: an ordinary object that only the pull writes.
+export const Part = ObjectSchema.create({
+  name: 'syncdemo_part', managedBy: 'synced', sharingModel: 'public_read',
+  fields: {
+    part_no: Field.text({ label: 'Part no', required: true }),
+    description: Field.text({ label: 'Description' }),
+    unit_price: Field.number({ label: 'Unit price', scale: 2 }),
+    source_updated_at: Field.datetime({ label: 'Updated at (ERP)' }),
+  },
+});
+
+// 4. The sync, defined on its target: where rows come from, how they map, how one matches.
+export const ErpPartsPull = defineMapping({
+  name: 'erp_parts_pull', targetObject: 'syncdemo_part',
+  mode: 'upsert', upsertKey: ['part_no'],
+  fieldMapping: [
+    { source: 'id', target: 'part_no' },
+    { source: 'description', target: 'description' },
+    { source: 'unit_price', target: 'unit_price' },
+    { source: 'updated_at', target: 'source_updated_at' },
+  ],
+  datasourceSource: { object: 'syncdemo_erp_part', watermark: { field: 'updated_at', start: '2026-01-01' } },
+});
+
+// 5. When. No code: `pull` names the mapping.
+export const ErpPartsPullJob = defineJob({
+  name: 'erp_parts_pull_job',
+  schedule: { type: 'interval', intervalMs: 30000 },
+  pull: { mapping: 'erp_parts_pull' },
+});
+```
+
+`objectstack validate` lo aprobó. La construcción es estricta en las partes que hacen honesta una copia. Sin `managedBy: 'synced'` en el destino, el mismo comando salió con 1:
+
+```text
+✗ Mapping 'erp_parts_pull' pulls rows into object 'syncdemo_part' through its datasourceSource,
+  but that object is not managedBy: 'synced' (it is unset). A pulled copy is read-only to members,
+  so a member's edit is never kept or lost silently by the next pull; declare managedBy: 'synced'
+  on the target object (ADR-0153 D4).
+```
+
+El changelog enumera los demás rechazos que se aplican al construir y otra vez antes de la primera lectura: un mapping con fuente debe ser `mode: 'upsert'` con `upsertKey`, la fuente debe ser un objeto federado cuyo `columnMap` asigne una columna a `id` (`source_key_missing`), la marca de agua debe ser un campo `datetime`, `date` o entero, y una entrada de `fieldMapping` debe copiarla sin cambios al destino (`watermark_field_unmapped`).
+
+Hay un interruptor fácil de pasar por alto: los jobs de un paquete solo se programan donde la variable `OS_AUTOMATION_SCHEDULED_WORK_ENABLED` vale `true`; según la guía de jobs, ese interruptor «**está desactivado por defecto en toda postura de tenencia y todo kernel**». Arranqué `objectstack dev --fresh` con él activado, creé una miembro (Mia) con un conjunto de permisos que concede lectura y, a propósito, edición sobre `syncdemo_part`, y registré cada respuesta.
+
+## El registro de ejecuciones
+
+Siete lecturas, en el orden en que ocurrieron. Horas en UTC del 2026-11-14.
+
+| # | Qué pasó | Qué volvió |
+|:--|:--|:--|
+| 1 | El primer tick del job, 04:42:41 | `sys_sync_run`: leídas 6, creadas 6, `completed` |
+| 2 | Mia lista `syncdemo_part` | `200`, 6 filas |
+| 3 | Mia cambia el precio de P-2001; un administrador intenta lo mismo | `403 PERMISSION_DENIED`, ambos |
+| 4 | Alguien edita P-1003 y añade P-3002 dentro del ERP | la siguiente ejecución, 04:43:11: leídas 3, creada 1, actualizadas 2 |
+| 5 | Mia ejecuta la acción «Change price in ERP» sobre P-2001 | `200`; la API del ERP registra un `PATCH` |
+| 6 | Mia lee P-2001 enseguida | sigue en `3.8` |
+| 7 | La siguiente ejecución, 04:43:41 | leídas 3, actualizadas 3; P-2001 muestra `4.1` |
+
+**Lectura 1: el registro de ejecución.** Cada pull deja una fila de `sys_sync_run` en la organización del job. Recortada a los campos que importan:
+
+```json
+{ "mapping": "erp_parts_pull", "mapping_package": "com.example.syncdemo",
+  "target_object": "syncdemo_part", "source_kind": "datasource", "source": "syncdemo_erp_part",
+  "datasource": "erp", "read_path": "builtin", "trigger": "schedule", "status": "completed",
+  "read_count": 6, "created_count": 6, "updated_count": 0, "refused_count": 0,
+  "watermark_field": "updated_at",
+  "watermark_from": "2026-01-01T00:00:00.000Z",
+  "watermark_committed": "2026-11-09T16:05:00.000Z",
+  "holds_position": true, "job_run_id": "run_a02e22c1-…", "failure_reason": null }
+```
+
+`watermark_committed` es el `UPDATED_AT` más reciente que escribió la ejecución, y `holds_position: true` marca la fila desde la que empieza la siguiente. El enlace con el libro de jobs es `job_run_id`, la fila `sys_job_run` del tick que la impulsó. La retención la fija el changelog del servicio: las filas son «telemetría conservada 30 días, la ventana del libro de jobs, salvo la fila por mapping (paquete y nombre) y organización que guarda la posición de lectura».
+
+**Lectura 3: la edición rechazada.** Mia tiene `allowEdit: true` sobre el objeto. A la respuesta no le importa:
+
+```json
+HTTP 403
+{ "error": "[Security] Access denied: 'syncdemo_part' is synced (managedBy:'synced', ADR-0153) — direct update via the data API is disabled. Its rows are copied from their source by a pull, which would keep or overwrite the change; change the source through a declared action instead, and the next pull brings it home.",
+  "code": "PERMISSION_DENIED", "object": "syncdemo_part" }
+```
+
+El `PATCH` del administrador recibió el mismo cuerpo. El `POST` y el `DELETE` de Mia respondieron `403` con «direct insert» y «direct delete» en la misma frase. El rechazo también nombra la salida, que es la forma que se quiere cuando quien hace la llamada es un agente.
+
+**Lectura 4: la ejecución incremental, 3 de 7.** Cambié el ERP directamente, como lo harían sus propios usuarios: el precio de P-1003 de 0.05 a 0.06 y una pieza nueva, P-3002, ambas con `2026-11-14T04:42:41.487Z`. El siguiente tick:
+
+```json
+{ "read_count": 3, "created_count": 1, "updated_count": 2,
+  "watermark_from": "2026-11-09T16:05:00.000Z",
+  "watermark_committed": "2026-11-14T04:42:41.487Z", "status": "completed" }
+```
+
+Tres filas leídas de las siete que el ERP tenía entonces: P-1003, P-3002 y P-3001, que comparte la posición confirmada por la última ejecución. La guía de jobs describe esa relectura: una ejecución «lee solo las filas escritas desde entonces, más las que comparten esa última posición, que el upsert vuelve a escribir sin daño». Así que `updated_count` cuenta también la P-3001 sin cambios. Léalo como «filas escritas», no «filas que cambiaron».
+
+**Lecturas 5 a 7: escritura de vuelta.** La acción es una acción `type: 'flow'` sobre `syncdemo_part`. Su flujo tiene un nodo que trabaja, un `connector_action` que llama a un conector `rest` apuntado a la propia API HTTP del ERP (aquí, un sustituto de 20 líneas que actualiza `PARTS` y sella `UPDATED_AT`):
+
+```ts
+{ id: 'patch_erp', type: 'connector_action',
+  connectorConfig: {
+    connectorId: 'erp_api', actionId: 'request',
+    input: {
+      method: 'PATCH',
+      path: { dialect: 'cel', source: "'/parts/' + record.part_no" },
+      body: { dialect: 'cel', source: '{ "unit_price": new_price }' },
+    },
+  },
+}
+```
+
+Mia la llamó por REST, la misma puerta por la que pasa el botón de la página del registro («el botón de la consola y la llamada a la API pasan por la misma puerta y el mismo manejador»):
+
+```bash
+curl -s -b mia.cookies -X POST http://localhost:49921/api/v1/actions/syncdemo_part/syncdemo_send_price \
+  -H 'content-type: application/json' \
+  -d '{"recordId":"07580e75-…","params":{"new_price":4.1}}'
+```
+
+```text
+HTTP 200  { "success": true, "data": { "success": true, "flowLabel": "Send price to ERP", … } }
+ERP API:  2026-11-14T04:43:12.035Z PATCH /parts/P-2001 {"unit_price":4.1} -> changes=1
+```
+
+Leída justo después, la copia seguía diciendo `"unit_price": 3.8`, porque la escritura de vuelta cambió el ERP y nada más. Treinta segundos después, la siguiente ejecución leyó 3 filas (P-1003 y P-3002 en la posición compartida, y P-2001), actualizó 3, confirmó `2026-11-14T04:43:12.035Z`, y P-2001 mostró `"unit_price": 4.1, "source_updated_at": "2026-11-14T04:43:12.035Z"`. El valor de la copia es el que el ERP aceptó, no el que tecleó el usuario. Si el ERP lo hubiera rechazado o redondeado, la copia mostraría eso.
+
+## Lo que la copia no hereda
+
+- **Los permisos de la fuente.** Quién puede leer una fila en el ERP no viaja con ella. ADR-0153: «Los permisos del objeto se configuran localmente desde cero, como dice la resolución: un miembro lee filas sincronizadas solo mediante una concesión». En la ejecución, Mia leyó la copia gracias a su conjunto de permisos, y la misma sesión recibió `403` en el objeto fuente federado, sobre el que no tiene concesión. Esa es la configuración a la que apuntar: los miembros leen la copia y nadie salvo el pull lee la fuente. Una fila copiada no tiene propietario (las filas de arriba no llevan `owner_id`), así que el consejo de lint del changelog de spec para un objeto synced es «`sharingModel: 'public_read'` … o `'private'` con una regla de compartición que conceda lectura».
+- **El historial de ejecuciones, para los miembros.** `sys_sync_run` está abierto a la API de datos, pero la lectura de Mia respondió `403`: como cualquier objeto, necesita una concesión.
+- **Una organización, en un despliegue multiorganización.** Bajo una postura amurallada, la plataforma no adivina. Arrancada con `OS_TENANCY_POSTURE=isolated`, esta misma aplicación se negó a iniciar hasta que la fuente federada declaró su alcance de organización («Stating nothing: 'syncdemo_erp_part'»). Con la fuente declarada compartida, el arranque registró en `error`: «NOT SCHEDULED — job 'erp_parts_pull_job' declares no `organization`» (luego se detuvo en un ajuste ajeno de la postura amurallada, la política de membresía, que un despliegue multiorganización real declara de todos modos). La solución es `organization` en el job, un job por organización. El changelog de 18.4.0 nombra los rechazos con los que responde el propio pull en esa postura: `source_organization_scope_unstated` y `job_organization_missing`.
+- **Un pipeline.** La copia es una tabla fuente, un mapping, un destino. ADR-0153: «ObjectStack no construye pipelines ni transformaciones. Unir, limpiar y agregar entre fuentes es trabajo del data warehouse o del proveedor de ETL; ObjectStack sincroniza el resultado». Si necesita una vista limpia y unida, constrúyala en el warehouse y traiga el resultado.
+
+El kernel sobre el que corre todo esto es de código abierto. ADR-0153 D9: el kernel de sincronización «se distribuye en este repositorio bajo Apache-2.0, como la federación».
+
+## En desarrollo
+
+Las partes siguientes están diseñadas en ADR-0153 (estado *Proposed* en la etiqueta 18.4.0) y no están en 18.4.0. Nada de esta sección se ejecutó.
+
+- **La política de borrado.** Una fila que desaparece de la fuente se marcará, nunca se borrará: «`deletePolicy: 'mark' | 'ignore'`, por defecto `mark`, sellando `_sync_deleted_at`», y «Un pull nunca borra físicamente una fila». Un pull incremental verá los borrados mediante un campo de borrado lógico de la fuente, `deletedField`. En 18.4.0 las claves se analizan, y el changelog dice que «todavía advierten a su autor de que aún no cambian nada». Hoy, una fila borrada en la fuente permanece en la copia.
+- **Columnas de procedencia en cada fila.** Cinco columnas de plataforma bajo un prefijo reservado: «`_sync_source`», «`_sync_external_id`», «`_sync_pulled_at`», «`_sync_run_id`» y «`_sync_deleted_at`». El pull de 18.4.0 lo dice en su cabecera: «El marcado de borrados (D3), las columnas de procedencia (D4) y la deriva (D6) son cambios posteriores». Hoy, el registro de ejecución es la procedencia; el prefijo ya está reservado, así que un campo llamado `_sync_…` se rechaza.
+- **El asistente de sincronización de Studio.** «El asistente de sincronización de Studio crea el objeto `synced`, el `mapping` y ese `job`». Necesita un job que pueda crearse en tiempo de ejecución, que el registro diseña como la única excepción a que los jobs vivan solo en código: «la puerta de tiempo de ejecución acepta un `job` cuya única forma de ejecución es `pull`». Studio también mostrará «el historial de ejecuciones en el objeto sincronizado y en la página de su fuente».
+- **Warehouses como fuente.** «La enmienda `6731744658` convierte un warehouse en fuente de pull de primera clase»; los drivers de Snowflake y BigQuery son «paquetes de plugin fuera de este repositorio», verificados con el kit de conformidad de drivers de plugin, y un driver de plugin bajo el umbral mínimo se lee «en ventanas acotadas por ambos lados», que se «dividen a la mitad» mientras una ventana vuelva por encima del tope de filas.
+- **La guía y las skills de sincronización.** «La regla de tres vías y la postura de socios (D10), la respuesta sobre la escritura de vuelta (D5), y `SYNC_ARCHITECTURE.md` y las skills apuntando a `mapping` / `job`». Hasta entonces, la sección «Pulling a mapping» de la guía de jobs y la referencia de mapping son la documentación.
+
+## Cómo revisarlo cuando lo escribe un agente
+
+Si un agente añade una sincronización a su aplicación, el diff son las cinco declaraciones de arriba, más una acción y un flujo si la escritura de vuelta entra en el alcance. Lea primero cuatro líneas:
+
+1. `managedBy: 'synced'` en el destino. Sin él la construcción rechaza el mapping, así que si la construcción está en verde, ahí está.
+2. El `sharingModel` y los conjuntos de permisos del destino. Empiezan desde cero; nada se heredó.
+3. `watermark.field` y la clave de la fuente. ADR-0153 pide a la marca de agua que «cada escritura en la fuente selle la marca de agua de la fila con un valor igual o superior a cualquier valor que la fuente ya tenga», y a la clave que sea única y nunca NULL, «un requisito sobre la fuente, como el invariante 2, que el pull no puede comprobar». Una columna que no se actualiza en cada escritura pierde cambios en silencio.
+4. La acción y su flujo, si existen. Es el único camino de vuelta a la fuente, así que revíselo como cualquier llamada saliente: qué envía, a quién y quién puede ejecutarla.
+
+Después lea la primera fila de `sys_sync_run` que escriba el despliegue. Comparar `read_count` con el número de filas de la fuente es la revisión de la ejecución.
+
+## Apunte su agente hacia ello
+
+Entregue a su agente de código la guía de jobs (`objectstack.ai/docs/automation/jobs`, «Pulling a mapping») y la referencia de mapping, y dele la regla en una línea: copiar a un objeto `managedBy: 'synced'` mediante un `mapping` con `datasourceSource` y un `job` cuyo `pull` lo nombre; nunca escribir en la copia; cambiar la fuente mediante una acción declarada. La [guía para configurar un agente de código para ObjectStack](/en/blog/how-to-point-your-agent-at-objectstack/) cubre el archivo de reglas y el endpoint MCP que llevan esa regla. El mapping de aquí usa los mismos `fieldMapping` y `upsertKey` que usaría para [importar una hoja de cálculo de un sistema antiguo](/es/blog/how-to-import-a-spreadsheet-from-an-old-system/); un pull es esa importación, ejecutada por un job contra una fuente viva. Y la copia es un objeto más de la [ontología](/en/glossary/ontology/), por eso todo informe y toda herramienta de IA la leen sin trabajo extra. Todo lo anterior se ejecutó en `@objectstack/cli` 18.4.0.
