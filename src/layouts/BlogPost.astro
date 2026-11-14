@@ -2,7 +2,7 @@
 import { Image } from 'astro:assets';
 import Base from './Base.astro';
 import { getEntry, type CollectionEntry } from 'astro:content';
-import { OG_IMAGE, ogImagePath, postCoverFile } from '../../scripts/lib/og-image.mjs';
+import { OG_IMAGE, postShareImage } from '../../scripts/lib/og-image.mjs';
 import { phraseHtml } from '../../scripts/lib/cjk-phrases.mjs';
 import { formatDate, ui, blogPath, postPath, STATUS_COLOR, type Locale } from '../lib/i18n';
 import { termBySlug, termHref, termLabel } from '../lib/terms';
@@ -43,25 +43,32 @@ const absoluteUrl = (href: string): string =>
   site ? new URL(href, `${site}/`).toString() : new URL(href, Astro.url).toString();
 const currentUrl = site ? `${site}${Astro.url.pathname}` : Astro.url.href;
 // The share image (`og:image`, `twitter:image`, `BlogPosting.image`): a
-// 1200x630 JPEG that scripts/og-images.mjs renders from the cover after
-// `astro build`, because the networks draw no card for an SVG and the PNG
-// covers are 1.5-1.9 MB. Its URL comes from the rule the renderer uses too
-// (scripts/lib/og-image.mjs), which reads the cover path from the post's
-// frontmatter: `data.cover` only carries the built asset, so the entry is
-// looked up for its file. That script fails the build if a page names a file
-// it did not render, or a size that is not the file's.
+// 1200x630 JPEG that scripts/og-images.mjs draws after `astro build`, one per
+// locale page: this page's title, the cover's art on its ground and the
+// ObjectOS mark (scripts/lib/og-composite.mjs). The networks draw no card for
+// an SVG, and a cover under spec v2 carries no title. Its URL comes from the
+// rule the renderer uses too (scripts/lib/og-image.mjs), which reads the cover
+// path and the title from this locale's frontmatter: `data.cover` only carries
+// the built asset, so the entry is looked up for its file. That script fails
+// the build if a page names a file it did not render, or a size that is not
+// the file's.
 const entry = await getEntry('blog', locale === 'en' ? slug : `${slug}.${locale}`);
-const coverFile: string | undefined = entry?.filePath ? postCoverFile(entry.filePath) : undefined;
-if (data.cover && !coverFile) {
+const share = entry?.filePath ? postShareImage(entry.filePath) : undefined;
+if (data.cover && !share) {
   throw new Error(`BlogPost: ${locale}/${slug} has a cover, but its file could not be resolved`);
+}
+// The image is drawn from the frontmatter title, the page shows `data.title`:
+// one string, or the card would show a title the page does not.
+if (share && share.title !== data.title) {
+  throw new Error(`BlogPost: ${locale}/${slug}: the share image's title "${share.title}" is not the page's "${data.title}"`);
 }
 // An SVG cover with a dark variant (src/lib/cover-variant.ts) is drawn twice,
 // one image per theme. Both are lazy: a display:none image is only skipped
 // when it is lazy, so the eager, high-priority pair would fetch both. The
 // visible one sits in the first viewport and is requested at first layout.
 const coverDark = darkCover(entry?.filePath, data.cover);
-const shareImage = coverFile
-  ? { url: absoluteUrl(ogImagePath(coverFile)), width: OG_IMAGE.width, height: OG_IMAGE.height, alt: data.title }
+const shareImage = share
+  ? { url: absoluteUrl(share.urlPath), width: OG_IMAGE.width, height: OG_IMAGE.height, alt: data.title }
   : undefined;
 const topic = termBySlug(data.topic)!;
 const relatedPosts = (await getPostsInLocale(locale))
