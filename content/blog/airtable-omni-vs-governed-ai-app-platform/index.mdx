@@ -1,8 +1,9 @@
 ---
-title: "Airtable Omni vs. Governed AI App Platforms: Why Reviewed Diffs Beat Undo"
-description: "Airtable Omni can build a real app from one sentence, but regulated systems of record need reviewed diffs, preventive controls, and infrastructure choices that go beyond undo."
+title: "Airtable Omni: Can You Edit What It Builds, and Who Approves the Change?"
+description: "Airtable Omni builds a live app from one sentence. Yes, you can edit what it generates, down to element source code. But most changes apply as Omni builds, so review comes after the change, not before."
 author: ObjectStack Team
 date: 2026-06-24
+updated: 2026-11-14T10:00:00+08:00
 status: published
 topic: app-building
 audience: business
@@ -14,19 +15,35 @@ tags:
   - Airtable Omni
 ---
 
-**TL;DR:** Airtable's relaunch as an AI-native platform is real: Omni assembles apps from production-tested components, not throwaway code. The gap is not capability; it is control. Omni relies on an *undo button* and a *detective* audit log, which means you learn that a control changed *after* it changed. A regulated system of record needs a *preventive* control: a reviewed diff approved *before* it ships, with permissions the runtime enforces on objects, fields, and actions rather than only through views. Add Airtable's SaaS deployment model, and for some systems of record the platform decision is made before you compare a single feature.
+**TL;DR:** If you build with Airtable Omni, you do get full control to edit what it makes. Its tables, fields and automations are ordinary Airtable objects, its interface pages open in Interface Designer, and the custom elements it generates have source code a base Creator or Owner can edit or download. Omni is not vibe coding: it assembles apps from production-tested components, not throwaway code. The gap is not editability; it is *when* review happens. Omni's changes go live as it builds them. It asks first before deleting, publishing an interface or turning on an automation, and otherwise relies on undo and an audit log. A regulated system of record needs a *preventive* control: a reviewed diff, approved before it ships, that names who gains access to what. Add Airtable's cloud-only deployment, and for some systems of record the platform decision is made before you compare a single feature.
 
 Start with an ordinary Tuesday, because this is where the issue appears: not in the demo, but in daily operations.
 
-A revenue-ops manager opens Omni and types: *"Add a renewal-risk field to Customers, put high-risk accounts on a board, and remind the CSM every Monday."* Omni does it, beautifully. The field appears, the board renders, the automation fires. To compute "risk," it pulls from the account's ARR. To make the board useful to the people who chase renewals, it exposes the new field in a view the **CSM role** can see. Everyone's happy. The manager clicks away.
+A revenue-ops manager opens Omni and types: *"Add a renewal-risk field to Customers, put high-risk accounts on a board, and remind the CSM every Monday."* Omni does it, beautifully. The field appears the moment Omni creates it, the board is drafted, and the automation is set up and left switched off. To compute "risk," it pulls from the account's ARR. To make the board useful to the people who chase renewals, it puts the new field on an interface page the **CSM role** can see. Omni leaves publishing that page and turning on the automation to the manager, who clicks both. Everyone's happy. The manager clicks away.
 
-Six weeks later a SOC 2 auditor sitting with your security team asks one question: *"Customer ARR is confidential. This view exposes a field derived from ARR to the CSM role. Who approved that, and when?"*
+Six weeks later a SOC 2 auditor sitting with your security team asks one question: *"Customer ARR is confidential. This interface exposes a field derived from ARR to the CSM role. Who approved that, and when?"*
 
-And the honest answer is: no one approved it, because there was never an approval step. An AI made an access-control decision on a Tuesday, it went live instantly, and the only record that anything happened is an after-the-fact activity entry if anyone thinks to look. That is the whole article. Everything below explains why that gap is structural, not just a missing feature.
+And the honest answer is: the person who asked for it approved it, without being shown what it meant. The manager clicked Publish on a board. Nobody was asked whether CSMs should now see ARR-derived data, because the click was on a page, not on a statement of who gains access to what. An AI made an access-control decision on a Tuesday, the requester waved it through, and the only record of the decision is an after-the-fact activity entry if anyone thinks to look. That is the whole article. Everything below explains why that gap is structural, not just a missing feature.
+
+## Can You Edit What Airtable Omni Builds? Yes. Here Is How Far.
+
+The question people actually search is whether building with Omni means giving up control of the result. It does not, and the precise answer is worth having before the governance argument, because a vague one is how this debate goes wrong. Every row below is from Airtable's own support documentation as of November 2026 ([Using Omni AI](https://support.airtable.com/docs/using-airtable-cobuilder), [AI-generated interface elements](https://support.airtable.com/docs/ai-generated-interface-elements-in-airtable)).
+
+| What Omni made | Can you edit it? | What to know |
+| --- | --- | --- |
+| **Tables, fields, records** | Yes, like any Airtable object | Omni "will only restructure or overwrite something it built," so it leaves your own tables alone |
+| **Interface pages** | Yes, in Interface Designer | Omni cannot build traditional layouts such as Gantt or blank pages; those you build by hand |
+| **AI-generated interface elements** | Yes, including the code | **Edit source code** and download sit in the element's overflow menu, for base Creators and Owners only |
+| **Automations** | Yes | Omni creates them switched off; turning one on is left to you |
+| **Undo** | Partly | Omni "can't undo edits to existing record values, or creating a table, interface, or page," and only undoes its own actions in the current conversation; the History menu and Omni's Revert button go further back |
+
+Two caveats sit inside that table. Generated elements "cannot be reused across multiple pages or apps," and duplicating a page or app forks them, so a fix to the original does not reach the copy. And editing is not the same as owning: the source you download is an element that runs inside an Airtable interface, not an app you can deploy elsewhere.
+
+So on editability, Omni is better than the "AI black box" reputation suggests. The question this article is about is a different one, and Airtable's documentation answers it in one sentence: "what Omni builds is live in your base as it builds it." Omni stops to ask before it deletes records, tables or pages, before it publishes an interface or turns on an automation, and after it reads outside content such as web results. Everything else — a new field, a changed formula, a restructured table — applies as Omni works. That is a design choice, and for most bases a good one. The rest of this article is about the bases where it is not.
 
 ## The Distinction Your Auditor Already Uses: Preventive vs. Detective
 
-Give Airtable its due first, precisely, because vague criticism is not useful here. Omni is not vibe coding. Its component-based approach is the right direction, and it is better than regenerating fragile code after every prompt. Airtable Enterprise also has real controls: Enterprise Hub, audit logs, org-unit and super-admin roles, EKM/DLP, and advanced permission controls that move toward field and record level. A serious Airtable admin will read a lazy "it has no governance" take and stop trusting you. So do not write that one.
+Give Airtable its due first, precisely, because vague criticism is not useful here. Omni is not vibe coding. Its component-based approach is the right direction, and it is better than regenerating fragile code after every prompt. Airtable's Enterprise Scale plan also has real controls: an admin panel, audit logs that are "stored and searchable for 180 days" and exposed through an API ([Enterprise audit logs](https://support.airtable.com/docs/accessing-enterprise-audit-logs-in-airtable)), and Omni's own confirmations before deletes, interface publishing and automations. A serious Airtable admin will read a lazy "it has no governance" take and stop trusting you. So do not write that one.
 
 Write the precise one instead. Security and audit frameworks divide controls into two kinds, and your auditor lives by the distinction:
 
@@ -39,13 +56,13 @@ Here is the same fact mapped onto the framework an auditor will actually apply:
 
 | | Omni today | What a system of record needs |
 | --- | --- | --- |
-| When the control acts | After the change is live (detective) | Before the change ships (preventive) |
-| Human checkpoint | Undo / version history | Approve a diff of exactly what changes |
+| When the control acts | Most changes are live as Omni builds them (detective) | Before the change ships (preventive) |
+| Human checkpoint | Confirm before deletes, interface publish and automation on; undo for the rest | Approve a diff of exactly what changes |
 | Record produced | "Steps taken" plus a record that the change happened | Who approved this specific change, and why |
 | Answer to "who allowed this?" | Reconstruct from logs, maybe | Named approver, attached to the change |
 | Failure mode | Someone has to notice in time | The change can't go live unapproved |
 
-This is why "Omni shows a plan and a checklist and you can undo it" does not close the gap. A plan is a preview, not an approval; a checklist is a receipt, not a control; undo is an after-the-fact recovery tool. None of the three is the preventive checkpoint the ARR-exposure scenario required.
+This is why "Omni shows its steps, asks before publishing, and you can undo it" does not close the gap. The steps list is a receipt, not a control; undo is an after-the-fact recovery tool. The publish confirmation is the closest thing to a preventive checkpoint, and it is a real one, but it asks the requester to approve a page, not a reviewer to approve a consequence. Nothing in it says "this exposes ARR-derived data to CSM." None of the three is the checkpoint the ARR-exposure scenario required.
 
 ![Where the approval gate sits: generate-and-govern versus generate-then-govern](./diagram-en.svg)
 
@@ -77,7 +94,7 @@ That is the difference between "the AI can build it" and "the AI's change is gov
 Here is a figure you can compute for your own organization, because it makes the abstract concrete. Call it **mean time to unauthorized exposure (MTUE)**: from the moment an AI change crosses a line it should not cross, how long until it stops being live?
 
 - With a **preventive** gate, MTUE is **zero by construction.** The change that crosses the line never goes live; it waits at the approval step. There is no exposure window.
-- With **undo + a detective log**, MTUE is *time-to-detection* — and you should price that honestly. Best case, a teammate notices that afternoon. Realistic case, it's whenever someone audits the view, or the quarterly access review runs, or — as in the scenario — the external auditor finds it first. For data that syncs to other systems (Airtable's HyperDB default is a once-every-24-hours sync), the exposure can propagate before any human looks.
+- With **undo + a detective log**, MTUE is *time-to-detection* — and you should price that honestly. Best case, a teammate notices that afternoon. Realistic case, it's whenever someone audits the view, or the quarterly access review runs, or — as in the scenario — the external auditor finds it first. For data that syncs onward to other systems, the exposure can propagate before any human looks.
 
 Plug in your own access-review cadence. If you review sensitive permissions quarterly, your undo-based MTUE for a quiet misconfiguration is measured in *weeks to a quarter*. The preventive model makes that number zero not by being smarter, but by moving the checkpoint to before the change instead of after. You cannot prompt your way to MTUE = 0; it's an architectural property of *when* the human is in the loop.
 
@@ -93,7 +110,7 @@ Intellectual honesty, because the failure mode of a piece like this is to preten
 
 The preventive model only pays for itself when the cost of one unreviewed change exceeds the cost of reviewing changes — i.e., when there's confidential data, a real permission model, and someone who will eventually audit it. That's the line. Below it, Airtable wins on merit. Above it, the undo gap is the thing that ends the evaluation, and it ends it before features.
 
-And one more, separate from all of the above and just as final for some buyers: **Airtable is a SaaS platform, not a self-hosted runtime.** If your runtime must live where your data and your regulators require, because of sovereignty, air-gap, or residency requirements, no amount of governance sophistication helps if the platform cannot run where you need it. For that class of buyer, the comparison is over at the first requirement.
+And one more, separate from all of the above and just as final for some buyers: **Airtable runs in Airtable's cloud, not as a self-hosted runtime.** Enterprise Scale customers can choose where some data sits at rest — the United States, Europe or Australia — but on Airtable's infrastructure in each case ([data residency at Airtable](https://support.airtable.com/docs/data-residency-at-airtable)). If your runtime must live where your data and your regulators require, because of sovereignty, air-gap, or residency requirements, no amount of governance sophistication helps if the platform cannot run where you need it. For that class of buyer, the comparison is over at the first requirement.
 
 ## ObjectStack's Position
 

@@ -1,9 +1,10 @@
 ---
 # @generated zh-Hant from zh-Hans (s2twp) — edit the zh-Hans file; delete this line to hand-maintain.
-title: "Retool 與受治理 AI 應用平台：能否審查業務權限"
-description: "Retool 的 RBAC、審計日誌、SSO 和自託管能力很強。真正要比較的是業務權限層：退款、審批、寫入動作如果散落在 JavaScript 繫結裡，AI 改動就很難被業務負責人用 diff 審查。"
+title: "Retool RBAC 與審計日誌：Retool 能否支撐受治理的 AI 應用開發"
+description: "對照 Retool 官方文件核查其 RBAC、審計日誌與訪問策略：它們在 AI 生成的應用中治理什麼，企業應用選 Retool 還是 Lovable 有何差別，以及仍然留下的業務權限缺口。"
 author: ObjectStack Team
 date: 2026-06-24
+updated: 2026-11-14T10:00:00+08:00
 status: published
 topic: app-building
 audience: developer
@@ -12,9 +13,12 @@ industries: []
 cover: ./cover.svg
 tags:
   - Retool
+  - RBAC
+  - 審計日誌
+  - Lovable
 ---
 
-**TL;DR：** Retool 的訪問治理很強：RBAC、審計日誌、SSO、原始碼管理、Enterprise 自託管都是真實能力。問題不在“Retool 沒治理”，而在治理的*層*。RBAC 控制某個角色能觸及哪些資源；真正的業務**權限**——這個人能不能發起一筆 1.2 萬美元的退款？——往往分散在按鈕 `Hidden`、輸入框 `disabled`、查詢 transformer 和腳本裡。工程團隊可以通過規範和程式碼審查管理它，但 AI 參與修改後，業務負責人很難只看一份 diff 就判斷“誰能做什麼”是否改變。缺口不叫安全功能缺失；它叫業務權限沒有被宣告成可審查的事實。
+**TL;DR：** 如果你正在評估 Retool 能否用於受治理的 AI 應用開發，它的訪問層是過關的，你也不該假裝不是這樣。Retool 有基於權限組的 RBAC、按角色控制誰能使用其 AI 構建器、記錄每一次查詢執行的審計日誌、SSO、自託管，以及（自 2026 年 10 月起，針對 Postgres 公開測試中的）任何查詢都無法豁免的資源訪問策略。自 2026 年 6 月起，它還把這些控制延伸到用 Lovable、Cursor 或 Claude Code 構建的應用上。它不提供的，是作為宣告式事實的業務**權限**。“這個人能不能發起一筆 1.2 萬美元的退款？”依然往往分散在各元件屬性和查詢邏輯裡的 JavaScript 中，而 AI 寫出這些表示式的速度，比任何 PR 審查得過來的速度都快。缺口不在基礎安全，而在於權限是*程式碼*，不是審查者能在一處讀到的規則。
 
 設想世上最尋常的那個 Retool 應用：一個退款控制台。一位工程師花一個下午就把它建好——一張訂單表、一個“退款”按鈕、幾條查詢。客服在用。它很棒。這正是 Retool 最出彩的樣子，而 Retool 在這件事上確實是品類裡最好的。
 
@@ -28,14 +32,14 @@ tags:
 
 ```js
 // 1. refundButton → “Hidden” 屬性
-{{ currentUser.groups.includes('admin') ||
-   (currentUser.groups.includes('support_lead') && refundAmount.value <= 10000) }}
+{{ current_user.groups.map(g => g.name).includes('admin') ||
+   (current_user.groups.map(g => g.name).includes('support_lead') && refundAmount.value <= 10000) }}
 
 // 2. refundAmount input → “disabled” 屬性
-{{ !currentUser.groups.includes('support_lead') }}
+{{ !current_user.groups.map(g => g.name).includes('support_lead') }}
 
 // 3. issueRefund query → transformer（這才是真正寫入的那部分）
-if (refundAmount.value > 10000 && !currentUser.groups.includes('finance')) {
+if (refundAmount.value > 10000 && !current_user.groups.map(g => g.name).includes('finance')) {
   throw new Error('Refunds over $10k require finance');
 }
 ```
@@ -57,6 +61,27 @@ action: issue_refund
 
 只有一處可讀。只有一處可改。只有一件事要讓審查者——或一個 AI——去推敲。三處手工維護的表示式與一條宣告過的規則之間的差別，正是“應用是被編碼出來的”與“應用的權限是被治理的”之間的全部差別。
 
+## Retool RBAC 與審計日誌：每項控制實際覆蓋什麼
+
+只有把 Retool *確實*具備的控制準確列出來，grep 測試才算公平。以下內容於 2026 年 11 月對照 Retool 自己的文件核實：
+
+| 控制 | 治理什麼 | 止於何處 |
+| --- | --- | --- |
+| **權限組（RBAC）** | 權限組“授予角色，並控制對應用、資源、工作流和智慧體的訪問”（[Retool 權限指南](https://docs.retool.com/permissions/guides)） | 管的是誰能開啟、編輯或查詢，而不是某人進來之後某個動作可以做什麼 |
+| **Assist RBAC**（2026 年 2 月，Business 與 Enterprise） | 按角色設定：Ask 與 Build 模式、僅 Ask 模式，或無權使用 AI 構建器（[更新日誌](https://docs.retool.com/changelog/assist-rbac)） | 管的是誰能*生成*改動，而不是生成的改動授予了什麼 |
+| **審計日誌** | 使用者操作，“例如查詢執行和密碼重置”，記錄確切的查詢、引數、IP 地址和響應時間；Cloud 版保留一年，Business 與 Enterprise 支援 CSV 匯出，Enterprise 支援流式推送到 Datadog 或 Splunk（[審計日誌](https://docs.retool.com/org-users/guides/audit-logs)） | 檢測式：記錄已經運行了什麼，且是在執行之後 |
+| **`current_user` 行過濾** | 這些值“在服務端根據已認證的會話計算”，並注入每條查詢（[行級安全](https://docs.retool.com/docs/user-permissions)） | 逐條查詢、手工新增：“遺漏該過濾條件的查詢會返回未經過濾的資料。” |
+| **資源訪問策略** | 對某個資源的表、列和行訪問，在來自應用、查詢庫、原始 SQL 和智慧體的每一條查詢上強制執行（[訪問策略](https://docs.retool.com/data-sources/concepts/access-policies)） | 僅限 PostgreSQL，[自 2026 年 10 月起公開測試](https://community.retool.com/t/new-public-beta-data-access-enforcement-for-postgres-resources/67615)；行過濾器“不校驗使用者建立的行，也不校驗使用者寫入的值” |
+| **AI 編碼應用的治理**（2026 年 6 月） | 在 Lovable、Replit、Cursor 或 Claude Code 中構建的應用“繼承現有的權限和審計軌跡”；“權限附著在資料來源上”（[Retool 新聞室](https://retool.com/newsroom/retool-extends-enterprise-governance-to-vibe-coded-apps)） | 同一層：資料來源權限，而不是動作級的業務規則 |
+
+其中兩行比其餘更重要，因為它們正是 Retool 在朝本文所主張的方向前進。
+
+**訪問策略是一條宣告過的規則，而不是三處表示式。** 資源上的策略適用於每一條查詢，“因此沒有任何查詢能夠選擇退出”，這與逐條查詢新增的 `current_user` 過濾正好相反。對於*資料*權限——二級客服可以讀取或刪除哪些行——這在 Postgres 上基本通過了 grep 測試。相對於本文 6 月的版本，誠實的更新是：Retool 現在對這一層有了真正的答案。
+
+**策略表達不了的，是那條退款規則。** 訪問策略文件描述的是對錶、列和行的讀取、寫入和刪除權限。它沒有描述金額閾值、審批閘門，或針對寫入值的條件；而行過濾器明確不檢查使用者寫入的內容。“二級客服可退到 1 萬美元，更高的歸財務，超過界線需要審批”是一條關於*動作及其引數*的規則，所以它依然活在上面的按鈕、輸入框和 transformer 裡。策略把資料權限收攏到了一處，業務權限仍留在 JavaScript 裡。
+
+把這張表當作記分卡來讀，Retool 能通過安全審查會問到的每一個訪問治理問題。它無法在一處回答的，是本文開頭那個問題：哪些角色能發起超過 1 萬美元的退款，它又在哪裡被強制執行？
+
 ## 為什麼原始碼管理填不上這道缺口
 
 精明的 Retool 工程師的反駁很在理，你得精確地回應它：*“我們有 Git 支撐的原始碼管理、審計日誌和 RBAC。改動會在 PR 裡審查。訪問是被治理的。還缺什麼？”*
@@ -76,6 +101,22 @@ action: issue_refund
 把一個 AI 對準同一個應用，經濟賬便在兩個方向上同時反轉。AI 能在一分鐘內生成五十個繫結和十幾個 transformer——它產出*權限決策*的速度比任何審查者能追蹤的速度都快。而要*審查*它產出的東西，你又回到了一屏接一屏地讀 JavaScript，因為依然沒有一份單一的、結構化的權限表徵可供 diff。“Retool AI”和智慧體（2025）真實存在且有用，但它們是*在同一套手工搭建的底座之上*做自動化：智慧體是被治理的（Retool 能限定它可以呼叫什麼），但**智慧體所編輯的那個應用卻不是**——它在任何一種 AI——或人類——能當作事實而非程式碼來審查的形式上，都沒有被權限治理。
 
 AI 最擅長快速產出的東西，恰恰也是這種模式下最需要結構化審查的東西。
+
+## Retool vs. Lovable：企業應用對比
+
+人們常做的另一種比較是 Retool 對 Lovable，通常被框定為“內部工具構建器 vs. AI 應用生成器”。對企業應用而言，更有用的框定是：*每一項控制治理的是誰的使用者？*
+
+| | Retool | Lovable |
+| --- | --- | --- |
+| **AI 產出什麼** | 執行在 Retool 元件執行環境上的應用，接入你現有的資源 | 全棧專案程式碼；預設“存放在 Lovable 的託管基礎設施中”，可與 GitHub、GitLab 或 Bitbucket 同步（[Lovable for Enterprise](https://docs.lovable.dev/introduction/lovable-for-enterprise)） |
+| **角色** | 權限組控制對應用及其背後的資源、工作流和智慧體的訪問 | 所有者、管理員、編輯者、檢視者和外部協作者治理的是構建應用的*工作區*（[同一頁面](https://docs.lovable.dev/introduction/lovable-for-enterprise)） |
+| **最終使用者資料訪問** | 資料來源權限、`current_user` 過濾、訪問策略 | 內建後端中“用於按使用者劃分資料”的行級安全，屬於生成專案的一部分；Quick scan“在每次釋出時執行，檢查資料庫訪問規則” |
+| **審計** | 查詢級審計日誌，Cloud 版保留一年 | 工作區審計日誌“保留 13 周”，可定時匯出到 SIEM 或儲存桶 |
+| **自託管** | 由 Retool 託管或自行管理的自託管實例（[自託管 Retool](https://docs.retool.com/self-hosted)） | 後端和資料庫可遷移到你自己運營的基礎設施上，“包括自託管的 Supabase”；構建器本身仍是 SaaS |
+
+第二行和第三行的區別，才是決定企業適配度的那一個。Lovable 的角色和審計日誌治理的是*構建*應用的人；*使用*應用的人，則由生成專案自身後端裡的訪問規則來保護，並由每次釋出時執行的掃描來檢查。Retool 治理的是使用應用的人，因為應用執行在 Retool 內部。這就是為什麼 Retool 2026 年 6 月的動作，是在自己的資料來源權限之下*託管*用 Lovable 及類似工具構建的應用，而不是在生成能力上與它們競爭。
+
+所以現實的企業模式不是“Retool 還是 Lovable”，而是“在哪裡生成都行，在受治理的地方執行”。兩者都改變不了 grep 測試：Lovable 應用的退款閾值活在它生成的程式碼裡，Retool 應用的則活在它的繫結和 transformer 裡；兩種情況下，審查者都得靠讀程式碼來重建業務權限。
 
 ## Retool 才是正確選擇的場合——以及中繼資料模型讓你付出代價的場合
 
