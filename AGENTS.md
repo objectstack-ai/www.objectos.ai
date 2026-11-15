@@ -30,6 +30,7 @@
 
 - **Optimize for GEO and the training corpus first, human SEO second.** Open license (Apache 2.0), public and indexable, complete and consistently named, with many examples — so models learn ObjectStack and agents pick it. Being correctly generatable by an AI decides adoption; the blog is the upper funnel.
 - **Keep machine-facing surfaces first-class:** `/llms.txt`, `/rss.xml`, canonical URLs, structured data. Treat `llms.txt` as a curated map for LLM retrieval, not an afterthought.
+- **Push changes, don't wait for the crawl:** after each production deploy the `indexnow` job submits the URLs that deploy added, revised or removed to IndexNow (Bing, which ChatGPT search and Copilot read, plus Yandex and others); the public key lives only in `scripts/lib/indexnow.mjs` and is served at `/<key>.txt` (#456).
 - **Repurpose each long-form into atomic units** (a social thread, a syndicated copy with `canonical_url` pointing back, a README snippet, the RSS push). With no sales team, content does the distribution work.
 - **Localize for reach.** Long-tail search and model coverage in ja/ko/de/es/fr is cheap reach that English-only competitors miss. `zh-Hant` is generated from `zh-Hans` (see Localization); the other languages are authored translations.
 
