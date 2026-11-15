@@ -774,6 +774,18 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
     .prose th {
       background: var(--surface-sunk);
     }
+    /* A word in a table cell is never split at an arbitrary letter (#453).
+       Cells wrap at word boundaries only, so the longest word sets its
+       column's minimum width and a table that outgrows its column scrolls
+       inside itself (below), never the page. `anywhere` here (and the ko
+       page root's inherited `anywhere`, Base.astro) broke `Validierungsreg` /
+       `el` at 390 and Korean digits at 1440. ko keeps its inherited
+       `keep-all`, zh and ja their normal CJK breaking; on a phone, Latin
+       locales hyphenate a long word instead (the media query below). */
+    .prose th,
+    .prose td {
+      overflow-wrap: normal;
+    }
     /* An identifier in a table cell is never split. Under the inline-code
        rule above (`overflow-wrap: anywhere`) a column narrower than its token
        broke it at an arbitrary letter and added no hyphen: `beforeDelet` /
@@ -932,17 +944,27 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
          included) is the widest floor at which three columns still fit the
          328px column of a 360px phone (3 × 104 = 312), so a two- or
          three-column table of prose needs no sideways scroll at 360 or 390;
-         four to six columns scroll. `overflow-wrap: anywhere` keeps a column
-         of prose at its floor. It does not reach inline code (the rule above
-         the media query): an identifier wider than its column widens the
-         column instead of splitting, and the table scrolls further. */
+         four to six columns scroll. A word wider than its column widens the
+         column instead of splitting (the cell rule above the media query),
+         and the table scrolls further. */
       .prose th,
       .prose td {
         box-sizing: border-box;
         min-width: 6.5rem;
         padding-right: 0.6rem;
         padding-left: 0.6rem;
-        overflow-wrap: anywhere;
+      }
+      /* Latin-script cells hyphenate a long word (by the <html lang>
+         dictionary, the heading rule's limits) rather than widen the column
+         to the whole compound. An identifier never gains a hyphen. */
+      .prose :is(th, td):is(:lang(en), :lang(de), :lang(fr), :lang(es)) {
+        -webkit-hyphens: auto;
+        hyphens: auto;
+        hyphenate-limit-chars: 12 5 5;
+      }
+      .prose :is(th, td) code {
+        -webkit-hyphens: manual;
+        hyphens: manual;
       }
     }
   </style>
