@@ -147,6 +147,20 @@ const sitemap = await readDist('sitemap-0.xml');
 requireContains('sitemap-0.xml', sitemap, `${SITE}/en/blog/`, 'missing English blog index');
 requireContains('sitemap-0.xml', sitemap, `${SITE}/zh-Hans/blog/`, 'missing Simplified Chinese blog index');
 
+// IndexNow key file (#456): engines verify a submission by fetching
+// `/<key>.txt` and comparing its body to the submitted key, so the body must
+// be exactly the key, and the file is a verification artifact, not a page —
+// it must never be listed in the sitemap. The key is read from its one home.
+const { INDEXNOW_KEY } = await import('./lib/indexnow.mjs');
+const indexnowFile = `${INDEXNOW_KEY}.txt`;
+const indexnowBody = await readDist(indexnowFile);
+if (indexnowBody && indexnowBody !== INDEXNOW_KEY) {
+  issues.push(`${indexnowFile}: body must be exactly the IndexNow key, got ${JSON.stringify(indexnowBody.slice(0, 80))}`);
+}
+for (const [file, xml] of [['sitemap-index.xml', sitemapIndex], ['sitemap-0.xml', sitemap]]) {
+  requireExcludes(file, xml, indexnowFile, 'lists the IndexNow key file');
+}
+
 const llms = await readDist('llms.txt');
 requireContains('llms.txt', llms, '# ObjectOS', 'missing title');
 requireContains('llms.txt', llms, '## English Articles', 'missing English article section');
