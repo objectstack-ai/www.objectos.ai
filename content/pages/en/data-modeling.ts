@@ -100,6 +100,7 @@ export const Subscription = ObjectSchema.create({
           },
           {
             title: 'Datasource sync',
+            href: '/en/connect-existing-systems/',
             body: 'Connection forms generate from the driver’s schema, “Test connection” verifies it, then pick from the remote table list — introspect an existing ERP or CRM database and mount its tables as governed objects, read-only by default; writes are enabled deliberately, per object.',
           },
         ],
@@ -156,7 +157,7 @@ export const Subscription = ObjectSchema.create({
       {
         question: 'What is open source here, and what does ObjectOS add?',
         answer:
-          'All of the data layer: objects, relationships, validations, formulas, migrations, the query engine, REST APIs, file storage, and the object designer, ER diagram, and datasource sync in the Console — Apache-2.0, with no feature gate between development and production. ObjectOS adds the in-app AI Builder, whose built-in tools create packages and objects and add, modify, and delete fields from a chat, queued for human approval before they go live — on Cloud and on Enterprise, from its Enterprise Single-Node entry option up.',
+          'All of the data layer: objects, relationships, validations, formulas, migrations, the query engine, REST APIs, file storage, and the object designer, ER diagram, and datasource sync in the Console — Apache-2.0, with no feature gate between development and production. ObjectOS adds the in-app AI Builder, whose built-in tools create packages and objects and add, modify, and delete fields from a chat, queued for human approval before they go live — on Cloud and on Enterprise.',
       },
     ],
   } satisfies MarketingPage;

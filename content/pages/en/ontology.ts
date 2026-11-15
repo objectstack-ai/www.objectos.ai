@@ -150,7 +150,7 @@ sharing · audit`,
         items: [
           {
             title: p.t3[0],
-            body: 'The definition is the thing that runs. From the compiled artifact the runtime derives the database, the REST and realtime API, the Console UI and the MCP server, and enforces permissions and audit on every call — a REST request, a Console click and an agent’s tool call alike.',
+            body: 'The definition is the thing that runs. From the compiled artifact the runtime derives the database, the REST and realtime API, the Console UI and the MCP server, and enforces permissions on every call — a REST request, a Console click and an agent’s tool call alike — and audits the record reads and writes they make.',
             meta: 'Guide',
             href: '/en/platform/',
           },
@@ -180,7 +180,7 @@ sharing · audit`,
       rows: [
         ['Objects, fields, relations', 'The database schema on an interchangeable driver; a generated REST and realtime API', 'Validation, formulas and defaults, as declared on the field'],
         ['Actions', 'Permission-checked buttons and server operations; every exposed action doubles as an MCP tool', 'The conditions under which an action shows, and who may invoke it'],
-        ['Permissions', 'Nothing to generate — the fence itself', 'RBAC, row-level and field-level security, sharing and audit, on a REST request, a Console click and an agent’s tool call alike'],
+        ['Permissions', 'Nothing to generate — the fence itself', 'RBAC, row-level and field-level security, sharing, and audit of record reads and writes, on a REST request, a Console click and an agent’s tool call alike; the in-app AI’s tool calls are audited on Enterprise'],
         ['Flows', 'DAG flows, record triggers, scheduled jobs, approvals with queues', 'Multi-step approval chains with a full audit trail'],
         ['Agent and tool definitions', 'The MCP server the app serves, on by default', 'Permissions decide what an agent may call; audit records what it did'],
         ['Views, dashboards, apps, translations', 'Server-driven UI for the Console', 'A view projects an object’s fields and its permissions — remove it and the business is unchanged'],

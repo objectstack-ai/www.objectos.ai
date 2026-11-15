@@ -15,8 +15,15 @@ export interface LegalPageCopy {
   sections: LegalSection[];
 }
 
-const company =
-  'ObjectStack AI LLC, 30 N Gould St, Ste R, Sheridan, Wyoming 82801, United States';
+/**
+ * The company's legal name and mailing address, as the Terms, the Privacy
+ * Policy and the Refund Policy state them (section 21, 20 and 10 below). The
+ * /contact/ page quotes these two constants rather than retyping them.
+ */
+export const COMPANY_NAME = 'ObjectStack AI LLC';
+export const COMPANY_ADDRESS = '30 N Gould St, Ste R, Sheridan, Wyoming 82801, United States';
+
+const company = `${COMPANY_NAME}, ${COMPANY_ADDRESS}`;
 
 const termsEn: LegalPageCopy = {
   title: 'Terms of Service and License',

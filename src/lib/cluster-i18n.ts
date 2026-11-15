@@ -28,6 +28,16 @@ export interface ClusterLabels {
   whyNow: string;
 }
 
+/**
+ * One cluster written in one locale: `content/clusters/<locale>/<slug>.ts`,
+ * whose default export is the whole page's copy (the English cluster in
+ * `clusters.ts` is the source it translates). The file's name must be the
+ * cluster's slug.
+ */
+export interface AuthoredClusterCopy extends ClusterCopy {
+  slug: string;
+}
+
 type TemplateLocale = Exclude<Locale, 'en' | 'zh-Hant'>;
 type NameMap = Record<TemplateLocale, { title: string; shortTitle: string }>;
 type TextTemplates = {
@@ -426,11 +436,33 @@ const EXTRA_FAQ: Partial<Record<string, Partial<Record<TemplateLocale, ClusterFa
       {
         question: '自托管是免费的吗？ObjectOS 又加了什么？',
         answer:
-          '免费自托管指的是开源的 ObjectStack 框架（Apache-2.0）：协议、内核、CLI、生产运行时、Console UI 与 MCP 服务器，开发与生产之间没有功能门槛——经 MCP 自带你的 AI。自管部署的 ObjectOS 即 ObjectOS Enterprise，按许可付费：其单节点入门选项 Enterprise 单机版在单个节点上提供产品内 Ask（AI Builder 为预览版）、AI 治理与自带模型；单节点以上，Enterprise 再提供多组织、按组织架构控制记录可见范围、离线隔离、默认开启的 SCIM 2.0 与 SLA 支持，高可用（HA）在规划中。你的本体是普通的 ObjectStack 元数据。从 ObjectOS Cloud 或 ObjectOS Enterprise 导出本体、在开源的 ObjectStack 运行时上运行，目前尚在计划中。起步：npm create objectstack@latest，把编码 Agent 指向生成的项目及其 AGENTS.md，然后 npx os dev --ui。',
+          '免费自托管指的是开源的 ObjectStack 框架（Apache-2.0）：协议、内核、CLI、生产运行时、Console UI 与 MCP 服务器，开发与生产之间没有功能门槛——经 MCP 自带你的 AI。自管部署的 ObjectOS 即 ObjectOS Enterprise，按许可付费：只有一个版本，即私有部署，提供产品内 AI Builder 与 Ask（均为预览版）、AI 治理、按组织架构控制记录可见范围、离线隔离、默认开启的 SCIM 2.0、自带模型，以及可选的 SLA 支持，按 AI 用户数授权，最低 25 人起。单点登录与多组织是开源能力，Enterprise 为其提供许可与支持。多副本高可用正在开发中，暂不提供。你的本体是普通的 ObjectStack 元数据。从 ObjectOS Cloud 或 ObjectOS Enterprise 导出本体、在开源的 ObjectStack 运行时上运行，目前尚在计划中。起步：npm create objectstack@latest，把编码 Agent 指向生成的项目及其 AGENTS.md，然后 npx os dev --ui。',
       },
     ],
   },
 };
+
+// Authored per-cluster copy, keyed `<locale>/<slug>`. zh-Hant is never
+// authored here: it is converted from an authored zh-Hans file, like every
+// other Traditional Chinese surface. A file the build cannot place fails it,
+// so a misnamed translation does not silently stay a noindexed fallback.
+const TEMPLATE_LOCALES = new Set<string>(Object.keys(TEMPLATES));
+const AUTHORED = new Map<string, ClusterCopy>();
+for (const [modulePath, page] of Object.entries(
+  import.meta.glob<AuthoredClusterCopy>('../../content/clusters/*/*.ts', { eager: true, import: 'default' })
+)) {
+  const [, locale, fileSlug] = modulePath.match(/content\/clusters\/([^/]+)\/([^/]+)\.ts$/) ?? [];
+  if (!TEMPLATE_LOCALES.has(locale) || fileSlug !== page?.slug || !NAMES[fileSlug]) {
+    throw new Error(
+      `${modulePath}: an authored cluster must be content/clusters/<locale>/<slug>.ts, with a locale ` +
+        `other than en or zh-Hant, a slug from src/lib/clusters.ts, and that slug as its \`slug\``
+    );
+  }
+  const { slug: _slug, ...copy } = page;
+  AUTHORED.set(`${locale}/${fileSlug}`, copy);
+}
+const authoredCopy = (slug: string, locale: Locale): ClusterCopy | undefined =>
+  AUTHORED.get(`${locale}/${slug}`);
 
 const copyToHant = (copy: ClusterCopy): ClusterCopy => ({
   title: s2t(copy.title),
@@ -464,6 +496,9 @@ const labelsToHant = (labels: ClusterLabels): ClusterLabels => ({
 export function clusterCopy(cluster: Cluster, locale: Locale): ClusterCopy {
   if (locale === 'en') return cluster;
   if (locale === 'zh-Hant') return copyToHant(clusterCopy(cluster, 'zh-Hans'));
+
+  const authored = authoredCopy(cluster.slug, locale);
+  if (authored) return authored;
 
   const template = TEMPLATES[locale];
   const name = NAMES[cluster.slug]?.[locale] ?? {
@@ -504,15 +539,27 @@ export function clusterLabels(locale: Locale): ClusterLabels {
 }
 
 /**
- * Whose page a locale's cluster page stands for. Only English is written per
- * cluster: every other locale is `TEMPLATES[locale]` with the cluster's name
- * swapped in (and zh-Hant is that template converted), so the 35 non-English
- * cluster pages share one body per locale — the scaled-content pattern
- * AGENTS.md writing rule 9 rules out. Until a cluster is written per locale,
- * those pages fall back: noindexed, canonical to the English cluster page, and
- * absent from hreflang (`fallbackRoute` in ./fallback). Their body stays in the
- * locale it is written in, so they keep their own `lang`.
+ * Whose page a locale's cluster page stands for. English is written per
+ * cluster in `clusters.ts`; a locale is written per cluster when it has a
+ * `content/clusters/<locale>/<slug>.ts` file (zh-Hant when zh-Hans has one).
+ * Every other locale is `TEMPLATES[locale]` with the cluster's name swapped in
+ * (and zh-Hant is that template converted), so those pages share one body per
+ * locale — the scaled-content pattern AGENTS.md writing rule 9 rules out — and
+ * fall back: noindexed, canonical to the English cluster page, and absent from
+ * hreflang (`fallbackRoute` in ./fallback). Their body stays in the locale it
+ * is written in, so they keep their own `lang`.
  *
- * When a locale gets real per-cluster copy, answer that locale here.
+ * Adding an authored file is the whole change: the page becomes
+ * self-canonical, gains hreflang, and enters the sitemap and llms.txt.
  */
-export const clusterSourceLocale = (_locale: Locale): Locale => 'en';
+export const clusterSourceLocale =
+  (slug: string) =>
+  (locale: Locale): Locale => {
+    if (locale === 'en') return 'en';
+    const written = authoredCopy(slug, locale === 'zh-Hant' ? 'zh-Hans' : locale);
+    return written ? locale : 'en';
+  };
+
+/** The non-English locales a cluster is written in, in `LOCALES` order. */
+export const authoredClusterLocales = (slug: string, locales: readonly Locale[]): Locale[] =>
+  locales.filter((locale) => locale !== 'en' && clusterSourceLocale(slug)(locale) === locale);

@@ -100,6 +100,7 @@ export const Subscription = ObjectSchema.create({
           },
           {
             title: '数据源同步',
+            href: '/en/connect-existing-systems/',
             body: '连接表单按驱动自动生成，点"测试连接"验证，再从远程表清单里勾选——introspect 现有 ERP/CRM 数据库，外部表直接生成受治理对象，默认只读；写权限按对象有意开启。',
           },
         ],
@@ -156,7 +157,7 @@ export const Subscription = ObjectSchema.create({
       {
         question: '这里哪些是开源的，ObjectOS 又加了什么？',
         answer:
-          '整个数据层都是开源的：对象、关系、校验、公式、迁移、查询引擎、REST API、文件存储，以及 Console 里的对象设计器、ER 图和数据源同步——Apache-2.0，开发与生产之间没有功能门槛。ObjectOS 加的是产品内 AI Builder：它的内置工具能从一段对话创建包与对象、增删改字段，并在生效前排队等人审批——在 Cloud 与 Enterprise（含单节点入门选项 Enterprise 单机版）上提供。',
+          '整个数据层都是开源的：对象、关系、校验、公式、迁移、查询引擎、REST API、文件存储，以及 Console 里的对象设计器、ER 图和数据源同步——Apache-2.0，开发与生产之间没有功能门槛。ObjectOS 加的是产品内 AI Builder：它的内置工具能从一段对话创建包与对象、增删改字段，并在生效前排队等人审批——在 Cloud 与 Enterprise 上提供。',
       },
     ],
   } satisfies MarketingPage;

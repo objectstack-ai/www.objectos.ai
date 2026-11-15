@@ -8,6 +8,7 @@ import { rehypeCjkHeadingPhrases } from './scripts/lib/cjk-phrases.mjs';
 import { remarkQuotes } from './scripts/lib/cjk-quotes.mjs';
 import sitemap from '@astrojs/sitemap';
 import { readPostLastmods } from './scripts/lib/post-dates.mjs';
+import { rewriteFallbackLinks } from './scripts/lib/fallback-links.mjs';
 
 // `lastmod` for the sitemap, keyed by URL path. Read from MDX frontmatter
 // rather than the content collection, because this config is evaluated before
@@ -87,6 +88,25 @@ const locale404 = {
   },
 };
 
+/**
+ * Internal links to a locale-fallback page (noindexed, canonical to the
+ * English copy) are pointed at that canonical, so a locale's header, footer and
+ * body links reach indexable pages instead of noindex dead ends. The language
+ * switcher keeps its per-locale targets. See scripts/lib/fallback-links.mjs.
+ */
+const fallbackLinks = {
+  name: 'fallback-links',
+  hooks: {
+    'astro:build:done': async ({ dir, logger }) => {
+      const { fallbacks, rewritten } = await rewriteFallbackLinks(
+        fileURLToPath(dir),
+        'https://www.objectos.ai'
+      );
+      logger.info(`pointed ${rewritten} links at the canonical of ${fallbacks} locale-fallback pages`);
+    },
+  },
+};
+
 // https://astro.build
 export default defineConfig({
   site: 'https://www.objectos.ai',
@@ -135,5 +155,6 @@ export default defineConfig({
       },
     }),
     locale404,
+    fallbackLinks,
   ],
 });

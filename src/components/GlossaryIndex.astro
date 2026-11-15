@@ -1,45 +1,84 @@
 ---
-import { getGlossaryTerms, glossaryTermPath } from '../glossary/registry';
+import {
+  getGlossaryIndexSourceLocale,
+  getGlossaryTermSourceLocale,
+  getGlossaryTerms,
+  glossaryTermPath,
+} from '../glossary/registry';
 import { glossaryUi } from '../glossary/ui';
 import { cardSpans } from '../lib/card-rows';
 import { phraseHtml } from '../../scripts/lib/cjk-phrases.mjs';
-import type { Locale } from '../lib/i18n';
+import { htmlLang, type Locale } from '../lib/i18n';
 
 interface Props {
   locale: Locale;
 }
 
 const { locale } = Astro.props;
-const ui = glossaryUi(locale);
+const sourceLocale = getGlossaryIndexSourceLocale(locale);
+const ui = glossaryUi(sourceLocale);
 const terms = getGlossaryTerms(locale);
-const spans = cardSpans(terms.length);
+
+// A partly translated locale (#428: ja/ko/de/es/fr carry 5 of 24 terms) lists
+// its translated terms first and the English stand-ins after them, under a
+// heading that says why they are English. Interleaving them alphabetically
+// put five Japanese cards among nineteen English ones with nothing marking
+// which was which. A fully translated locale, or the English index, has no
+// second group and renders exactly as before.
+const isLocalized = (slug: string): boolean =>
+  getGlossaryTermSourceLocale(locale, slug) === sourceLocale;
+const localized = terms.filter((term) => isLocalized(term.slug));
+const fallback = terms.filter((term) => !isLocalized(term.slug));
+const groups = [
+  { terms: localized, lang: undefined, spans: cardSpans(localized.length) },
+  ...(fallback.length > 0
+    ? [{ terms: fallback, lang: htmlLang('en'), spans: cardSpans(fallback.length) }]
+    : []),
+].filter((group) => group.terms.length > 0);
+const isPartial = localized.length > 0 && fallback.length > 0;
 ---
 
 <div class="glossary-index">
   <header class="head">
     <p class="eyebrow">{ui.eyebrow}</p>
-    <h1 set:html={phraseHtml(ui.indexHeading, locale)} />
+    <h1 set:html={phraseHtml(ui.indexHeading, sourceLocale)} />
     <p class="lead">{ui.indexLead}</p>
-    <p class="count">{ui.termCount(terms.length)}</p>
+    <p class="count">{ui.termCount(isPartial ? localized.length : terms.length)}</p>
   </header>
 
   {
     terms.length === 0 ? (
       <p class="empty">{ui.empty}</p>
     ) : (
-      <ul class="term-grid">
-        {terms.map((term, index) => (
-          <li class={`span-${spans[index]}`}>
-            <a class="card card-link" href={glossaryTermPath(locale, term.slug)}>
-              <h2>
-                {term.term}
-                <span class="arrow" aria-hidden="true">→</span>
-              </h2>
-              <p>{term.definition}</p>
-            </a>
-          </li>
-        ))}
-      </ul>
+      groups.map((group, groupIndex) => (
+        <>
+          {groupIndex > 0 && (
+            <header class="group-head">
+              <h2 id="untranslated-title">{ui.fallbackHeading}</h2>
+              <p>{ui.fallbackLead}</p>
+              <p class="count">{ui.termCount(group.terms.length)}</p>
+            </header>
+          )}
+          <ul
+            class:list={['term-grid', { 'term-grid-fallback': groupIndex > 0 }]}
+            aria-labelledby={groupIndex > 0 ? 'untranslated-title' : undefined}>
+            {group.terms.map((term, index) => (
+              <li class={`span-${group.spans[index]}`}>
+                <a
+                  class="card card-link"
+                  href={glossaryTermPath(locale, term.slug)}
+                  lang={group.lang}>
+                  <h2>
+                    {term.term}
+                    <span class="arrow" aria-hidden="true">→</span>
+                  </h2>
+                  <p>{term.definition}</p>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </>
+      ))
     )
   }
 </div>
@@ -63,6 +102,18 @@ const spans = cardSpans(terms.length);
   }
   /* zh and ja: break only at the <wbr> between phrases (scripts/lib/cjk-phrases.mjs).
      ko: break only at its own spaces; no <wbr>. */
+  /* On a phone, Latin-script headings hyphenate a word wider than the line by
+     the <html lang> dictionary, as post titles do (BlogPost.astro): at 360 a
+     German term split Genehmigungswor / kflow (#428). 12+ letters only, 5 kept
+     on each side; `overflow-wrap` stays the last resort. Wider screens fit
+     every word, and hyphenating there only served text-wrap: balance. */
+  @media (max-width: 640px) {
+    h1:is(:lang(en), :lang(de), :lang(fr), :lang(es)) {
+      -webkit-hyphens: auto;
+      hyphens: auto;
+      hyphenate-limit-chars: 12 5 5;
+    }
+  }
   h1:lang(zh),
   h1:lang(ja),
   h1:lang(ko) {
@@ -101,6 +152,33 @@ const spans = cardSpans(terms.length);
   }
   .term-grid li {
     min-width: 0;
+  }
+  /* The English stand-ins on a partly translated index (#428). */
+  /* The rule runs the grid's full width, as the one above the first grid does;
+     only the text keeps the prose measure. */
+  .group-head {
+    margin: 3rem 0 0;
+    padding: 2.25rem 0 0;
+    border-top: 1px solid var(--line);
+  }
+  .group-head > * {
+    max-width: var(--measure-prose);
+  }
+  .group-head h2 {
+    margin: 0 0 0.5rem;
+    font-family: var(--font-display);
+    font-size: var(--fs-24);
+    line-height: var(--lh-heading);
+  }
+  .group-head p:not(.count) {
+    margin: 0;
+    color: var(--muted);
+    font-size: var(--fs-15);
+    line-height: var(--lh-body);
+  }
+  .term-grid-fallback {
+    padding-top: 1.5rem;
+    border-top: 0;
   }
   @media (min-width: 861px) {
     .term-grid .span-2 {

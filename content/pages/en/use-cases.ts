@@ -32,7 +32,7 @@ const page = {
         'Today: where the work stalls now, and why a form or a queue is not enough.',
         'With AI: what the app does once the work is modelled — read, classify, draft, check, propose.',
         'A person approves: what stays a human decision, and what the runtime enforces around it.',
-        'Agents act as the signed-in user, inside that user’s permissions, and the audit trail records what AI suggested, what a person confirmed and what changed.',
+        'Agents act as the signed-in user, inside that user’s permissions; the records they read and change are audited, and on Enterprise so is each tool call the in-app AI makes.',
       ],
     },
     sections: [
@@ -195,7 +195,7 @@ const page = {
               post: 'ai-agent-workbench',
               readiness: 'rule',
               withAi: 'The agent turns a goal into a visible plan and calls governed tools: it queries records, creates tasks, starts approvals and generates reports.',
-              approves: 'It checks the user’s access before querying data, asks before creating tasks, gates high-risk actions with approval and records each tool call and result.',
+              approves: 'It checks the user’s access before querying data, asks before creating tasks, holds high-risk actions at a flow approval step, and the records it reads and changes are audited.',
             },
           },
         ],

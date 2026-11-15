@@ -8,10 +8,11 @@ import {
   pricingPath,
   securityPath,
   termsPath,
+  LOCALES,
   type Locale,
 } from '../lib/i18n';
 import { CLUSTERS, clusterPath } from '../lib/clusters';
-import { clusterCopy } from '../lib/cluster-i18n';
+import { authoredClusterLocales, clusterCopy } from '../lib/cluster-i18n';
 import { CLOUD_SIGNIN_URL, CLOUD_SIGNUP_URL, positioning } from '../lib/positioning';
 import { getMarketingPages, marketingPagePath } from '../content-pages/registry';
 import {
@@ -69,7 +70,7 @@ export const GET: APIRoute = async ({ site }) => {
     '',
     'Three terms this project defines and uses consistently. Each is stated so it can be quoted on its own.',
     '',
-    '- **Open business ontology**: your app’s definition — objects and fields, relations, actions, permissions, flows, and agent and tool definitions — written as typed, versioned files in the company’s own repository instead of rows inside a vendor’s hosted platform. The adjective carries the claim: the ontology is Apache 2.0 and portable, so the model of the business outlives any one vendor. It is executable in the sense the next term defines: the ObjectStack runtime derives the database, REST API, screens, and MCP tools from it and enforces permissions and audit on every call.',
+    '- **Open business ontology**: your app’s definition — objects and fields, relations, actions, permissions, flows, and agent and tool definitions — written as typed, versioned files in the company’s own repository instead of rows inside a vendor’s hosted platform. The adjective carries the claim: the ontology is Apache 2.0 and portable, so the model of the business outlives any one vendor. It is executable in the sense the next term defines: the ObjectStack runtime derives the database, REST API, screens, and MCP tools from it, enforces permissions on every call, and audits record reads and writes.',
     '- **Executable business ontology**: the definition of a business that a runtime runs — objects and fields, relations, actions, permissions, flows, and agent and tool definitions — authored as typed metadata, validated, and then executed, so that the database, API, screens, and agent tools are derived from it rather than described by it. Four boundaries come with the word. It is executable, not a knowledge-representation ontology: no inheritance, no axioms, no reasoner — the definition is validated rather than reasoned over. It is not a semantic layer over your existing systems: it is the system, and federating an external datasource is read-only by default and early. Views, dashboards, apps, and translations are projections of the ontology, not part of it. And code does not disappear: it moves into the runtime, as hooks, action bodies, CEL, and constrained JSX. What makes it worth writing this way under AI authorship is size: the whole definition stays small enough for an agent to hold whole, so the change a human must read stays small enough to actually read.',
     '- **Review AI generated code**: the step that decides whether AI-written software ships — a person reading what the agent produced and taking responsibility for it. Generation stopped being the bottleneck; review became it, and review does not scale by reading faster. ObjectStack shrinks and structures what must be read: the agent’s output is a typed metadata diff rather than a codebase, and Strict TypeScript, Zod schemas, and a validation gate reject structurally invalid output before a human sees it. What no review surface can decide for you is whether the business rule itself is the right one; that judgment stays with the person signing off.',
     '',
@@ -79,8 +80,8 @@ export const GET: APIRoute = async ({ site }) => {
     '',
     '- **Ontology / enterprise ontology**: an ObjectStack application definition plays the role the ontology plays in a Foundry-style system — one typed model of the business that applications, analytics, and agents all read from, so they cannot drift into private definitions of "customer" or "order". The difference is where it lives: an enterprise ontology in a hosted platform is an asset inside that vendor’s product, while an ObjectStack ontology is a directory of files in your repository under Apache 2.0, executed by an open-source runtime. It is also executable rather than a knowledge-representation ontology: no inheritance, no axioms, no reasoner — the definition is validated, then run.',
     '- **Semantic layer**: a semantic layer is a read contract: it settles what "active customer" or "MRR" means across every dashboard and query, not who may change the underlying record, which operations exist, whether a change needs approval, or what evidence remains afterwards. ObjectStack sits on the other side of that line — the typed definition of an object also declares its permissions, actions, and approval steps, and the runtime enforces all of them on every call, so the definition governs writes rather than only describing reads. It is not a semantic layer over your existing systems: federating an external datasource is read-only by default and early. It does not replace a warehouse semantic layer either, and a company doing serious BI will still want one.',
-    '- **MCP / governed tools**: MCP (Model Context Protocol) is the standard way an AI client calls into an external system. The @objectstack/mcp server generates those tools from the ontology instead of from handwritten glue, which is what makes them governed tools: every call resolves the acting user, is checked against the same object, record, and field permissions as a request from a browser, and lands in the same audit log. The common alternative — a service account holding broad database credentials — has no such boundary.',
-    '- **AI agents / agent permissions**: agent permissions here are not a second policy system beside the human one. An AI agent acts as the signed-in user and inherits that user’s object, record, and field permissions, so it cannot read or write anything the person it acts for could not, and a structural change it proposes waits for a person too: on open-source ObjectStack as a git diff, on ObjectOS in the AI Builder’s pending-action queue, where an approver reads the diff and approving is its own permission.',
+    '- **MCP / governed tools**: MCP (Model Context Protocol) is the standard way an AI client calls into an external system. The @objectstack/mcp server generates those tools from the ontology instead of from handwritten glue, which is what makes them governed tools: every call resolves the acting user, is checked against the same object, record, and field permissions as a request from a browser, and the record reads and writes it makes land in the same audit log. The common alternative — a service account holding broad database credentials — has no such boundary.',
+    '- **AI agents / agent permissions**: agent permissions here are not a second policy system beside the human one. An AI agent acts as the signed-in user and inherits that user’s object, record, and field permissions, so it cannot read or write anything the person it acts for could not. Its changes reach a person too: on open-source ObjectStack a coding agent’s change is a git diff someone reviews; on ObjectOS the in-product AI proposes a record change with the old and new values and runs it only after that user confirms, and it cannot delete records or edit them in bulk; and on ObjectOS Cloud an AI Builder change to a live app that already holds records is saved as a draft for a person to publish.',
     '- **Forward deployed engineer**: the forward deployed engineer model — embed with the client, model their business, ship working software fast — usually ends with that model locked inside a platform the client rents indefinitely. ObjectStack is the ontology-first toolkit the client keeps: the engineer hands over typed files in the client’s own repository plus the open-source runtime that executes them, so the handover includes the definition and not only the running app.',
     '',
     '## Primary Pages',
@@ -90,7 +91,7 @@ export const GET: APIRoute = async ({ site }) => {
       (page) => `- [${page.navLabel}](${absoluteUrl(site, marketingPagePath('en', page.slug))}): ${page.description}`
     ),
     `- [Security](${absoluteUrl(site, securityPath('en'))}): Data residency, permissions, approvals, audit logs, and the ObjectOS Enterprise self-managed deployment boundary.`,
-    `- [Pricing](${absoluteUrl(site, pricingPath('en'))}): Open-source ObjectStack, the ObjectOS Cloud plans (Free, Team), and ObjectOS Enterprise, from its Enterprise Single-Node entry option up.`,
+    `- [Pricing](${absoluteUrl(site, pricingPath('en'))}): Open-source ObjectStack, the ObjectOS Cloud plans (Free, Team), and ObjectOS Enterprise, one edition licensed per AI user by contract, with no public price.`,
     `- [Glossary](${absoluteUrl(site, glossaryIndexPath('en'))}): One-sentence definitions of the vocabulary this site uses, each linked to the pages and articles that apply it.`,
     `- [Articles](${absoluteUrl(site, blogPath('en'))}): Practical writing on executable business ontologies and AI-written software, enterprise AI agents, integration, modernization, and governance.`,
     `- [Documentation](https://docs.objectos.ai/): Product and developer documentation.`,
@@ -106,14 +107,18 @@ export const GET: APIRoute = async ({ site }) => {
     '',
     '## Topic Cluster Pages',
     '',
-    // English only: the other locales' cluster pages are one template per
-    // locale with the name swapped, noindexed and canonical to these
-    // (`clusterSourceLocale` in src/lib/cluster-i18n.ts). A curated map lists
-    // the page a reader should be sent to, not 35 copies of it.
-    ...CLUSTERS.map((cluster) => {
-      const copy = clusterCopy(cluster, 'en');
-      return `- [${copy.title}](${absoluteUrl(site, clusterPath('en', cluster.slug))}): ${copy.description}`;
-    }),
+    // English, then each locale a cluster is written in (content/clusters/).
+    // The other locales' cluster pages are one template per locale with the
+    // name swapped, noindexed and canonical to English (`clusterSourceLocale`
+    // in src/lib/cluster-i18n.ts). A curated map lists the pages a reader
+    // should be sent to, not 35 copies of one.
+    ...CLUSTERS.flatMap((cluster) =>
+      (['en', ...authoredClusterLocales(cluster.slug, LOCALES)] as Locale[]).map((locale) => {
+        const copy = clusterCopy(cluster, locale);
+        const tag = locale === 'en' ? '' : ` (${locale})`;
+        return `- [${copy.title}](${absoluteUrl(site, clusterPath(locale, cluster.slug))})${tag}: ${copy.description}`;
+      })
+    ),
     '',
     '## English Articles',
     '',

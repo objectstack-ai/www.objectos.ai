@@ -5,11 +5,11 @@ const page = {
     navLabel: 'Approvals',
     title: 'Approvals: Multi-Step Sign-Off for Business Changes and AI Actions',
     description:
-      'Multi-step approvals with user, role, team, and hierarchy resolution, a three-tab approvals inbox, escalation, and record locking in the open-source console — and, on ObjectOS, a separate reviewed path for the AI Builder’s metadata changes: a pending-action queue with the diff, its own approve permission, and an audit entry.',
+      'Multi-step approvals with user, role, team, and hierarchy resolution, a three-tab approvals inbox, escalation, and record locking in the open-source console — and, on ObjectOS Cloud, an AI Builder change to a live app that already holds records is saved as a draft for a person to publish.',
     eyebrow: 'Approvals',
     heroTitle: 'Every consequential change waits for a yes.',
     lead:
-      'What does a 15%+ discount actually look like getting approved? The flow parks, the order locks, and finance sees the request in the approvals inbox — record snapshot, who did what when, all in one panel. Approve to release it, reject with a comment to send it back, and a stalled request escalates on its own. A schema change the ObjectOS AI Builder just proposed waits the same way — in its own pending-action queue, where an approver reads the diff before it goes live.',
+      'What does a 15%+ discount actually look like getting approved? The flow parks, the order locks, and finance sees the request in the approvals inbox — record snapshot, who did what when, all in one panel. Approve to release it, reject with a comment to send it back, and a stalled request escalates on its own. A change the ObjectOS AI Builder makes to a live app that already holds records waits too: it is saved as a draft and goes live when a person publishes it.',
     primary: { label: 'Read the approvals docs', href: 'https://docs.objectos.ai/docs/build/automation/approvals' },
     secondary: { label: 'See permissions & security', href: '/en/permissions/' },
     metrics: [
@@ -130,21 +130,21 @@ export const DiscountApproval = defineFlow({
       {
         id: 'ai-gate',
         eyebrow: 'The AI governance gate',
-        title: 'People and AI are both reviewed before anything ships',
+        title: 'Once an app is live with data, AI changes wait for a person',
         copy:
-          'This is the mechanism that makes AI-written software governable: a structural change from an agent does not ship — it waits for a person. On the open runtime that is your git diff; on ObjectOS it is the AI Builder’s pending-action queue.',
+          'This is the mechanism that keeps AI-written software governable once real records depend on it: an agent’s change to a live app does not ship on its own — it waits for a person. On the open runtime that is your git diff; on ObjectOS Cloud it is a draft that a person publishes.',
         items: [
           {
-            title: 'Structural changes queue',
-            body: 'When the ObjectOS AI Builder proposes new packages, objects, fields, actions, or flows, the change lands in a pending-action queue — separate from record approvals — where approvers see the proposed diff before clicking Approve; every approve or reject lands in the audit log with the originating conversation.',
+            title: 'Changes to a live app wait as a draft',
+            body: 'On ObjectOS Cloud, the AI Builder publishes a first build right away. Once the app is live and holds records, a change to its objects, fields, actions, or flows is saved as a draft instead, and it goes live only when a person publishes it.',
           },
           {
             title: 'The diff is the request',
-            body: 'Reviewers see exactly what would change — schema, authority, automation — not a description of it. Approving is its own permission, ai:approve: Setup Administrators hold it by default, and a permission set can scope it per package.',
+            body: 'On the open runtime, your coding agent’s change is ordinary metadata in a git diff, so reviewers see exactly what would change — schema, authority, automation — not a description of it, and merge it like any other change.',
           },
           {
-            title: 'Sensitive actions gated',
-            body: 'Runtime actions can require sign-off too, so an AI-triggered refund or bulk update waits for a person.',
+            title: 'Business decisions use approval steps',
+            body: 'A flow approval step can hold an AI-triggered refund or bulk update for a person’s sign-off, with the same inbox, locking, and decision record as any other approval.',
           },
         ],
       },
@@ -155,7 +155,7 @@ export const DiscountApproval = defineFlow({
         ['Discounts above 15% need finance', 'An approval step on the change', 'Routing, the inbox, locking, decision records'],
         ['Big refunds need two approvals', 'A multi-step chain', 'Sequenced sign-off with escalation and send-back'],
         ['Nothing stalls in one inbox', 'A timeout and an escalation path', 'Automatic escalation and reminders'],
-        ['AI schema changes get reviewed', 'The proposed diff itself', 'The AI Builder’s pending-action queue, in front of deployment'],
+        ['AI changes to a live app get a human check', 'The metadata change itself', 'A draft a person publishes on ObjectOS Cloud; your git review on the open runtime'],
       ],
     },
     checklistTitle: 'An approval review should confirm',
@@ -164,7 +164,7 @@ export const DiscountApproval = defineFlow({
       'Routing uses roles and hierarchy, not hardcoded people.',
       'Timeouts and escalation are defined for every step.',
       'Records lock while decisions are pending.',
-      'AI-proposed structural changes cannot bypass review — the pending-action queue on ObjectOS, the git diff on the open runtime.',
+      'AI changes to a live app with records wait for a person — a draft to publish on ObjectOS Cloud, the git diff on the open runtime.',
     ],
     faqs: [
       {
@@ -175,7 +175,7 @@ export const DiscountApproval = defineFlow({
       {
         question: 'What is open source here, and what does ObjectOS add?',
         answer:
-          'Multi-step approvals, approver resolution, escalation, record locking, the audit trail, and the three-tab inbox with its side panel, comments, recall, return-for-revision, and keyboard shortcuts ship in the open-source ObjectStack Console, Apache-2.0. ObjectOS adds a second thing to approve: the in-app AI Builder’s metadata changes land in a pending-action queue where approvers see the proposed diff before clicking Approve — only Setup Administrators hold that permission by default — and every approve or reject lands in the audit log with the originating conversation.',
+          'Multi-step approvals, approver resolution, escalation, record locking, the audit trail, and the three-tab inbox with its side panel, comments, recall, return-for-revision, and keyboard shortcuts ship in the open-source ObjectStack Console, Apache-2.0. ObjectOS adds the in-app AI Builder (a preview on Enterprise). On ObjectOS Cloud it publishes a first build right away, and a change to a live app that already holds records is saved as a draft for a person to publish. Business decisions such as the discount above still go through flow approval steps.',
       },
     ],
   } satisfies MarketingPage;

@@ -2,7 +2,7 @@
 import { Image } from 'astro:assets';
 import Base from './Base.astro';
 import { getEntry, type CollectionEntry } from 'astro:content';
-import { OG_IMAGE, ogImagePath, postCoverFile } from '../../scripts/lib/og-image.mjs';
+import { OG_IMAGE, postShareImage } from '../../scripts/lib/og-image.mjs';
 import { phraseHtml } from '../../scripts/lib/cjk-phrases.mjs';
 import { formatDate, ui, blogPath, postPath, STATUS_COLOR, type Locale } from '../lib/i18n';
 import { termBySlug, termHref, termLabel } from '../lib/terms';
@@ -43,27 +43,47 @@ const absoluteUrl = (href: string): string =>
   site ? new URL(href, `${site}/`).toString() : new URL(href, Astro.url).toString();
 const currentUrl = site ? `${site}${Astro.url.pathname}` : Astro.url.href;
 // The share image (`og:image`, `twitter:image`, `BlogPosting.image`): a
-// 1200x630 JPEG that scripts/og-images.mjs renders from the cover after
-// `astro build`, because the networks draw no card for an SVG and the PNG
-// covers are 1.5-1.9 MB. Its URL comes from the rule the renderer uses too
-// (scripts/lib/og-image.mjs), which reads the cover path from the post's
-// frontmatter: `data.cover` only carries the built asset, so the entry is
-// looked up for its file. That script fails the build if a page names a file
-// it did not render, or a size that is not the file's.
+// 1200x630 JPEG that scripts/og-images.mjs draws after `astro build`, one per
+// locale page: this page's title, the cover's art on its ground and the
+// ObjectOS mark (scripts/lib/og-composite.mjs). The networks draw no card for
+// an SVG, and a cover under spec v2 carries no title. Its URL comes from the
+// rule the renderer uses too (scripts/lib/og-image.mjs), which reads the cover
+// path and the title from this locale's frontmatter: `data.cover` only carries
+// the built asset, so the entry is looked up for its file. That script fails
+// the build if a page names a file it did not render, or a size that is not
+// the file's.
 const entry = await getEntry('blog', locale === 'en' ? slug : `${slug}.${locale}`);
-const coverFile: string | undefined = entry?.filePath ? postCoverFile(entry.filePath) : undefined;
-if (data.cover && !coverFile) {
+const share = entry?.filePath ? postShareImage(entry.filePath) : undefined;
+if (data.cover && !share) {
   throw new Error(`BlogPost: ${locale}/${slug} has a cover, but its file could not be resolved`);
+}
+// The image is drawn from the frontmatter title, the page shows `data.title`:
+// one string, or the card would show a title the page does not.
+if (share && share.title !== data.title) {
+  throw new Error(`BlogPost: ${locale}/${slug}: the share image's title "${share.title}" is not the page's "${data.title}"`);
 }
 // An SVG cover with a dark variant (src/lib/cover-variant.ts) is drawn twice,
 // one image per theme. Both are lazy: a display:none image is only skipped
 // when it is lazy, so the eager, high-priority pair would fetch both. The
 // visible one sits in the first viewport and is requested at first layout.
 const coverDark = darkCover(entry?.filePath, data.cover);
-const shareImage = coverFile
-  ? { url: absoluteUrl(ogImagePath(coverFile)), width: OG_IMAGE.width, height: OG_IMAGE.height, alt: data.title }
+const shareImage = share
+  ? { url: absoluteUrl(share.urlPath), width: OG_IMAGE.width, height: OG_IMAGE.height, alt: data.title }
   : undefined;
 const topic = termBySlug(data.topic)!;
+// Ties in the related score are broken by a stable hash of the (this post,
+// candidate) pair, not by date. Newest-first sent every tie to the latest
+// posts, so the posts published together on 2026-06-03/04/05/16 rarely
+// appeared in a related list: in the build at `ea20640`, 15 of the 25
+// least-linked English posts were from those days, and Search Console listed
+// several of them as "Crawled - currently not indexed". A per-pair hash still
+// gives each page a fixed list (no churn between builds) but spreads the
+// inbound links across the corpus.
+const pairRank = (other: string): number => {
+  let h = 0x811c9dc5;
+  for (const ch of `${slug}|${other}`) h = Math.imul(h ^ ch.charCodeAt(0), 0x01000193);
+  return h >>> 0;
+};
 const relatedPosts = (await getPostsInLocale(locale))
   .filter((post) => post.slug !== slug && post.entry.data.status !== 'archived')
   .map((post) => {
@@ -76,7 +96,7 @@ const relatedPosts = (await getPostsInLocale(locale))
     return { ...post, score };
   })
   .filter((post) => post.score > 0)
-  .sort((a, b) => b.score - a.score || b.entry.data.date.getTime() - a.entry.data.date.getTime())
+  .sort((a, b) => b.score - a.score || pairRank(a.slug) - pairRank(b.slug))
   .slice(0, 3);
 // The pillar pages that list this post in their reading path. Each links the
 // post; the post links back, so a reader who lands on one article from search
@@ -244,7 +264,7 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
 
     <header class="post-head">
       <div class="meta">
-        <a class="chip chip-brand" href={termHref(locale, topic)}>
+        <a class="chip chip-topic" data-topic={data.topic} href={termHref(locale, topic)}>
           {termLabel(data.topic, locale)}
         </a>
         <a class="chip" href={termHref(locale, termBySlug(data.audience)!)}>
@@ -708,7 +728,7 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
       overscroll-behavior-x: contain;
     }
     /* A code block scrolls sideways at every width, not only on a phone, so
-       it carries the two scroll affordances the phone table carries (see the
+       it carries the two scroll affordances the table carries (see the
        comments there) at every width. Shiki paints the block dark in both
        themes, so its scrollbar is drawn light. A block that fits draws no
        scrollbar and its scroll timeline is inactive, so it is unchanged. */
@@ -753,6 +773,88 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
     }
     .prose th {
       background: var(--surface-sunk);
+    }
+    /* An identifier in a table cell is never split. Under the inline-code
+       rule above (`overflow-wrap: anywhere`) a column narrower than its token
+       broke it at an arbitrary letter and added no hyphen: `beforeDelet` /
+       `e` at 390, `crm_sales_us` / `er` at 1366. Here the code wraps only
+       where it already may (a space, a hyphen), so a token sets its column's
+       minimum width, and a table that outgrows its column scrolls inside
+       itself (below), never the page. Code in running text keeps `anywhere`
+       as the last resort for a path wider than the line. */
+    .prose :is(th, td) code {
+      overflow-wrap: normal;
+    }
+    /* The table itself is the scroll container, at every width (`display:
+       block` + `overflow-x: auto`), so a wide table scrolls instead of
+       clipping and the page keeps `documentElement.scrollWidth === viewport`.
+       A desktop column is not wide enough for every table either: with whole
+       identifiers the access-matrix table needs about 970px. What scrolling
+       costs is the affordance: a phone draws an OVERLAY scrollbar, which is
+       invisible until a gesture is already in progress, so a reader who never
+       swipes never learns the right-hand columns exist. The cut-off column at
+       the edge is indistinguishable from a clipped table. The two rules below
+       are the signal, not the scrolling. */
+    .prose table {
+      display: block;
+      max-width: 100%;
+      overflow-x: auto;
+      /* Keep a horizontal swipe that reaches the end of the table from
+         chaining into the page/browser behind it. */
+      overscroll-behavior-x: contain;
+    }
+    /* Affordance 1 — a scrollbar that is always drawn, not just mid-gesture.
+       Styling ::-webkit-scrollbar opts the container out of overlay
+       scrollbars on iOS Safari and Blink, which is the whole point.
+       ⚠️ Do NOT add `scrollbar-width`/`scrollbar-color` to `.prose table`:
+       Chrome 121+ drops ::-webkit-scrollbar customization entirely on any
+       element that sets either one, which would silently give the overlay
+       scrollbar back. A scrollbar only renders when the content overflows,
+       so short tables are unaffected. */
+    .prose table::-webkit-scrollbar {
+      height: 6px;
+    }
+    .prose table::-webkit-scrollbar-track {
+      background: color-mix(in srgb, var(--surface-sunk) 70%, transparent);
+      border-radius: var(--r-pill);
+    }
+    .prose table::-webkit-scrollbar-thumb {
+      background: color-mix(in srgb, var(--ink) 32%, transparent);
+      border-radius: var(--r-pill);
+    }
+    /* Affordance 2 — fade the trailing edge while there is more table to the
+       right. Driven by the container's own scroll position so it clears
+       exactly at the end of the scroll: a fade that is always on is a false
+       signal, and telling a reader there is more table when there is not is
+       the same defect in the other direction.
+       The fade lives ONLY in the keyframes, never in the base rule. When a
+       table is narrow enough not to overflow, its scroll timeline is inactive
+       and the effect is not applied at all (`mask-image` computes to `none`)
+       — a fade declared in the base rule would instead be stuck on for every
+       table that does not scroll. */
+    @supports (animation-timeline: scroll(self inline)) {
+      .prose table {
+        animation: prose-scroll-edge-fade linear both;
+        animation-timeline: scroll(self inline);
+      }
+    }
+    /* `display: block` wraps the rows in an anonymous table that shrinks to
+       its content, so a short table no longer spans the column as it does at
+       `display: table; width: 100%`. Above the phone breakpoint an empty
+       caption as wide as the table element (`100cqi`, the table being its
+       own container) widens that anonymous table back to the column: the
+       grid takes the same width and the same column widths as before, and a
+       table that does not fit still scrolls. Phones keep shrink-to-fit. */
+    @media (min-width: 641px) {
+      .prose table {
+        container-type: inline-size;
+      }
+      .prose table::after {
+        content: '';
+        display: table-caption;
+        caption-side: bottom;
+        inline-size: 100cqi;
+      }
     }
     @media (max-width: 640px) {
       .back {
@@ -821,35 +923,19 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
         border-radius: var(--r-control);
         font-size: var(--fs-13);
       }
-      /* The table itself is the scroll container here (`display: block` +
-         `overflow-x: auto`), so wide tables scroll instead of clipping and the
-         page keeps `documentElement.scrollWidth === viewport`. What that costs
-         is the affordance: a phone draws an OVERLAY scrollbar, which is
-         invisible until a gesture is already in progress, so a reader who never
-         swipes never learns the right-hand columns exist. The cut-off column at
-         the edge is indistinguishable from a clipped table. The two rules below
-         are the signal, not the scrolling. */
       .prose table {
-        display: block;
-        max-width: 100%;
-        overflow-x: auto;
         font-size: var(--fs-13);
-        /* Keep a horizontal swipe that reaches the end of the table from
-           chaining into the page/browser behind it. */
-        overscroll-behavior-x: contain;
       }
       /* Cells wrap; each column keeps a floor. Unwrapped (`nowrap`), a row of
          prose cells ran as long as its longest sentence: 2,035px on a 328px
          column, seven screens of swiping per row. 6.5rem (104px, padding
          included) is the widest floor at which three columns still fit the
-         328px column of a 360px phone (3 × 104 = 312), so every two- and
-         three-column table, 57 of the 69 in the English corpus, needs no
-         sideways scroll at 360 or 390; four to six columns still scroll,
-         to at most 6 × 104px + 1px of border = 625px. `overflow-wrap:
-         anywhere` is what keeps a column at its floor: it lets a long
-         identifier break instead of setting the column's minimum width, so
-         an overflowing table is never wider than its column count × 104px
-         plus its border. */
+         328px column of a 360px phone (3 × 104 = 312), so a two- or
+         three-column table of prose needs no sideways scroll at 360 or 390;
+         four to six columns scroll. `overflow-wrap: anywhere` keeps a column
+         of prose at its floor. It does not reach inline code (the rule above
+         the media query): an identifier wider than its column widens the
+         column instead of splitting, and the table scrolls further. */
       .prose th,
       .prose td {
         box-sizing: border-box;
@@ -857,41 +943,6 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
         padding-right: 0.6rem;
         padding-left: 0.6rem;
         overflow-wrap: anywhere;
-      }
-      /* Affordance 1 — a scrollbar that is always drawn, not just mid-gesture.
-         Styling ::-webkit-scrollbar opts the container out of overlay
-         scrollbars on iOS Safari and Blink, which is the whole point.
-         ⚠️ Do NOT add `scrollbar-width`/`scrollbar-color` to `.prose table`:
-         Chrome 121+ drops ::-webkit-scrollbar customization entirely on any
-         element that sets either one, which would silently give the overlay
-         scrollbar back. A scrollbar only renders when the content overflows,
-         so short tables are unaffected. */
-      .prose table::-webkit-scrollbar {
-        height: 6px;
-      }
-      .prose table::-webkit-scrollbar-track {
-        background: color-mix(in srgb, var(--surface-sunk) 70%, transparent);
-        border-radius: var(--r-pill);
-      }
-      .prose table::-webkit-scrollbar-thumb {
-        background: color-mix(in srgb, var(--ink) 32%, transparent);
-        border-radius: var(--r-pill);
-      }
-      /* Affordance 2 — fade the trailing edge while there is more table to the
-         right. Driven by the container's own scroll position so it clears
-         exactly at the end of the scroll: a fade that is always on is a false
-         signal, and telling a reader there is more table when there is not is
-         the same defect in the other direction.
-         The fade lives ONLY in the keyframes, never in the base rule. When a
-         table is narrow enough not to overflow, its scroll timeline is inactive
-         and the effect is not applied at all (`mask-image` computes to `none`)
-         — a fade declared in the base rule would instead be stuck on for every
-         table that does not scroll. */
-      @supports (animation-timeline: scroll(self inline)) {
-        .prose table {
-          animation: prose-scroll-edge-fade linear both;
-          animation-timeline: scroll(self inline);
-        }
       }
     }
   </style>

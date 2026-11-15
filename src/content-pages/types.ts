@@ -60,6 +60,15 @@ export interface MarketingPageSection {
   title: string;
   copy: string;
   items: MarketingPageItem[];
+  /**
+   * `in-development` marks a section of capabilities that are not in the
+   * current release (pre-announcing ruling of 2026-11-14, recorded on #267):
+   * they sit in their own visibly separate section, never mixed into shipped
+   * prose, with no dates and no "no schedule" wording. The section renders
+   * dashed cards with the item label in the status colour. Absent, the section
+   * describes what ships.
+   */
+  status?: 'in-development';
 }
 
 export interface MarketingPageTable {
@@ -100,3 +109,45 @@ export interface MarketingPage {
   checklist?: string[];
   faqs: { question: string; answer: string }[];
 }
+
+/**
+ * One address on /contact/ (#397): the purpose, one plain sentence on when to
+ * use it, and the mailbox. `email` is always one of the constants in
+ * `src/lib/contact.ts`, never typed into the content file, so the page cannot
+ * name an address the rest of the site does not.
+ */
+export interface ContactPageGroup {
+  id: string;
+  title: string;
+  body: string;
+  email: string;
+  /** Further reading for this purpose; `/en/<route>/` is localized at render time. */
+  links?: MarketingPageAction[];
+}
+
+/**
+ * The /contact/ page (#397). It lives in the marketing tree — same registry,
+ * same locale fallback, hreflang, canonical and sitemap rules as the evidence
+ * pages — but it is a short page of its own shape, so `kind` tells the two
+ * apart: `getMarketingPages` returns evidence pages only, `getContactPage` this
+ * one. The company name and mailing address are not content: the page quotes
+ * them from `src/lib/legal.ts`; only their labels are here.
+ */
+export interface ContactPage {
+  kind: 'contact';
+  slug: 'contact';
+  navLabel: string;
+  title: string;
+  description: string;
+  eyebrow: string;
+  heroTitle: string;
+  lead: string;
+  groups: ContactPageGroup[];
+  company: { title: string; nameLabel: string; addressLabel: string };
+}
+
+/** Everything a `content/pages/<locale>/<slug>.ts` module may export. */
+export type RegisteredPage = MarketingPage | ContactPage;
+
+export const isContactPage = (page: RegisteredPage): page is ContactPage =>
+  'kind' in page && page.kind === 'contact';

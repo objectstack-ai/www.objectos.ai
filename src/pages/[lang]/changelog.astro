@@ -1,0 +1,32 @@
+---
+import Base from '../../layouts/Base.astro';
+import ChangelogPage from '../../components/ChangelogPage.astro';
+import { changelogCopy } from '../../lib/changelog';
+import { changelogSnapshot } from '../../lib/changelog-data';
+import { fallbackRoute, sourceLocaleByIdentity } from '../../lib/fallback';
+import { changelogPath, LOCALES, segToLocale } from '../../lib/i18n';
+
+export function getStaticPaths() {
+  return LOCALES.map((locale) => ({ params: { lang: locale } }));
+}
+
+const locale = segToLocale(Astro.params.lang!)!;
+const copy = changelogCopy[locale];
+// ja/de/es/fr/ko render the English copy: noindexed, canonical to
+// /en/changelog/, and absent from hreflang (src/lib/fallback.ts). zh-Hans has
+// its own frame; the highlights are the release notes' English, marked
+// lang="en" by ChangelogPage.
+const route = fallbackRoute(locale, sourceLocaleByIdentity(changelogCopy), changelogPath);
+---
+
+<Base
+  title={copy.title}
+  description={copy.description}
+  {locale}
+  contentLocale={route.sourceLocale}
+  canonical={route.canonical}
+  noindex={route.isFallback}
+  alternates={route.alternates}
+  navAlternates={route.navAlternates}>
+  <ChangelogPage {copy} locale={route.sourceLocale} snapshot={changelogSnapshot} />
+</Base>

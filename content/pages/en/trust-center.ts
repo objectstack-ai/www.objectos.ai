@@ -12,13 +12,13 @@ const page = {
     eyebrow: 'Trust center',
     heroTitle: 'AI can write software. The harder question is whether you can approve it.',
     lead:
-      `ObjectOS is designed for the procurement, security, and IT review that happens after a demo works. ${p.e1} On either edition, agent authority is explicit in metadata and runtime enforcement.`,
+      `ObjectOS is designed for the procurement, security, and IT review that happens after a demo works. ${p.e1} On every edition, agent authority is explicit in metadata and runtime enforcement.`,
     primary: { label: 'Read the security model', href: '/en/security/' },
     secondary: { label: 'See deployment paths', href: '/en/pricing/' },
     metrics: [
-      { value: '2 editions', label: 'Hosted on ObjectOS Cloud, or self-managed on your own infrastructure with ObjectOS Enterprise' },
+      { value: '3 editions', label: `${p.descriptor}: open source and free to self-host; hosted in the browser with nothing to install; self-managed on your own infrastructure` },
       { value: 'User scoped', label: 'Agents inherit the signed-in user permissions' },
-      { value: 'Auditable', label: 'Reads, writes, tool calls, approvals, and schema changes' },
+      { value: 'Auditable', label: 'Record reads and writes, approvals, and schema changes; the in-app AI’s tool calls on Enterprise' },
     ],
     artifact: {
       eyebrow: 'Security review packet',
@@ -54,14 +54,14 @@ const page = {
           },
           {
             meta: 'Gate 3 · Approvals',
-            title: 'Sensitive changes wait for a person',
-            body: 'A structural change, or an action you mark for sign-off such as a refund or a bulk update, waits for a person to approve it.',
+            title: 'Changes to a live app wait for a person',
+            body: 'When an app is live and holds records, an AI Builder change to it waits as a draft until a person publishes it. Flow approval steps put business decisions, such as a refund or a bulk update, in front of an approver.',
             href: '/en/approvals/#ai-gate',
           },
           {
             meta: 'Gate 4 · Audit',
-            title: 'Every AI tool call leaves a trail',
-            body: 'AI tool calls land in the same audit log as people’s actions, so reviewing the AI is the same job as reviewing your team.',
+            title: 'Record reads and writes leave a trail',
+            body: 'Reads and writes of records land in the same audit log whether a person makes them or the AI acting for that person. On Enterprise, the in-app AI’s tool calls are audited too.',
             href: '/en/permissions/#admin',
           },
         ],
@@ -71,7 +71,7 @@ const page = {
         eyebrow: 'Boundaries',
         title: 'Keep sensitive business data inside controlled infrastructure',
         copy:
-          'On ObjectOS Enterprise — from its Enterprise Single-Node entry option up — the runtime, your business data, user identities, audit log, files, and secrets all live in your own infrastructure; unless you configure external providers, they stay inside that boundary. ObjectOS Cloud is operated by us.',
+          'On ObjectOS Enterprise, a private deployment, the runtime, your business data, user identities, audit log, files, and secrets all live in your own infrastructure; unless you configure external providers, they stay inside that boundary. ObjectOS Cloud is operated by us.',
         items: [
           {
             title: 'Data residency',
