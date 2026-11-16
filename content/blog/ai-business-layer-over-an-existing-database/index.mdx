@@ -1,6 +1,6 @@
 ---
 title: "How Do You Put an AI-Ready Business Layer Over a Database You Already Run, Without Moving the Data?"
-description: "Bind the tables of a database you already run as objects: reads go live to the source, writes are refused by default, and member permissions apply over REST and MCP alike. Measured on ObjectStack 18.4.0, limits included."
+description: "Bind the tables of a database you already run as objects: reads go live to the source, writes are refused by default, and member permissions apply over REST and MCP alike. Measured on ObjectStack 18.5.0, limits included."
 author: ObjectStack Team
 date: 2026-11-18
 status: published
@@ -15,7 +15,7 @@ tags:
   - Data modeling
 ---
 
-**The answer.** Declare the database as an `external` datasource, bind each table you need to an object, map the old column names onto business names, and those tables become objects that people, reports and AI agents query through the same REST and MCP doors as any other — under the same permissions. Nothing is copied. On ObjectStack 18.4.0, the version `npm create objectstack@latest` installs today, an edit made directly in the source database showed on the very next read, and ObjectStack's own database held **0 of the 2,400 orders** it was serving. Writes are refused until both the datasource and the object opt in. I will call this a **read-through ontology**: names, relationships, permissions and AI tools laid over tables you do not own, with every read passed through to the system that does. Below is the transcript, then the five places it stops.
+**The answer.** Declare the database as an `external` datasource, bind each table you need to an object, map the old column names onto business names, and those tables become objects that people, reports and AI agents query through the same REST and MCP doors as any other — under the same permissions. Nothing is copied. On ObjectStack 18.5.0, the version `npm create objectstack@latest` installs today, an edit made directly in the source database showed on the very next read, and ObjectStack's own database held **0 of the 2,400 orders** it was serving. Writes are refused until both the datasource and the object opt in. I will call this a **read-through ontology**: names, relationships, permissions and AI tools laid over tables you do not own, with every read passed through to the system that does. Below is the transcript, then the five places it stops.
 
 ## Three ways to make a running database usable
 
@@ -32,7 +32,7 @@ Most companies asked to "make our data AI-ready" already have the data, in a dat
 
 The case for copying is real, and it is not a straw man: a copy can be indexed, joined with anything, searched and reported on while the source is slow or down, and it never puts a dashboard's queries on a production order system. If those are the needs, copy. The case for reading through is narrower and stronger where it applies: the day you connect, the business layer is correct, because there is nothing to keep in step. The ADR that specifies the mechanism lists among its goals to "Register existing remote tables as ObjectStack objects **without touching the remote schema**" and to "Default to read-only; require **two explicit opt-ins** (datasource level + object level) to enable writes."
 
-![A read-through ontology on ObjectStack 18.4.0. Three callers on the left: Mia, a member, over REST; an AI agent over MCP signed in as Mia; and an admin. In the middle, the ObjectStack layer holds three things: the objects sales_customer and sales_order with a column map from the old names, the sales_reader permission set that grants read on customers with credit_limit hidden and nothing on orders, and a write gate with allowWrites false. On the right, the order system's own database with 5 customers and 2,400 orders, where every read runs live. Outcomes: Mia gets 200 with two EU customers and no credit limit, orders 403; the agent's list_objects names one object; any insert, update or delete answers 403 EXTERNAL_WRITE_FORBIDDEN. Below, ObjectStack's own database holds users, grants and native objects, and 0 customer or order rows.](./read-through-en.svg)
+![A read-through ontology on ObjectStack 18.5.0. Three callers on the left: Mia, a member, over REST; an AI agent over MCP signed in as Mia; and an admin. In the middle, the ObjectStack layer holds three things: the objects sales_customer and sales_order with a column map from the old names, the sales_reader permission set that grants read on customers with credit_limit hidden and nothing on orders, and a write gate with allowWrites false. On the right, the order system's own database with 5 customers and 2,400 orders, where every read runs live. Outcomes: Mia gets 200 with two EU customers and no credit limit, orders 403; the agent's list_objects does not list orders; any insert, update or delete answers 403 EXTERNAL_WRITE_FORBIDDEN. Below, ObjectStack's own database holds users, grants and native objects, and 0 customer or order rows.](./read-through-en.svg)
 
 ## The order system ObjectStack never touched
 
@@ -115,7 +115,7 @@ That is `schemaMode: 'external'` doing its job: per the guide, "A mature externa
 
 ## Five questions, answered by the running app
 
-Everything below is real output from `objectstack dev` on 18.4.0, trimmed only where marked. `$B` is the dev server's address, and `sql.py` is a three-line Python helper that runs one statement against the file, because the machine had no `sqlite3` command.
+Everything below is real output from `objectstack dev` on 18.5.0, trimmed only where marked. `$B` is the dev server's address, and `sql.py` is a three-line Python helper that runs one statement against the file, because the machine had no `sqlite3` command.
 
 ### Is it live, or a copy?
 
@@ -138,7 +138,7 @@ curl -s -b admin.cookies "$B/api/v1/data/sales_customer/C-1002"
 {"object":"sales_customer","id":"C-1002","record":{"credit_limit":95000,"id":"C-1002","name":"Borealis GmbH","region":"EU"}}
 ```
 
-No sync ran, because there is none. ObjectStack's own database held 84 tables at that point, and a search of their names for `customer` or `order` returned nothing. Filters push down to the source, and a lookup expands across the two remote tables:
+No sync ran, because there is none. ObjectStack's own database held 85 tables at that point, and a search of their names for `customer` or `order` returned nothing. Filters push down to the source, and a lookup expands across the two remote tables:
 
 ```bash
 curl -s -b admin.cookies "$B/api/v1/data/sales_order?status=pending&top=2&expand=customer"
@@ -196,7 +196,7 @@ Sorting by it answered the same. The source database has no idea who Mia is; the
 
 ### Can an AI agent get around that?
 
-Every ObjectStack app is an MCP server at `/api/v1/mcp`. Signed in as Mia, an agent's `list_objects` answered with one object, `sales_customer`: it cannot even see that orders exist. The rest, trimmed to the tool results:
+Every ObjectStack app is an MCP server at `/api/v1/mcp`. Signed in as Mia, an agent's `list_objects` answered with two objects: `sys_user`, which 18.5.0 opens to an agent so it can find a colleague for a person field, and `sales_customer`. Orders are not on the list: the agent cannot even see that they exist. The rest, trimmed to the tool results:
 
 ```text
 query_records  sales_customer  where {"region":"NA"}  → 2 records: Aurora Labs, Ember Foods (no credit_limit)
@@ -266,11 +266,11 @@ Over a plugin driver, OData included, the guide sets the cap: "A read that match
 
 The ObjectStack guide on virtual objects draws the line in one sentence: "Make the object virtual when a copy would be **wrong**, and real when a copy is merely **convenient**". A copy is wrong when the remote computes the answer at request time, when the data must not land (residency, licence, audit), or when it changes faster than any sync. A copy is convenient for slow-changing reference data, and for reports that join many sources. Read through the first kind; copy the second kind. For a system already switched off, all that is left is an export, and [an import mapping and its dry run](/en/blog/how-to-import-a-spreadsheet-from-an-old-system/) is how that file lands without its old codes.
 
-Copying in is the other path, and its kernel ships in 18.4.0. A `job` whose `pull` names a `mapping` with a `datasourceSource` reads a federated object, like the two above, in windows and upserts its rows into an object declared `managedBy: 'synced'`: members can read it, and the engine refuses their writes with `403`. Each run leaves a `sys_sync_run` row with what it read and the position it reached, and the next run reads on from there. The release notes put it in one line: "A mapping's `datasourceSource` now does what it declares". Jobs declared in an app run only on a deployment that sets `OS_AUTOMATION_SCHEDULED_WORK_ENABLED` to `true`, which is off by default. I did not measure the pull for this post. ADR-0153's rule of thumb sends "Reports, analysis, AI question answering, joins across sources; a slow or fragile legacy system" to sync-in and "Live data, one table at a time; the legacy system must not be touched; data that must not land" to federation. [Connect existing systems](/en/connect-existing-systems/) sets the three paths side by side: read live, copy in, or change the source through a declared action.
+Copying in is the other path, and its kernel ships in 18.5.0. A `job` whose `pull` names a `mapping` with a `datasourceSource` reads a federated object, like the two above, in windows and upserts its rows into an object declared `managedBy: 'synced'`: members can read it, and the engine refuses their writes with `403`. Each run leaves a `sys_sync_run` row with what it read and the position it reached, and the next run reads on from there. The release notes put it in one line: "A mapping's `datasourceSource` now does what it declares". Jobs declared in an app run only on a deployment that sets `OS_AUTOMATION_SCHEDULED_WORK_ENABLED` to `true`, which is off by default. I did not measure the pull for this post. ADR-0153's rule of thumb sends "Reports, analysis, AI question answering, joins across sources; a slow or fragile legacy system" to sync-in and "Live data, one table at a time; the legacy system must not be touched; data that must not land" to federation. [Connect existing systems](/en/connect-existing-systems/) sets the three paths side by side: read live, copy in, or change the source through a declared action.
 
 ## In development: the rest of sync-in
 
-Not in 18.4.0: marking rows the source deleted (the jobs guide: "The delete keys change nothing yet"), paging for connector sources, whose key can be declared but "nothing reads it yet", and the sync-in guide and skills. Nothing in this section was measured.
+Not in 18.5.0: marking rows the source deleted (the jobs guide: "The delete keys change nothing yet"), paging for connector sources, whose key can be declared but "nothing reads it yet", and the sync-in guide and skills. Nothing in this section was measured.
 
 ## What to read in the diff
 
@@ -289,4 +289,4 @@ The [ontology](/en/glossary/ontology/) is the layer that names your business: ob
 
 ## Point your agent at it
 
-Hand your coding agent the binding as a rule rather than this article: an `external` datasource, one object per table with `remoteName` and `columnMap`, an authored `sharingModel`, both write switches off, and a permission set per audience. [How to configure the coding agent](/en/blog/how-to-point-your-agent-at-objectstack/) covers the rule file, the MCP endpoint the running app exposes, and the spec; the [external datasources guide](https://objectstack.ai/docs/data-modeling/external-datasources) is the reference the agent should read. `npm create objectstack@latest` installs 18.4.0, the version every transcript above ran on.
+Hand your coding agent the binding as a rule rather than this article: an `external` datasource, one object per table with `remoteName` and `columnMap`, an authored `sharingModel`, both write switches off, and a permission set per audience. [How to configure the coding agent](/en/blog/how-to-point-your-agent-at-objectstack/) covers the rule file, the MCP endpoint the running app exposes, and the spec; the [external datasources guide](https://objectstack.ai/docs/data-modeling/external-datasources) is the reference the agent should read. `npm create objectstack@latest` installs 18.5.0, the version every transcript above ran on.

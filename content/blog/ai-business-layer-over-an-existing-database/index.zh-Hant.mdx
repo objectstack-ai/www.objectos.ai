@@ -1,7 +1,7 @@
 ---
 # @generated zh-Hant from zh-Hans (s2twp) — edit the zh-Hans file; delete this line to hand-maintain.
 title: 不搬資料，怎樣給已經在跑的資料庫加一層 AI 能用的業務層？
-description: 把在跑資料庫的表繫結成物件：讀取即時落到源庫，寫入預設拒絕，成員權限在 REST 和 MCP 上同樣生效。在 ObjectStack 18.4.0 上實測，邊界也一併測了。
+description: 把在跑資料庫的表繫結成物件：讀取即時落到源庫，寫入預設拒絕，成員權限在 REST 和 MCP 上同樣生效。在 ObjectStack 18.5.0 上實測，邊界也一併測了。
 author: ObjectStack Team
 date: 2026-11-18
 status: published
@@ -16,7 +16,7 @@ tags:
   - 資料建模
 ---
 
-**先給答案**：把資料庫宣告為一個 `external` 資料來源，把需要的每張表繫結成一個物件，把舊列名對映成業務名，這些表就成了物件——人、報表和 AI Agent 通過和其他物件一樣的 REST 與 MCP 入口查詢它們，權限也一樣。沒有任何複製。在 ObjectStack 18.4.0（也就是今天 `npm create objectstack@latest` 裝上的版本）上，直接在源資料庫裡改的一行，下一次讀取就看到了；而 ObjectStack 自己的資料庫裡，它正在提供的 **2,400 條訂單一條都沒有（0 條）**。在資料來源和物件都顯式開啟之前，寫入一律拒絕。我把這叫作**直通式本體**（read-through ontology）：名字、關係、權限和 AI 工具疊在你並不擁有的表之上，每一次讀取都穿過去，交給真正擁有它們的那個系統。下面先給實測記錄，再講它止步的五個地方。
+**先給答案**：把資料庫宣告為一個 `external` 資料來源，把需要的每張表繫結成一個物件，把舊列名對映成業務名，這些表就成了物件——人、報表和 AI Agent 通過和其他物件一樣的 REST 與 MCP 入口查詢它們，權限也一樣。沒有任何複製。在 ObjectStack 18.5.0（也就是今天 `npm create objectstack@latest` 裝上的版本）上，直接在源資料庫裡改的一行，下一次讀取就看到了；而 ObjectStack 自己的資料庫裡，它正在提供的 **2,400 條訂單一條都沒有（0 條）**。在資料來源和物件都顯式開啟之前，寫入一律拒絕。我把這叫作**直通式本體**（read-through ontology）：名字、關係、權限和 AI 工具疊在你並不擁有的表之上，每一次讀取都穿過去，交給真正擁有它們的那個系統。下面先給實測記錄，再講它止步的五個地方。
 
 ## 讓在跑的資料庫可用，有三條路
 
@@ -33,7 +33,7 @@ tags:
 
 複製的理由是真實的，不是稻草人：副本可以建索引、和任何東西關聯、被搜尋，源庫慢了或宕了也照樣能出報表，而且永遠不會把儀表盤的查詢壓到生產訂單系統上。如果你要的是這些，就複製。直通讀取的理由更窄，但在適用的地方更硬：接上的那一天，業務層就是對的，因為根本沒有需要保持同步的東西。規定這套機制的 ADR 在目標裡寫著「Register existing remote tables as ObjectStack objects **without touching the remote schema**」（把現有遠端表註冊成 ObjectStack 物件，而不碰遠端 schema），以及「Default to read-only; require **two explicit opt-ins** (datasource level + object level) to enable writes」（預設只讀；要開啟寫入，需要兩處顯式開啟：資料來源級和物件級）。
 
-![ObjectStack 18.4.0 上的直通式本體。左邊三個呼叫方：成員 Mia 走 REST；以 Mia 身份登入的 AI Agent 走 MCP；還有管理員。中間是 ObjectStack 層，裡面有三樣東西：帶舊列名對映的物件 sales_customer 和 sales_order；sales_reader 權限集，允許讀客戶但隱藏 credit_limit，對訂單不授權；以及 allowWrites 為 false 的寫入閘門。右邊是訂單系統自己的資料庫，5 個客戶、2,400 條訂單，每次讀取都在這裡即時執行。結果：Mia 拿到 200、兩個 EU 客戶、沒有信用額度，訂單 403；Agent 的 list_objects 只列出一個物件；任何插入、更新、刪除都回 403 EXTERNAL_WRITE_FORBIDDEN。下方，ObjectStack 自己的資料庫只有使用者、授權和原生物件，客戶和訂單資料為 0 行。](./read-through.svg)
+![ObjectStack 18.5.0 上的直通式本體。左邊三個呼叫方：成員 Mia 走 REST；以 Mia 身份登入的 AI Agent 走 MCP；還有管理員。中間是 ObjectStack 層，裡面有三樣東西：帶舊列名對映的物件 sales_customer 和 sales_order；sales_reader 權限集，允許讀客戶但隱藏 credit_limit，對訂單不授權；以及 allowWrites 為 false 的寫入閘門。右邊是訂單系統自己的資料庫，5 個客戶、2,400 條訂單，每次讀取都在這裡即時執行。結果：Mia 拿到 200、兩個 EU 客戶、沒有信用額度，訂單 403；Agent 的 list_objects 裡沒有訂單；任何插入、更新、刪除都回 403 EXTERNAL_WRITE_FORBIDDEN。下方，ObjectStack 自己的資料庫只有使用者、授權和原生物件，客戶和訂單資料為 0 行。](./read-through.svg)
 
 ## 一個 ObjectStack 從沒碰過的訂單系統
 
@@ -116,7 +116,7 @@ export const SalesReader = definePermissionSet({
 
 ## 五個問題，由執行中的應用來回答
 
-下面每一段都是 18.4.0 上 `objectstack dev` 的真實輸出，只在標明處做了刪節。`$B` 是開發伺服器的地址；`sql.py` 是一個三行的 Python 小工具，對這個檔案執行一條語句，因為這臺機器上沒有 `sqlite3` 命令。
+下面每一段都是 18.5.0 上 `objectstack dev` 的真實輸出，只在標明處做了刪節。`$B` 是開發伺服器的地址；`sql.py` 是一個三行的 Python 小工具，對這個檔案執行一條語句，因為這臺機器上沒有 `sqlite3` 命令。
 
 ### 是即時的，還是副本？
 
@@ -139,7 +139,7 @@ curl -s -b admin.cookies "$B/api/v1/data/sales_customer/C-1002"
 {"object":"sales_customer","id":"C-1002","record":{"credit_limit":95000,"id":"C-1002","name":"Borealis GmbH","region":"EU"}}
 ```
 
-沒有任何同步在跑，因為根本沒有同步。那時 ObjectStack 自己的資料庫裡有 84 張表，按名字搜 `customer` 或 `order`，一張都沒有。篩選條件下推到源庫，查詢欄位可以跨兩張遠端表展開：
+沒有任何同步在跑，因為根本沒有同步。那時 ObjectStack 自己的資料庫裡有 85 張表，按名字搜 `customer` 或 `order`，一張都沒有。篩選條件下推到源庫，查詢欄位可以跨兩張遠端表展開：
 
 ```bash
 curl -s -b admin.cookies "$B/api/v1/data/sales_order?status=pending&top=2&expand=customer"
@@ -197,7 +197,7 @@ HTTP 403
 
 ### AI Agent 能繞過去嗎？
 
-每個 ObjectStack 應用都是一個 MCP 伺服器，地址是 `/api/v1/mcp`。以 Mia 身份登入後，Agent 的 `list_objects` 只回答了一個物件 `sales_customer`：它連訂單存在都看不到。其餘的，刪節到只剩工具結果：
+每個 ObjectStack 應用都是一個 MCP 伺服器，地址是 `/api/v1/mcp`。以 Mia 身份登入後，Agent 的 `list_objects` 回答了兩個物件：`sys_user`（18.5.0 向 Agent 開放了它，好讓 Agent 為人員欄位找到同事）和 `sales_customer`。訂單不在其中：它連訂單存在都看不到。其餘的，刪節到只剩工具結果：
 
 ```text
 query_records  sales_customer  where {"region":"NA"}  → 2 records: Aurora Labs, Ember Foods (no credit_limit)
@@ -267,11 +267,11 @@ $ python3 sql.py erp.db "SELECT c.cust_region, round(sum(o.amount),2), count(*) 
 
 ObjectStack 關於虛擬物件的指南用一句話劃了線：「Make the object virtual when a copy would be **wrong**, and real when a copy is merely **convenient**」（複製會出錯時，讓物件保持虛擬；複製只是方便時，讓它成為真實物件）。遠端在請求時才算出答案、資料不能落地（資料駐留、許可、審計），或者變化快過任何同步，複製就是錯的。變化緩慢的參考資料、要關聯很多來源的報表，複製只是方便。前一類直通讀取，後一類複製。對一個已經停用的系統，剩下的只有一份匯出檔案，[一份匯入對映和它的試執行](/zh-Hant/blog/how-to-import-a-spreadsheet-from-an-old-system/)就是讓那份檔案落進模型、又不把舊編碼一起帶進來的辦法。
 
-複製進來是另一條路，它的核心已經隨 18.4.0 釋出。一個 `job` 的 `pull` 指向一份帶 `datasourceSource` 的 `mapping`，就會按視窗讀取一個聯邦物件（比如上面那兩個），把行 upsert 進一個宣告為 `managedBy: 'synced'` 的物件：成員可以讀，引擎會以 `403` 拒絕他們的寫入。每次執行都會留下一行 `sys_sync_run`，記錄讀了什麼、讀到了哪個位置，下一次執行從那裡接著讀。釋出說明用一句話概括：「A mapping's `datasourceSource` now does what it declares」（對映的 `datasourceSource` 現在會做它宣告的事）。應用裡宣告的作業，只在把 `OS_AUTOMATION_SCHEDULED_WORK_ENABLED` 設為 `true` 的部署上執行，這個開關預設關閉。本文沒有實測這條拉取。ADR-0153 的經驗法則把「Reports, analysis, AI question answering, joins across sources; a slow or fragile legacy system」（報表、分析、AI 問答、跨源關聯；慢或脆弱的老系統）分給 sync-in，把「Live data, one table at a time; the legacy system must not be touched; data that must not land」（即時資料、一次一張表；不能碰老系統；不能落地的資料）分給聯邦。[對接現有系統](/zh-Hant/connect-existing-systems/)把三條路並排擺開：即時讀取、複製進來，或者通過宣告的動作修改源系統。
+複製進來是另一條路，它的核心已經隨 18.5.0 釋出。一個 `job` 的 `pull` 指向一份帶 `datasourceSource` 的 `mapping`，就會按視窗讀取一個聯邦物件（比如上面那兩個），把行 upsert 進一個宣告為 `managedBy: 'synced'` 的物件：成員可以讀，引擎會以 `403` 拒絕他們的寫入。每次執行都會留下一行 `sys_sync_run`，記錄讀了什麼、讀到了哪個位置，下一次執行從那裡接著讀。釋出說明用一句話概括：「A mapping's `datasourceSource` now does what it declares」（對映的 `datasourceSource` 現在會做它宣告的事）。應用裡宣告的作業，只在把 `OS_AUTOMATION_SCHEDULED_WORK_ENABLED` 設為 `true` 的部署上執行，這個開關預設關閉。本文沒有實測這條拉取。ADR-0153 的經驗法則把「Reports, analysis, AI question answering, joins across sources; a slow or fragile legacy system」（報表、分析、AI 問答、跨源關聯；慢或脆弱的老系統）分給 sync-in，把「Live data, one table at a time; the legacy system must not be touched; data that must not land」（即時資料、一次一張表；不能碰老系統；不能落地的資料）分給聯邦。[對接現有系統](/zh-Hant/connect-existing-systems/)把三條路並排擺開：即時讀取、複製進來，或者通過宣告的動作修改源系統。
 
 ## 開發中：sync-in 的其餘部分
 
-不在 18.4.0 裡的有：標記源系統已刪除的行（作業指南的原話是「The delete keys change nothing yet」，刪除相關的鍵暫時什麼都不改變）；聯結器來源的分頁，它的鍵已經可以宣告，但「nothing reads it yet」（還沒有任何東西讀取它）；以及 sync-in 的指南和技能。本節內容都沒有實測。
+不在 18.5.0 裡的有：標記源系統已刪除的行（作業指南的原話是「The delete keys change nothing yet」，刪除相關的鍵暫時什麼都不改變）；聯結器來源的分頁，它的鍵已經可以宣告，但「nothing reads it yet」（還沒有任何東西讀取它）；以及 sync-in 的指南和技能。本節內容都沒有實測。
 
 ## 在 diff 裡該看什麼
 
@@ -290,4 +290,4 @@ ObjectStack 關於虛擬物件的指南用一句話劃了線：「Make the objec
 
 ## 讓你的 Agent 來做
 
-交給你的編碼 Agent 的，應該是一條規則，而不是這篇文章：一個 `external` 資料來源；每張表一個物件，帶 `remoteName` 和 `columnMap`；一個明確寫出的 `sharingModel`；兩個寫入開關都關閉；每類受眾一個權限集。[怎樣配置編碼 Agent](/en/blog/how-to-point-your-agent-at-objectstack/) 講了規則檔案、執行中的應用暴露的 MCP 端點和規範；[外部資料來源指南](https://objectstack.ai/docs/data-modeling/external-datasources)是 Agent 該讀的參考。`npm create objectstack@latest` 裝上的是 18.4.0，上面每一段實測記錄都跑在這個版本上。
+交給你的編碼 Agent 的，應該是一條規則，而不是這篇文章：一個 `external` 資料來源；每張表一個物件，帶 `remoteName` 和 `columnMap`；一個明確寫出的 `sharingModel`；兩個寫入開關都關閉；每類受眾一個權限集。[怎樣配置編碼 Agent](/en/blog/how-to-point-your-agent-at-objectstack/) 講了規則檔案、執行中的應用暴露的 MCP 端點和規範；[外部資料來源指南](https://objectstack.ai/docs/data-modeling/external-datasources)是 Agent 該讀的參考。`npm create objectstack@latest` 裝上的是 18.5.0，上面每一段實測記錄都跑在這個版本上。
