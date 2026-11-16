@@ -147,6 +147,20 @@ const sitemap = await readDist('sitemap-0.xml');
 requireContains('sitemap-0.xml', sitemap, `${SITE}/en/blog/`, 'missing English blog index');
 requireContains('sitemap-0.xml', sitemap, `${SITE}/zh-Hans/blog/`, 'missing Simplified Chinese blog index');
 
+// IndexNow key file (#456): engines verify a submission by fetching
+// `/<key>.txt` and comparing its body to the submitted key, so the body must
+// be exactly the key, and the file is a verification artifact, not a page —
+// it must never be listed in the sitemap. The key is read from its one home.
+const { INDEXNOW_KEY } = await import('./lib/indexnow.mjs');
+const indexnowFile = `${INDEXNOW_KEY}.txt`;
+const indexnowBody = await readDist(indexnowFile);
+if (indexnowBody && indexnowBody !== INDEXNOW_KEY) {
+  issues.push(`${indexnowFile}: body must be exactly the IndexNow key, got ${JSON.stringify(indexnowBody.slice(0, 80))}`);
+}
+for (const [file, xml] of [['sitemap-index.xml', sitemapIndex], ['sitemap-0.xml', sitemap]]) {
+  requireExcludes(file, xml, indexnowFile, 'lists the IndexNow key file');
+}
+
 const llms = await readDist('llms.txt');
 requireContains('llms.txt', llms, '# ObjectOS', 'missing title');
 requireContains('llms.txt', llms, '## English Articles', 'missing English article section');
@@ -215,7 +229,12 @@ for (const { file, locale } of NOT_FOUND_PAGES) {
   // Inside <main>: the header already links all three on every page, so a
   // whole-document match would pass with the 404 body missing.
   const main = html.match(/<main\b[^>]*>([\s\S]*?)<\/main>/)?.[1] ?? '';
-  for (const href of [`/${locale}/`, `/${locale}/blog/`, `/${locale}/pricing/`]) {
+  // A locale with no pricing copy of its own links the English page: the
+  // fallback-links integration points links at a fallback's canonical.
+  const pricingHead = (await readDist(`${locale}/pricing/index.html`)) ?? '';
+  const pricingCanonical = /<link rel="canonical" href="https:\/\/www\.objectos\.ai(\/[^"]*)"/.exec(pricingHead)?.[1];
+  const pricingHref = /content="noindex/.test(pricingHead) && pricingCanonical ? pricingCanonical : `/${locale}/pricing/`;
+  for (const href of [`/${locale}/`, `/${locale}/blog/`, pricingHref]) {
     requireContains(file, main, `href="${href}"`, `404 page body must link ${href}`);
   }
 }
@@ -869,6 +888,57 @@ for (const [key, files] of redirecting) {
 }
 if (internalLinksChecked === 0) {
   issues.push('redirect check: found no internal links — an empty match is a failure, not a pass');
+}
+
+// A link to a locale-fallback page (noindexed, canonical to the same path in
+// another locale) spends link equity on a page Google will not index. The
+// `fallback-links` integration (scripts/lib/fallback-links.mjs) points every
+// such link at the canonical; only the language switcher (`data-lang`) keeps
+// its per-locale target. This fails on any other link that still reaches one,
+// and on a build with no switcher links to fallbacks at all, which would mean
+// the check matched nothing rather than that the site is clean.
+{
+  const isLocaleFallback = (page) => {
+    if (!page?.noindex || !page.canonical || page.canonical === page.url) return false;
+    const target = pageAt(page.canonical);
+    const rest = (u) => new URL(u).pathname.replace(/^\/[^/]+/, '');
+    return isIndexable(target) && rest(page.canonical) === rest(page.url);
+  };
+  let switcherLinksToFallbacks = 0;
+  const toFallback = new Map(); // href -> files
+  for (const page of pages.values()) {
+    const bodyStart = page.html.indexOf('<body');
+    if (bodyStart === -1) continue;
+    for (const [tag] of page.html.slice(bodyStart).matchAll(TAG('a'))) {
+      const href = attrOf(tag, 'href');
+      if (!href || href.startsWith('#')) continue;
+      let url;
+      try {
+        url = new URL(href, page.url);
+      } catch {
+        continue;
+      }
+      url.hash = '';
+      url.search = '';
+      if (!isLocaleFallback(pageAt(url.href))) continue;
+      if (/\sdata-lang="/.test(tag)) {
+        switcherLinksToFallbacks += 1;
+        continue;
+      }
+      toFallback.set(href, [...(toFallback.get(href) ?? []), page.file]);
+    }
+  }
+  for (const [href, files] of toFallback) {
+    const unique = [...new Set(files)];
+    issues.push(
+      `internal link ${href} targets a noindexed locale fallback; link its canonical instead ` +
+        `(linked from ${unique.length} page${unique.length === 1 ? '' : 's'}: ` +
+        `${unique.slice(0, 3).join(', ')}${unique.length > 3 ? ', …' : ''})`
+    );
+  }
+  if (switcherLinksToFallbacks === 0) {
+    issues.push('fallback-link check: found no switcher links to a locale fallback — the check matched nothing');
+  }
 }
 
 // ─── The root page ──────────────────────────────────────────────────────────

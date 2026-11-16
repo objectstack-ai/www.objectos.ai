@@ -1,5 +1,6 @@
-// The fonts `scripts/og-images.mjs` rasterizes SVG cover text with, and the
-// check that every character a cover draws is in one of them.
+// The fonts `scripts/og-images.mjs` rasterizes SVG cover text and share-image
+// titles with, and the check that every character a cover or a title draws is
+// in one of them.
 //
 // ─── Why the fonts are bundled, not taken from the machine ─────────────────
 //
@@ -37,6 +38,11 @@
 //   Noto Sans SC          Chinese. The zh-Hans and zh-Hant posts share one
 //                         Simplified-Chinese cover per post (AGENTS.md); the
 //                         other locales use the English cover.
+//   Noto Sans JP          Japanese titles in the share image: the Japanese
+//                         forms of the kanji, and the ones Noto Sans SC lacks
+//                         (捗).
+//   Noto Sans KR          Korean titles in the share image: Hangul, which no
+//                         other face has.
 //   Noto Sans Symbols 2   ✓ ✗ ⛔ and the other dingbats in the diagrams.
 //   Noto Sans Math        the arrows and operators the others lack (↶ ⊘).
 //   Noto Emoji            the emoji (💥 🤔), in monochrome: the COLRv1
@@ -62,6 +68,8 @@ export const OG_FACES = [
   { family: 'Arimo', pkg: '@fontsource-variable/arimo', files: /^arimo-latin(-ext)?-wght-normal\.woff2$/ },
   { family: 'Cousine', pkg: '@fontsource/cousine', files: /^cousine-latin(-ext)?-(400|700)-normal\.woff2$/ },
   { family: 'Noto Sans SC', pkg: '@fontsource-variable/noto-sans-sc', files: /^noto-sans-sc-.*-wght-normal\.woff2$/ },
+  { family: 'Noto Sans JP', pkg: '@fontsource-variable/noto-sans-jp', files: /^noto-sans-jp-.*-wght-normal\.woff2$/ },
+  { family: 'Noto Sans KR', pkg: '@fontsource-variable/noto-sans-kr', files: /^noto-sans-kr-.*-wght-normal\.woff2$/ },
   { family: 'Noto Sans Symbols 2', pkg: '@fontsource/noto-sans-symbols-2', files: /^noto-sans-symbols-2-.*-400-normal\.woff2$/ },
   { family: 'Noto Sans Math', pkg: '@fontsource/noto-sans-math', files: /^noto-sans-math-.*-400-normal\.woff2$/ },
   { family: 'Noto Emoji', pkg: '@fontsource-variable/noto-emoji', files: /^noto-emoji-.*-wght-normal\.woff2$/ },
@@ -73,9 +81,12 @@ const SANS_NAMES = ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'system-u
 const MONO_NAMES = ['ui-monospace', 'SFMono-Regular', 'SF Mono', 'Menlo', 'Monaco', 'Consolas', 'Courier New', 'monospace'];
 // The symbol faces come before the CJK face: Noto Sans SC also has ✓ and the
 // arrows, but as full-width CJK glyphs, which sit badly in a Latin line; a
-// Chinese line reads fine with the Latin-proportioned ones.
-const SANS_CHAIN = ['Arimo', 'Noto Sans Symbols 2', 'Noto Sans Math', 'Noto Sans SC', 'Noto Emoji'];
-const MONO_CHAIN = ['Cousine', 'Noto Sans Symbols 2', 'Noto Sans Math', 'Noto Sans SC', 'Noto Emoji', 'Arimo'];
+// Chinese line reads fine with the Latin-proportioned ones. The Japanese and
+// Korean faces come after the Chinese one, so a cover's text resolves exactly
+// as it did before they were added; they serve the share-image titles, which
+// name them first (`titleFont`), and anything only they have.
+const SANS_CHAIN = ['Arimo', 'Noto Sans Symbols 2', 'Noto Sans Math', 'Noto Sans SC', 'Noto Sans JP', 'Noto Sans KR', 'Noto Emoji'];
+const MONO_CHAIN = ['Cousine', 'Noto Sans Symbols 2', 'Noto Sans Math', 'Noto Sans SC', 'Noto Sans JP', 'Noto Sans KR', 'Noto Emoji', 'Arimo'];
 
 const xml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -252,6 +263,16 @@ export function svgTextChars(svg) {
   return chars;
 }
 
+/** The characters of `chars` (code point -> context) that no face can draw. */
+function uncovered(chars, faces) {
+  const missing = [];
+  for (const [cp, text] of chars) {
+    if (faces.some((face) => face.cmap.has(cp))) continue;
+    missing.push({ char: String.fromCodePoint(cp), codePoint: `U+${cp.toString(16).toUpperCase().padStart(4, '0')}`, text });
+  }
+  return missing;
+}
+
 /**
  * The characters of an SVG that no bundled face can draw.
  *
@@ -260,10 +281,46 @@ export function svgTextChars(svg) {
  * @returns {{ char: string, codePoint: string, text: string }[]}
  */
 export function uncoveredChars(svg, faces) {
-  const missing = [];
-  for (const [cp, text] of svgTextChars(svg)) {
-    if (faces.some((face) => face.cmap.has(cp))) continue;
-    missing.push({ char: String.fromCodePoint(cp), codePoint: `U+${cp.toString(16).toUpperCase().padStart(4, '0')}`, text });
-  }
-  return missing;
+  return uncovered(svgTextChars(svg), faces);
 }
+
+/**
+ * The characters of a plain text (a post title) that no bundled face can draw.
+ *
+ * @param {string} text
+ * @param {{ cmap: Cmap }[]} faces
+ * @returns {{ char: string, codePoint: string, text: string }[]}
+ */
+export function uncoveredText(text, faces) {
+  const chars = new Map();
+  for (const ch of text) {
+    if (!NOT_DRAWN.test(ch)) chars.set(ch.codePointAt(0), text);
+  }
+  return uncovered(chars, faces);
+}
+
+// ─── Titles ─────────────────────────────────────────────────────────────────
+//
+// The share image sets the post's title in its locale
+// (scripts/lib/og-composite.mjs). A Chinese, Japanese or Korean title names
+// its CJK face first, so the Latin words inside it (AI, ObjectStack) take that
+// face's proportions and baseline instead of switching faces mid-line; any
+// other title names Arimo. Either way fontconfig falls back through the sans-serif
+// chain for a character the named face lacks, so `uncoveredText` against
+// every face is exactly "this title can be drawn".
+//
+// Japanese has its own face, Noto Sans JP: the Simplified-Chinese face has the
+// kana, but draws the Chinese forms of the kanji and lacks some (捗, in 進捗).
+// Korean needs Noto Sans KR, the only face with Hangul. zh-Hant uses the
+// Simplified-Chinese face, which covers every Traditional title the site has.
+
+const TITLE_FAMILY = { 'zh-Hans': 'Noto Sans SC', 'zh-Hant': 'Noto Sans SC', ja: 'Noto Sans JP', ko: 'Noto Sans KR' };
+
+/**
+ * The Pango font description a share-image title is set in, bold, at `size`
+ * pixels (the renderer draws at 72 dpi, where a point is a pixel).
+ *
+ * @param {string} locale
+ * @param {number} size
+ */
+export const titleFont = (locale, size) => `${TITLE_FAMILY[locale] ?? 'Arimo'} Bold ${size}`;
