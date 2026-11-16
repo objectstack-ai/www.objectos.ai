@@ -54,12 +54,35 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
+      # IndexNow inputs (#456): the live sitemaps as they are BEFORE this deploy
+      # (the baseline) and the dist/ sitemaps this deploy publishes. Must run
+      # before `Deploy`, which is why it is a step here and not in the
+      # `indexnow` job. continue-on-error: a failure here only degrades the
+      # IndexNow job's diff, never this job or the required check.
+      - name: Snapshot sitemaps for IndexNow
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        continue-on-error: true
+        run: |
+          mkdir -p indexnow/next
+          cp dist/sitemap-*.xml indexnow/next/
+          node scripts/indexnow-submit.mjs --snapshot indexnow/prev
+
       - name: Deploy
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: pnpm dlx wrangler@3.90.0 pages deploy dist --project-name=blog-objectos-ai --branch=main --commit-dirty=true
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Upload IndexNow inputs
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: indexnow-inputs
+          path: indexnow/
+          retention-days: 7
+          if-no-files-found: warn
 
   # Read-only check of the live site after a production deploy (#336, ruled on
   # #267): fetches the home, locale homes, sitemaps and the newest post, and on
@@ -99,3 +122,56 @@ jobs:
         run: node scripts/post-deploy-probe.mjs --open-issue
         env:
           GH_TOKEN: ${{ github.token }}
+
+  # IndexNow push after a production deploy (#456): submits only the URLs this
+  # deploy added, revised or removed to api.indexnow.org, so Bing (and through
+  # it ChatGPT search and Copilot), Yandex and the other participating engines
+  # learn of them without waiting for a sitemap crawl. Same shape as `probe`:
+  # its own job on `push` to main only, so a failure marks the run red and
+  # never blocks a merge or the required check `Build and deploy`. The key is
+  # public (scripts/lib/indexnow.mjs). How the changed set is derived — a diff
+  # of the pre-deploy live sitemap against dist/, plus a git diff for pages
+  # without lastmod — is documented in scripts/indexnow-submit.mjs, runnable
+  # locally with --dry-run.
+  indexnow:
+    name: IndexNow submit
+    needs: deploy
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      # The checkout is depth 1. `git diff before sha` needs only the two
+      # commits' trees, not the history between them, so fetching `before`
+      # alone is enough. All zeros (a ref's first push) or a commit lost to a
+      # force-push cannot be fetched; the script then reports the git source
+      # as unavailable and uses the sitemap diff alone.
+      - name: Fetch the pre-push commit
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: git fetch --no-tags --depth=1 origin "$BEFORE" || echo "::warning::could not fetch $BEFORE; the git half of the IndexNow diff is skipped"
+
+      - name: Download IndexNow inputs
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: indexnow-inputs
+          path: indexnow
+
+      - name: Submit changed URLs to IndexNow
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          # Without the artifact, this deploy's sitemaps are the live ones now.
+          next=indexnow/next
+          [ -f "$next/sitemap-index.xml" ] || next=https://www.objectos.ai
+          node scripts/indexnow-submit.mjs --prev indexnow/prev --next "$next" --git-base "$BEFORE" --git-head "$GITHUB_SHA"

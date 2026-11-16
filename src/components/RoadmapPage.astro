@@ -1,0 +1,157 @@
+---
+import {
+  itemsIn,
+  itemWording,
+  ROADMAP_BUCKETS,
+  type RoadmapCopy,
+  type RoadmapSnapshot,
+} from '../lib/roadmap';
+import type { Locale } from '../lib/i18n';
+
+interface Props {
+  copy: RoadmapCopy;
+  /** The language the copy is written in (English on a fallback locale). */
+  locale: Locale;
+  snapshot: RoadmapSnapshot;
+}
+
+const { copy, locale, snapshot } = Astro.props;
+const empty = snapshot.items.length === 0;
+---
+
+<section class="roadmap">
+  <header class="intro">
+    <p class="eyebrow">{copy.eyebrow}</p>
+    <h1>{copy.heading}</h1>
+    <p class="lead">{copy.lead}</p>
+  </header>
+
+  {
+    empty ? (
+      <p class="empty" data-roadmap-empty>
+        {copy.empty}
+      </p>
+    ) : (
+      <div class="buckets">
+        {ROADMAP_BUCKETS.map((bucket) => {
+          const items = itemsIn(snapshot, bucket);
+          const bucketCopy = copy.buckets[bucket];
+          return (
+            <section class:list={['bucket', bucket]} aria-labelledby={`roadmap-${bucket}`} data-roadmap-bucket={bucket}>
+              <h2 id={`roadmap-${bucket}`}>{bucketCopy.heading}</h2>
+              <p class="bucket-note">{bucketCopy.note}</p>
+              {items.length ? (
+                <ul>
+                  {items.map((item) => (
+                    <li data-roadmap-item>
+                      <span class="status">{bucketCopy.status}</span>
+                      <p>{itemWording(item, locale)}</p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p class="bucket-empty">{copy.bucketEmpty}</p>
+              )}
+            </section>
+          );
+        })}
+      </div>
+    )
+  }
+</section>
+
+<style>
+  .roadmap {
+    max-width: var(--measure-wide);
+    margin: 0 auto;
+  }
+  .intro {
+    margin-bottom: var(--sp-7);
+  }
+  .eyebrow {
+    margin: 0 0 var(--sp-3);
+  }
+  h1 {
+    margin: 0 0 var(--sp-4);
+    font-family: var(--font-display);
+    font-size: var(--fs-h1);
+    line-height: var(--lh-display);
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  .lead {
+    margin: 0;
+    max-width: var(--measure-prose);
+    color: var(--ink-soft);
+    font-size: var(--fs-17);
+    line-height: var(--lh-body);
+  }
+  .empty {
+    margin: 0;
+    padding: var(--sp-6) 0;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: var(--fs-16);
+  }
+  /* Three columns — now, next, later — on a wide screen; stacked on a phone. */
+  .buckets {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--sp-6);
+    border-top: 1px solid var(--line);
+    padding-top: var(--sp-6);
+  }
+  .bucket h2 {
+    margin: 0 0 var(--sp-2);
+    font-size: var(--fs-24);
+    line-height: var(--lh-heading);
+  }
+  .bucket-note,
+  .bucket-empty {
+    margin: 0 0 var(--sp-5);
+    color: var(--muted);
+    font-size: var(--fs-14);
+    line-height: var(--lh-body);
+  }
+  .bucket ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: var(--sp-3);
+  }
+  .bucket li {
+    padding: var(--sp-4);
+    border: 1px solid var(--line);
+    border-radius: var(--r-control);
+    background: var(--surface-sunk);
+  }
+  .bucket li p {
+    margin: var(--sp-2) 0 0;
+    font-size: var(--fs-16);
+    line-height: var(--lh-body);
+  }
+  /* The status names whether an item can be used today. Only Now says
+     available; Next and Later carry a muted label, never the green one. */
+  .status {
+    display: inline-block;
+    font-size: var(--fs-13);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--muted);
+  }
+  .now .status {
+    color: var(--green);
+  }
+  @media (max-width: 900px) {
+    .buckets {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--sp-6);
+    }
+  }
+  @media (max-width: 640px) {
+    .intro {
+      margin-bottom: var(--sp-6);
+    }
+  }
+</style>
