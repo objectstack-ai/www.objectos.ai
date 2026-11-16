@@ -2,7 +2,7 @@
 import { Image } from 'astro:assets';
 import Base from './Base.astro';
 import { getEntry, type CollectionEntry } from 'astro:content';
-import { OG_IMAGE, ogImagePath, postCoverFile } from '../../scripts/lib/og-image.mjs';
+import { OG_IMAGE, postShareImage } from '../../scripts/lib/og-image.mjs';
 import { phraseHtml } from '../../scripts/lib/cjk-phrases.mjs';
 import { formatDate, ui, blogPath, postPath, STATUS_COLOR, type Locale } from '../lib/i18n';
 import { termBySlug, termHref, termLabel } from '../lib/terms';
@@ -43,27 +43,47 @@ const absoluteUrl = (href: string): string =>
   site ? new URL(href, `${site}/`).toString() : new URL(href, Astro.url).toString();
 const currentUrl = site ? `${site}${Astro.url.pathname}` : Astro.url.href;
 // The share image (`og:image`, `twitter:image`, `BlogPosting.image`): a
-// 1200x630 JPEG that scripts/og-images.mjs renders from the cover after
-// `astro build`, because the networks draw no card for an SVG and the PNG
-// covers are 1.5-1.9 MB. Its URL comes from the rule the renderer uses too
-// (scripts/lib/og-image.mjs), which reads the cover path from the post's
-// frontmatter: `data.cover` only carries the built asset, so the entry is
-// looked up for its file. That script fails the build if a page names a file
-// it did not render, or a size that is not the file's.
+// 1200x630 JPEG that scripts/og-images.mjs draws after `astro build`, one per
+// locale page: this page's title, the cover's art on its ground and the
+// ObjectOS mark (scripts/lib/og-composite.mjs). The networks draw no card for
+// an SVG, and a cover under spec v2 carries no title. Its URL comes from the
+// rule the renderer uses too (scripts/lib/og-image.mjs), which reads the cover
+// path and the title from this locale's frontmatter: `data.cover` only carries
+// the built asset, so the entry is looked up for its file. That script fails
+// the build if a page names a file it did not render, or a size that is not
+// the file's.
 const entry = await getEntry('blog', locale === 'en' ? slug : `${slug}.${locale}`);
-const coverFile: string | undefined = entry?.filePath ? postCoverFile(entry.filePath) : undefined;
-if (data.cover && !coverFile) {
+const share = entry?.filePath ? postShareImage(entry.filePath) : undefined;
+if (data.cover && !share) {
   throw new Error(`BlogPost: ${locale}/${slug} has a cover, but its file could not be resolved`);
+}
+// The image is drawn from the frontmatter title, the page shows `data.title`:
+// one string, or the card would show a title the page does not.
+if (share && share.title !== data.title) {
+  throw new Error(`BlogPost: ${locale}/${slug}: the share image's title "${share.title}" is not the page's "${data.title}"`);
 }
 // An SVG cover with a dark variant (src/lib/cover-variant.ts) is drawn twice,
 // one image per theme. Both are lazy: a display:none image is only skipped
 // when it is lazy, so the eager, high-priority pair would fetch both. The
 // visible one sits in the first viewport and is requested at first layout.
 const coverDark = darkCover(entry?.filePath, data.cover);
-const shareImage = coverFile
-  ? { url: absoluteUrl(ogImagePath(coverFile)), width: OG_IMAGE.width, height: OG_IMAGE.height, alt: data.title }
+const shareImage = share
+  ? { url: absoluteUrl(share.urlPath), width: OG_IMAGE.width, height: OG_IMAGE.height, alt: data.title }
   : undefined;
 const topic = termBySlug(data.topic)!;
+// Ties in the related score are broken by a stable hash of the (this post,
+// candidate) pair, not by date. Newest-first sent every tie to the latest
+// posts, so the posts published together on 2026-06-03/04/05/16 rarely
+// appeared in a related list: in the build at `ea20640`, 15 of the 25
+// least-linked English posts were from those days, and Search Console listed
+// several of them as "Crawled - currently not indexed". A per-pair hash still
+// gives each page a fixed list (no churn between builds) but spreads the
+// inbound links across the corpus.
+const pairRank = (other: string): number => {
+  let h = 0x811c9dc5;
+  for (const ch of `${slug}|${other}`) h = Math.imul(h ^ ch.charCodeAt(0), 0x01000193);
+  return h >>> 0;
+};
 const relatedPosts = (await getPostsInLocale(locale))
   .filter((post) => post.slug !== slug && post.entry.data.status !== 'archived')
   .map((post) => {
@@ -76,7 +96,7 @@ const relatedPosts = (await getPostsInLocale(locale))
     return { ...post, score };
   })
   .filter((post) => post.score > 0)
-  .sort((a, b) => b.score - a.score || b.entry.data.date.getTime() - a.entry.data.date.getTime())
+  .sort((a, b) => b.score - a.score || pairRank(a.slug) - pairRank(b.slug))
   .slice(0, 3);
 // The pillar pages that list this post in their reading path. Each links the
 // post; the post links back, so a reader who lands on one article from search
@@ -244,7 +264,7 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
 
     <header class="post-head">
       <div class="meta">
-        <a class="chip chip-brand" href={termHref(locale, topic)}>
+        <a class="chip chip-topic" data-topic={data.topic} href={termHref(locale, topic)}>
           {termLabel(data.topic, locale)}
         </a>
         <a class="chip" href={termHref(locale, termBySlug(data.audience)!)}>
@@ -754,6 +774,18 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
     .prose th {
       background: var(--surface-sunk);
     }
+    /* A word in a table cell is never split at an arbitrary letter (#453).
+       Cells wrap at word boundaries only, so the longest word sets its
+       column's minimum width and a table that outgrows its column scrolls
+       inside itself (below), never the page. `anywhere` here (and the ko
+       page root's inherited `anywhere`, Base.astro) broke `Validierungsreg` /
+       `el` at 390 and Korean digits at 1440. ko keeps its inherited
+       `keep-all`, zh and ja their normal CJK breaking; on a phone, Latin
+       locales hyphenate a long word instead (the media query below). */
+    .prose th,
+    .prose td {
+      overflow-wrap: normal;
+    }
     /* An identifier in a table cell is never split. Under the inline-code
        rule above (`overflow-wrap: anywhere`) a column narrower than its token
        broke it at an arbitrary letter and added no hyphen: `beforeDelet` /
@@ -912,17 +944,27 @@ const bodyHtml = annotateBody(await Astro.slots.render('default'));
          included) is the widest floor at which three columns still fit the
          328px column of a 360px phone (3 × 104 = 312), so a two- or
          three-column table of prose needs no sideways scroll at 360 or 390;
-         four to six columns scroll. `overflow-wrap: anywhere` keeps a column
-         of prose at its floor. It does not reach inline code (the rule above
-         the media query): an identifier wider than its column widens the
-         column instead of splitting, and the table scrolls further. */
+         four to six columns scroll. A word wider than its column widens the
+         column instead of splitting (the cell rule above the media query),
+         and the table scrolls further. */
       .prose th,
       .prose td {
         box-sizing: border-box;
         min-width: 6.5rem;
         padding-right: 0.6rem;
         padding-left: 0.6rem;
-        overflow-wrap: anywhere;
+      }
+      /* Latin-script cells hyphenate a long word (by the <html lang>
+         dictionary, the heading rule's limits) rather than widen the column
+         to the whole compound. An identifier never gains a hyphen. */
+      .prose :is(th, td):is(:lang(en), :lang(de), :lang(fr), :lang(es)) {
+        -webkit-hyphens: auto;
+        hyphens: auto;
+        hyphenate-limit-chars: 12 5 5;
+      }
+      .prose :is(th, td) code {
+        -webkit-hyphens: manual;
+        hyphens: manual;
       }
     }
   </style>

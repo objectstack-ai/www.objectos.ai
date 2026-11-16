@@ -86,7 +86,7 @@ interface HomeCopy {
   positioningCopy: string;
   /** The text link under the positioning copy, to the /[lang]/ontology/ pillar. */
   positioningLink: string;
-  /** Two cards: the business model, and federating what already runs (both → /data-modeling/). */
+  /** Two cards: the business model (→ /data-modeling/), and federating what already runs (→ /connect-existing-systems/). */
   capabilities: { title: string; copy: string }[];
   /**
    * Block 3, "AI in the product" (#411): three cards in business terms —

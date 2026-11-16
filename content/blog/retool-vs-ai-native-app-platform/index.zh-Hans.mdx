@@ -1,8 +1,9 @@
 ---
-title: "Retool 与受治理 AI 应用平台：能否审查业务权限"
-description: "Retool 的 RBAC、审计日志、SSO 和自托管能力很强。真正要比较的是业务权限层：退款、审批、写入动作如果散落在 JavaScript 绑定里，AI 改动就很难被业务负责人用 diff 审查。"
+title: "Retool RBAC 与审计日志：Retool 能否支撑受治理的 AI 应用开发"
+description: "对照 Retool 官方文档核查其 RBAC、审计日志与访问策略：它们在 AI 生成的应用中治理什么，企业应用选 Retool 还是 Lovable 有何差别，以及仍然留下的业务权限缺口。"
 author: ObjectStack Team
 date: 2026-06-24
+updated: 2026-11-14T10:00:00+08:00
 status: published
 topic: app-building
 audience: developer
@@ -11,9 +12,12 @@ industries: []
 cover: ./cover.svg
 tags:
   - Retool
+  - RBAC
+  - 审计日志
+  - Lovable
 ---
 
-**TL;DR：** Retool 的访问治理很强：RBAC、审计日志、SSO、源代码管理、Enterprise 自托管都是真实能力。问题不在“Retool 没治理”，而在治理的*层*。RBAC 控制某个角色能触及哪些资源；真正的业务**权限**——这个人能不能发起一笔 1.2 万美元的退款？——往往分散在按钮 `Hidden`、输入框 `disabled`、查询 transformer 和脚本里。工程团队可以通过规范和代码审查管理它，但 AI 参与修改后，业务负责人很难只看一份 diff 就判断“谁能做什么”是否改变。缺口不叫安全功能缺失；它叫业务权限没有被声明成可审查的事实。
+**TL;DR：** 如果你正在评估 Retool 能否用于受治理的 AI 应用开发，它的访问层是过关的，你也不该假装不是这样。Retool 有基于权限组的 RBAC、按角色控制谁能使用其 AI 构建器、记录每一次查询执行的审计日志、SSO、自托管，以及（自 2026 年 10 月起，针对 Postgres 公开测试中的）任何查询都无法豁免的资源访问策略。自 2026 年 6 月起，它还把这些控制延伸到用 Lovable、Cursor 或 Claude Code 构建的应用上。它不提供的，是作为声明式事实的业务**权限**。“这个人能不能发起一笔 1.2 万美元的退款？”依然往往分散在各组件属性和查询逻辑里的 JavaScript 中，而 AI 写出这些表达式的速度，比任何 PR 审查得过来的速度都快。缺口不在基础安全，而在于权限是*代码*，不是审查者能在一处读到的规则。
 
 设想世上最寻常的那个 Retool 应用：一个退款控制台。一位工程师花一个下午就把它建好——一张订单表、一个“退款”按钮、几条查询。客服在用。它很棒。这正是 Retool 最出彩的样子，而 Retool 在这件事上确实是品类里最好的。
 
@@ -27,14 +31,14 @@ tags:
 
 ```js
 // 1. refundButton → “Hidden” 属性
-{{ currentUser.groups.includes('admin') ||
-   (currentUser.groups.includes('support_lead') && refundAmount.value <= 10000) }}
+{{ current_user.groups.map(g => g.name).includes('admin') ||
+   (current_user.groups.map(g => g.name).includes('support_lead') && refundAmount.value <= 10000) }}
 
 // 2. refundAmount input → “disabled” 属性
-{{ !currentUser.groups.includes('support_lead') }}
+{{ !current_user.groups.map(g => g.name).includes('support_lead') }}
 
 // 3. issueRefund query → transformer（这才是真正写入的那部分）
-if (refundAmount.value > 10000 && !currentUser.groups.includes('finance')) {
+if (refundAmount.value > 10000 && !current_user.groups.map(g => g.name).includes('finance')) {
   throw new Error('Refunds over $10k require finance');
 }
 ```
@@ -56,6 +60,27 @@ action: issue_refund
 
 只有一处可读。只有一处可改。只有一件事要让审查者——或一个 AI——去推敲。三处手工维护的表达式与一条声明过的规则之间的差别，正是“应用是被编码出来的”与“应用的权限是被治理的”之间的全部差别。
 
+## Retool RBAC 与审计日志：每项控制实际覆盖什么
+
+只有把 Retool *确实*具备的控制准确列出来，grep 测试才算公平。以下内容于 2026 年 11 月对照 Retool 自己的文档核实：
+
+| 控制 | 治理什么 | 止于何处 |
+| --- | --- | --- |
+| **权限组（RBAC）** | 权限组“授予角色，并控制对应用、资源、工作流和智能体的访问”（[Retool 权限指南](https://docs.retool.com/permissions/guides)） | 管的是谁能打开、编辑或查询，而不是某人进来之后某个动作可以做什么 |
+| **Assist RBAC**（2026 年 2 月，Business 与 Enterprise） | 按角色设定：Ask 与 Build 模式、仅 Ask 模式，或无权使用 AI 构建器（[更新日志](https://docs.retool.com/changelog/assist-rbac)） | 管的是谁能*生成*改动，而不是生成的改动授予了什么 |
+| **审计日志** | 用户操作，“例如查询执行和密码重置”，记录确切的查询、参数、IP 地址和响应时间；Cloud 版保留一年，Business 与 Enterprise 支持 CSV 导出，Enterprise 支持流式推送到 Datadog 或 Splunk（[审计日志](https://docs.retool.com/org-users/guides/audit-logs)） | 检测式：记录已经运行了什么，且是在运行之后 |
+| **`current_user` 行过滤** | 这些值“在服务端根据已认证的会话计算”，并注入每条查询（[行级安全](https://docs.retool.com/docs/user-permissions)） | 逐条查询、手工添加：“遗漏该过滤条件的查询会返回未经过滤的数据。” |
+| **资源访问策略** | 对某个资源的表、列和行访问，在来自应用、查询库、原始 SQL 和智能体的每一条查询上强制执行（[访问策略](https://docs.retool.com/data-sources/concepts/access-policies)） | 仅限 PostgreSQL，[自 2026 年 10 月起公开测试](https://community.retool.com/t/new-public-beta-data-access-enforcement-for-postgres-resources/67615)；行过滤器“不校验用户创建的行，也不校验用户写入的值” |
+| **AI 编码应用的治理**（2026 年 6 月） | 在 Lovable、Replit、Cursor 或 Claude Code 中构建的应用“继承现有的权限和审计轨迹”；“权限附着在数据源上”（[Retool 新闻室](https://retool.com/newsroom/retool-extends-enterprise-governance-to-vibe-coded-apps)） | 同一层：数据源权限，而不是动作级的业务规则 |
+
+其中两行比其余更重要，因为它们正是 Retool 在朝本文所主张的方向前进。
+
+**访问策略是一条声明过的规则，而不是三处表达式。** 资源上的策略适用于每一条查询，“因此没有任何查询能够选择退出”，这与逐条查询添加的 `current_user` 过滤正好相反。对于*数据*权限——二级客服可以读取或删除哪些行——这在 Postgres 上基本通过了 grep 测试。相对于本文 6 月的版本，诚实的更新是：Retool 现在对这一层有了真正的答案。
+
+**策略表达不了的，是那条退款规则。** 访问策略文档描述的是对表、列和行的读取、写入和删除权限。它没有描述金额阈值、审批闸门，或针对写入值的条件；而行过滤器明确不检查用户写入的内容。“二级客服可退到 1 万美元，更高的归财务，超过界线需要审批”是一条关于*动作及其参数*的规则，所以它依然活在上面的按钮、输入框和 transformer 里。策略把数据权限收拢到了一处，业务权限仍留在 JavaScript 里。
+
+把这张表当作记分卡来读，Retool 能通过安全审查会问到的每一个访问治理问题。它无法在一处回答的，是本文开头那个问题：哪些角色能发起超过 1 万美元的退款，它又在哪里被强制执行？
+
 ## 为什么源代码管理填不上这道缺口
 
 精明的 Retool 工程师的反驳很在理，你得精确地回应它：*“我们有 Git 支撑的源代码管理、审计日志和 RBAC。改动会在 PR 里审查。访问是被治理的。还缺什么？”*
@@ -75,6 +100,22 @@ action: issue_refund
 把一个 AI 对准同一个应用，经济账便在两个方向上同时反转。AI 能在一分钟内生成五十个绑定和十几个 transformer——它产出*权限决策*的速度比任何审查者能追踪的速度都快。而要*审查*它产出的东西，你又回到了一屏接一屏地读 JavaScript，因为依然没有一份单一的、结构化的权限表征可供 diff。“Retool AI”和智能体（2025）真实存在且有用，但它们是*在同一套手工搭建的底座之上*做自动化：智能体是被治理的（Retool 能限定它可以调用什么），但**智能体所编辑的那个应用却不是**——它在任何一种 AI——或人类——能当作事实而非代码来审查的形式上，都没有被权限治理。
 
 AI 最擅长快速产出的东西，恰恰也是这种模式下最需要结构化审查的东西。
+
+## Retool vs. Lovable：企业应用对比
+
+人们常做的另一种比较是 Retool 对 Lovable，通常被框定为“内部工具构建器 vs. AI 应用生成器”。对企业应用而言，更有用的框定是：*每一项控制治理的是谁的用户？*
+
+| | Retool | Lovable |
+| --- | --- | --- |
+| **AI 产出什么** | 运行在 Retool 组件运行时上的应用，接入你现有的资源 | 全栈项目代码；默认“存放在 Lovable 的托管基础设施中”，可与 GitHub、GitLab 或 Bitbucket 同步（[Lovable for Enterprise](https://docs.lovable.dev/introduction/lovable-for-enterprise)） |
+| **角色** | 权限组控制对应用及其背后的资源、工作流和智能体的访问 | 所有者、管理员、编辑者、查看者和外部协作者治理的是构建应用的*工作区*（[同一页面](https://docs.lovable.dev/introduction/lovable-for-enterprise)） |
+| **最终用户数据访问** | 数据源权限、`current_user` 过滤、访问策略 | 内置后端中“用于按用户划分数据”的行级安全，属于生成项目的一部分；Quick scan“在每次发布时运行，检查数据库访问规则” |
+| **审计** | 查询级审计日志，Cloud 版保留一年 | 工作区审计日志“保留 13 周”，可定时导出到 SIEM 或存储桶 |
+| **自托管** | 由 Retool 托管或自行管理的自托管实例（[自托管 Retool](https://docs.retool.com/self-hosted)） | 后端和数据库可迁移到你自己运营的基础设施上，“包括自托管的 Supabase”；构建器本身仍是 SaaS |
+
+第二行和第三行的区别，才是决定企业适配度的那一个。Lovable 的角色和审计日志治理的是*构建*应用的人；*使用*应用的人，则由生成项目自身后端里的访问规则来保护，并由每次发布时运行的扫描来检查。Retool 治理的是使用应用的人，因为应用运行在 Retool 内部。这就是为什么 Retool 2026 年 6 月的动作，是在自己的数据源权限之下*托管*用 Lovable 及类似工具构建的应用，而不是在生成能力上与它们竞争。
+
+所以现实的企业模式不是“Retool 还是 Lovable”，而是“在哪里生成都行，在受治理的地方运行”。两者都改变不了 grep 测试：Lovable 应用的退款阈值活在它生成的代码里，Retool 应用的则活在它的绑定和 transformer 里；两种情况下，审查者都得靠读代码来重建业务权限。
 
 ## Retool 才是正确选择的场合——以及元数据模型让你付出代价的场合
 

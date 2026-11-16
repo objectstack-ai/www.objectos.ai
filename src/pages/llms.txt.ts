@@ -8,10 +8,11 @@ import {
   pricingPath,
   securityPath,
   termsPath,
+  LOCALES,
   type Locale,
 } from '../lib/i18n';
 import { CLUSTERS, clusterPath } from '../lib/clusters';
-import { clusterCopy } from '../lib/cluster-i18n';
+import { authoredClusterLocales, clusterCopy } from '../lib/cluster-i18n';
 import { CLOUD_SIGNIN_URL, CLOUD_SIGNUP_URL, positioning } from '../lib/positioning';
 import { getMarketingPages, marketingPagePath } from '../content-pages/registry';
 import {
@@ -106,14 +107,18 @@ export const GET: APIRoute = async ({ site }) => {
     '',
     '## Topic Cluster Pages',
     '',
-    // English only: the other locales' cluster pages are one template per
-    // locale with the name swapped, noindexed and canonical to these
-    // (`clusterSourceLocale` in src/lib/cluster-i18n.ts). A curated map lists
-    // the page a reader should be sent to, not 35 copies of it.
-    ...CLUSTERS.map((cluster) => {
-      const copy = clusterCopy(cluster, 'en');
-      return `- [${copy.title}](${absoluteUrl(site, clusterPath('en', cluster.slug))}): ${copy.description}`;
-    }),
+    // English, then each locale a cluster is written in (content/clusters/).
+    // The other locales' cluster pages are one template per locale with the
+    // name swapped, noindexed and canonical to English (`clusterSourceLocale`
+    // in src/lib/cluster-i18n.ts). A curated map lists the pages a reader
+    // should be sent to, not 35 copies of one.
+    ...CLUSTERS.flatMap((cluster) =>
+      (['en', ...authoredClusterLocales(cluster.slug, LOCALES)] as Locale[]).map((locale) => {
+        const copy = clusterCopy(cluster, locale);
+        const tag = locale === 'en' ? '' : ` (${locale})`;
+        return `- [${copy.title}](${absoluteUrl(site, clusterPath(locale, cluster.slug))})${tag}: ${copy.description}`;
+      })
+    ),
     '',
     '## English Articles',
     '',

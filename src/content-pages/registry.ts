@@ -11,6 +11,7 @@ const PAGE_ORDER = [
   'mcp',
   'permissions',
   'data-modeling',
+  'connect-existing-systems',
   'app-ui',
   'automation',
   'approvals',

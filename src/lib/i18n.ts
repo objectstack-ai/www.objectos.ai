@@ -32,6 +32,9 @@ export const pricingPath = (l: Locale): string => `/${l}/pricing/`;
 /** Changelog page URL: /<locale>/changelog/. */
 export const changelogPath = (l: Locale): string => `/${l}/changelog/`;
 
+/** Enterprise roadmap page URL: /<locale>/roadmap/ (src/lib/roadmap.ts). */
+export const roadmapPath = (l: Locale): string => `/${l}/roadmap/`;
+
 /** Article URL: /<locale>/blog/<baseSlug>. */
 export const postPath = (l: Locale, slug: string): string =>
   `/${l}/blog/${slug}/`;
@@ -137,7 +140,7 @@ interface Strings {
      */
     trustCenter: string;
     /**
-     * The five Capabilities entries. Each names an existing capability page and
+     * The Capabilities entries (with `connectExisting`, six). Each names an existing capability page and
      * stands for the pages folded under it: `capDataApps` opens data modeling
      * (app interfaces folds under it), `capAutomationApprovals` opens process
      * automation (approvals folds under it), `capAnalytics` opens analytics;
@@ -146,6 +149,12 @@ interface Strings {
      * `approvals`, `permissionsSecurity`) for the footer and its parent page.
      */
     capDataApps: string;
+    /**
+     * /[lang]/connect-existing-systems/ (#419): federation, one-way sync-in
+     * and write-back through actions. A Capabilities entry under Product, and
+     * the footer's Product link to the same page.
+     */
+    connectExisting: string;
     capAutomationApprovals: string;
     capAnalytics: string;
     toolsMcp: string;
@@ -183,6 +192,8 @@ interface Strings {
     videos: string;
     /** /[lang]/changelog/ — the release history; a footer link under Resources. */
     changelog: string;
+    /** /[lang]/roadmap/ — the Enterprise roadmap; a footer link under Resources, after Changelog. */
+    roadmap: string;
     /**
      * GitHub Discussions on objectstack-ai/objectstack (enabled there:
      * `has_discussions`) — an external footer link under Resources.
@@ -269,6 +280,7 @@ const en: Strings = {
     security: 'Security & trust',
     trustCenter: 'Trust center',
     capDataApps: 'Data & apps',
+    connectExisting: 'Connect existing systems',
     capAutomationApprovals: 'Automation & approvals',
     capAnalytics: 'Analytics',
     toolsMcp: 'Tools & MCP',
@@ -290,6 +302,7 @@ const en: Strings = {
     blog: 'Blog',
     videos: 'Videos',
     changelog: 'Changelog',
+    roadmap: 'Roadmap',
     community: 'Community',
     guides: 'Guides',
     featuredGuides: 'Featured guides',
@@ -348,6 +361,7 @@ const zhHans: Strings = {
     security: '安全与信任',
     trustCenter: '信任中心',
     capDataApps: '数据与应用',
+    connectExisting: '对接现有系统',
     capAutomationApprovals: '自动化与审批',
     capAnalytics: '报表与分析',
     toolsMcp: '工具与 MCP',
@@ -369,6 +383,7 @@ const zhHans: Strings = {
     blog: '博客',
     videos: '视频',
     changelog: '更新日志',
+    roadmap: '路线图',
     community: '社区',
     guides: '专题指南',
     featuredGuides: '精选专题',
@@ -427,6 +442,7 @@ const ja: Strings = {
     security: 'セキュリティと信頼',
     trustCenter: 'トラストセンター',
     capDataApps: 'データとアプリ',
+    connectExisting: '既存システムとの連携',
     capAutomationApprovals: '自動化と承認',
     capAnalytics: 'レポートと分析',
     toolsMcp: 'ツールと MCP',
@@ -448,6 +464,7 @@ const ja: Strings = {
     blog: 'ブログ',
     videos: '動画',
     changelog: '更新履歴',
+    roadmap: 'ロードマップ',
     community: 'コミュニティ',
     guides: 'ガイド',
     featuredGuides: '注目のガイド',
@@ -506,6 +523,7 @@ const de: Strings = {
     security: 'Sicherheit & Vertrauen',
     trustCenter: 'Trust Center',
     capDataApps: 'Daten & Apps',
+    connectExisting: 'Bestehende Systeme anbinden',
     capAutomationApprovals: 'Automatisierung & Freigaben',
     capAnalytics: 'Analysen',
     toolsMcp: 'Tools & MCP',
@@ -527,6 +545,7 @@ const de: Strings = {
     blog: 'Blog',
     videos: 'Videos',
     changelog: 'Changelog',
+    roadmap: 'Roadmap',
     community: 'Community',
     guides: 'Leitfäden',
     featuredGuides: 'Ausgewählte Leitfäden',
@@ -585,6 +604,7 @@ const es: Strings = {
     security: 'Seguridad y confianza',
     trustCenter: 'Centro de confianza',
     capDataApps: 'Datos y apps',
+    connectExisting: 'Conectar sistemas existentes',
     capAutomationApprovals: 'Automatización y aprobaciones',
     capAnalytics: 'Analítica',
     toolsMcp: 'Herramientas y MCP',
@@ -606,6 +626,7 @@ const es: Strings = {
     blog: 'Blog',
     videos: 'Vídeos',
     changelog: 'Registro de cambios',
+    roadmap: 'Hoja de ruta',
     community: 'Comunidad',
     guides: 'Guías',
     featuredGuides: 'Guías destacadas',
@@ -664,6 +685,7 @@ const fr: Strings = {
     security: 'Sécurité et confiance',
     trustCenter: 'Centre de confiance',
     capDataApps: 'Données et apps',
+    connectExisting: 'Connecter les systèmes existants',
     capAutomationApprovals: 'Automatisation et approbations',
     capAnalytics: 'Analytique',
     toolsMcp: 'Outils et MCP',
@@ -685,6 +707,7 @@ const fr: Strings = {
     blog: 'Blog',
     videos: 'Vidéos',
     changelog: 'Journal des versions',
+    roadmap: 'Feuille de route',
     community: 'Communauté',
     guides: 'Guides',
     featuredGuides: 'Guides à la une',
@@ -743,6 +766,7 @@ const ko: Strings = {
     security: '보안과 신뢰',
     trustCenter: '트러스트 센터',
     capDataApps: '데이터와 앱',
+    connectExisting: '기존 시스템 연동',
     capAutomationApprovals: '자동화와 승인',
     capAnalytics: '분석',
     toolsMcp: '도구 및 MCP',
@@ -764,6 +788,7 @@ const ko: Strings = {
     blog: '블로그',
     videos: '동영상',
     changelog: '변경 이력',
+    roadmap: '로드맵',
     community: '커뮤니티',
     guides: '가이드',
     featuredGuides: '추천 가이드',
@@ -823,6 +848,7 @@ const toHant = (s: Strings): Strings => ({
     security: s2t(s.siteNav.security),
     trustCenter: s2t(s.siteNav.trustCenter),
     capDataApps: s2t(s.siteNav.capDataApps),
+    connectExisting: s2t(s.siteNav.connectExisting),
     capAutomationApprovals: s2t(s.siteNav.capAutomationApprovals),
     capAnalytics: s2t(s.siteNav.capAnalytics),
     toolsMcp: s2t(s.siteNav.toolsMcp),
@@ -844,6 +870,7 @@ const toHant = (s: Strings): Strings => ({
     blog: s2t(s.siteNav.blog),
     videos: s2t(s.siteNav.videos),
     changelog: s2t(s.siteNav.changelog),
+    roadmap: s2t(s.siteNav.roadmap),
     community: s2t(s.siteNav.community),
     guides: s2t(s.siteNav.guides),
     featuredGuides: s2t(s.siteNav.featuredGuides),

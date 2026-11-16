@@ -72,11 +72,35 @@ const CLUSTER_SLUGS = [
 const CLUSTER_PATHS = LOCALES.flatMap((locale) =>
   CLUSTER_SLUGS.map((slug) => `/${locale}/${slug}/`)
 );
-// Only the English cluster pages are written per cluster; every other locale's
-// is one template with the name swapped (src/lib/cluster-i18n.ts), so those are
-// fallbacks: noindexed, canonical to English, and out of llms.txt and the
-// sitemap. When a locale gets real per-cluster copy, this list grows with it.
-const CLUSTER_AUTHORED_LOCALES = new Set(['en']);
+// English cluster pages are written per cluster (src/lib/clusters.ts); another
+// locale is written per cluster when it has content/clusters/<locale>/<slug>.ts
+// (zh-Hant when zh-Hans has one, converted at build time). Every other locale's
+// page is one template with the name swapped (src/lib/cluster-i18n.ts), so it
+// is a fallback: noindexed, canonical to English, out of hreflang, llms.txt and
+// the sitemap. The expectations are derived from that tree, as for glossary
+// and marketing pages, so adding a translation needs no edit here.
+const CONTENT_CLUSTERS = path.join(ROOT, 'content', 'clusters');
+const clusterContentLocales = new Map(CLUSTER_SLUGS.map((slug) => [slug, new Set(['en'])]));
+try {
+  for (const dirent of await readdir(CONTENT_CLUSTERS, { withFileTypes: true })) {
+    if (!dirent.isDirectory()) continue;
+    for (const entry of await readdir(path.join(CONTENT_CLUSTERS, dirent.name))) {
+      if (!entry.endsWith('.ts')) continue;
+      const slug = entry.replace(/\.ts$/, '');
+      if (!clusterContentLocales.has(slug)) {
+        issues.push(`content/clusters/${dirent.name}/${entry}: no cluster with slug ${slug}`);
+        continue;
+      }
+      clusterContentLocales.get(slug).add(dirent.name);
+    }
+  }
+} catch (error) {
+  if (error.code !== 'ENOENT') throw error;
+}
+for (const locales of clusterContentLocales.values()) {
+  if (locales.has('zh-Hans')) locales.add('zh-Hant');
+}
+const clusterIsAuthored = (slug, locale) => clusterContentLocales.get(slug)?.has(locale) ?? false;
 
 async function readDist(file) {
   try {
@@ -123,6 +147,20 @@ const sitemap = await readDist('sitemap-0.xml');
 requireContains('sitemap-0.xml', sitemap, `${SITE}/en/blog/`, 'missing English blog index');
 requireContains('sitemap-0.xml', sitemap, `${SITE}/zh-Hans/blog/`, 'missing Simplified Chinese blog index');
 
+// IndexNow key file (#456): engines verify a submission by fetching
+// `/<key>.txt` and comparing its body to the submitted key, so the body must
+// be exactly the key, and the file is a verification artifact, not a page —
+// it must never be listed in the sitemap. The key is read from its one home.
+const { INDEXNOW_KEY } = await import('./lib/indexnow.mjs');
+const indexnowFile = `${INDEXNOW_KEY}.txt`;
+const indexnowBody = await readDist(indexnowFile);
+if (indexnowBody && indexnowBody !== INDEXNOW_KEY) {
+  issues.push(`${indexnowFile}: body must be exactly the IndexNow key, got ${JSON.stringify(indexnowBody.slice(0, 80))}`);
+}
+for (const [file, xml] of [['sitemap-index.xml', sitemapIndex], ['sitemap-0.xml', sitemap]]) {
+  requireExcludes(file, xml, indexnowFile, 'lists the IndexNow key file');
+}
+
 const llms = await readDist('llms.txt');
 requireContains('llms.txt', llms, '# ObjectOS', 'missing title');
 requireContains('llms.txt', llms, '## English Articles', 'missing English article section');
@@ -158,7 +196,8 @@ for (const locale of ['en', 'zh-Hans']) {
 }
 for (const clusterPath of CLUSTER_PATHS) {
   const url = `${SITE}${clusterPath}`;
-  if (CLUSTER_AUTHORED_LOCALES.has(clusterPath.split('/')[1])) {
+  const [, clusterLocale, clusterSlug] = clusterPath.split('/');
+  if (clusterIsAuthored(clusterSlug, clusterLocale)) {
     requireContains('llms.txt', llms, url, `missing cluster page ${clusterPath}`);
     requireContains('sitemap-0.xml', sitemap, url, `missing cluster page ${clusterPath}`);
   } else {
@@ -190,7 +229,12 @@ for (const { file, locale } of NOT_FOUND_PAGES) {
   // Inside <main>: the header already links all three on every page, so a
   // whole-document match would pass with the 404 body missing.
   const main = html.match(/<main\b[^>]*>([\s\S]*?)<\/main>/)?.[1] ?? '';
-  for (const href of [`/${locale}/`, `/${locale}/blog/`, `/${locale}/pricing/`]) {
+  // A locale with no pricing copy of its own links the English page: the
+  // fallback-links integration points links at a fallback's canonical.
+  const pricingHead = (await readDist(`${locale}/pricing/index.html`)) ?? '';
+  const pricingCanonical = /<link rel="canonical" href="https:\/\/www\.objectos\.ai(\/[^"]*)"/.exec(pricingHead)?.[1];
+  const pricingHref = /content="noindex/.test(pricingHead) && pricingCanonical ? pricingCanonical : `/${locale}/pricing/`;
+  for (const href of [`/${locale}/`, `/${locale}/blog/`, pricingHref]) {
     requireContains(file, main, `href="${href}"`, `404 page body must link ${href}`);
   }
 }
@@ -219,6 +263,33 @@ for (const clusterPath of CLUSTER_PATHS) {
   requireContains(file, html, `${SITE}${clusterPath}`, 'missing absolute cluster URL');
   requireContains(file, html, '"@type":"FAQPage"', 'missing FAQPage JSON-LD');
   requireContains(file, html, '"@type":"ItemList"', 'missing reading path ItemList JSON-LD');
+  // A written cluster page is self-canonical and indexable, and every page of
+  // the slug names exactly the written locales as hreflang equivalents.
+  const [, locale, slug] = clusterPath.split('/');
+  if (clusterIsAuthored(slug, locale)) {
+    requireContains(
+      file,
+      html,
+      `<link rel="canonical" href="${SITE}${clusterPath}">`,
+      'written cluster page must be self-canonical'
+    );
+    requireExcludes(file, html, 'name="robots" content="noindex', 'written cluster page must be indexable');
+  }
+  for (const other of LOCALES) {
+    const tag = `hreflang="${other}" href="${SITE}/${other}/${slug}/"`;
+    if (clusterIsAuthored(slug, other)) {
+      requireContains(file, html, tag, `missing hreflang for written equivalent ${other}`);
+    } else {
+      requireExcludes(
+        file,
+        html,
+        tag,
+        other === locale
+          ? 'templated cluster page must not advertise itself as an hreflang equivalent'
+          : `must not advertise templated locale ${other} as an hreflang equivalent`
+      );
+    }
+  }
 }
 
 // Glossary pages carry the same locale guarantees as every other page type:
@@ -621,7 +692,7 @@ for (const file of htmlFiles) {
     const contentLocales = marketingContentLocales.get(slug);
     if (contentLocales && !contentLocales.has(locale)) {
       registryCanonicalPath = `/${FALLBACK_LOCALE}/${slug}/`;
-    } else if (CLUSTER_SLUGS.includes(slug) && !CLUSTER_AUTHORED_LOCALES.has(locale)) {
+    } else if (CLUSTER_SLUGS.includes(slug) && !clusterIsAuthored(slug, locale)) {
       registryCanonicalPath = `/${FALLBACK_LOCALE}/${slug}/`;
     }
   }
@@ -817,6 +888,57 @@ for (const [key, files] of redirecting) {
 }
 if (internalLinksChecked === 0) {
   issues.push('redirect check: found no internal links — an empty match is a failure, not a pass');
+}
+
+// A link to a locale-fallback page (noindexed, canonical to the same path in
+// another locale) spends link equity on a page Google will not index. The
+// `fallback-links` integration (scripts/lib/fallback-links.mjs) points every
+// such link at the canonical; only the language switcher (`data-lang`) keeps
+// its per-locale target. This fails on any other link that still reaches one,
+// and on a build with no switcher links to fallbacks at all, which would mean
+// the check matched nothing rather than that the site is clean.
+{
+  const isLocaleFallback = (page) => {
+    if (!page?.noindex || !page.canonical || page.canonical === page.url) return false;
+    const target = pageAt(page.canonical);
+    const rest = (u) => new URL(u).pathname.replace(/^\/[^/]+/, '');
+    return isIndexable(target) && rest(page.canonical) === rest(page.url);
+  };
+  let switcherLinksToFallbacks = 0;
+  const toFallback = new Map(); // href -> files
+  for (const page of pages.values()) {
+    const bodyStart = page.html.indexOf('<body');
+    if (bodyStart === -1) continue;
+    for (const [tag] of page.html.slice(bodyStart).matchAll(TAG('a'))) {
+      const href = attrOf(tag, 'href');
+      if (!href || href.startsWith('#')) continue;
+      let url;
+      try {
+        url = new URL(href, page.url);
+      } catch {
+        continue;
+      }
+      url.hash = '';
+      url.search = '';
+      if (!isLocaleFallback(pageAt(url.href))) continue;
+      if (/\sdata-lang="/.test(tag)) {
+        switcherLinksToFallbacks += 1;
+        continue;
+      }
+      toFallback.set(href, [...(toFallback.get(href) ?? []), page.file]);
+    }
+  }
+  for (const [href, files] of toFallback) {
+    const unique = [...new Set(files)];
+    issues.push(
+      `internal link ${href} targets a noindexed locale fallback; link its canonical instead ` +
+        `(linked from ${unique.length} page${unique.length === 1 ? '' : 's'}: ` +
+        `${unique.slice(0, 3).join(', ')}${unique.length > 3 ? ', …' : ''})`
+    );
+  }
+  if (switcherLinksToFallbacks === 0) {
+    issues.push('fallback-link check: found no switcher links to a locale fallback — the check matched nothing');
+  }
 }
 
 // ─── The root page ──────────────────────────────────────────────────────────

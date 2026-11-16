@@ -3,18 +3,22 @@
 // variant with.
 //
 // Two readers. scripts/cover-spec.mjs counts the distinct fill colours a
-// cover paints (the spec allows six), so it needs every spelling of one
-// colour (`white`, `#fff`, `#FFFFFF`, `rgb(255,255,255)`) to be one colour.
-// scripts/cover-dark.mjs rewrites each colour to its dark counterpart.
+// cover paints and checks its ground against the post's topic tint, so it
+// needs every spelling of one colour (`white`, `#fff`, `#FFFFFF`,
+// `rgb(255,255,255)`) to be one colour. scripts/cover-dark.mjs rewrites each
+// colour to its dark counterpart.
 //
 // ─── The dark palette ───────────────────────────────────────────────────────
 //
 // Two layers, applied in order:
 //
 //   1. TOKEN_MAP: the site's own light tokens and their dark values, copied
-//      from the two `:root` blocks in src/layouts/Base.astro, plus white. A
-//      cover drawn in the site palette lands on exactly the colours the dark
-//      page uses. Keep it in step with Base.astro when a token changes.
+//      from the two `:root` blocks in src/layouts/Base.astro, plus white and
+//      the seven topic tints (TOPIC_TINTS). A cover drawn in the site palette
+//      lands on exactly the colours the dark page uses, so a cover's ground
+//      and its card's topic chip stay one colour in both themes. Keep it in
+//      step with Base.astro when a token changes; `topicTintDrift` checks the
+//      topic tints (scripts/cover-spec.mjs runs it in `pnpm build`).
 //   2. Everything else (the 88 covers hold about 370 distinct literals, far
 //      too many to pair by hand) goes through `flipLightness`, which inverts
 //      the colour's luminance in the one way that keeps WCAG contrast: a
@@ -25,6 +29,61 @@
 //
 // Not rewritten: drop-shadow `flood-color` and `lighting-color`. A shadow is
 // darkness under a card in both themes; flipping it would paint a glow.
+
+/**
+ * The topic tints (cover spec v2, #430): one low-saturation ground per topic,
+ * and the same-hue ink its topic chip is set in. A cover of a post dated on or
+ * after the spec's start paints its ground in `light`; the card's and the
+ * post page's topic chip is `ink` on `light` (dark theme: `inkDark` on
+ * `dark`). Base.astro declares them as `--topic-<slug>` and
+ * `--topic-<slug>-ink`, the same values in the same two `:root` blocks.
+ *
+ * Chip contrast (12px bold text, WCAG AA asks 4.5): light / dark
+ *   integration-data 4.64 / 6.03   governance 5.19 / 6.16   app-building 5.90 / 6.72
+ *   ai-agents 5.03 / 6.01          automation 5.03 / 6.04   modernization 5.01 / 6.06
+ *   customer-stories 5.01 / 6.04
+ * The first three were sampled with the maintainer (#430); the other four
+ * share their OKLCH lightness and chroma (ground L 0.946, dark L 0.287) on
+ * hues the first three leave free: violet (the brand indigo turned toward
+ * magenta), teal (between --green and --brand), olive (between --amber and
+ * --green) and apricot (--amber turned warm, 15 degrees clear of --red).
+ */
+export const TOPIC_TINTS = {
+  'integration-data': { light: '#e8ecff', dark: '#272a38', ink: '#3d58f0', inkDark: '#91a3ff' },
+  governance: { light: '#e2f0e6', dark: '#222d26', ink: '#06704f', inkDark: '#3fbf8f' },
+  'app-building': { light: '#f4eee4', dark: '#2d2921', ink: '#7d5210', inkDark: '#e3a54a' },
+  'ai-agents': { light: '#f8e7fa', dark: '#322534', ink: '#8d4998', inkDark: '#d58de0' },
+  automation: { light: '#daf2f7', dark: '#1b2e32', ink: '#056f7f', inkDark: '#5bb6c7' },
+  modernization: { light: '#edf0d8', dark: '#2b2c19', ink: '#656925', inkDark: '#a9ae6a' },
+  'customer-stories': { light: '#fee7e0', dark: '#382520', ink: '#9b4e36', inkDark: '#e79277' },
+};
+
+/**
+ * Where src/layouts/Base.astro disagrees with TOPIC_TINTS: one message per
+ * token that is missing or holds another value, in either `:root` block.
+ * @param {string} base The source of src/layouts/Base.astro.
+ * @returns {string[]}
+ */
+export function topicTintDrift(base) {
+  const block = (open) => {
+    const at = base.indexOf(open);
+    return at < 0 ? '' : base.slice(at, base.indexOf('}', at));
+  };
+  const blocks = { ':root': block(':root {'), ":root[data-theme='dark']": block(":root[data-theme='dark'] {") };
+  const issues = [];
+  for (const [slug, t] of Object.entries(TOPIC_TINTS)) {
+    const want = { ':root': [['', t.light], ['-ink', t.ink]], ":root[data-theme='dark']": [['', t.dark], ['-ink', t.inkDark]] };
+    for (const [sel, pairs] of Object.entries(want)) {
+      for (const [suffix, value] of pairs) {
+        const name = `--topic-${slug}${suffix}`;
+        const m = new RegExp(`${name}\\s*:\\s*([^;]+);`).exec(blocks[sel]);
+        if (!m) issues.push(`${sel} declares no ${name} (scripts/lib/cover-colors.mjs TOPIC_TINTS has ${value})`);
+        else if (canonicalColor(m[1]) !== value) issues.push(`${sel} sets ${name}: ${m[1].trim()}, but scripts/lib/cover-colors.mjs TOPIC_TINTS has ${value}`);
+      }
+    }
+  }
+  return issues;
+}
 
 /** Light token -> dark token, from src/layouts/Base.astro (`:root` and `:root[data-theme='dark']`). */
 export const TOKEN_MAP = new Map([
@@ -39,6 +98,8 @@ export const TOKEN_MAP = new Map([
   ['#3d58f0', '#91a3ff'], // --brand (the ring)
   ['#eef2ff', '#202849'], // --brand-soft
   ['#68625d', '#a8a29e'], // --status-archived
+  // --topic-<slug>: a cover's ground lands on its topic chip's dark ground
+  ...Object.values(TOPIC_TINTS).map((t) => [t.light, t.dark]),
 ]);
 
 const NAMED = {
