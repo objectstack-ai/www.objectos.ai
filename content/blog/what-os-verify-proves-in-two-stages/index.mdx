@@ -1,6 +1,6 @@
 ---
 title: "How Do You Test an AI-Written App Without Writing Tests? What os verify Proves in Two Stages"
-description: "os verify on the published 18.4.0 runs two stages — author-time rules, then a real in-process boot — and the second never starts if the first refuses. Three transcripts, one failing on purpose, and what a green run did not prove."
+description: "os verify on the published 18.5.0 runs two stages — author-time rules, then a real in-process boot — and the second never starts if the first refuses. Three transcripts, one failing on purpose, and what a green run did not prove."
 author: ObjectStack Team
 date: 2026-10-24
 status: published
@@ -25,7 +25,7 @@ npx os verify --json > report.json; echo $?
 0
 ```
 
-**The short answer.** You cannot test an AI-written app's business logic without writing tests, and nothing below claims otherwise. What you can do, with one command, is prove two narrower things the runtime is in a position to prove: that the definition is **enforceable** — the same author-time rules `os validate` runs — and that the app **behaves**: it boots, and every object round-trips a record through the real HTTP stack. On ObjectStack **18.4.0**, the version `npm create objectstack@latest` installs today, that command is `os verify`. It runs those two stages in order, **the second stage never starts if the first refuses**, and the exit code is read from one count, `hardFailures`. The rest of this post is three real runs of it — the blank scaffold, the CRM example with its three declared positions, and one run that fails on purpose — plus one run of the five other proofs it offers on request — because the most useful thing a verifier can show you is what it refuses, and the second most useful is what it admits it did not prove.
+**The short answer.** You cannot test an AI-written app's business logic without writing tests, and nothing below claims otherwise. What you can do, with one command, is prove two narrower things the runtime is in a position to prove: that the definition is **enforceable** — the same author-time rules `os validate` runs — and that the app **behaves**: it boots, and every object round-trips a record through the real HTTP stack. On ObjectStack **18.5.0**, the version `npm create objectstack@latest` installs today, that command is `os verify`. It runs those two stages in order, **the second stage never starts if the first refuses**, and the exit code is read from one count, `hardFailures`. The rest of this post is three real runs of it — the blank scaffold, the CRM example with its three declared positions, and one run that fails on purpose — plus one run of the five other proofs it offers on request — because the most useful thing a verifier can show you is what it refuses, and the second most useful is what it admits it did not prove.
 
 ## Two stages, one count
 
@@ -33,14 +33,14 @@ The CLI reference states the contract in one sentence: "The done-bar: `os verify
 
 | Stage | What runs | What a failure looks like |
 | :--- | :--- | :--- |
-| **1 · Author-time rules** | The rule registry `os validate` runs — 65 rules on 18.4.0 — over the stack prepared the way `os validate` prepares it | Exit 1 and a JSON document with `error` and `errors[]`; the runtime stage did not run |
+| **1 · Author-time rules** | The rule registry `os validate` runs — 68 rules on 18.5.0 — over the stack prepared the way `os validate` prepares it | Exit 1 and a JSON document with `error` and `errors[]`; the runtime stage did not run |
 | **2 · Runtime** | Boot the app in-process, judge the seed the boot landed, and, for every object, derive a record from its fields, create it through the real HTTP stack, read it back, compare | `seed.hardFailures`, `createFailed`, `readFailed` and `fidelityGaps` each add to `hardFailures` |
 | **On request · `--rls`** | A second fresh boot proves the cross-owner invariant — "a member must not write what it cannot read" — for a probe persona and for one persona per declared position | A `hole`, a degraded probe persona, or a declared position the run could not provision each add to `hardFailures` |
 | **On request · five more proofs** | `--reference-shapes`, `--delete-behaviors`, `--unique-scopes`, `--parent-write-reach`, `--dashboard-windows`: each boots another fresh stack and proves one declared behaviour, through the REST door and the system door | Each family's own `summary.hardFailures` adds to `hardFailures`; inconclusive and excluded legs are reported, not counted |
 
-![os verify on 18.4.0, stage by stage: the author-time rules first, with a refusal exiting 1 before anything boots; then an in-process boot that judges the seed and creates, reads back and compares one record per object; then, on request, the cross-owner RLS probe with one persona per declared position, and five more opt-in proof families; the twelve terms that make up hardFailures and the exit code read from it, with the statuses the count does not include](./two-stages-en.svg)
+![os verify on 18.5.0, stage by stage: the author-time rules first, with a refusal exiting 1 before anything boots; then an in-process boot that judges the seed and creates, reads back and compares one record per object; then, on request, the cross-owner RLS probe with one persona per declared position, and five more opt-in proof families; the twelve terms that make up hardFailures and the exit code read from it, with the statuses the count does not include](./two-stages-en.svg)
 
-The count the exit code reads is twelve terms — one from the seed, three from the round-trip, three from `--rls`, one per opt-in family — and the source states them plainer than any paraphrase (`packages/cli/src/commands/verify.ts` lines 460-492 at the 18.4.0 tag, its comments cut):
+The count the exit code reads is twelve terms — one from the seed, three from the round-trip, three from `--rls`, one per opt-in family — and the source states them plainer than any paraphrase (`packages/cli/src/commands/verify.ts` lines 460-492 at the 18.5.0 tag, its comments cut):
 
 ```ts
 const hardFailures =
@@ -66,7 +66,7 @@ The ordering is not a detail, and it has a history. Before 17.7.0, `os verify` b
 
 > A stack carrying a lookup to an object that does not exist, an action `visible` expression naming a field without `record.`, or a list column naming no field booted, round-tripped its records and printed `✓ verify passed` at exit 0, while `os validate`, `os build` and `os lint` all refused it. The documented done-bar ("`objectstack verify` is green") was green on a stack the build refuses to ship.
 
-Call that shape a **false green**: a verifier that passes what the build refuses. It is the worst defect a verifier can have, because the whole point of running one is to be the thing that notices. Since 17.7.0 the gate runs first, and on 18.4.0 it still does. The fastest way to see the closure is to open the hole on purpose. Take the scaffold's one object and give it a lookup to an object that does not exist — four lines, the kind of thing an agent writes when it names a target before it creates it:
+Call that shape a **false green**: a verifier that passes what the build refuses. It is the worst defect a verifier can have, because the whole point of running one is to be the thing that notices. Since 17.7.0 the gate runs first, and on 18.5.0 it still does. The fastest way to see the closure is to open the hole on purpose. Take the scaffold's one object and give it a lookup to an object that does not exist — four lines, the kind of thing an agent writes when it names a target before it creates it:
 
 ```diff
      body: Field.textarea({
@@ -80,11 +80,11 @@ Call that shape a **false green**: a verifier that passes what the build refuses
    },
 ```
 
-Then run the done-bar again, on 18.4.0:
+Then run the done-bar again, on 18.5.0:
 
 ```text
 $ npx os verify; echo $?
-  → Running author-time rules (65)...
+  → Running author-time rules (68)...
 
   ✗ Author-time rules failed (1 issue) — the runtime stage did not run
   • object "verify_demo_note" · field "project": lookup target "verify_demo_project"
@@ -143,7 +143,7 @@ Restore the field and the done-bar reaches its second stage. This is the scaffol
 
 `checked: 2` is the two fields the verifier wrote and read back; `mismatchTotal: 0` says every value came back as written; `seed.status: "none"` says the scaffold declares no seed records for the boot to land. What is not in the file is as deliberate as what is: the booted stack's own log — here the dev metadata endpoint registering and the server stopping — went to stderr, **two lines** of it on this one-object app, and stdout carried exactly one JSON document. That contract dates from 17.7.0 as well; its changelog measured the previous behaviour at 318 log lines landing on stdout ahead of the report on a two-object stack, so that `os verify --json > report.json` "used to exit 0 and leave a file no JSON parser accepts." Now `JSON.parse` reads the file whole, which is what makes `report.json` an artifact you can attach to a pull request rather than a screenshot.
 
-A record "derived from its fields" is the verifier's record, not yours, and that has a consequence the scaffold is too small to show. Here is the CRM example — `examples/app-crm` at the `@objectstack/cli@18.4.0` tag, six objects, run against the published 18.4.0 packages — on the text face, where the verifier cuts the quoted refusal at the code:
+A record "derived from its fields" is the verifier's record, not yours, and that has a consequence the scaffold is too small to show. Here is the CRM example — `examples/app-crm` at the `@objectstack/cli@18.5.0` tag, six objects, run against the published 18.5.0 packages — on the text face, where the verifier cuts the quoted refusal at the code:
 
 ```text
 === objectstack verify — com.example.crm ===
@@ -164,7 +164,7 @@ Four of six objects round-tripped. The fifth, `crm_opportunity`, carries two val
 
 ## On request: the cross-owner invariant, one persona per declared position
 
-The round-trip proves fidelity. It proves nothing about who can write what, and `os verify` does not pretend to by default. With `--rls` it boots a second, fresh stack and proves one invariant — the reference's phrasing is "a member must not write what it cannot read" — for a probe persona it provisions itself and, on 18.4.0, for one persona per position the app declares. Since 18.0 the probe persona's permission set is registered in the app's security catalog for the run rather than written as a row, and a boot that cannot serve it reports a degraded probe persona — a term in `hardFailures` — instead of probing with something weaker. The CRM declares three, in `src/security/sales-positions.ts`: `crm_sales_rep`, `crm_sales_manager` and `crm_finance_approver`. So `npx os verify --rls --json` minted four personas, and the report's `rls` block says what each one established:
+The round-trip proves fidelity. It proves nothing about who can write what, and `os verify` does not pretend to by default. With `--rls` it boots a second, fresh stack and proves one invariant — the reference's phrasing is "a member must not write what it cannot read" — for a probe persona it provisions itself and, on 18.5.0, for one persona per position the app declares. Since 18.0 the probe persona's permission set is registered in the app's security catalog for the run rather than written as a row, and a boot that cannot serve it reports a degraded probe persona — a term in `hardFailures` — instead of probing with something weaker. The CRM declares three, in `src/security/sales-positions.ts`: `crm_sales_rep`, `crm_sales_manager` and `crm_finance_approver`. So `npx os verify --rls --json` minted four personas, and the report's `rls` block says what each one established:
 
 ```json
 "rls": {
@@ -269,4 +269,4 @@ Point your agent at that target and let it run the done-bar itself. The README's
 
 ---
 
-*Verified against ObjectStack 18.4.0 — `create-objectstack` 18.4.0 and `@objectstack/cli` 18.4.0 as `npm create objectstack@latest` installed them on 2026-11-14, on Node 22. The CRM is `examples/app-crm` at the `@objectstack/cli@18.4.0` tag, run against the published 18.4.0 packages; source citations are at the same tag. Every command and every block of output above was run, not reconstructed; output is trimmed where marked with an ellipsis and nowhere rewritten.*
+*Verified against ObjectStack 18.5.0 — `create-objectstack` 18.5.0 and `@objectstack/cli` 18.5.0 as `npm create objectstack@latest` installed them on 2026-11-16, on Node 22. The CRM is `examples/app-crm` at the `@objectstack/cli@18.5.0` tag, run against the published 18.5.0 packages; source citations are at the same tag. Every command and every block of output above was run, not reconstructed; output is trimmed where marked with an ellipsis and nowhere rewritten.*
