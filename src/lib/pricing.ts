@@ -23,11 +23,11 @@ export interface PricingPlan {
 
 /**
  * One cell of the edition comparison. `mark` draws ✓ (`yes`) or — (`no`)
- * with a spoken label; `text` is the qualifier beside it, or the whole cell
+ * with a spoken label, or the grey "In development" chip (`dev`); `text` is the qualifier beside it, or the whole cell
  * when there is no mark.
  */
 export interface ComparisonCell {
-  mark?: 'yes' | 'no';
+  mark?: 'yes' | 'no' | 'dev';
   text?: string;
 }
 
@@ -66,16 +66,16 @@ export interface ComparisonGroup {
  * (docs.objectos.ai/docs/editions/compare, /docs/editions/license,
  * /docs/deploy/licensing, /docs/deploy/air-gapped, /docs/configure/mcp,
  * /docs/configure/permissions/hierarchy-visibility, /docs/operate/audit-logs).
- * Several organizations on one deployment (the `multi-tenancy` row) is
- * Community ✓ by the maintainer's ruling of 2026-11-17, which wins over the
- * docs until they are corrected; the row is on hold for a further ruling.
  * Building apps is the `ai-build` row: the agent writes metadata in the
- * repository and os verify checks it; the MCP build tools are Cloud-only and
- * are not claimed here. Single sign-on and SCIM (maintainer, 2026-11-17) are one
- * "Enterprise adds" row whose Community cell is left empty, never —:
- * nothing here says Community lacks them. `roadmap` holds what has not shipped:
- * "Coming soon", Enterprise features in the product but not yet in the
- * docs, and "In development", roadmap items (two of them are the ones the
+ * repository and os verify checks it. Building through MCP (`mcp-build`) is
+ * in development for both editions (maintainer, 2026-11-17); today the MCP
+ * build tools are Cloud-only. Customer-managed keys cover secrets only
+ * (/docs/deploy/licensing). Single sign-on and SCIM, and single-database
+ * multi-tenancy (maintainer, 2026-11-17), are "Enterprise adds" rows whose
+ * Community cell is left empty, never —: nothing here says Community has or
+ * lacks them. `roadmap` holds what has not shipped: "Coming soon",
+ * Enterprise features in the product but not yet in the docs, and "In
+ * development", roadmap items (two of them are the ones the
  * connect-existing-systems page lists); all are published with no date
  * (maintainer, 2026-11-17), and none says external MCP calls are in the AI
  * audit today. The two "Connect existing systems" rows link to that page.
@@ -144,6 +144,7 @@ const COMPARE_DOCS = 'https://docs.objectos.ai/docs/editions/compare';
 const yes = (text?: string): ComparisonCell => ({ mark: 'yes', text });
 const no = (text?: string): ComparisonCell => ({ mark: 'no', text });
 const text = (t: string): ComparisonCell => ({ text: t });
+const dev: ComparisonCell = { mark: 'dev' };
 
 // Prices/quotas mirror the product's source of truth:
 // cloud `packages/service-cloud/src/plan-entitlements.ts` (PLAN_PRICING +
@@ -290,9 +291,15 @@ const pricingEn: PricingCopy = {
               },
               {
                 id: 'ai-build',
-                feature: 'Build apps with your own AI: it writes the metadata in your repository, checked by os verify',
+                feature: 'Build apps with your own AI: metadata in your repo, checked by os verify',
                 community: yes(),
                 enterprise: yes(),
+              },
+              {
+                id: 'mcp-build',
+                feature: 'Build apps with your own AI through MCP',
+                community: dev,
+                enterprise: dev,
               },
               {
                 id: 'mcp-ask',
@@ -329,12 +336,6 @@ const pricingEn: PricingCopy = {
                 id: 'sync-in',
                 feature: 'One-way sync from external systems',
                 link: 'connect-existing-systems',
-                community: yes(),
-                enterprise: yes(),
-              },
-              {
-                id: 'multi-tenancy',
-                feature: 'Multi-tenancy on one database',
                 community: yes(),
                 enterprise: yes(),
               },
@@ -386,8 +387,14 @@ const pricingEn: PricingCopy = {
                 enterprise: yes(),
               },
               {
+                id: 'multi-tenancy',
+                feature: 'Single-database multi-tenancy (several organizations on one deployment), licensed and supported',
+                community: {},
+                enterprise: yes(),
+              },
+              {
                 id: 'customer-managed-keys',
-                feature: 'Customer-managed keys',
+                feature: 'Customer-managed keys for secrets',
                 community: no(),
                 enterprise: yes(),
               },
@@ -561,6 +568,12 @@ const pricingZhHans: PricingCopy = {
                 enterprise: yes(),
               },
               {
+                id: 'mcp-build',
+                feature: '用你自己的 AI 经 MCP 搭建应用',
+                community: dev,
+                enterprise: dev,
+              },
+              {
                 id: 'mcp-ask',
                 feature: '用你自己的 AI 经 MCP 问数据',
                 community: yes(),
@@ -595,12 +608,6 @@ const pricingZhHans: PricingCopy = {
                 id: 'sync-in',
                 feature: '外部系统单向同步',
                 link: 'connect-existing-systems',
-                community: yes(),
-                enterprise: yes(),
-              },
-              {
-                id: 'multi-tenancy',
-                feature: '单库多租户',
                 community: yes(),
                 enterprise: yes(),
               },
@@ -652,8 +659,14 @@ const pricingZhHans: PricingCopy = {
                 enterprise: yes(),
               },
               {
+                id: 'multi-tenancy',
+                feature: '单库多租户（一个部署跑多个组织），授权并提供支持',
+                community: {},
+                enterprise: yes(),
+              },
+              {
                 id: 'customer-managed-keys',
-                feature: '客户自管密钥',
+                feature: '客户自管密钥（用于机密信息）',
                 community: no(),
                 enterprise: yes(),
               },
