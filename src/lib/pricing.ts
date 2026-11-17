@@ -18,6 +18,8 @@ export interface PricingPlan {
    * per-locale target cannot be baked into the copy; `planHref` resolves it.
    */
   ctaHref: string | ((locale: Locale) => string);
+  /** A secondary text link under the CTA, e.g. the free Developer Edition. */
+  secondaryLink?: { label: string; href: string };
   highlight?: boolean;
 }
 
@@ -70,10 +72,12 @@ export interface ComparisonGroup {
  * repository and os verify checks it. Building through MCP (`mcp-build`) is
  * in development for both editions (maintainer, 2026-11-17); today the MCP
  * build tools are Cloud-only. Customer-managed keys cover secrets only
- * (/docs/deploy/licensing). Single sign-on and SCIM, and single-database
- * multi-tenancy (maintainer, 2026-11-17), are "Enterprise adds" rows whose
- * Community cell is left empty, never —: nothing here says Community has or
- * lacks them. `roadmap` holds what has not shipped: "Coming soon",
+ * (/docs/deploy/licensing). Single sign-on is not on the table or the cards
+ * (maintainer, 2026-11-17): Enterprise turns SCIM on by default, so the row
+ * is SCIM only, and Community's — means "not on by default and supported".
+ * Multiple organizations on one deployment: an open-source plugin you
+ * integrate yourself on Community, licensed and supported on Enterprise
+ * (maintainer, 2026-11-17). `roadmap` holds what has not shipped: "Coming soon",
  * Enterprise features in the product but not yet in the docs, and "In
  * development", roadmap items (two of them are the ones the
  * connect-existing-systems page lists); all are published with no date
@@ -140,6 +144,9 @@ const CONTACT = (locale: Locale): string => CONTACT_URL[locale];
 // deployment docs (the runtime image and `os start` live in that repository).
 const COMMUNITY = 'https://objectstack.ai/docs/deployment';
 const COMPARE_DOCS = 'https://docs.objectos.ai/docs/editions/compare';
+// www and the Cloud have no Developer Edition sign-up page of their own; the
+// docs section says who can open one and how.
+const DEVELOPER_EDITION = 'https://docs.objectos.ai/docs/editions/compare#developer-edition';
 
 const yes = (text?: string): ComparisonCell => ({ mark: 'yes', text });
 const no = (text?: string): ComparisonCell => ({ mark: 'no', text });
@@ -202,7 +209,7 @@ const pricingEn: PricingCopy = {
       intro:
         'Run ObjectOS on your own servers. ObjectOS Community is open source and free; ObjectOS Enterprise is the licensed edition, sold by annual contract.',
       billingNote:
-        "Enterprise is priced per AI user, with a 25-user minimum, billed annually by invoice; there is no public price. People who don't use the in-app AI are free; an agent that connects over MCP with its own API key counts as one AI user.",
+        "Enterprise is priced per AI user, with a 25-user minimum, billed annually by invoice; there is no public price. People who don't use the in-app AI are free; an agent that connects over MCP with its own API key counts as one AI user. No per-node fees; perpetual licenses are available; if a subscription ends, it falls back to Community with your data intact.",
       plans: [
         {
           name: 'Community',
@@ -223,11 +230,12 @@ const pricingEn: PricingCopy = {
           tagline: 'For organizations that want the in-app AI and enterprise controls on their own infrastructure.',
           features: [
             'Everything in Community, plus the in-app AI (preview) and AI governance',
-            'Single sign-on (OIDC, SAML 2.0) and SCIM 2.0 provisioning, on by default, with our support; a SCIM provisioning console is coming soon',
+            'SCIM provisioning on by default, with our support; a SCIM console is coming soon',
             'Standard support; priority and SLA by contract',
           ],
           cta: 'Contact sales',
           ctaHref: CONTACT,
+          secondaryLink: { label: 'Try the free Developer Edition', href: DEVELOPER_EDITION },
         },
       ],
       comparison: {
@@ -348,8 +356,8 @@ const pricingEn: PricingCopy = {
               {
                 id: 'high-availability',
                 feature: 'High availability',
-                community: text('One node + backup/restore'),
-                enterprise: text('One node + backup/restore; multi-replica preview'),
+                community: text('One node + backup and restore'),
+                enterprise: text('One node + backup and restore'),
               },
               {
                 id: 'support',
@@ -381,16 +389,16 @@ const pricingEn: PricingCopy = {
                 enterprise: yes(),
               },
               {
-                id: 'sso-scim',
-                feature: 'Single sign-on and SCIM, on by default, with our support',
-                community: {},
+                id: 'scim',
+                feature: 'SCIM provisioning on by default, with our support',
+                community: no(),
                 enterprise: yes(),
               },
               {
-                id: 'multi-tenancy',
-                feature: 'Single-database multi-tenancy (several organizations on one deployment), licensed and supported',
-                community: {},
-                enterprise: yes(),
+                id: 'multi-org',
+                feature: 'Multiple organizations on one deployment',
+                community: text('Open-source plugin, integrate it yourself'),
+                enterprise: text('Licensed and supported'),
               },
               {
                 id: 'customer-managed-keys',
@@ -414,6 +422,7 @@ const pricingEn: PricingCopy = {
             { id: 'record-lineage', feature: 'Record-level lineage', status: 'dev' },
             { id: 'ai-workforce-console', feature: 'AI workforce console', status: 'dev' },
             { id: 'external-ai-approval', feature: "A person approves an external AI's irreversible actions", status: 'dev' },
+            { id: 'multiple-replicas', feature: 'Multiple replicas', status: 'dev' },
           ],
         },
         footer: 'The full matrix is in the docs:',
@@ -478,7 +487,7 @@ const pricingZhHans: PricingCopy = {
       intro:
         '在你自己的服务器上运行 ObjectOS。ObjectOS Community 开源免费；ObjectOS 企业版（私有部署）是需要许可的版本，按年度合同销售。',
       billingNote:
-        'ObjectOS 企业版按 AI 用户数计价，最低 25 人，按年开票付款，不公开报价。不使用产品内 AI 的人免费；以自己的 API 密钥经 MCP 接入的 Agent 计为一个 AI 用户。',
+        'ObjectOS 企业版按 AI 用户数计价，最低 25 人，按年开票付款，不公开报价。不使用产品内 AI 的人免费；以自己的 API 密钥经 MCP 接入的 Agent 计为一个 AI 用户。不按节点收费；可买永久许可证；订阅到期回落为 Community，数据照常可用。',
       plans: [
         {
           name: 'Community',
@@ -495,11 +504,12 @@ const pricingZhHans: PricingCopy = {
           tagline: '面向要在自己基础设施上使用产品内 AI 与企业级管控的组织。',
           features: [
             'Community 的全部能力，另加产品内 AI（预览版）与 AI 治理',
-            '单点登录（OIDC、SAML 2.0）与 SCIM 2.0 用户同步，默认开启，享官方支持；SCIM 用户同步管理台即将发布',
+            'SCIM 用户同步默认开启，享官方支持；SCIM 管理台即将发布',
             '标准支持；优先支持与 SLA 按合同提供',
           ],
           cta: '联系销售',
           ctaHref: CONTACT,
+          secondaryLink: { label: '免费试用开发者版', href: DEVELOPER_EDITION },
         },
       ],
       comparison: {
@@ -621,7 +631,7 @@ const pricingZhHans: PricingCopy = {
                 id: 'high-availability',
                 feature: '高可用',
                 community: text('单节点 + 备份恢复'),
-                enterprise: text('单节点 + 备份恢复；多副本预览'),
+                enterprise: text('单节点 + 备份恢复'),
               },
               {
                 id: 'support',
@@ -653,16 +663,16 @@ const pricingZhHans: PricingCopy = {
                 enterprise: yes(),
               },
               {
-                id: 'sso-scim',
-                feature: '单点登录与 SCIM，默认开启，享官方支持',
-                community: {},
+                id: 'scim',
+                feature: 'SCIM 用户同步默认开启，享官方支持',
+                community: no(),
                 enterprise: yes(),
               },
               {
-                id: 'multi-tenancy',
-                feature: '单库多租户（一个部署跑多个组织），授权并提供支持',
-                community: {},
-                enterprise: yes(),
+                id: 'multi-org',
+                feature: '多组织（一个部署跑多个组织）',
+                community: text('开源插件，需自行集成'),
+                enterprise: text('授权并提供支持'),
               },
               {
                 id: 'customer-managed-keys',
@@ -686,6 +696,7 @@ const pricingZhHans: PricingCopy = {
             { id: 'record-lineage', feature: '记录级血缘', status: 'dev' },
             { id: 'ai-workforce-console', feature: 'AI 员工控制台', status: 'dev' },
             { id: 'external-ai-approval', feature: '外部 AI 不可逆操作须真人批准', status: 'dev' },
+            { id: 'multiple-replicas', feature: '多副本', status: 'dev' },
           ],
         },
         footer: '完整对照表见文档：',
@@ -709,6 +720,9 @@ const planToHant = (plan: PricingPlan): PricingPlan => ({
   tagline: s2t(plan.tagline),
   features: plan.features.map(s2t),
   cta: s2t(plan.cta),
+  secondaryLink: plan.secondaryLink
+    ? { label: s2t(plan.secondaryLink.label), href: plan.secondaryLink.href }
+    : undefined,
 });
 
 const cellToHant = (cell: ComparisonCell): ComparisonCell => ({
