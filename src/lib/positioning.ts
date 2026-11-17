@@ -118,6 +118,16 @@ export const T4_STANDALONE = CANONICAL.t4.replace('this repository', 'the Object
 /** The three edition names T4 spells, in T4's order; `descriptor` lists them. */
 const EDITIONS = ['Community', 'Cloud', 'Enterprise'] as const;
 
+/**
+ * How a locale spells those names. Every locale keeps them untranslated except
+ * Chinese, which names the paid private-deployment edition 「ObjectOS 企业版」
+ * (maintainer ruling, 2026-11-17, #459); zh-Hant derives it with `s2t`.
+ */
+const editionNames = (locale: Locale): readonly string[] =>
+  locale === 'zh-Hans' || locale === 'zh-Hant'
+    ? [EDITIONS[0], EDITIONS[1], locale === 'zh-Hant' ? s2t('企业版') : '企业版']
+    : EDITIONS;
+
 export interface PositioningStrings {
   /** T1, one sentence. The home H1 renders `t1Hero`, which rejoins to exactly this minus its full stop. */
   t1: string;
@@ -164,10 +174,12 @@ const zhHans: PositioningStrings = {
   t1Hero: ['本体', '即软件'],
   t2: '一份可执行的业务本体。AI 编写它，运行时运行它，Agent 操作它，你拥有它。',
   t3: ['可执行', 'AI 可编写', 'Agent 可操作', '归你所有'],
-  // The same words docs.objectos.ai uses for this sentence (objectos #416).
-  t4: '为了运行它，ObjectStack 仓库提供 ObjectOS Community —— ghcr.io/objectstack-ai/objectstack 镜像、os start 和 Console，免费且自托管 —— 而 ObjectOS Cloud 是托管版本，ObjectOS Enterprise 是自管理、需许可的版本。',
-  descriptor: 'ObjectOS Community、Cloud 与 Enterprise',
-  e1: 'ObjectOS 有三个版本：ObjectOS Community，开源、可免费自托管；ObjectOS Cloud，托管在浏览器中、无需安装；ObjectOS Enterprise，自管部署在你自己的基础设施上。你的本体是普通的 ObjectStack 元数据。从 ObjectOS Cloud 或 ObjectOS Enterprise 导出本体、在开源的 ObjectStack 运行时上运行，目前尚在计划中。',
+  // The same words docs.objectos.ai uses for this sentence (objectos #416),
+  // with the Enterprise edition under its Chinese name, 「ObjectOS 企业版」
+  // (maintainer ruling, 2026-11-17, #459).
+  t4: '为了运行它，ObjectStack 仓库提供 ObjectOS Community —— ghcr.io/objectstack-ai/objectstack 镜像、os start 和 Console，免费且自托管 —— 而 ObjectOS Cloud 是托管版本，ObjectOS 企业版是自管理、需许可的版本。',
+  descriptor: 'ObjectOS Community、Cloud 与 ObjectOS 企业版',
+  e1: 'ObjectOS 有三个版本：ObjectOS Community，开源、可免费自托管；ObjectOS Cloud，托管在浏览器中、无需安装；ObjectOS 企业版，自管部署在你自己的基础设施上。你的本体是普通的 ObjectStack 元数据。从 ObjectOS Cloud 或 ObjectOS 企业版导出本体、在开源的 ObjectStack 运行时上运行，目前尚在计划中。',
   protocol: '建立在开放的 ObjectStack 协议之上',
 };
 
@@ -260,7 +272,7 @@ export const heroLineJoin = (locale: Locale): string =>
 // H1's one display rule, applied here and nowhere else: no page strips the
 // stop itself), and the phrase every page uses to say what ObjectOS is must
 // still name the editions T4 names — all three, in T4's order, each spelled
-// "ObjectOS <edition>" in T4 itself.
+// "ObjectOS <edition>" in T4 itself, in the locale's spelling (`editionNames`).
 // Checked once, at load, so `astro build` (and the dev server) fail loudly
 // instead of a page drifting. (T4 against the README is the build-time
 // gate, `scripts/check-positioning.mjs`.)
@@ -272,14 +284,15 @@ for (const [locale, strings] of Object.entries(positioning) as [Locale, Position
       `positioning[${locale}].t1Hero rejoins to "${rejoined}", not T1 minus its full stop "${t1Bare}"`
     );
   }
-  const positions = EDITIONS.map((edition) => strings.descriptor.indexOf(edition));
+  const names = editionNames(locale);
+  const positions = names.map((edition) => strings.descriptor.indexOf(edition));
   const inOrder = positions.every((at, i) => at >= 0 && (i === 0 || at > positions[i - 1]));
   if (!strings.descriptor.startsWith('ObjectOS ') || !inOrder) {
     throw new Error(
-      `positioning[${locale}].descriptor "${strings.descriptor}" must name ObjectOS ${EDITIONS.join(', ')} in that order`
+      `positioning[${locale}].descriptor "${strings.descriptor}" must name ObjectOS ${names.join(', ')} in that order`
     );
   }
-  for (const edition of EDITIONS) {
+  for (const edition of names) {
     if (!strings.t4.includes(`ObjectOS ${edition}`)) {
       throw new Error(`positioning[${locale}].t4 does not spell "ObjectOS ${edition}": "${strings.t4}"`);
     }

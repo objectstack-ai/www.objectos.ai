@@ -166,7 +166,7 @@ export const OrdersPullJob = defineJob({
         eyebrow: '开发中',
         title: '尚未包含在当前版本中',
         copy:
-          '基于同一个同步内核开发。各项依据公开的设计记录 ADR-0153 描述，两项 Enterprise 能力依据 objectstack#31763 上的版本划分。',
+          '基于同一个同步内核开发。各项依据公开的设计记录 ADR-0153 描述，两项 ObjectOS 企业版（私有部署）能力依据 objectstack#31763 上的版本划分。',
         items: [
           {
             title: '标记源头的删除',
@@ -201,12 +201,12 @@ export const OrdersPullJob = defineJob({
           {
             title: '记录级血缘',
             body: '逐条记录地说明每条数据从哪来、又流向了哪里。',
-            meta: '开发中 · Enterprise',
+            meta: '开发中 · ObjectOS 企业版',
           },
           {
             title: '基于标签的访问控制',
             body: '由数据上的标签决定访问，并对数据的使用目的加以限制。',
-            meta: '开发中 · Enterprise',
+            meta: '开发中 · ObjectOS 企业版',
           },
         ],
       },

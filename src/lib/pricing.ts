@@ -201,9 +201,9 @@ const pricingZhHans: PricingCopy = {
     selfHosted: {
       label: '私有部署',
       intro:
-        '想自己运行？ObjectOS Community（开源自托管）是开源的运行时与 Console，自托管、免费，采用 Apache-2.0：经 MCP 自带 AI，以源码方式编写元数据并审阅 diff。ObjectStack 是它运行的开放协议。ObjectOS Cloud（托管版）与 Enterprise（自管版）在此之上增加托管或带许可的私有部署、产品内 AI Build 与 Ask，以及商业支持；对接你自己身份提供商的单点登录是开源能力，免费提供。',
+        '想自己运行？ObjectOS Community（开源自托管）是开源的运行时与 Console，自托管、免费，采用 Apache-2.0：经 MCP 自带 AI，以源码方式编写元数据并审阅 diff。ObjectStack 是它运行的开放协议。ObjectOS Cloud（托管版）与 ObjectOS 企业版（私有部署）在此之上增加托管或带许可的私有部署、产品内 AI Build 与 Ask，以及商业支持；对接你自己身份提供商的单点登录是开源能力，免费提供。',
       billingNote:
-        'ObjectOS Enterprise 只有一个版本，即部署在你自己基础设施上的私有部署，不公开报价：按 AI 用户数年付，最低 25 人起，通过合同购买、开票付款——请联系销售。',
+        'ObjectOS 企业版只有一个版本，即部署在你自己基础设施上的私有部署，不公开报价：按 AI 用户数年付，最低 25 人起，通过合同购买、开票付款——请联系销售。',
       plans: [
         {
           name: 'Community',
@@ -221,7 +221,7 @@ const pricingZhHans: PricingCopy = {
           ctaHref: COMMUNITY,
         },
         {
-          name: 'Enterprise',
+          name: 'ObjectOS 企业版',
           price: '联系销售',
           tagline: '面向在自己基础设施上运行 ObjectOS 的组织，含离线隔离部署，提供 AI 治理与按组织架构控制记录可见范围。',
           features: [

@@ -157,7 +157,7 @@ export const Subscription = ObjectSchema.create({
       {
         question: '这里哪些是开源的，ObjectOS 又加了什么？',
         answer:
-          '整个数据层都是开源的：对象、关系、校验、公式、迁移、查询引擎、REST API、文件存储，以及 Console 里的对象设计器、ER 图和数据源同步——Apache-2.0，开发与生产之间没有功能门槛。ObjectOS 加的是产品内 AI Builder：它的内置工具能从一段对话创建包与对象、增删改字段，并在生效前排队等人审批——在 Cloud 与 Enterprise 上提供。',
+          '整个数据层都是开源的：对象、关系、校验、公式、迁移、查询引擎、REST API、文件存储，以及 Console 里的对象设计器、ER 图和数据源同步——Apache-2.0，开发与生产之间没有功能门槛。ObjectOS 加的是产品内 AI Builder：它的内置工具能从一段对话创建包与对象、增删改字段，并在生效前排队等人审批——在 ObjectOS Cloud 与 ObjectOS 企业版（私有部署）中提供。',
       },
     ],
   } satisfies MarketingPage;

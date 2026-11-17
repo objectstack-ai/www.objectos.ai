@@ -18,7 +18,7 @@ const page = {
     metrics: [
       { value: '三个版本', label: `${p.descriptor}：开源、可免费自托管；托管在浏览器中、无需安装；自管部署在你自己的基础设施上` },
       { value: '用户级', label: 'Agent 继承登录用户的权限' },
-      { value: '可审计', label: '记录的读与写、审批与 schema 变更；Enterprise 版还审计界面内 AI 的工具调用' },
+      { value: '可审计', label: '记录的读与写、审批与 schema 变更；ObjectOS 企业版（私有部署）还审计界面内 AI 的工具调用' },
     ],
     artifact: {
       eyebrow: '安全评审材料包',
@@ -61,7 +61,7 @@ const page = {
           {
             meta: '第 4 道 · 审计',
             title: '记录的读写都留痕',
-            body: '无论是人，还是代表这个人行事的 AI，对记录的读取和写入都写进同一份审计日志。在 Enterprise 版中，界面内 AI 的工具调用也会被审计。',
+            body: '无论是人，还是代表这个人行事的 AI，对记录的读取和写入都写进同一份审计日志。在 ObjectOS 企业版中，界面内 AI 的工具调用也会被审计。',
             href: '/en/permissions/#admin',
           },
         ],
@@ -71,15 +71,15 @@ const page = {
         eyebrow: '边界',
         title: '敏感业务数据留在受控基础设施内',
         copy:
-          '在 ObjectOS Enterprise（私有部署）中，运行时、业务数据、用户身份、审计日志、文件与密钥都在你自己的基础设施内；除非你显式配置外部服务，它们都留在这个边界内。ObjectOS Cloud 由我们运营。',
+          '在 ObjectOS 企业版中，运行时、业务数据、用户身份、审计日志、文件与密钥都在你自己的基础设施内；除非你显式配置外部服务，它们都留在这个边界内。ObjectOS Cloud 由我们运营。',
         items: [
           {
             title: '数据驻留',
-            body: '在 ObjectOS Enterprise 中，连接你自己的数据库与存储：业务记录、身份、审计日志与文件都存放在那里，而不是供应商的工作区。',
+            body: '在 ObjectOS 企业版中，连接你自己的数据库与存储：业务记录、身份、审计日志与文件都存放在那里，而不是供应商的工作区。',
           },
           {
             title: '许可证校验',
-            body: '自管部署的 ObjectOS 在线校验许可证（Enterprise 离线许可证可离线校验）。开源 ObjectStack 运行时没有遥测、不查许可证、也不检查更新。',
+            body: 'ObjectOS 企业版在线校验许可证（也可使用离线许可证离线校验）。开源 ObjectStack 运行时没有遥测、不查许可证、也不检查更新。',
           },
           {
             title: '模型可选',
@@ -110,7 +110,7 @@ const page = {
       },
     ],
     table: {
-      columns: ['评审领域', '现已可用', 'Enterprise 材料包'],
+      columns: ['评审领域', '现已可用', 'ObjectOS 企业版材料包'],
       rows: [
         ['部署', '自托管开源 ObjectStack 运行时', 'VPC、私有网络、隔离部署说明'],
         ['身份', '项目身份与权限元数据；SSO / SAML / OIDC 由开源框架免费提供', 'SCIM 与身份生命周期、管理员角色、会话策略映射'],
@@ -136,7 +136,7 @@ const page = {
       {
         question: 'ObjectOS 能在无互联网环境运行吗？',
         answer:
-          '能。ObjectOS Enterprise 可在自托管或隔离环境中运营 ObjectStack 运行时。具体方式取决于包镜像、模型路由、身份系统与客户基础设施。',
+          '能。ObjectOS 企业版可在自托管或隔离环境中运营 ObjectStack 运行时。具体方式取决于包镜像、模型路由、身份系统与客户基础设施。',
       },
     ],
   } satisfies MarketingPage;
