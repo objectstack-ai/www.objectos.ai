@@ -25,7 +25,7 @@ const page = {
     {
       id: 'sales',
       title: '销售与演示',
-      body: '咨询 ObjectOS Enterprise 授权、批量定价，或为你的团队预约演示。',
+      body: '咨询 ObjectOS 企业版（私有部署）授权、批量定价，或为你的团队预约演示。',
       email: SALES_CONTACT,
     },
     {

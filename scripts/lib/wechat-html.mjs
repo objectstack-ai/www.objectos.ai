@@ -138,10 +138,26 @@ function styleTag(html, tag, style) {
 export function toWechatHtml(source) {
   const { data, body } = splitFrontmatter(source);
 
-  // Drop any MDX import/export lines (our posts are plain markdown, but be safe).
+  // Drop any MDX import/export lines (our posts are plain markdown, but be safe),
+  // and MDX comment lines such as the proof marker `{/* the-proof */}` (see
+  // scripts/lib/chooser-first.mjs): MDX renders them as nothing, but `marked`
+  // would print them. A comment line inside a code fence is code and stays.
+  let fence = null;
   const md = body
     .split('\n')
-    .filter((l) => !/^\s*(import|export)\s/.test(l))
+    .filter((l) => {
+      const t = l.trim();
+      if (fence) {
+        if (t[0] === fence[0] && /^(`+|~+)$/.test(t) && t.length >= fence.length) fence = null;
+        return true;
+      }
+      const open = /^(`{3,}|~{3,})/.exec(t);
+      if (open) {
+        fence = open[1];
+        return true;
+      }
+      return !/^\s*(import|export)\s/.test(l) && !/^\{\/\*[\s\S]*\*\/\}$/.test(t);
+    })
     .join('\n')
     .trim();
 

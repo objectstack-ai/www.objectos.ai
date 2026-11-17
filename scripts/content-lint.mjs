@@ -4,7 +4,10 @@
 // Default behavior checks every MDX file. Use `--published` in CI/builds to
 // skip archived content and check only indexable content. `--dist` is a
 // separate mode that checks the BUILT HTML instead of the sources; it runs
-// after `astro build` (see the `build` script in package.json).
+// after `astro build` (see the `build` script in package.json). `--self-test`
+// runs only the chooser-first rule's self-test (scripts/lib/chooser-first.mjs,
+// which documents the `{/* the-proof */}` proof marker); every MDX pass runs it
+// first as well.
 
 import { readdir, readFile, access } from 'node:fs/promises';
 import path from 'node:path';
@@ -21,6 +24,7 @@ import {
   lastChar,
 } from './lib/cjk-segment-break.mjs';
 import { LOW_OPENERS, OPAQUE_INLINE, isApostrophe } from './lib/cjk-quotes.mjs';
+import { chooserFirstIssues, selfTest as chooserFirstSelfTest } from './lib/chooser-first.mjs';
 
 const ROOT = cwd();
 const BLOG = path.join(ROOT, 'content', 'blog');
@@ -816,6 +820,21 @@ if (args.has('--dist')) {
   const quotes = await checkBuiltQuotes();
   const links = await checkBuiltLinks();
   exit(prose || cjkBreaks || quotes || links);
+}
+
+// The chooser-first rule's self-test runs before the MDX pass it gates, so a
+// broken rule fails the lint instead of passing every post.
+{
+  const { passed, failures } = chooserFirstSelfTest();
+  if (failures.length > 0) {
+    for (const failure of failures) console.error(`✗ chooser-first self-test: ${failure}`);
+    console.error(`\n✗ chooser-first self-test failed (${failures.length} of ${passed + failures.length} cases)`);
+    exit(1);
+  }
+  if (args.has('--self-test')) {
+    console.log(`✓ chooser-first self-test passed (${passed} cases)`);
+    exit(0);
+  }
 }
 
 // The frontmatter taxonomy, derived from the module that declares it instead of
@@ -1690,6 +1709,12 @@ for (const file of files) {
         `Cross-locale internal link [${link.text}](${link.href}): ${crossed.reason}`
       );
     }
+  }
+
+  // Chooser-first structure (#458): code density above the proof marker in
+  // business / general posts; see scripts/lib/chooser-first.mjs.
+  for (const finding of chooserFirstIssues({ data, body })) {
+    addIssue(issues, rel, data, finding.severity, finding.message);
   }
 
   const seenBodyImages = new Map();

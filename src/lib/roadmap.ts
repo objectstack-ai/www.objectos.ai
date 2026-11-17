@@ -117,7 +117,7 @@ const en: RoadmapCopy = {
 
 const zhHans: RoadmapCopy = {
   title: '路线图 · ObjectOS 企业版',
-  description: 'ObjectOS 企业版路线图：现在已经提供什么、接下来在开发什么、以后计划做什么，只用批准对外发布的说法。',
+  description: 'ObjectOS 企业版（私有部署）路线图：现在已经提供什么、接下来在开发什么、以后计划做什么，只用批准对外发布的说法。',
   eyebrow: 'ObjectOS 企业版',
   heading: '路线图',
   lead: '「现在」是已经交付的能力；「接下来」正在开发，尚不可用；「以后」是计划中的工作。条目的说法经批准对外发布后才会出现在这里；「接下来」和「以后」中的条目在交付前都不构成承诺。',
