@@ -22,6 +22,13 @@ const { copy, locale, refundsHref } = Astro.props;
 // CSS-only switch, and a stale state is worse than none. The hidden panel is
 // `display: none`, so assistive technology reads only the visible one, and each
 // panel opens with a heading naming its tab.
+// A feature name too long for one desktop line (about 90 columns, a CJK
+// character counting two) may wrap; every other row stays on one line, so
+// a long name does not squeeze the column and wrap the rest.
+const columns = (text: string): number =>
+  [...text].reduce((n, ch) => n + (/[\u2e80-\u9fff\uff00-\uffef]/.test(ch) ? 2 : 1), 0);
+const longFeature = (text: string): boolean => columns(text) > 90;
+
 const panels = [
   { key: 'cloud', tab: copy.tabs.cloud },
   { key: 'self', tab: copy.tabs.selfHosted },
@@ -100,7 +107,7 @@ const panels = [
                     )}
                     {group.rows.map((row) => (
                       <tr data-row={row.id}>
-                        <th scope="row">
+                        <th scope="row" class:list={{ 'feature-long': longFeature(row.feature) }}>
                           {row.link ? <a href={marketingPagePath(locale, row.link)}>{row.feature}</a> : row.feature}
                         </th>
                         {[row.community, row.enterprise].map((cell) => (
@@ -493,20 +500,23 @@ const panels = [
     font-size: var(--fs-13);
   }
   /* Desktop: every row on one line, as ruled; the section takes the page's
-     full measure to make room. The value cells never wrap; a feature name
-     longer than its column may (the main table never scrolls on desktop). */
+     full measure to make room. Only a feature name marked long (see
+     longFeature above) may wrap, so the table never scrolls on desktop. */
   @media (min-width: 1200px) {
     .compare {
       max-width: var(--maxw);
     }
     .compare th,
     .compare td {
-      padding-right: 0.7rem;
-      padding-left: 0.7rem;
+      padding-right: 0.6rem;
+      padding-left: 0.6rem;
     }
-    .compare td,
-    .compare thead th {
+    .compare th,
+    .compare td {
       white-space: nowrap;
+    }
+    .compare th.feature-long {
+      white-space: normal;
     }
   }
   @media (max-width: 640px) {
