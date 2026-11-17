@@ -1,0 +1,306 @@
+---
+title: "¿Tu aplicación de negocio debe vivir en una base de datos o en un repositorio?"
+description: "¿Configuración en la base de datos de una plataforma o una definición en tu repositorio? Un cambio de permisos en un CRM de código abierto, rastreado y deshecho en ObjectStack 18.5.0, muestra qué permite responder cada opción."
+author: ObjectStack Team
+date: 2026-11-23
+status: published
+topic: governance
+audience: business
+solutions: []
+industries: []
+cover: ./cover.svg
+tags:
+  - Metadatos
+  - Diff revisable
+  - Agentes de AI
+---
+
+Si los agentes de AI van a cambiar tu software de negocio, guarda la copia maestra de sus reglas como archivos en un repositorio que controle tu empresa, y construye el sistema en marcha a partir de ellos. Cada cambio llega entonces como un antes y después fechado y firmado, con una razón por escrito, de modo que «¿quién dejó que ventas hiciera eso, y por qué?» se responde con el registro, no con la memoria. El precio es doble. Las plataformas establecidas (Salesforce, Odoo y sus parientes) aportan años de uso en producción, paquetes de aplicaciones y socios; una plataforma que parte del repositorio exige construir más por tu cuenta. Y cada cambio pasa por un paso de revisión que una pantalla de administración no exige.
+
+*Medido en ObjectStack 18.5.0, la versión que obtiene hoy una instalación nueva: el historial de git de su ejemplo de CRM de código abierto en la etiqueta de la versión, y la herramienta de línea de comandos 18.5.0 publicada, ejecutada contra ese ejemplo. Todos los comandos están en [La prueba](#la-prueba).*
+
+## Configuración o definición: ¿qué copia manda?
+
+Los dos tipos de plataforma hacen el mismo trabajo visible. Describes tu negocio (clientes, oportunidades, quién puede editar qué) y la plataforma convierte esa descripción en tablas de base de datos, pantallas y una interfaz de programación (una API). Una plataforma que funciona así se llama plataforma de metadatos: la descripción con la que funciona son metadatos, datos sobre tus datos. La propia [página de comparación](/en/compare/) de ObjectStack llama a estas plataformas [«los parientes más cercanos»](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/content/docs/concepts/compare.mdx#L58-L73): «Los metadatos de Salesforce son el antepasado; entre los primos de código abierto están Frappe Framework con ERPNext, Odoo, NocoBase, Payload y Twenty». Nombra la diferencia en una frase:
+
+> Dónde vive la definición y para quién está escrita. En la mayoría de estas plataformas, los metadatos son configuración guardada en la base de datos de la plataforma y editada a través de su interfaz; cuando son código, como la Payload Config o los módulos de Odoo, es código del framework.
+
+Código del framework significa aquí código escrito para esa única plataforma. La pregunta útil para quien compra es más concreta que «metadatos o código». Es esta: **¿qué copia tiene autoridad?** La copia con autoridad es la que manda cuando el sistema en marcha y cualquier otra copia no coinciden.
+
+- **Configuración.** La base de datos del sistema en marcha guarda la copia con autoridad. Cambias el sistema cambiándola a ella, normalmente desde una pantalla de administración, y un archivo, si guardas uno, describe lo que está en marcha.
+- **Definición.** Un conjunto de archivos en tu repositorio guarda la copia con autoridad, y el sistema en marcha se construye a partir de ellos. Cambias el sistema cambiando un archivo, y el cambio entra en vigor después de la compilación, el paso que convierte los archivos en el sistema en marcha.
+
+Son dos formas de trabajar, no dos listas de proveedores. Varias de las plataformas citadas también pueden funcionar a partir de archivos; pregunta a cada proveedor cómo trabajan realmente sus clientes. ObjectStack, que publica este artículo, es del tipo que parte del repositorio.
+
+![Dos formas de guardar las reglas de una aplicación de negocio. A la izquierda, una definición: los archivos de tu repositorio son la copia con autoridad, y cada cambio en ellos es un diff con un nombre y una razón por escrito; la compilación revisa los archivos y los convierte en el sistema en marcha, que se reconstruye a partir de ellos en cada despliegue. A la derecha, configuración: un administrador cambia ajustes en una pantalla de administración, el sistema en marcha y su base de datos son la copia con autoridad, y un archivo, si se guarda uno, describe lo que está en marcha](./two-copies-en.svg)
+
+Un repositorio es una carpeta con control de versiones, normalmente alojada en GitHub o GitLab, que guarda cada cambio como un antes y después con autor, fecha y mensaje. Ese antes y después se llama diff. Una pull request es un cambio propuesto mostrado así, que alguien acepta en la copia principal. Los dos tipos de plataforma pueden guardar historial; este artículo no afirma nada sobre el seguimiento de cambios de ningún proveedor, así que compruébalo en la plataforma que estés evaluando. Lo que decide la elección es dónde se responde «¿qué es cierto ahora mismo, y desde cuándo?» y dónde se lee un cambio antes de que entre en vigor: en el historial de un archivo, o en los propios registros y herramientas de la plataforma.
+
+Eso pesa más ahora que un agente de AI escribe muchos de los cambios. En el ejemplo de abajo, un agente de programación con AI figura como coautor en cada uno de los siete cambios del archivo de permisos de los roles de ventas.
+
+## Un cambio de permisos, rastreado
+
+El repositorio de ObjectStack incluye un ejemplo de CRM de código abierto, una aplicación de demostración y no el sistema de un cliente. En agosto de 2026, su rol de ventas podía abrir oportunidades pero no añadirles líneas de producto: la plataforma rechazaba a todo usuario que no fuera administrador. La corrección añadió una línea de permisos y una fila en la tabla de acceso de la aplicación: una lista, guardada en el repositorio, de lo que cada rol puede crear, leer, editar y borrar. Le hicimos al historial del archivo de permisos las preguntas que haría una auditora o un responsable financiero, y después deshicimos la corrección en la versión de hoy para ver qué la detenía.
+
+| Lo que preguntamos | Lo que respondió el registro | Lo que significa para ti |
+|:--|:--|:--|
+| ¿Cuántas veces ha cambiado el archivo de permisos de los roles de ventas? | 7 veces desde que tomó su nombre actual el 9 de julio de 2026, la última el 6 de noviembre. Cada cambio tiene fecha, autor, una pull request numerada y una razón por escrito. | La pregunta de auditoría se responde con el propio historial del archivo, no con la memoria de nadie. |
+| ¿Quién escribió esos cambios? | Un agente de programación con AI figura como coautor en los 7. En los archivos fuente del ejemplo de CRM, 49 de los 50 cambios desde el 1 de julio de 2026 llevan la misma línea de coautor (71 de 218 en toda la historia del ejemplo, que empieza en febrero de 2026). | La AI ya escribe la definición, y el registro lo dice. |
+| ¿Quién los aprobó? | El registro de revisiones de GitHub muestra una aprobación en 1 de las 7 pull requests. Las otras 6 no tienen registro de revisión. Tres las abrió y fusionó la cuenta de una misma persona, dos las abrió y fusionó la cuenta de automatización del proyecto, y una la abrió la cuenta de un agente de AI y la fusionó la cuenta de una persona. | Un repositorio no crea la revisión. Muestra, cambio a cambio, si quedó registrada una, y aquí muestra que en el nuestro casi nunca. |
+| ¿Por qué ventas puede añadir líneas de producto a una oportunidad? | Una línea de permisos y una fila nueva en la tabla de acceso, 12 de agosto de 2026, [pull request 8228](https://github.com/objectstack-ai/objectstack/pull/8228), con la razón por escrito: a los usuarios de ventas se les rechazaba en oportunidades que, por lo demás, eran del todo suyas. | La respuesta es una línea y una fila de tabla, con su razón adjunta. Quien revisa firma una fila de una tabla, no un bloque de código. |
+| ¿Y si alguien quita hoy esa línea sin avisar? | La primera comprobación de la plataforma, que lee los archivos en busca de errores, sigue pasando, con una advertencia de que todo usuario que no sea administrador será rechazado. La compilación se detiene y nombra la pérdida (abajo). | En una aplicación que mantiene esta tabla, quitar el acceso de un rol a un tipo de registro detiene la compilación hasta que una persona regenera la tabla. La comprobación no decide si el cambio es correcto. |
+| ¿Y si aceptamos la eliminación a propósito? | Regenerar la tabla produce la tabla de antes de la corrección de agosto, exactamente, carácter por carácter. | Quién podía hacer qué se puede reproducir a partir de la definición en cualquier punto de su historia. |
+
+Una revisión formal significa aquí un registro de revisión en la pull request en GitHub: una aprobación, una solicitud de cambios o un comentario de revisión.
+
+El rechazo de la compilación dice así:
+
+```text
+✗ Access matrix drift (1 change) — capability changes must be reviewed
+• 'crm_sales_user' loses ALL access to 'crm_opportunity_line_item' (entry removed)
+If intended, re-run with --update-access-matrix and commit the snapshot — its diff IS the review artifact.
+```
+
+En palabras sencillas: el rol de ventas perdería todo acceso a las líneas de producto de las oportunidades, y la compilación no terminará hasta que una persona lo acepte a propósito. La «access matrix» es la tabla de acceso guardada en el repositorio, una fila por rol y tipo de registro. El mecanismo, línea a línea, está en [¿Cómo detectar un cambio de permisos silencioso hecho por una AI antes de que llegue a producción?](/es/blog/catch-ai-silent-permission-change-access-matrix-gate/)
+
+## Lo que las plataformas de metadatos hacen mejor
+
+Los argumentos a favor de las plataformas establecidas son sólidos, y la documentación de ObjectStack los expone con sus propias palabras. En qué son buenas: [«construir aplicaciones de negocio rápido sobre un entorno de ejecución probado, con paquetes de aplicaciones, módulos e integraciones de los que partir»](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/content/docs/concepts/compare.mdx#L65-L66). Dónde parten con ventaja:
+
+> Salesforce, Odoo y ERPNext aportan años de uso en producción, aplicaciones empaquetadas, mercados de aplicaciones y socios de implantación. ObjectStack es más joven; cuenta con construir más por tu cuenta.
+> — [Documentación de ObjectStack, «Dónde los demás son más fuertes»](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/content/docs/concepts/compare.mdx#L115-L117)
+
+Hay tres puntos más a su favor:
+
+- **Los agentes también llegan a ellas.** La misma página dice que [«varias ofrecen ya servidores MCP, así que los agentes también pueden llegar a ellas»](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/content/docs/concepts/compare.mdx#L62-L63). MCP es el estándar abierto con el que los agentes de AI llaman a las herramientas de un sistema.
+- **Guardar la lógica como datos es la forma normal, no un defecto.** [«Es el mismo compromiso que asumieron ServiceNow (Business Rules), Salesforce (Formulas y Apex Triggers guardados como metadatos), Retool (cadenas JS de transformadores) y Airtable (Scripting blocks). Es la forma estándar del low-code»](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/content/docs/automation/hook-bodies.mdx#L61). Es la propia documentación de ObjectStack, sobre su decisión de guardar pequeñas piezas de lógica de negocio como datos. Así que la diferencia no está en si una plataforma usa metadatos. ObjectStack es una plataforma de metadatos. La diferencia está en dónde se versiona la copia con autoridad.
+- **Una pantalla de administración no necesita repositorio.** En una plataforma de configuración, una administradora de negocio puede añadir un campo en pocos minutos sin pull request, compilación ni despliegue. Para muchos equipos, de eso se trata.
+
+Si ya trabajas en una de estas plataformas, lo que ya has construido allí es una razón real para quedarte, y nuestros artículos sobre [Power Platform y Dataverse](/es/blog/power-platform-lock-in-dataverse-self-host/) y sobre [Retool](/es/blog/retool-vs-ai-native-app-platform/) sopesan productos concretos.
+
+## Cómo elegir
+
+**Empieza con una plataforma de configuración** cuando necesites paquetes de aplicaciones, un mercado y socios de implantación este mismo trimestre; cuando quienes cambian el sistema sean administradores que trabajan en sus pantallas; y cuando tus auditores acepten los registros de cambios propios de la plataforma.
+
+**Guarda la definición en un repositorio** cuando los agentes de AI vayan a escribir la mayoría de los cambios y una persona tenga que responder por cada uno; cuando un cambio de permisos deba llegar con una razón y un antes y después legible; y cuando quieras que la definición de tu negocio sean archivos que tu empresa conserva, no filas en la base de datos de un sistema en marcha. El README de ObjectStack lo dice así: [«La definición vive en tu repositorio como TypeScript corriente, versionada en tu VCS y revisable como un diff, no como un grafo guardado dentro del sistema de un proveedor»](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/README.md#L197-L199). VCS es control de versiones; TypeScript es el lenguaje en que están escritos los archivos.
+
+Elijas lo que elijas, hazle tres preguntas al proveedor:
+
+1. ¿Qué copia tiene autoridad: el sistema en marcha o un archivo?
+2. ¿Puedo obtener cada cambio de permisos como un antes y después legible, con autor y razón, antes de que entre en vigor?
+3. Cuando el sistema en marcha y el archivo no coinciden, ¿cuál manda, y quién se entera?
+
+## Lo que un repositorio no resuelve
+
+- **No decide si un cambio es correcto.** Cuando quitamos la corrección de agosto, la primera comprobación de la plataforma pasó con una advertencia. Solo la tabla de acceso detuvo la compilación, y solo porque esta aplicación tiene una: cada aplicación tiene que activarla, y una sin ella habría compilado. Una persona sigue teniendo que decidir si ventas debe tocar o no las líneas de producto.
+- **No crea la revisión.** Seis de las siete pull requests de arriba no tienen revisión registrada en GitHub, contando las nuestras: este es el propio repositorio de ObjectStack. Que no haya registro no prueba que nadie leyera el cambio; significa que nadie puede demostrar que alguien lo hizo. El repositorio hace que esa brecha se pueda contar. Cerrarla requiere un ajuste que exija una aprobación antes de fusionar.
+- **ObjectStack también guarda algo de configuración.** Las vistas, los paneles, los informes, las traducciones y las plantillas de correo se pueden editar en la pantalla de administración de un entorno en marcha. Esas ediciones se guardan en la base de datos de ese entorno y [tienen prioridad sobre la versión del repositorio](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/content/docs/concepts/metadata-lifecycle.mdx#L43), con su propio registro de cambios. La mayoría de los tipos de definición, incluidos los paquetes de permisos, también se pueden [crear en tiempo de ejecución a través de la interfaz de programación](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/packages/spec/src/kernel/metadata-plugin.zod.ts#L348). Eso es configuración exactamente en el sentido de este artículo, así que qué cambios deben pasar por el repositorio es una política que decides tú.
+
+## Apunta tu agente a la definición
+
+Una definición que un agente puede generar, con una forma fija y comprobable, que una persona puede revisar como un diff pequeño y que el sistema en marcha hace cumplir: ObjectStack es uno de esos destinos; [apunta tu agente a ObjectStack](/en/blog/how-to-point-your-agent-at-objectstack/) para probarlo con tu propio proceso. Para el vocabulario, consulta la [capa de definición](/en/glossary/definition-layer/), [definición de la aplicación frente a tiempo de ejecución](/en/glossary/application-definition-vs-runtime/) y [qué significa «la ontología es el software»](/es/blog/what-does-the-ontology-is-the-software-mean/).
+
+{/* the-proof */}
+## La prueba
+
+Todo lo anterior se midió el 2026-11-17 contra ObjectStack **18.5.0**.
+
+```text
+$ npm view @objectstack/cli dist-tags
+{ next: '18.5.0', latest: '18.5.0' }
+```
+
+Los recuentos de git leen el repositorio de objectstack en la etiqueta `@objectstack/cli@18.5.0` (commit [`b914e72`](https://github.com/objectstack-ai/objectstack/commit/b914e7247f692a79804f9b7eba278add46d57625)), en un clon completo, no superficial.
+
+### 1. El historial del archivo de permisos: 7 cambios
+
+```text
+$ T='@objectstack/cli@18.5.0'
+$ git log $T --format='%h %ad  %s' --date=short -- examples/app-crm/src/security/sales-positions.ts
+9d313f3ac70 2026-11-06  refactor(examples): every example-authored metadata name carries its package namespace (#30927)
+9975c26ae38 2026-10-18  docs(rest,app-crm): the public form submit is authorized by its declaration, not by a guest_portal set (#24237)
+bfc15d275ba 2026-10-11  feat(spec,core)!: positions declare their permissionSets; the authorization resolver reads the security catalog and the activation ledger (#22723)
+90718b6804e 2026-09-03  docs(app-crm): point two stale comments at the real consumers (#14840)
+c4624f084f7 2026-08-12  fix(example-crm): grant crm_opportunity_line_item in crm_sales_user, matching its master crm_opportunity (#8164) (#8228)
+0a8e68580eb 2026-07-10  feat(showcase,docs): ADR-0090 permission-model zoo + full docs alignment (#2739)
+6d83431cfaf 2026-07-09  feat(security)!: ADR-0090 P1 breaking wave — position rename, profile removal, secure OWD default, principal/external spec shapes (#2697)
+
+$ git log $T --oneline -- examples/app-crm/src/security/sales-positions.ts | wc -l
+7
+$ git log $T --follow --oneline -- examples/app-crm/src/security/sales-positions.ts | wc -l
+15
+$ git show -M --format= --name-status 6d83431cfaf | grep sales-
+R088	examples/app-crm/src/security/sales-roles.ts	examples/app-crm/src/security/sales-positions.ts
+$ git log $T --oneline -- examples/app-crm/access-matrix.json | wc -l
+2
+```
+
+El recuento es para el archivo con su nombre actual. Se renombró desde `sales-roles.ts` en el primero de los siete; `git log --follow` alcanza 8 commits anteriores, hasta el 27 de mayo de 2026. El cambio del 6 de noviembre, #30927, renombró los nombres dentro del archivo, no el archivo. La tabla de acceso tiene dos commits: `a5a1e41ba89` (2026-07-09) la creó, y `c4624f084f7` (2026-08-12) es la corrección de abajo.
+
+### 2. Coautoría de AI y pull requests
+
+```text
+$ for c in $(git log $T --format=%h -- examples/app-crm/src/security/sales-positions.ts); do
+>   git log -1 --format=%B $c | grep -qi 'co-authored-by: claude' && echo ai || echo other; done | sort | uniq -c
+      7 ai
+
+$ git log $T --since=2026-07-01 --format=%H -- examples/app-crm/src | while read c; do
+>   git log -1 --format=%B $c | grep -qi 'co-authored-by: claude' && echo ai || echo other; done | sort | uniq -c
+     49 ai
+      1 other
+
+$ git log $T --format=%H -- examples/app-crm/src | while read c; do
+>   git log -1 --format=%B $c | grep -qi 'co-authored-by: claude' && echo ai || echo other; done | sort | uniq -c
+     71 ai
+    147 other
+$ git log $T --reverse --format=%ad --date=short -- examples/app-crm/src | head -1
+2026-02-03
+
+$ git log --first-parent $T --since=2026-07-01 --oneline -- examples/app-crm/src | wc -l
+50
+$ git log --first-parent $T --since=2026-07-01 --oneline -- examples/app-crm/src | grep -v '(#[0-9]*)'
+df1137309d0 Merge pull request #2624 from objectstack-ai/claude/metadata-showcase-redesign-ougiov
+```
+
+Una línea de coautor registra que la herramienta participó en el cambio, no cuánto de él escribió. `--since` filtra por fecha de commit; el commit más antiguo de la ventana es del 5 de julio de 2026. Los 50 cambios en los archivos fuente del ejemplo de CRM dentro de esa ventana llegaron a la rama principal a través de una pull request: 49 como pull requests aplastadas cuyo asunto lleva el número, y uno dentro de la fusión de la pull request 2624. El único cambio sin línea de coautor es `23430995bcf` (#3806).
+
+### 3. Registros de revisión en las 7 pull requests
+
+```text
+$ for n in 2697 2739 8228 14840 22723 24237 30927; do
+>   r=$(gh api repos/objectstack-ai/objectstack/pulls/$n/reviews --jq length)
+>   gh api repos/objectstack-ai/objectstack/pulls/$n --jq "\"$n reviews=$r opened-by=\(.user.type) merged-by=\(.merged_by.type) same-account=\(if .user.login == .merged_by.login then \"yes\" else \"no\" end)\""
+> done
+2697 reviews=0 opened-by=User merged-by=User same-account=yes
+2739 reviews=0 opened-by=User merged-by=User same-account=yes
+8228 reviews=0 opened-by=User merged-by=User same-account=yes
+14840 reviews=0 opened-by=Bot merged-by=User same-account=no
+22723 reviews=1 opened-by=Bot merged-by=Bot same-account=yes
+24237 reviews=0 opened-by=Bot merged-by=Bot same-account=yes
+30927 reviews=0 opened-by=Bot merged-by=Bot same-account=yes
+```
+
+El único registro de revisión, en 22723, es una aprobación. Contadas por tipo, las seis sin registro: tres abiertas y fusionadas por la cuenta de una misma persona (2697, 2739, 8228); dos abiertas y fusionadas por la cuenta de automatización del proyecto (24237, 30927); y una abierta por la cuenta de un agente de AI y fusionada por la cuenta de una persona (14840). La cuenta de automatización y la del agente de AI son dos cuentas bot distintas; el comando imprime tipos de cuenta en lugar de nombres, y sin las consultas de `type` muestra las cuentas mismas.
+
+### 4. El cambio de agosto: una línea, una entrada de tabla
+
+```text
+$ git show c4624f084f7 --stat --format='%h %ad%n%n%b' --date=short | sed -n '1,14p'
+c4624f084f7 2026-08-12
+
+* fix(example-crm): grant crm_opportunity_line_item in crm_sales_user, matching its master crm_opportunity (#8164)
+
+crm_opportunity_line_item is a master-detail CHILD of crm_opportunity
+(sharingModel: 'controlled_by_parent', inlineEdit: 'grid' on the
+Opportunity form), but crm_sales_user granted object-level CRUD on 5
+CRM objects and never the line item. Record-level access always
+follows the master (ADR-0055), but object-level CRUD is a SEPARATE
+gate the platform never derives -- every role-bound (non-admin) user
+got a silent 403 the moment they tried to add/edit a product line on
+an Opportunity they otherwise fully own. The platform's own
+build-time lint (security-master-detail-ungranted) already flagged
+this independently.
+```
+
+El cambio en la definición, sin las cinco líneas sin cambios que solo se reespaciaron:
+
+```diff
+     crm_opportunity: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: false },
++    // [#8164] crm_opportunity_line_item is a master-detail CHILD of
++    // crm_opportunity (sharingModel: 'controlled_by_parent') — ...
++    crm_opportunity_line_item: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: false },
+     crm_lead: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: false },
+```
+
+Y la entrada que añadió a `examples/app-crm/access-matrix.json`, que sigue ahí en la etiqueta 18.5.0:
+
+```diff
++    {
++      "permissionSet": "crm_sales_user",
++      "object": "crm_opportunity_line_item",
++      "create": true,
++      "read": true,
++      "edit": true,
++      "delete": false,
++      "viewAllRecords": false,
++      "modifyAllRecords": false,
++      "sharingModel": "controlled_by_parent"
++    },
+```
+
+### 5. Deshacerlo en 18.5.0
+
+El ejemplo de CRM de la etiqueta, instalado contra los paquetes 18.5.0 publicados en lugar del monorepo (sus dependencias `workspace:*` fijadas en `18.5.0`, su carpeta de pruebas omitida), y confirmado en un repositorio temporal para que la edición se vea como un diff:
+
+```text
+$ git -C ~/objectstack archive '@objectstack/cli@18.5.0' examples/app-crm | tar -x --strip-components=2
+$ npm install
+$ npx os --version
+@objectstack/cli/18.5.0 linux-x64 node-v22.22.0
+$ npx os compile; echo $?
+  ...
+  → Checking access-matrix snapshot (ADR-0090 D6)...
+  ...
+  ✓ Build complete (353ms)
+0
+```
+
+Quitar la única línea de permiso y ejecutar la comprobación y la compilación:
+
+```text
+$ sed -i '/^    crm_opportunity_line_item: { allowRead: true/d' src/security/sales-positions.ts
+$ git diff --stat
+ src/security/sales-positions.ts | 1 -
+ 1 file changed, 1 deletion(-)
+
+$ npx os validate; echo $?
+  → Running author-time rules (68)...
+  ...
+  ✓ Validation passed (414ms)
+  ...
+  ⚠ object "crm_opportunity_line_item": detail object "crm_opportunity_line_item" (master_detail "opportunity" → "crm_opportunity") has no object-level CRUD grant in any permission set, so non-admin users are denied it (403)
+    fix: Grant it where its master "crm_opportunity" is granted: permissions[i].objects.crm_opportunity_line_item = { allowRead: true, allowCreate: true, allowEdit: true }
+    rule: security-master-detail-ungranted  at objects[5].fields.opportunity
+  ...
+0
+
+$ npx os compile; echo $?
+  → Running author-time rules (68)...
+  ...
+  → Checking access-matrix snapshot (ADR-0090 D6)...
+
+  ✗ Access matrix drift (1 change) — capability changes must be reviewed
+  • 'crm_sales_user' loses ALL access to 'crm_opportunity_line_item' (entry removed)
+  If intended, re-run with --update-access-matrix and commit the snapshot — its diff IS the review artifact.
+1
+```
+
+La tabla es opcional por aplicación. El código fuente de compilación de 18.5.0 lo dice donde ejecuta la comprobación: [«Opt-in per app: when `access-matrix.json` sits next to the config»](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/packages/cli/src/commands/compile.ts#L1108-L1114).
+
+### 6. Aceptar la eliminación a propósito
+
+```text
+$ npx os compile --update-access-matrix; echo $?
+  → Access matrix snapshot written to access-matrix.json (ADR-0090 D6) — review the diff.
+  ✓ Build complete (387ms)
+0
+$ git diff --stat
+ access-matrix.json              | 11 -----------
+ src/security/sales-positions.ts |  1 -
+ 2 files changed, 12 deletions(-)
+
+$ git hash-object access-matrix.json
+ecfe192469fc5500deecb0924d20699a382d6b45
+$ git -C ~/objectstack rev-parse c4624f084f7^:examples/app-crm/access-matrix.json
+ecfe192469fc5500deecb0924d20699a382d6b45
+```
+
+La tabla regenerada es el mismo archivo, byte a byte, que la tabla anterior a la corrección de agosto. Después se restauró el árbol temporal con `git checkout HEAD -- .`, y `git diff HEAD` quedó vacío.
+
+### 7. Las líneas citadas, en la etiqueta 18.5.0
+
+- `content/docs/concepts/compare.mdx` [líneas 58–73](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/content/docs/concepts/compare.mdx#L58-L73) (los parientes más cercanos, en qué son buenos, la diferencia) y [líneas 115–117](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/content/docs/concepts/compare.mdx#L115-L117) (dónde son más fuertes).
+- `content/docs/automation/hook-bodies.mdx` [línea 61](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/content/docs/automation/hook-bodies.mdx#L61) (la forma estándar del low-code).
+- `README.md` [líneas 197–199](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/README.md#L197-L199) (la definición vive en tu repositorio).
+- `content/docs/concepts/metadata-lifecycle.mdx` [línea 43](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/content/docs/concepts/metadata-lifecycle.mdx#L43) («Reads walk top-to-bottom: the first non-null layer wins») y [línea 327](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/content/docs/concepts/metadata-lifecycle.mdx#L327) (una edición en la pantalla de administración se escribe como fila de superposición, con una fila de historial en la misma transacción).
+- `packages/spec/src/kernel/metadata-plugin.zod.ts` [línea 348](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/packages/spec/src/kernel/metadata-plugin.zod.ts#L348) («Allow runtime creation via API») y el registro de tipos debajo: la superposición de la pantalla de administración está activada para `view`, `dashboard`, `report`, `translation` y `email_template`, y desactivada para `permission`, `position`, `object` y `flow`.
