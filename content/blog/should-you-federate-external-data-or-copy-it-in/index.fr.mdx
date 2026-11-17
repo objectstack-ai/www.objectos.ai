@@ -1,6 +1,6 @@
 ---
-title: "Fédérer des données externes ou les copier ? Synchronisation unidirectionnelle, un seul écrivain par ligne"
-description: "La fédération lit une table externe en direct ; la synchronisation la copie dans un objet que seul le pull écrit. Mesuré sur ObjectStack 18.5.0 : job, journal d'exécution, édition refusée, 3 lignes sur 7, réécriture par action."
+title: "Lire les données externes en direct ou les copier ?"
+description: "Lisez en direct si les données doivent être à jour ou non dupliquées ; copiez pour rapports et IA, un seul rédacteur par ligne. Mesuré sur ObjectStack 18.5.0."
 author: ObjectStack Team
 date: 2026-11-20
 status: published
@@ -15,38 +15,103 @@ tags:
   - Données externes
 ---
 
-**Fédérez quand les données doivent rester en direct ou ne doivent pas atterrir. Copiez-les quand des personnes, des rapports et l'IA doivent les joindre, les filtrer et les interroger à la vitesse de la plateforme.** Si vous copiez, faites une copie à **un seul écrivain par ligne** : un pull planifié est la seule chose qui écrit une ligne copiée, personne ne la modifie, et un changement de données repart vers la source par une seule action déclarée, après quoi le pull suivant rapporte le résultat. Deux écrivains exigent une fusion de conflits. Un seul n'en exige jamais. Sur le `@objectstack/cli` 18.5.0 publié, cette copie fonctionne aujourd'hui : dans la transcription ci-dessous, le deuxième pull a lu **3 des 7 lignes** de la source — celles qui avaient changé, et celle qui partage le point où la dernière exécution s'était arrêtée — et n'a rien écrit d'autre.
+**Lisez le système source en direct quand les données doivent être à jour à la seconde près ou ne doivent être stockées nulle part ailleurs. Copiez-les quand des personnes, des rapports et l'IA doivent les croiser, les filtrer et les interroger à pleine vitesse.** Chaque option a un prix. La lecture en direct attend le système source à chaque fois et ne peut pas combiner deux bases de données dans une seule requête. Une copie n'est fraîche que de sa dernière actualisation planifiée. Si vous copiez, tenez-vous à **un seul rédacteur par ligne** : seule l'actualisation planifiée écrit la copie. Personne ne la modifie, pas même un administrateur. Une modification se fait dans la source, par une action prévue pour cela, et l'actualisation suivante la récupère. Dans mon test, une actualisation n'a lu que 3 des 7 lignes de la source, et une modification de la copie a été refusée à un membre comme à un administrateur.
 
-## Deux façons d'entrer, et une troisième qui n'est ni l'une ni l'autre
+*Mesuré sur ObjectStack 18.5.0, la dernière version publiée au 2026-11-16. Toutes les transcriptions sont dans la dernière section, « La preuve ».*
 
-Le document de conception d'ObjectStack sur ce sujet, l'ADR-0153, part de ce que la fédération ne sait pas faire. La fédération laisse les lignes là où elles vivent et transmet chaque requête, ce qui est juste pour des données en direct ou qui ne doivent pas atterrir, mais « les rapports, l'analyse, les questions posées à l'IA et les jointures entre sources se heurtent les premiers à ces limites. Copier les lignes dans un objet ordinaire les supprime : la plateforme possède alors les index, les opérateurs de requête, les permissions et la disponibilité. » Il énonce ensuite la règle que son guide et ses skills doivent enseigner :
+## Lire en direct ou copier ?
 
-| Le besoin | Choisir |
+La **fédération** laisse les lignes là où elles sont et transmet chaque requête à la source. La **synchronisation entrante** (sync-in) les copie selon un calendrier dans une table ordinaire qui appartient à la plateforme. Une **action de connecteur** appelle l'autre système depuis un bouton ou une automatisation et ne stocke aucune de ses lignes. Le document de conception d'ObjectStack sur la synchronisation, ADR-0153, encore au statut « Proposé » au tag 18.5.0, choisit ainsi entre elles :
+
+| Votre situation | Choisir |
 |:--|:--|
-| Données en direct, une table à la fois ; le système historique ne doit pas être touché ; des données qui ne doivent pas atterrir | **fédération** : un objet virtuel |
-| Rapports, analyse, questions à l'IA, jointures entre sources ; un système historique lent ou fragile ; les résultats d'un entrepôt de données | **synchronisation entrante** : un objet `synced`, un `mapping` avec source et un `job` |
-| Déclencher quelque chose dans un système externe ; aucune ligne n'atterrit | **une action de connecteur** : un nœud de flow `connector_action`, ou une action déclarée |
+| Des données en direct, une table à la fois ; le système existant ne doit pas être touché ; des données qui ne doivent pas être stockées hors de la source | **Lire en direct** (fédération) |
+| Rapports, analyses, questions à l'IA, croisements entre sources ; un système existant lent ou fragile ; les résultats d'un entrepôt de données | **Copier** (sync-in) |
+| Déclencher quelque chose dans l'autre système ; aucune ligne n'est stockée | **Ni l'un ni l'autre** : une action de connecteur |
 
-L'argument en faveur de la fédération est solide et mérite d'être exposé dans toute sa force. Un objet fédéré est toujours à jour ; il n'y a aucun décalage entre un changement à la source et ce que voit un membre. Rien n'est dupliqué, donc il n'existe pas de seconde copie de données personnelles à sécuriser, conserver ou supprimer. Et la source reste le seul endroit où l'on écrit. Un [article compagnon](/fr/blog/ai-business-layer-over-an-existing-database/) traite la fédération pour elle-même, et la page [Connecter les systèmes existants](/fr/connect-existing-systems/) met côte à côte la fédération, la synchronisation entrante et les actions de connecteur. Si ce sont ces propriétés qu'il vous faut, arrêtez-vous ici : une copie est le mauvais outil.
+Les arguments en faveur de la lecture en direct sont solides. Une table fédérée est toujours à jour : aucun délai entre une modification à la source et ce que voit un membre. Rien n'est dupliqué, donc aucune seconde copie de données personnelles à sécuriser, conserver ou supprimer. Et la source reste le seul endroit où les données sont écrites. Un [article compagnon](/fr/blog/ai-business-layer-over-an-existing-database/) parcourt la fédération selon sa propre logique, et la page [Connecter les systèmes existants](/fr/connect-existing-systems/) place les trois côte à côte. Si ce sont ces propriétés qu'il vous faut, arrêtez-vous ici : une copie n'est pas le bon outil.
 
-Une copie se justifie quand les limites de la fédération se font sentir. Le moteur ne peut pas joindre entre sources de données, chaque lecture paie la latence du système distant, et les lectures d'un driver de plugin sont plafonnées. Une copie transforme la table distante en objet ordinaire, et chaque permission, rapport, dataset, flow et outil MCP existant la lit sans modification.
+Une copie est le meilleur choix quand la lecture en direct atteint ses limites. La plateforme ne peut pas croiser deux bases de données dans une seule requête (elle lit chacune et combine les lignes en mémoire), chaque lecture attend le système distant, et les lectures via un connecteur de base de données additionnel sont limitées à un nombre maximal de lignes. Selon le document de conception : « Copier les lignes dans un objet ordinaire les supprime : la plateforme possède alors les index, les opérateurs de requête, les permissions et la disponibilité. » Une fois copiée, c'est une table de plus que les permissions, rapports et outils d'IA existants lisent sans changement.
 
-## Un seul écrivain par ligne
+## La règle qui garde une copie honnête : un seul rédacteur par ligne
 
-La copie n'est sûre que si elle ne peut pas dériver vers un second système de référence. C'est ce que veut dire « un seul écrivain par ligne », et sur 18.5.0 ce sont quatre règles que le runtime applique :
+Le risque de toute copie est qu'elle dérive en second système de référence : quelqu'un corrige un prix dans la copie, la source n'en sait jamais rien, et les deux divergent. Un seul rédacteur par ligne l'empêche avec quatre règles que le runtime fait respecter :
 
-1. **Le pull écrit les lignes.** Un `mapping` avec `datasourceSource` nomme un objet fédéré et un champ de filigrane. Un `job` dont le `pull` nomme ce mapping l'exécute selon un calendrier et écrit via l'importeur, en tant que système.
-2. **Personne d'autre.** La cible est déclarée `managedBy: 'synced'`. Le changelog de la spec énumère ce que cela active : « La garde d'écriture du moteur refuse l'écriture générique d'un membre (403), la réconciliation `apiMethods` retire toute méthode d'écriture, le verrou `/me/permissions` répond la ligne fermée ».
-3. **Un changement va à la source, par une action déclarée.** ADR-0153 D5 : « Un changement des données sources se fait dans la source, par une action déclarée … La réécriture ne modifie pas la ligne locale ; **le pull suivant la réconcilie**. »
-4. **Il n'y a pas d'autre direction.** « Pas de synchronisation bidirectionnelle, pas de fusion de conflits, pas de couche d'éditions à la Writeback-Dataset ».
+1. **Le pull écrit les lignes.** Le pull est l'actualisation planifiée : un job qui lit la source et écrit la copie sous l'identité propre de la plateforme, non celle d'un utilisateur, en ne lisant que ce qui a changé depuis sa dernière exécution. Il trouve ces lignes grâce à un *filigrane* (watermark) : une colonne « dernière modification » dans la source.
+2. **Personne d'autre n'écrit.** La copie est déclarée *objet synchronisé* (synced) : une table dont seul le pull peut écrire les lignes. Une modification, insertion ou suppression par un membre, un administrateur ou un appelant de l'API est refusée, quelles que soient ses permissions.
+3. **Une modification va à la source, par une action déclarée.** Une *action déclarée* est un bouton défini dans l'application, derrière son propre contrôle de permissions, qui appelle l'API de la source elle-même. Elle ne touche pas la copie ; le pull suivant la met à jour.
+4. **Il n'y a pas d'autre sens.** Ni synchronisation bidirectionnelle, ni fusion de modifications en conflit.
 
-La règle 4 est l'essentiel. Une synchronisation bidirectionnelle a deux écrivains par ligne, elle a donc besoin d'une politique pour la ligne que les deux côtés ont modifiée depuis la dernière synchronisation : le dernier écrivain gagne, fusion champ par champ, une file de conflits que quelqu'un doit traiter. Chacune est un endroit où des données se perdent en silence. Avec un seul écrivain, cette ligne n'existe pas, donc aucune fusion ne peut mal tourner.
+La règle 4 est l'essentiel. Une synchronisation bidirectionnelle a deux rédacteurs par ligne, elle a donc besoin d'une politique pour la ligne que les deux côtés ont modifiée : le dernier qui écrit gagne, fusion champ par champ, une file de conflits qu'une personne doit résoudre. Chacune soit abandonne la modification d'un côté, soit exige une personne pour arbitrer. Avec un seul rédacteur, cette ligne n'existe pas, ni de fusion qui puisse mal tourner.
 
-![La boucle à un seul écrivain, mesurée sur 18.5.0 : un job de pull copie la table PARTS de l'ERP dans l'objet synced syncdemo_part (l'exécution 1 lit 6 lignes, la 2 en lit 3 sur 7, la 3 en lit 3) ; la modification d'une ligne copiée par un membre ou un administrateur répond 403 ; un changement ne repart que par l'action déclarée, dont le flow appelle l'API de l'ERP, et le pull suivant le rapporte.](./one-writer-loop-en.svg)
+![La boucle « un seul rédacteur par ligne » sur ObjectStack 18.5.0 : un pull planifié copie la table des pièces de l'ERP dans la plateforme (l'exécution 1 lit 6 lignes, la 2 lit 3 sur 7, la 3 lit 3) ; les modifications de la copie sont refusées ; une modification ne repart que par l'action déclarée, qui appelle l'API de l'ERP, et le pull suivant met à jour la copie.](./one-writer-loop-en.svg)
 
-## Le montage : cinq déclarations, rien d'autre
+## Ce que j'ai testé, et ce que cela signifie pour vous
 
-Le banc d'essai est un scaffold neuf issu de `npm create objectstack@latest`, qui a installé `@objectstack/cli` 18.5.0, la version que `npm view @objectstack/cli dist-tags` donnait comme `latest` le 2026-11-16. Le « vieil ERP » est un fichier SQLite que l'application ne possède pas, avec une table, `PARTS`, contenant six pièces et une colonne `UPDATED_AT`. Cinq déclarations les relient.
+J'ai connecté une application ObjectStack neuve à un substitut d'« ancien ERP », une petite base de données de six pièces, et donné à un membre, Mia, le droit de lecture et, exprès, de modification sur la copie, pour voir si une permission pouvait contourner la règle. Le pull s'exécutait toutes les 30 secondes dans ce test ; votre calendrier fixe le délai. Heures UTC du 2026-11-16.
+
+| Ce que j'ai fait | Ce que le système a répondu | Ce que cela signifie pour vous |
+|:--|:--|:--|
+| Construit l'application après avoir retiré de la copie le marqueur « synced » | Le build a échoué en nommant le marqueur manquant | Si le build passe, la protection est active |
+| Laissé le pull s'exécuter une fois, à 02:31:21, puis fait lister la copie par Mia | 6 lignes lues, 6 créées, terminé, et un registre d'exécution laissé ; Mia a vu les 6 lignes | Chaque actualisation est tracée, et les membres lisent la copie comme n'importe quelle table |
+| Mia, qui a le droit de modification, a changé le prix de P-2001 ; un administrateur a tenté la même chose | Refusé aux deux ; le message dit quoi faire à la place | Ni un membre ayant le droit de modification ni un administrateur ne peut modifier la copie via l'application ou son API |
+| Modifié P-1003 et ajouté P-3002 directement dans l'ERP | Exécution suivante, 02:31:51 : 3 des 7 lignes lues, 1 créée, 2 mises à jour | Une actualisation lit ce qui a changé, pas toute la table |
+| Mia a lancé l'action « Change price in ERP » sur P-2001, puis a lu la ligne | Autorisé ; l'API de l'ERP a journalisé une mise à jour. La copie affichait toujours 3.8 | L'action a changé la source, pas la copie |
+| Attendu l'exécution suivante, 02:32:21 | 3 lues, 3 mises à jour ; P-2001 affiche maintenant 4.1 | La copie ne montre jamais que ce que contient l'ERP |
+
+Deux détails. L'une des 2 lignes « mises à jour » de la deuxième exécution, P-3001, n'avait pas changé : une exécution relit les lignes au point où la précédente s'est arrêtée, lisez donc ce chiffre comme « lignes écrites », non « lignes modifiées ». Et les jobs planifiés sont désactivés par défaut : un déploiement doit les activer, sinon aucun pull ne s'exécute jamais.
+
+## Ce que la copie n'hérite pas
+
+- **Les permissions de la source.** Qui peut lire une ligne dans l'ERP n'est pas copié avec elle : les permissions sur la copie partent sans aucun accès, et un membre ne la lit que par une attribution. Mia a lu la copie grâce à son jeu de permissions et a été refusée sur la table source, où elle n'a aucune attribution : la configuration à viser. Une ligne copiée n'a pas de propriétaire ; rendez donc la copie lisible par tous les membres, ou gardez-la privée et accordez la lecture par une règle de partage.
+- **L'historique des exécutions, pour les membres.** Mia a été refusée en le lisant : comme toute table, il exige une attribution.
+- **Les suppressions.** Une ligne supprimée dans la source reste dans la copie sur 18.5.0 (le guide des jobs : « Les clés de suppression ne changent encore rien » ; je ne l'ai pas exécuté). Marquer ces lignes est en développement, plus bas.
+- **Une organisation, dans un déploiement multi-organisation.** La plateforme ne devine pas. En mode multi-organisation isolé, la même application a refusé de démarrer tant que la source n'a pas déclaré sa portée d'organisation, puis n'a pas planifié le pull tant que le job n'a pas nommé son organisation : un job par organisation.
+- **Un pipeline.** La copie, c'est une table source, un mapping, une cible. Le document de conception : « ObjectStack ne construit ni pipelines ni transformations. Croiser, nettoyer et agréger entre sources est le travail de l'entrepôt de données ou de l'éditeur ETL ; ObjectStack y synchronise le résultat. » Besoin d'une vue nettoyée et croisée ? Construisez-la dans l'entrepôt et tirez le résultat.
+
+## En développement
+
+Les parties ci-dessous sont conçues dans le document et ne sont pas dans 18.5.0. Rien dans cette section n'a été exécuté ; les affirmations sur 18.5.0 y sont citées de son changelog et de son guide.
+
+- Lignes supprimées à la source : la conception les marque comme supprimées et ne les retire jamais.
+- Une marque de provenance sur chaque ligne : d'où elle vient et quelle exécution l'a écrite.
+- Un assistant de synchronisation dans Studio, avec l'historique des exécutions à l'écran.
+- Des entrepôts de données (Snowflake, BigQuery) comme sources, via des connecteurs additionnels.
+- Le guide de synchronisation et les skills pour agents.
+
+<details>
+<summary>Ce que disent le document de conception, le changelog et le guide</summary>
+
+- **La politique de suppression.** Une ligne qui disparaît de la source sera marquée, jamais supprimée : « `deletePolicy: 'mark' | 'ignore'`, par défaut `mark`, en posant `_sync_deleted_at` », et « Un pull ne supprime jamais physiquement une ligne. » Un pull incrémental verra les suppressions via un champ de suppression logique de la source, `deletedField`. Selon le changelog, sur 18.5.0 les clés sont analysées et « avertissent toujours leur auteur qu'elles ne changent encore rien ».
+- **Des colonnes de provenance sur chaque ligne.** Cinq colonnes de plateforme sous un préfixe réservé : « `_sync_source` », « `_sync_external_id` », « `_sync_pulled_at` », « `_sync_run_id` » et « `_sync_deleted_at` ». Le pull de 18.5.0 le dit dans son en-tête : « Le marquage des suppressions (D3), les colonnes de provenance (D4) et la dérive (D6) sont des changements ultérieurs ». Aujourd'hui, le registre d'exécution tient lieu de provenance ; le préfixe est déjà réservé, donc un champ nommé `_sync_…` est refusé.
+- **L'assistant de synchronisation de Studio.** « L'assistant de synchronisation de Studio crée l'objet `synced`, le `mapping` et ce `job`. » Il lui faut un job créable à l'exécution, que le document conçoit comme la seule exception au fait que les jobs n'existent qu'en code : « la porte d'exécution accepte un `job` dont la seule forme d'exécution est `pull` ». Studio doit aussi montrer « l'historique des exécutions sur l'objet synchronisé et sur la page de sa source ».
+- **Des entrepôts comme sources.** « L'amendement `6731744658` fait d'un entrepôt une source de pull de premier rang » ; les drivers Snowflake et BigQuery sont « des paquets de plugin hors de ce dépôt », vérifiés par le kit de conformité des drivers de plugin, et un driver de plugin sous plancher de correction est lu « par fenêtres bornées des deux côtés », « divisées par deux » tant qu'une fenêtre revient au-dessus du plafond de lignes.
+- **Le guide de synchronisation et les skills.** « La règle à trois voies et la posture partenaires (D10), la réponse sur la réécriture (D5), ainsi que `SYNC_ARCHITECTURE.md` et les skills qui pointent vers `mapping` / `job` ». D'ici là, la section « Pulling a mapping » du guide des jobs et la référence du mapping font office de documentation.
+
+</details>
+
+## Comment le relire quand un agent l'écrit
+
+La synchronisation d'un agent, c'est cinq déclarations, plus une action et un flow si la réécriture vers la source en fait partie. Vérifiez quatre choses :
+
+1. **La copie est marquée synced** (`managedBy: 'synced'` sur la cible). Sans cela, le build refuse la synchronisation ; si le build passe, c'est donc là.
+2. **Qui peut lire la copie** : son modèle de partage et ses jeux de permissions, qui partent sans aucun accès.
+3. **La colonne « dernière modification » de la source et sa clé.** Une telle colonne qui n'est pas changée à chaque écriture perd des modifications en silence, et la clé doit être unique et jamais vide. Le pull ne peut vérifier ni l'une ni l'autre ; la source doit les garantir.
+4. **L'action de réécriture et son flow**, le cas échéant : le seul chemin de retour vers la source. Relisez-la comme tout appel sortant : ce qu'elle envoie, à qui, et qui peut l'exécuter.
+
+Comparez ensuite les lignes lues du premier registre d'exécution au nombre de lignes de la source.
+
+## Orientez votre agent vers cela
+
+Donnez à votre agent de code le guide des jobs (`objectstack.ai/docs/automation/jobs`, « Pulling a mapping ») et la référence du mapping, et donnez-lui la règle en une ligne : copier dans un objet `managedBy: 'synced'` via un `mapping` avec un `datasourceSource` et un `job` dont le `pull` le nomme ; ne jamais écrire la copie ; modifier la source par une action déclarée. Le [guide pour configurer un agent de code pour ObjectStack](/en/blog/how-to-point-your-agent-at-objectstack/) couvre le fichier de règles et le point d'accès MCP qui portent cette règle. Le mapping utilise les mêmes `fieldMapping` et `upsertKey` que pour [importer un tableur depuis un ancien système](/fr/blog/how-to-import-a-spreadsheet-from-an-old-system/) : un pull est cet import, exécuté par un job contre une source vivante, et la copie est un objet de plus dans l'[ontologie](/fr/glossary/ontology/). Le noyau de synchronisation est open source sous Apache-2.0, comme la fédération.
+
+## La preuve
+
+Tout ici a tourné sur `@objectstack/cli` 18.5.0, la version que `npm view @objectstack/cli dist-tags` indiquait comme `latest` le 2026-11-16, dans un échafaudage neuf `npm create objectstack@latest`.
+
+### Les cinq déclarations
+
+L'« ancien ERP » est un fichier SQLite que l'application ne possède pas, avec une table, `PARTS`, contenant six pièces et une colonne `UPDATED_AT`.
 
 ```ts
 // 1. The ERP's database: external, so no DDL ever runs there.
@@ -102,7 +167,11 @@ export const ErpPartsPullJob = defineJob({
 });
 ```
 
-`objectstack validate` l'a accepté. Le build est strict sur les points qui rendent une copie honnête. Sans `managedBy: 'synced'` sur la cible, la même commande est sortie avec le code 1 :
+Le `job` exécute le mapping selon son calendrier et écrit via l'import runner en tant que système. Le changelog de la spec liste ce qu'active `managedBy: 'synced'` : « La garde d'écriture du moteur refuse l'écriture générique d'un membre (403), la réconciliation `apiMethods` retire toute méthode d'écriture, le bornage `/me/permissions` répond la ligne fermée ».
+
+### Le refus au build
+
+`objectstack validate` l'a accepté. Sans `managedBy: 'synced'` sur la cible, la même commande est sortie avec 1 :
 
 ```text
 ✗ Mapping 'erp_parts_pull' pulls rows into object 'syncdemo_part' through its datasourceSource,
@@ -111,25 +180,13 @@ export const ErpPartsPullJob = defineJob({
   on the target object (ADR-0153 D4).
 ```
 
-Le changelog énumère les autres refus appliqués au build et de nouveau avant la première lecture : un mapping avec source doit être `mode: 'upsert'` avec un `upsertKey`, la source doit être un objet fédéré dont le `columnMap` associe une colonne à `id` (`source_key_missing`), le filigrane doit être un champ `datetime`, `date` ou entier, et une entrée de `fieldMapping` doit le copier tel quel dans la cible (`watermark_field_unmapped`).
+Le changelog liste les autres refus exécutés au build puis de nouveau avant la première lecture : un mapping à source doit être `mode: 'upsert'` avec un `upsertKey`, la source doit être un objet fédéré dont le `columnMap` associe une colonne à `id` (`source_key_missing`), le filigrane doit être un champ `datetime`, `date` ou entier, et une entrée de `fieldMapping` doit le copier tel quel dans la cible (`watermark_field_unmapped`).
 
-Un interrupteur se manque facilement : les jobs d'un package ne sont planifiés que là où la variable `OS_AUTOMATION_SCHEDULED_WORK_ENABLED` vaut `true`, et selon le guide des jobs il « **est désactivé par défaut dans toute posture de tenance et tout noyau** ». J'ai lancé `objectstack dev --fresh` avec l'interrupteur activé, créé une membre (Mia) dotée d'un ensemble de permissions accordant la lecture et, volontairement, la modification sur `syncdemo_part`, et noté chaque réponse.
+### L'exécution
 
-## Le journal d'exécution
+Les jobs d'un paquet ne sont planifiés que là où la variable `OS_AUTOMATION_SCHEDULED_WORK_ENABLED` vaut `true`, un interrupteur qui, selon le guide des jobs, « est **désactivé par défaut dans toute posture de tenancy et tout kernel** ». J'ai démarré `objectstack dev --fresh` avec l'interrupteur activé et créé un membre (Mia) avec un jeu de permissions accordant la lecture et, exprès, la modification sur `syncdemo_part`. Le premier tick a eu lieu à 02:31:21 ; la liste de `syncdemo_part` par Mia a répondu `200` avec 6 lignes.
 
-Sept relevés, dans l'ordre où ils ont eu lieu. Heures UTC du 2026-11-16.
-
-| # | Ce qui s'est passé | Ce qui est revenu |
-|:--|:--|:--|
-| 1 | Le premier tick du job, 02:31:21 | `sys_sync_run` : lues 6, créées 6, `completed` |
-| 2 | Mia liste `syncdemo_part` | `200`, 6 lignes |
-| 3 | Mia modifie le prix de P-2001 ; un administrateur essaie la même chose | `403 PERMISSION_DENIED`, les deux |
-| 4 | Quelqu'un modifie P-1003 et ajoute P-3002 dans l'ERP lui-même | l'exécution suivante, 02:31:51 : lues 3, créée 1, mises à jour 2 |
-| 5 | Mia lance l'action « Change price in ERP » sur P-2001 | `200` ; l'API de l'ERP journalise un `PATCH` |
-| 6 | Mia relit P-2001 aussitôt | toujours `3.8` |
-| 7 | L'exécution suivante, 02:32:21 | lues 3, mises à jour 3 ; P-2001 affiche `4.1` |
-
-**Relevé 1 : le journal d'exécution.** Chaque pull laisse une ligne `sys_sync_run` dans l'organisation du job. Réduite aux champs utiles :
+**Le registre d'exécution.** Chaque pull laisse une ligne `sys_sync_run` dans l'organisation du job. La première, réduite aux champs qui comptent :
 
 ```json
 { "mapping": "erp_parts_pull", "mapping_package": "com.example.syncdemo",
@@ -142,9 +199,9 @@ Sept relevés, dans l'ordre où ils ont eu lieu. Heures UTC du 2026-11-16.
   "holds_position": true, "job_run_id": "run_0b31fc19-…", "failure_reason": null }
 ```
 
-`watermark_committed` est le `UPDATED_AT` le plus récent que l'exécution a écrit, et `holds_position: true` marque la ligne d'où part l'exécution suivante. Le lien avec le registre des jobs est `job_run_id`, la ligne `sys_job_run` du tick qui l'a déclenchée. La rétention est fixée par le changelog du service : les lignes sont « de la télémétrie conservée 30 jours, la fenêtre du registre des jobs, sauf la ligne par mapping (package et nom) et par organisation qui détient la position de lecture ».
+`watermark_committed` est le `UPDATED_AT` le plus récent écrit par l'exécution, et `holds_position: true` désigne cette ligne comme celle d'où part l'exécution suivante. Le lien vers le journal des jobs est `job_run_id`, la ligne `sys_job_run` du tick qui l'a déclenchée. Le changelog du service fixe la rétention : les lignes sont « de la télémétrie conservée 30 jours, la fenêtre du journal des jobs, sauf la ligne par mapping (paquet et nom) et organisation qui détient la position de lecture ».
 
-**Relevé 3 : la modification refusée.** Mia détient `allowEdit: true` sur l'objet. La réponse n'en tient pas compte :
+**La modification refusée.** Mia a `allowEdit: true` sur l'objet. Son `PATCH` du prix de P-2001 :
 
 ```json
 HTTP 403
@@ -152,9 +209,9 @@ HTTP 403
   "code": "PERMISSION_DENIED", "object": "syncdemo_part" }
 ```
 
-Le `PATCH` de l'administrateur a reçu le même corps. Le `POST` et le `DELETE` de Mia ont répondu `403` avec « direct insert » et « direct delete » dans la même phrase. Le refus indique aussi l'issue, ce qui est la forme voulue quand c'est un agent qui fait l'appel.
+Le `PATCH` de l'administrateur a reçu le même corps. Le `POST` et le `DELETE` de Mia ont répondu `403` avec « direct insert » et « direct delete » dans la même phrase. Dire quoi faire à la place, c'est exactement ce qu'il faut quand c'est un agent qui appelle.
 
-**Relevé 4 : l'exécution incrémentale, 3 sur 7.** J'ai modifié l'ERP directement, comme ses propres utilisateurs le feraient : le prix de P-1003 de 0.05 à 0.06 et une nouvelle pièce, P-3002, toutes deux horodatées `2026-11-16T02:31:22.383Z`. Le tick suivant :
+**L'exécution incrémentale, 3 sur 7.** J'ai modifié l'ERP directement, comme ses propres utilisateurs le feraient : le prix de P-1003 de 0.05 à 0.06 et une nouvelle pièce, P-3002, toutes deux horodatées `2026-11-16T02:31:22.383Z`. Le tick suivant, à 02:31:51 :
 
 ```json
 { "read_count": 3, "created_count": 1, "updated_count": 2,
@@ -162,9 +219,9 @@ Le `PATCH` de l'administrateur a reçu le même corps. Le `POST` et le `DELETE` 
   "watermark_committed": "2026-11-16T02:31:22.383Z", "status": "completed" }
 ```
 
-Trois lignes lues sur les sept que contenait alors l'ERP : P-1003, P-3002 et P-3001, qui partage la position validée par la dernière exécution. Le guide des jobs décrit cette relecture : une exécution « ne lit que les lignes écrites depuis, plus celles qui partagent cette dernière position, que l'upsert réécrit sans dommage ». `updated_count` compte donc aussi P-3001, inchangée. Lisez-le comme « lignes écrites », pas « lignes modifiées ».
+Trois lignes lues sur les sept que l'ERP contenait alors : P-1003, P-3002 et P-3001, qui partage la position validée par la dernière exécution. Le guide des jobs décrit cette relecture : une exécution « ne lit que les lignes écrites depuis, plus celles qui partagent cette dernière position, que l'upsert réécrit sans dommage ».
 
-**Relevés 5 à 7 : réécriture vers la source.** L'action est une action `type: 'flow'` sur `syncdemo_part`. Son flow a un seul nœud qui travaille, un `connector_action` qui appelle un connecteur `rest` pointé vers l'API HTTP de l'ERP lui-même (ici un remplaçant de 20 lignes qui met à jour `PARTS` et horodate `UPDATED_AT`) :
+**Réécriture vers la source.** L'action est une action `type: 'flow'` sur `syncdemo_part`. Son flow a un nœud de travail, un `connector_action` qui appelle un connecteur `rest` pointé sur l'API HTTP propre de l'ERP (ici un substitut de 20 lignes qui met à jour `PARTS` et horodate `UPDATED_AT`) :
 
 ```ts
 { id: 'patch_erp', type: 'connector_action',
@@ -179,7 +236,7 @@ Trois lignes lues sur les sept que contenait alors l'ERP : P-1003, P-3002 et P-3
 }
 ```
 
-Mia l'a appelée en REST, par la porte que prend aussi le bouton de la page de l'enregistrement (« le bouton de la console et l'appel d'API passent par le même contrôle et le même gestionnaire ») :
+Mia l'a appelée en REST, le même point d'entrée que celui du bouton de la page de l'enregistrement (« le bouton de la Console et l'appel API passent par le même contrôle et le même handler ») :
 
 ```bash
 curl -s -b mia.cookies -X POST http://localhost:49921/api/v1/actions/syncdemo_part/syncdemo_send_price \
@@ -192,38 +249,24 @@ HTTP 200  { "success": true, "data": { "success": true, "flowLabel": "Send price
 ERP API:  2026-11-16T02:31:52.833Z PATCH /parts/P-2001 {"unit_price":4.1} -> changes=1
 ```
 
-Relue juste après, la copie indiquait toujours `"unit_price": 3.8`, parce que la réécriture a changé l'ERP et rien d'autre. Trente secondes plus tard, l'exécution suivante a lu 3 lignes (P-1003 et P-3002 à la position partagée, et P-2001), en a mis 3 à jour, a validé `2026-11-16T02:31:52.833Z`, et P-2001 affichait `"unit_price": 4.1, "source_updated_at": "2026-11-16T02:31:52.833Z"`. La valeur dans la copie est celle que l'ERP a acceptée, pas celle que l'utilisateur a tapée. Si l'ERP l'avait refusée ou arrondie, la copie le montrerait.
+Lue juste après, la copie affichait toujours `"unit_price": 3.8`, parce que la réécriture a modifié l'ERP et rien d'autre. Trente secondes plus tard, à 02:32:21, l'exécution suivante a lu 3 lignes (P-1003 et P-3002 à la position partagée, et P-2001), en a mis à jour 3, a validé `2026-11-16T02:31:52.833Z`, et P-2001 affichait `"unit_price": 4.1, "source_updated_at": "2026-11-16T02:31:52.833Z"`. Si l'ERP avait refusé ou arrondi la valeur, la copie le montrerait.
 
-## Ce que la copie n'hérite pas
+### Les limites, mesurées
 
-- **Les permissions de la source.** Qui peut lire une ligne dans l'ERP ne voyage pas avec elle. ADR-0153 : « Les permissions de l'objet se configurent localement à partir de zéro, comme le dit la décision : un membre ne lit des lignes synchronisées que par une autorisation. » Pendant l'exécution, Mia a lu la copie grâce à son ensemble de permissions, et la même session a reçu `403` sur l'objet source fédéré, sur lequel elle n'a aucune autorisation. C'est la configuration à viser : les membres lisent la copie, et personne sauf le pull ne lit la source. Une ligne copiée n'a pas de propriétaire (les lignes ci-dessus ne portent pas d'`owner_id`), d'où le conseil de lint du changelog de la spec pour un objet synced : « `sharingModel: 'public_read'` … ou `'private'` avec une règle de partage qui accorde la lecture ».
-- **L'historique des exécutions, pour les membres.** `sys_sync_run` est ouvert à l'API de données, mais la lecture de Mia a répondu `403` : comme tout objet, il faut une autorisation.
-- **Une organisation, dans un déploiement multi-organisations.** Sous une posture cloisonnée, la plateforme ne devine pas. Lancée avec `OS_TENANCY_POSTURE=isolated`, cette même application a refusé de démarrer tant que la source fédérée n'a pas déclaré sa portée d'organisation (« Stating nothing: 'syncdemo_erp_part' »). La source déclarée partagée, le démarrage a journalisé en `error` : « NOT SCHEDULED — job 'erp_parts_pull_job' declares no `organization` » (il s'est ensuite arrêté sur un réglage sans rapport de la posture cloisonnée, la politique d'adhésion, qu'un vrai déploiement multi-organisations déclare de toute façon). La solution est `organization` sur le job, un job par organisation. Le changelog nomme les refus qu'un pull renvoie lui-même dans cette posture : `source_organization_scope_unstated` et `job_organization_missing`.
-- **Un pipeline.** La copie, c'est une table source, un mapping, une cible. ADR-0153 : « ObjectStack ne construit ni pipelines ni transformations. Joindre, nettoyer et agréger entre sources est le travail de l'entrepôt de données ou de l'éditeur d'ETL ; ObjectStack synchronise le résultat. » S'il vous faut une vue nettoyée et jointe, construisez-la dans l'entrepôt et tirez le résultat.
+- **Permissions.** La session même où Mia a lu la copie a reçu `403` sur l'objet source fédéré, `syncdemo_erp_part`, sur lequel elle n'a aucune attribution. Les lignes copiées ne portent pas d'`owner_id`, d'où le conseil de lint du changelog de la spec pour un objet synchronisé : « `sharingModel: 'public_read'` … ou `'private'` avec une règle de partage qui accorde la lecture ».
+- **Historique des exécutions.** `sys_sync_run` est ouvert à l'API de données, mais la lecture de Mia a répondu `403`.
+- **Organisations.** Démarrée avec `OS_TENANCY_POSTURE=isolated`, cette même application a refusé de démarrer tant que la source fédérée n'a pas déclaré sa portée d'organisation (« Stating nothing: 'syncdemo_erp_part' »). Avec la source déclarée partagée, le démarrage a journalisé au niveau `error` : « NOT SCHEDULED — job 'erp_parts_pull_job' declares no `organization` » (il s'est ensuite arrêté sur un réglage sans rapport de la posture cloisonnée, la politique d'adhésion, qu'un vrai déploiement multi-organisation déclare de toute façon). La correction est `organization` sur le job, un job par organisation. Le changelog nomme les refus que renvoie le pull lui-même dans cette posture : `source_organization_scope_unstated` et `job_organization_missing`.
 
-Le noyau sur lequel tout cela tourne est open source. ADR-0153 D9 : le noyau de synchronisation « est livré dans ce dépôt sous Apache-2.0, comme la fédération ».
+### Ce que disent le document de conception et les guides
 
-## En développement
+Les sections ci-dessus paraphrasent ces sources ; voici les lignes elles-mêmes.
 
-Les éléments ci-dessous sont conçus dans l'ADR-0153 (statut *Proposed* au tag 18.5.0) et ne sont pas dans 18.5.0. Rien dans cette section n'a été exécuté.
-
-- **La politique de suppression.** Une ligne qui disparaît de la source sera marquée, jamais supprimée : « `deletePolicy: 'mark' | 'ignore'`, `mark` par défaut, en horodatant `_sync_deleted_at` », et « Un pull ne supprime jamais physiquement une ligne. » Un pull incrémental verra les suppressions via un champ de suppression logique de la source, `deletedField`. Sur 18.5.0 les clés sont analysées, et le changelog dit qu'elles « avertissent encore leur auteur qu'elles ne changent rien pour l'instant ». Aujourd'hui, une ligne supprimée à la source reste dans la copie.
-- **Des colonnes de provenance sur chaque ligne.** Cinq colonnes de plateforme sous un préfixe réservé : « `_sync_source` », « `_sync_external_id` », « `_sync_pulled_at` », « `_sync_run_id` » et « `_sync_deleted_at` ». Le pull de 18.5.0 le dit dans son en-tête : « Le marquage des suppressions (D3), les colonnes de provenance (D4) et la dérive (D6) sont des changements ultérieurs ». Aujourd'hui, le journal d'exécution est la provenance ; le préfixe est déjà réservé, donc un champ nommé `_sync_…` est refusé.
-- **L'assistant de synchronisation de Studio.** « L'assistant de synchronisation de Studio crée l'objet `synced`, le `mapping` et ce `job`. » Il lui faut un job créable à l'exécution, que le document conçoit comme la seule exception au fait que les jobs n'existent qu'en code : « la porte d'exécution accepte un `job` dont la seule forme d'exécution est `pull` ». Studio doit aussi afficher « l'historique des exécutions sur l'objet synchronisé et sur la page de sa source ».
-- **Des entrepôts comme source.** « L'amendement `6731744658` fait d'un entrepôt une source de pull de premier rang » ; les drivers Snowflake et BigQuery sont des « packages de plugin hors de ce dépôt », vérifiés par le kit de conformité des drivers de plugin, et un driver de plugin sous plancher se lit « en fenêtres bornées des deux côtés », « divisées par deux » tant qu'une fenêtre revient au-dessus du plafond de lignes.
-- **Le guide et les skills de synchronisation.** « La règle des trois voies et la posture partenaire (D10), la réponse sur la réécriture (D5), et `SYNC_ARCHITECTURE.md` et les skills pointant vers `mapping` / `job` ». D'ici là, la section « Pulling a mapping » du guide des jobs et la référence du mapping font office de documentation.
-
-## Comment le relire quand un agent l'écrit
-
-Si un agent ajoute une synchronisation à votre application, le diff se compose des cinq déclarations ci-dessus, plus une action et un flow si la réécriture est prévue. Lisez d'abord quatre lignes :
-
-1. `managedBy: 'synced'` sur la cible. Sans lui, le build refuse le mapping ; si le build est vert, il est là.
-2. Le `sharingModel` et les ensembles de permissions de la cible. Ils partent de zéro ; rien n'a été hérité.
-3. `watermark.field` et la clé de la source. L'ADR-0153 exige du filigrane que « chaque écriture à la source horodate le filigrane de la ligne avec une valeur supérieure ou égale à toute valeur que la source détient déjà », et de la clé qu'elle soit unique et jamais NULL, « une exigence envers la source, comme l'invariant 2, que le pull ne peut pas vérifier ». Une colonne qui n'est pas mise à jour à chaque écriture perd des changements en silence.
-4. L'action et son flow, s'il y en a. C'est le seul chemin de retour vers la source ; relisez-le comme tout appel sortant : ce qu'il envoie, à qui, et qui peut le lancer.
-
-Lisez ensuite la première ligne `sys_sync_run` que le déploiement écrit. Comparer `read_count` au nombre de lignes de la source, c'est relire l'exécution.
-
-## Orientez votre agent vers cela
-
-Donnez à votre agent de code le guide des jobs (`objectstack.ai/docs/automation/jobs`, « Pulling a mapping ») et la référence du mapping, et énoncez la règle en une ligne : copier dans un objet `managedBy: 'synced'` via un `mapping` avec `datasourceSource` et un `job` dont le `pull` le nomme ; ne jamais écrire dans la copie ; changer la source par une action déclarée. Le [guide pour configurer un agent de code pour ObjectStack](/en/blog/how-to-point-your-agent-at-objectstack/) couvre le fichier de règles et le point d'accès MCP qui portent cette règle. Le mapping utilise ici les mêmes `fieldMapping` et `upsertKey` que pour [importer un tableur depuis un ancien système](/fr/blog/how-to-import-a-spreadsheet-from-an-old-system/) ; un pull, c'est cette importation, lancée par un job contre une source vivante. Et la copie n'est qu'un objet de plus dans l'[ontologie](/fr/glossary/ontology/), c'est pourquoi chaque rapport et chaque outil d'IA la lit sans travail supplémentaire. Tout ce qui précède a tourné sur `@objectstack/cli` 18.5.0.
+- **Pourquoi copier.** « Les rapports, l'analyse, les questions à l'IA et les croisements entre sources heurtent ces limites en premier. Copier les lignes dans un objet ordinaire les supprime : la plateforme possède alors les index, les opérateurs de requête, les permissions et la disponibilité. »
+- **Croisements entre bases de données.** Le commentaire de code du compilateur d'analytique de 18.5.0 : un dataset avec un objet fédéré « est servi par le chemin FK-expand d'ObjectQL (deux lectures, croisées en mémoire), qui traverse les sources de données par construction ».
+- **Le plafond de lignes (non exécuté ici).** Le guide des objets virtuels de 18.5.0 : « Une lecture qui correspond à plus de lignes que le plafond de lignes de la source de données est refusée avec `422 EXTERNAL_ROW_CAP_EXCEEDED` plutôt que servie à partir d'un ensemble partiel. Le plafond ne s'applique qu'aux drivers de plugin, OData compris ». « La valeur par défaut est de 1000 lignes », et le maximum de la plateforme est de 10,000.
+- **Règle 3, réécriture.** ADR-0153 D5 : « Une modification des données source se fait dans la source, par une action déclarée … La réécriture ne modifie pas la ligne locale ; **le pull suivant la réconcilie**. »
+- **Règle 4, un seul sens.** « Pas de synchronisation bidirectionnelle, pas de fusion de conflits, pas de couche de modifications à la Writeback-Dataset ».
+- **Permissions.** « Les permissions d'objet restent configurées localement à partir de zéro … un membre ne lit les lignes synchronisées que par une attribution. »
+- **Le filigrane et la clé.** À propos de `watermark.field` : « Chaque écriture à la source pose sur le filigrane de la ligne une valeur supérieure ou égale à toute valeur que la source contient déjà ». À propos de la colonne associée à `id` : unique et jamais NULL, « une exigence envers la source … que le pull ne peut pas vérifier ».
+- **Suppressions.** Le guide des jobs de 18.5.0 : « Les clés de suppression ne changent encore rien, et `os validate` le dit. »
+- **Licence.** ADR-0153 D9 : le noyau de synchronisation « est livré dans ce dépôt sous Apache-2.0, comme la fédération ».
