@@ -31,7 +31,7 @@
 Ruled on #267 (maintainer, 2026-11-17; #458); it sharpens rules 2 and 3 above.
 
 - **Opening:** the first 100 words give the decision and its consequence, with no code identifiers, status codes or version numbers; the "Measured on …" line comes right after them.
-- **Proof goes down:** the body carries one results table; transcripts and code go in a final proof section (or `<details>`), and every number stays checkable. Put `{/* the-proof */}` on its own line directly above that section's heading in every locale: `pnpm content:lint` finds the section by this marker, not by the translated heading.
+- **Proof goes down:** the body carries one results table; transcripts and code go in a final proof section, and every number stays checkable. Put `{/* the-proof */}` on its own line directly above that section's heading in every locale: `pnpm content:lint` finds the section by this marker, not by the translated heading, and a code block inside `<details>` above the marker still counts toward the cap.
 - **Title:** the question only; mechanism words go into `description`.
 - **Code density by `audience`:** `business` / `general` posts have at most 2 fenced code blocks above the marker (`content:lint` enforces this for posts dated on or after 2026-11-23), and each mechanism name is explained in one plain sentence on first use; `it` posts stay readable by an IT lead who does not write code; `developer` posts have no cap.
 - **English first:** the English post is written and reviewed before it is translated.
