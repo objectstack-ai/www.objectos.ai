@@ -66,9 +66,12 @@ export interface ComparisonGroup {
  * (docs.objectos.ai/docs/editions/compare, /docs/editions/license,
  * /docs/deploy/licensing, /docs/deploy/air-gapped, /docs/configure/mcp,
  * /docs/configure/permissions/hierarchy-visibility, /docs/operate/audit-logs).
- * Several organizations on one deployment is Community ✓ by the
- * maintainer's ruling of 2026-11-17, which wins over the docs until they are
- * corrected. Single sign-on and SCIM (maintainer, 2026-11-17) are one
+ * Several organizations on one deployment (the `multi-tenancy` row) is
+ * Community ✓ by the maintainer's ruling of 2026-11-17, which wins over the
+ * docs until they are corrected; the row is on hold for a further ruling.
+ * Building apps is the `ai-build` row: the agent writes metadata in the
+ * repository and os verify checks it; the MCP build tools are Cloud-only and
+ * are not claimed here. Single sign-on and SCIM (maintainer, 2026-11-17) are one
  * "Enterprise adds" row whose Community cell is left empty, never —:
  * nothing here says Community lacks them. `roadmap` holds what has not shipped:
  * "Coming soon", Enterprise features in the product but not yet in the
@@ -207,7 +210,7 @@ const pricingEn: PricingCopy = {
           tagline: 'The open-source edition: build, run and self-host your apps for free.',
           features: [
             'Apache-2.0, free forever, no license key',
-            'Build apps and ask your data with your own AI through MCP',
+            'Build apps and ask your data with your own AI',
             'Community support',
           ],
           cta: 'Run it yourself',
@@ -286,8 +289,8 @@ const pricingEn: PricingCopy = {
                 enterprise: yes(),
               },
               {
-                id: 'mcp-build',
-                feature: 'Build apps with your own AI over MCP',
+                id: 'ai-build',
+                feature: 'Build apps with your own AI: it writes the metadata in your repository, checked by os verify',
                 community: yes(),
                 enterprise: yes(),
               },
@@ -475,7 +478,7 @@ const pricingZhHans: PricingCopy = {
           price: '免费',
           cadence: '自托管',
           tagline: '开源版本：免费搭建、运行并自托管你的应用。',
-          features: ['Apache-2.0，永久免费，无需许可证密钥', '用你自己的 AI 通过 MCP 搭建应用、问数据', '社区支持'],
+          features: ['Apache-2.0，永久免费，无需许可证密钥', '用你自己的 AI 搭建应用、经 MCP 问数据', '社区支持'],
           cta: '自己运行',
           ctaHref: COMMUNITY,
         },
@@ -552,8 +555,8 @@ const pricingZhHans: PricingCopy = {
                 enterprise: yes(),
               },
               {
-                id: 'mcp-build',
-                feature: '用你自己的 AI 经 MCP 搭建应用',
+                id: 'ai-build',
+                feature: '用你自己的 AI 搭建应用：在代码仓库里写元数据，os verify 校验',
                 community: yes(),
                 enterprise: yes(),
               },
