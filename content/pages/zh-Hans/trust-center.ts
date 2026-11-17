@@ -71,11 +71,11 @@ const page = {
         eyebrow: '边界',
         title: '敏感业务数据留在受控基础设施内',
         copy:
-          '在 ObjectOS 企业版中，运行时、业务数据、用户身份、审计日志、文件与密钥都在你自己的基础设施内；除非你显式配置外部服务，它们都留在这个边界内。ObjectOS Cloud 由我们运营。',
+          '在自托管部署（Community 或 ObjectOS 企业版）中，运行时、业务数据、用户身份、审计日志、文件与密钥都在你自己的基础设施内；除非你显式配置外部服务，它们都留在这个边界内。ObjectOS Cloud 由我们运营。',
         items: [
           {
             title: '数据驻留',
-            body: '在 ObjectOS 企业版中，连接你自己的数据库与存储：业务记录、身份、审计日志与文件都存放在那里，而不是供应商的工作区。',
+            body: '在自托管部署（Community 或 ObjectOS 企业版）中，连接你自己的数据库与存储：业务记录、身份、审计日志与文件都存放在那里，而不是供应商的工作区。',
           },
           {
             title: '许可证校验',
@@ -136,7 +136,7 @@ const page = {
       {
         question: 'ObjectOS 能在无互联网环境运行吗？',
         answer:
-          '能。ObjectOS 企业版可在自托管或隔离环境中运营 ObjectStack 运行时。具体方式取决于包镜像、模型路由、身份系统与客户基础设施。',
+          '能。ObjectOS Community 无需许可证即可离线运行；ObjectOS 企业版使用按合同提供、本地校验的离线隔离许可证离线运行。',
       },
     ],
   } satisfies MarketingPage;

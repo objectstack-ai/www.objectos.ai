@@ -62,7 +62,7 @@ const page = {
           },
           {
             title: 'Row-level rules',
-            body: 'One expression — team == current_user.team — and reps see only their team; switch it to the manager hierarchy and a manager sees the region. Filtering happens inside the query engine, so there is nothing to bypass.',
+            body: 'One expression — team == current_user.team — and reps see only their team; on ObjectOS Enterprise, hierarchy security lets a manager see their whole region. Filtering happens inside the query engine, so there is nothing to bypass.',
           },
           {
             title: 'Field-level security',
@@ -137,7 +137,7 @@ const page = {
     checklistTitle: 'A security review should confirm',
     checklist: [
       'Every object has an explicit read and write policy.',
-      'Row rules match the org hierarchy, not a copy of it.',
+      'Row rules match the org hierarchy, not a copy of it (hierarchy scopes: Enterprise).',
       'Sensitive fields are masked for every consumer, including AI.',
       'Structural changes cannot ship without an approval record.',
       'On Enterprise, the audit log captures the in-app AI’s tool calls, not just record writes.',
@@ -151,7 +151,7 @@ const page = {
       {
         question: 'What is open source here, and what does ObjectOS add?',
         answer:
-          'Roles and permission sets, row-level rules, field security, sharing, tenant isolation, the audit log, and the permission matrix editor and audit log viewer in the Console are all open-source ObjectStack, Apache-2.0, and apply equally to MCP tool access. ObjectOS adds AI governance for its in-app AI on Enterprise — per-call audit of its tool calls, guardrails, and permission scoping. An external agent over MCP is covered by the open-source rules above, not by that per-call audit.',
+          'Roles and permission sets, row-level rules, field security, sharing, tenant isolation, the audit log, and the permission matrix editor and audit log viewer in the Console are all open-source ObjectStack, Apache-2.0, and apply equally to MCP tool access. ObjectOS adds AI governance for its in-app AI on Enterprise — per-call audit of its tool calls, guardrails, and permission scoping.',
       },
     ],
   } satisfies MarketingPage;

@@ -62,7 +62,7 @@ const page = {
           },
           {
             title: '行级规则',
-            body: '"team == current_user.team" 一行表达式，代表就只看本团队；换成沿组织层级向上，经理就看整个大区——过滤发生在查询引擎内部，绕不过去。',
+            body: '"team == current_user.team" 一行表达式，代表就只看本团队；在 ObjectOS 企业版中，组织架构可见性可让经理看到整个大区。过滤发生在查询引擎内部，绕不过去。',
           },
           {
             title: '字段级安全',
@@ -137,7 +137,7 @@ const page = {
     checklistTitle: '安全评审应确认',
     checklist: [
       '每个对象都有显式的读写策略。',
-      '行级规则对应组织层级本身，而不是它的副本。',
+      '行级规则对应组织层级本身，而不是它的副本（层级范围：ObjectOS 企业版）。',
       '敏感字段对所有消费方脱敏，包括 AI。',
       '结构性变更没有审批记录就无法上线。',
       '在 ObjectOS 企业版中，审计日志覆盖界面内 AI 的工具调用，而不只是记录写入。',
@@ -151,7 +151,7 @@ const page = {
       {
         question: '这里哪些是开源的，ObjectOS 又加了什么？',
         answer:
-          '角色与权限集、行级规则、字段级安全、共享、租户隔离、审计日志，以及 Console 里的权限矩阵编辑器与审计日志查看器，都是开源 ObjectStack，Apache-2.0，并同等适用于 MCP 工具访问。ObjectOS 加的是 ObjectOS 企业版为其产品内 AI 提供的 AI 治理——对其工具调用的逐次审计、护栏、权限限定。经 MCP 接入的外部 Agent 受上面这些开源规则约束，不在这项逐次审计范围内。',
+          '角色与权限集、行级规则、字段级安全、共享、租户隔离、审计日志，以及 Console 里的权限矩阵编辑器与审计日志查看器，都是开源 ObjectStack，Apache-2.0，并同等适用于 MCP 工具访问。ObjectOS 加的是 ObjectOS 企业版为其产品内 AI 提供的 AI 治理——对其工具调用的逐次审计、护栏、权限限定。',
       },
     ],
   } satisfies MarketingPage;
