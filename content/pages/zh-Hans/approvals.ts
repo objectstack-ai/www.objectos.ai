@@ -175,7 +175,7 @@ export const DiscountApproval = defineFlow({
       {
         question: '这里哪些是开源的，ObjectOS 又加了什么？',
         answer:
-          '多级审批、审批人解析、升级、记录锁定、审计轨迹，以及三页签收件箱连同侧栏、评论、撤回、退回修改和键盘快捷键，都随开源 ObjectStack Console 发布，Apache-2.0。ObjectOS 加的是产品内 AI Builder（Enterprise 版为预览版）。在 ObjectOS Cloud 上，它的首次搭建会直接发布；对已上线且已有记录的应用所做的变更存为草稿，由人来发布。上面那笔折扣这类业务决定，仍然走流程中的审批节点。',
+          '多级审批、审批人解析、升级、记录锁定、审计轨迹，以及三页签收件箱连同侧栏、评论、撤回、退回修改和键盘快捷键，都随开源 ObjectStack Console 发布，Apache-2.0。ObjectOS 加的是产品内 AI Builder（在 ObjectOS 企业版（私有部署）中为预览版）。在 ObjectOS Cloud 上，它的首次搭建会直接发布；对已上线且已有记录的应用所做的变更存为草稿，由人来发布。上面那笔折扣这类业务决定，仍然走流程中的审批节点。',
       },
     ],
   } satisfies MarketingPage;

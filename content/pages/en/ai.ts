@@ -147,7 +147,7 @@ const page = {
         ['Open-source ObjectStack', 'Your coding agent edits metadata source files; review as git diffs', 'Any MCP client queries governed objects with your own model'],
         ['ObjectOS Cloud Free', 'A taste of in-app AI Build', 'A taste of in-app AI Ask'],
         ['ObjectOS Cloud Team', 'In-app AI Build drafts changes; a change to a live app that holds records waits as a draft for a person to publish', 'In-app AI Ask answers with a source line and proposes record changes the user confirms'],
-        ['ObjectOS Enterprise (self-managed or by contract)', 'Same, as a preview, plus AI governance: per-call audit of the in-app AI’s tool calls, guardrails, permission scoping; on your own infrastructure with bring-your-own-model', 'Same, as a preview, with Ask’s tool calls audited and guardrailed, plus local models and internal identity'],
+        ['ObjectOS Enterprise (one edition, a private deployment)', 'Same, as a preview, plus AI governance: per-call audit of the in-app AI’s tool calls, guardrails, permission scoping; on your own infrastructure with bring-your-own-model', 'Same, as a preview, with Ask’s tool calls audited and guardrailed, plus local models and internal identity'],
       ],
     },
     faqs: [
