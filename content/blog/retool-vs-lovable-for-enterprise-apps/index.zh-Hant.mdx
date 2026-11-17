@@ -1,0 +1,243 @@
+---
+# @generated zh-Hant from zh-Hans (s2twp) — edit the zh-Hans file; delete this line to hand-maintain.
+title: 企業應用選 Retool 還是 Lovable？
+description: 誰能改 AI 做出的應用、誰來批准、執行環境按什麼權限、審計日誌記什麼、怎麼離開：Retool 與 Lovable 以它們自己的文件為準，ObjectStack 18.5.0 實測並列對照。
+author: ObjectStack Team
+date: 2026-11-25
+status: published
+topic: app-building
+audience: it
+solutions: []
+industries: []
+cover: ./cover.svg
+tags:
+  - Retool
+  - Lovable
+  - AI 應用生成工具
+  - 審計追蹤
+---
+
+按誰來改應用來選。如果是工程師在現有資料庫上做工具，選 Retool：它的 AI 不會越出你已經授予的訪問權限，審計日誌從 Business 套餐開始提供；但在 Free 和 Team 套餐上，它的 All Users 組可以編輯每一個應用，而要讓每次改動都走拉取請求評審，需要最高套餐。如果是業務團隊生成整個應用，選 Lovable：它把應用做出來並負責託管，它的 Git 同步在每個套餐上都能接入拉取請求評審，最高套餐還能把公開應用壓住，等管理員或所有者批准。但資料訪問規則是它的 AI 寫的，而且這些規則約束不了應用的特權伺服器賬號。無論選哪個，都得有人為 AI 做出的東西負責。
+
+*下文每一條關於 Retool 和 Lovable 的說法，都引自該廠商的公開文件或定價頁，閱讀日期為 2026 年 11 月 17 日。ObjectStack 的結果實測於 ObjectStack 18.5.0，即今天新安裝得到的版本。來源和完整記錄見[證據](#證據)。*
+
+## 這場比較背後的問題
+
+如果你搜到了這個比較，多半已經接受了一件事：應用會由 AI 來做。懸而未決的是做完之後怎麼辦。IT 負責人會收到三類請求，通常按這個順序來：業務負責人要改一個地方；審計員問上一次改動是誰批准的；有人問應用在某一天對某條記錄做了什麼。所以有用的比較不在於哪個工具做得快，而在於這三類請求在每個工具裡由誰、在哪裡回答。
+
+Retool 的文件描述的是這樣一個應用構建器：“the primary development experience of apps is by prompting an AI agent with natural language”（構建應用的主要方式是用自然語言向 AI Agent 下指令），連線的是你公司已經接入 Retool 的資料庫和服務。本文講的是這個 AI 應用構建器（Retool 稱之為 Apps），不是它的經典拖拽式應用。Lovable 的文件描述的是一個把整個應用（介面、伺服器和資料庫）都生成出來、預設還負責託管的工具。我們之前分別寫過[Retool 那篇](/zh-Hant/blog/retool-vs-ai-native-app-platform/)和[Lovable 那篇](/zh-Hant/blog/is-lovable-safe-for-production/)，更多平台的對比見[對比頁](/zh-Hant/compare/)。
+
+## 七個問題，兩家廠商
+
+每一格寫的都是該廠商自己的文件或定價頁怎麼說。粗體標籤標出廠商對某項功能限定的套餐。有三個詞會反覆出現：**拉取請求**（pull request）是放在你的程式碼倉庫（例如 GitHub）裡的一份改動提議，有人批准後才生效；**Git 同步**是 Lovable 把應用程式碼雙向同步到你的程式碼倉庫的功能；**MCP** 是 AI 助手連線其他軟體所用的協議。
+
+| 你會被問到的問題 | Retool | Lovable |
+|:--|:--|:--|
+| **誰能改應用？** | 構建者（builder），他們也能釋出；以及“internal users”（內部使用者，即使用應用的員工），他們能建立應用但不能釋出。**Free、Team：**固定分組，All Users 組可編輯每個應用。 | 編輯者及以上角色。工作區成員“can see, edit, and publish the workspace's projects”（可以檢視、編輯和釋出工作區的專案）。**Business、Enterprise：**專案可限定為僅受邀者可見。 |
+| **改動在使用者看到之前怎麼評審？** | 改動留在一份獨立的工作副本中，有自己的預覽。AI 在執行任何寫資料的操作之前會先詢問。 | 草稿會先顯示“a one-line summary of what the draft changes”（一句話概括草稿改了什麼）和具體改動，再由人接受。**所有套餐：**Git 同步可以加上拉取請求評審。 |
+| **誰來批准？** | 由構建者釋出；內部使用者做的應用需要構建者來發布。**Enterprise：**對納入原始碼管理的應用，合併拉取請求即釋出，評審者可看到應用預覽。 | 預設“editors and above can publish”（編輯者及以上可以釋出）。**Enterprise：**策略可要求管理員或所有者批准公開應用、使用聯結器的應用，或外部協作者的釋出。 |
+| **執行中的應用執行什麼權限？** | 使用者需要有某個資料來源的訪問權限才能對它執行查詢。**Business、Enterprise：**按組控制。在開啟了強制執行的 PostgreSQL 資源上，策略作用於每一條查詢，“including … agents”（包括 Agent 發出的）。 | 由它的 AI 編寫的資料庫規則；你能檢視，修改要通過對話。它們不約束應用的特權伺服器賬號（`service_role`）。每次釋出都會執行的掃描會“checks database access rules”（檢查資料庫訪問規則）。 |
+| **審計日誌記錄什麼？** | **Business、Enterprise：**每一次查詢執行和使用者在 Retool 中的操作，經 MCP 接入的客戶端會被標記。Retool 雲上保留一年。**Enterprise：**可推送到 Datadog 或 Splunk。 | **Enterprise：**工作區活動，包括成員、專案、提示詞和釋出。保留 13 周；可定期匯出到你的安全監控系統。 |
+| **資料和定義放在哪裡？** | 應用使用你已接入的資料庫和服務；應用本身存放在 Retool 中。Enterprise 套餐卡片：“Retool Cloud, self-hosted, or air-gapped”（Retool 雲、自託管或物理隔離，即不接入網際網路的網路）。 | 程式碼預設放在“Lovable's managed infrastructure”（Lovable 託管的基礎設施）裡；Git 同步（所有套餐）可以在你的倉庫裡保留一份副本。資料庫：用 Lovable 的，或你自己接入的，例如 Supabase。 |
+| **它的邊界在哪裡，怎麼離開？** | 在 Retool 之外執行匯出的 AI 構建器應用，被列為尚不支援（經典應用可能不同）。**Enterprise：**納入原始碼管理的應用，其原始碼放在你的倉庫裡。 | 文件稱“you are never locked in”（你永遠不會被鎖定）；程式碼和資料都能匯出。接受草稿“can change your live app's backend immediately”（可能立即改動線上應用的後端）。後端日誌（不同於審計日誌）“do not prove who made a particular database change”（不能證明某次資料庫改動是誰做的）。 |
+
+這張表說明了三件事：
+
+- **批准發生在不同的環節。** 在 Retool 裡是釋出，或者在 Enterprise 上是合併拉取請求。在 Lovable 裡是先接受草稿再發布，在 Enterprise 上，策略點名的那幾類釋出還要管理員或所有者批准。兩者的差別在於批准人看到的是什麼。
+- **兩份審計日誌回答的是不同的問題。** Retool 的日誌記錄使用者在 Retool 中的操作，“such as query runs and password resets”（例如執行查詢和重置密碼）。Lovable 的日誌記錄工作區活動，它列出的事件包括“Prompt sent”（傳送提示詞）、“Project published externally”（專案對外發布）和“Database query executed”（執行資料庫查詢）。先寫下審計員會問的問題，再看哪份日誌能回答。
+- **這些管控要更高的套餐。** Retool 的定價頁把豐富的權限控制和審計日誌列在 Business 起，Git 原始碼管理只在 Enterprise；Lovable 的文件把審計日誌和釋出審批標為僅 Enterprise。
+
+## 什麼時候選 Retool 更合適
+
+如果應用是基於你現有系統的內部工具，做應用的人是工程師或技術人員，就選 Retool。對 IT 負責人來說，它最有力的一點是 AI 的觸及範圍永遠不會超過構建者本人：它的安全頁面寫著“the LLM cannot read or write any resource data the user is not already authorized to access”（LLM 不能讀寫使用者本來就無權訪問的任何資源資料），而且 AI 在執行任何寫入、插入、更新或刪除資料的操作之前，都會先問構建者。它的審計日誌記錄應用使用者執行的每一次查詢，包括具體查詢語句和引數，並標記經 Retool 的 MCP 伺服器接入的 AI 助手所做的操作。如果審計員問某個使用者在內部工具裡做了什麼，這份日誌能直接回答。需要知道的限制是：用它的 AI 應用構建器做出的應用，在 Retool 之外執行被列為尚不支援。如果需要按組授權和審計日誌，按 Business 做預算；如果每次改動都必須在你自己的倉庫裡走拉取請求，按 Enterprise 做預算。
+
+## 什麼時候選 Lovable 更合適
+
+如果業務團隊需要自己把一個想法變成能用的應用，而應用可以跑在 Lovable 替你運營的伺服器和資料庫上，就選 Lovable。它一次性做出介面、伺服器和資料庫，負責託管，並讓人先在草稿裡試改動、再決定是否接受。它的 Git 同步在每個套餐上都可用，所以你的開發人員可以讓它的改動走他們已經在用的拉取請求評審；釋出應用仍是單獨的一步。Lovable 從 Business 套餐起提供單點登入，而 Retool 把它列在僅 Enterprise。如果你希望應用在公開、使用聯結器或由外部協作者釋出之前，先由管理員或所有者批准，按 Enterprise 做預算；審計日誌和定期安全掃描也都在 Enterprise。它的文件對離開有一個直白的承諾：“you are never locked in. You can export your code, migrate your data, self-host parts or all of your stack, or move to another provider at any time.”（你永遠不會被鎖定。你可以匯出程式碼、遷移資料、自託管部分或全部技術棧，或隨時換到其他服務商。）同一頁也列出了真要離開時你要接手的事，其中包括“Implementing authentication and enforcing data isolation policies”（實現身份認證並執行資料隔離策略）。
+
+## 我們在 ObjectStack 上測了什麼
+
+ObjectStack 是我們做的，它走第三條路：應用的定義是一組普通檔案，執行中的應用執行這些檔案寫下的規則。我們在 ObjectStack 18.5.0 自帶的開源 CRM 示例上做了這些檢查。這是一個演示應用，不是客戶系統。銷售代表這個角色可以讀取、建立和編輯商機，但不能刪除。
+
+| 我們做了什麼 | 系統怎麼回答 | 這對你意味著什麼 |
+|:--|:--|:--|
+| 一個 AI Agent 用為銷售代表賬號建立的訪問金鑰，通過 MCP 嘗試刪除一條商機。 | 被拒絕兩次：第一次因為沒有人確認這是一次永久刪除；帶上確認後，又因為銷售代表不能刪除商機而被拒。 | 永久刪除需要有人確認，而且即便確認了，Agent 也只擁有它所用賬號的權限。 |
+| 一位銷售代表通過應用的 API 嘗試同樣的刪除。 | 被拒絕。 | 這條規則對人和 Agent 一視同仁。 |
+| Agent 把這條商機從“prospecting”（初步接觸）推進到“qualification”（資格確認），這是銷售代表可以做的。 | 一行審計記錄：Agent 的賬號、這條商機，以及階段改動前後的值。被拒絕的刪除沒有留下任何記錄。 | 你能拿出證據說明 Agent 改了什麼、什麼時候改的。被拒絕的嘗試只出現在伺服器日誌裡。 |
+| 這位銷售代表請求讀取審計日誌。 | 被拒絕。 | 銷售代表看不到誰做了什麼；要讀日誌，得有授予該權限的角色。 |
+| 一個 AI Agent 修改應用檔案，讓銷售角色可以刪除商機。 | 平台對檔案的第一道檢查通過了。構建停下，用一行字點出這次改動，並一直停著，直到有人運行了接受命令（在我們這次執行中，就是同一個 Agent；見下文的侷限）。 | 這次改動不可能悄無聲息地生效，但仍需要一個人去評審接受之後產生的那一行改動。 |
+
+最後一項檢查背後的機制，在[業務應用該放在資料庫裡，還是放在程式碼倉庫裡？](/zh-Hant/blog/where-should-a-business-app-definition-live/)和[怎樣在上線前抓住 AI 悄悄改掉的權限？](/zh-Hant/blog/catch-ai-silent-permission-change-access-matrix-gate/)裡有完整解釋。開啟一條記錄如何被審計、這份記錄的侷限在哪裡，見[能證明是誰打開了一條客戶記錄嗎——包括 AI Agent？](/zh-Hant/blog/prove-who-opened-a-customer-record-view-auditing/)
+
+## ObjectStack 不做什麼
+
+- **它不判斷一次改動對不對。** 平台的第一道檢查對這條刪除權限一言不發就放行了。構建之所以停下，只是因為這個示例應用保留了一張訪問表。新應用在你開啟之前沒有這張表，而新專案自帶的自動檢查執行的是第一道檢查，不是構建。
+- **它不阻止 Agent 接受自己的改動。** 接受只是一條命令，任何能訪問這些檔案的人或程式都能執行。只有當那一行改動經過你的拉取請求流程、由一個人批准時，它才成為一次評審。
+- **它不把被拒絕的嘗試寫進審計日誌。** 兩次被拒的刪除只出現在伺服器日誌裡，那是審計日誌之外的另一個地方。
+- **它分不清 Agent 和人。** 審計記錄寫的是 Agent 的訪問金鑰所屬的賬號，記錄裡沒有任何地方寫著“AI”。給每個 Agent 一個專屬賬號，否則日誌會把 Agent 做的事記在某個人名下。
+- **它不把每一次改動都留在檔案裡。** 執行中的環境也可以儲存在管理介面裡或通過 API 做的編輯，這些編輯優先於檔案。哪些改動必須經過檔案，是你來定的規則。
+- **它比兩家廠商都年輕。** ObjectStack 自己的對比頁寫道：“ObjectStack is younger; expect to build more of it yourself.”（ObjectStack 更年輕，要做好更多東西得自己搭的準備。）
+
+## 怎麼選
+
+Retool 和 Lovable 各自適合上面描述的情形。如果為應用負責的人必須把“誰能做什麼”當成一張簡短的表來讀，而不是當成程式碼來讀，並且必須在每一次改動生效之前看到它，那就看看第三種選擇。這正是 ObjectStack 要解決的情形，侷限見上文；想在你自己的流程上試一試，可以[把你的 Agent 指向 ObjectStack](/en/blog/how-to-point-your-agent-at-objectstack/)。
+
+無論選哪個，都向廠商問這三個問題，並把答案留存下來：
+
+1. 當 AI 改動了誰能看到或做什麼時，批准人在使用者拿到之前到底看到了什麼？
+2. 批准的人能不能是改動者以外的另一個人？
+3. 哪份日誌能回答“這個使用者或這個 Agent 對那條記錄做了什麼”，保留多久？
+
+{/* the-proof */}
+## 證據
+
+下面的一切都在 2026-11-17 閱讀或執行。
+
+```text
+$ npm view @objectstack/cli dist-tags
+{ next: '18.5.0', latest: '18.5.0' }
+```
+
+### 廠商來源
+
+上文的每一句引文都來自這裡列出的頁面，閱讀日期為 2026 年 11 月 17 日（Retool 的“Free and Team”權限頁在 04:34 UTC，其餘在 04:16 至 04:18 UTC 之間）。關於套餐的說法來自廠商的定價頁，或文件頁面上的套餐標註。Retool 一欄描述的是它的 AI 應用構建器（“Apps”），不是經典應用。下面的引文保留英文原文，作為可核對的證據。
+
+**Retool**
+
+- [Introduction to apps](https://docs.retool.com/build/apps/concepts/intro)：“The primary development experience of apps is by prompting an AI agent with natural language in threads.” “Retool only explores and connects resources for which the user has Edit permission.” “Enterprise users can also utilize Source Control to version apps and track changes using a git-based workflow.” “Apps use resources to connect to your business data.”
+- [App builder](https://docs.retool.com/build/apps/concepts/app-builder)：“It is available to both internal users and builders, but only builders can publish apps.”
+- [Permission levels](https://docs.retool.com/permissions/reference/permission-levels)：應用上的 Edit 表示“Build and modify the app. Release, rename, export, delete the app.”；Use 表示“Interact with the app as an end user. Cannot open the editor.”
+- [Permissions on Free and Team plans](https://docs.retool.com/permissions/guides/free-and-team/)：“On Free and Team plans, Retool provides a fixed set of default groups that control what users can do with apps, workflows, agents, and resources. You cannot create custom groups or configure role-based access control on these plans.” 在這兩個套餐的表格裡，All Users 組對 Apps、Workflows 和 Agents 是 Edit，對 Resources 是 Own，並且“The following built-in permission groups cannot be modified or removed, and the access levels cannot be changed.” “Business and Enterprise plan users have more granular control over groups, and can create their own custom groups.”
+- [Publish an app](https://docs.retool.com/build/apps/guides/publishing)：“You must be a builder to publish an app. Internal users can create apps, but they cannot publish them.” Limitations 標籤頁的開頭是“Limitations describe functionality that isn't yet supported in apps but may exist in classic apps.”，其中列有“Exported apps for use outside of Retool.”
+- [Threads and branches](https://docs.retool.com/build/apps/concepts/threads-branches)：“A branch is a set of changes to your app, associated with an app preview, and with its own change history. A branch is the unit of work that you publish.”
+- [App security](https://docs.retool.com/build/apps/concepts/security)：“The LLM cannot read or write any resource data the user is not already authorized to access.” “The agent always requests permission from the builder to run functions that change data in your resources, such as those that write, create, insert, update, or delete data.”
+- [Edit and publish protected apps](https://docs.retool.com/build/apps/guides/source-control/edit-publish)：“Opening a pull request and integrating changes into the main branch of the repository creates a new published version of your app.” 釋出檢查清單確認“The shared preview is ready. This allows your PR reviewers to see your changes in an app preview.” [Protect apps](https://docs.retool.com/build/apps/guides/source-control/protect-app)：“Each protected app is stored as its own directory in your repository at the /apps-v2 path.”
+- [Data](https://docs.retool.com/build/apps/concepts/data)：“Users need Use access to a resource in an environment to run functions against it.”
+- [Access policies](https://docs.retool.com/data-sources/concepts/access-policies)：策略作用於“every query Retool runs against the resource, including queries from apps, the query library, raw SQL, and agents.” “Access policies apply only to PostgreSQL resources.”
+- [Audit logs](https://docs.retool.com/org-users/guides/audit-logs)：“Retool automatically logs user actions, such as query runs and password resets.” 詳情包括“the exact query, the parameters passed”。來自 MCP 的事件帶有一個標記，表示“An AI client connected to Retool's MCP server.” 雲上：“Audit logs are retained for one year.”
+- [Pricing](https://retool.com/pricing)，套餐對比表：
+  - “Rich permission controls”（“Grant data-level and role-based permissions for granular control over app and data access.”）在 Free 和 Team 上為“—”，在 Business 和 Enterprise 上為“Included”。
+  - “Audit logs”（“Track every query run against your databases and APIs, as well as user actions taken in Retool.”）在 Free 和 Team 上為“—”，在 Business 和 Enterprise 上為“Included”。
+  - “Source control”（“Use branch-based editing processes that are compatible with Git.”）和“Custom SSO”僅 Enterprise 包含。套餐卡片在 Business 上把“Git source control”和“SSO, SCIM, 2FA”列為“Not included”。
+  - Enterprise 卡片列有“Retool Cloud, self-hosted, or air-gapped”和“Audit logs + streaming”。
+
+**Lovable**
+
+- [Lovable for Enterprise](https://docs.lovable.dev/introduction/lovable-for-enterprise)：“By default, project code lives in Lovable's managed infrastructure.” 角色：“All paid plans. Owner, admin, editor, viewer, and external-collaborator.” “Quick scan runs on every publish and checks database access rules, dependencies, and MCP server exposure.” 工作區 SSO 標為“Business and Enterprise”。資料匯出：“Enterprise only. Scheduled exports of audit logs to Splunk, Azure Log Analytics, Amazon S3, Google Cloud Storage, or Azure Blob Storage.” 定期 Deep 掃描、釋出審批和審計日誌標為“Enterprise only”。
+- [Collaboration](https://docs.lovable.dev/features/collaboration)：“By default, editors and above can publish projects on all plans.” 在專案權限表裡，“Edit project”對 Viewer 是“No”，對 Editor、Admin 和 Owner 是“Yes”。工作區成員“can see, edit, and publish the workspace's projects (unless a project's access is restricted)”。“A draft's edits reach the project only when someone accepts it.”
+- [Drafts](https://docs.lovable.dev/features/drafts)：“Lovable shows you a one-line summary of what the draft changes, followed by the draft's edits.” “Accepting can change your live app's backend immediately, before you publish.”
+- [Workspace policies](https://docs.lovable.dev/features/workspace-policies)：這些策略限制“with unresolved sensitive data findings”的釋出、“by external collaborators”的釋出、“that makes an app public”的釋出、“apps that use connectors”的釋出，以及啟用“Lovable backend services”。“When no policy applies, Lovable publishes the app or enables the backend without a review.” “You cannot write your own conditions, choose different approvers, or send requests to specific people.”
+- [Git sync](https://docs.lovable.dev/integrations/git-sync-overview)：與 github.com、GitLab.com 和 Bitbucket Cloud 雙向同步，均標為“(all plans)”。“If your team requires a pull or merge request for every change to `main`, switch Lovable to a feature branch of its own and merge its work through the same review process.” “Lovable edits and syncs one branch at a time.”
+- [Control who can access your app's data](https://docs.lovable.dev/features/database-access)：“Lovable sets up these rules automatically when it builds features that store user data.” “The policies view is read-only. To change a policy, ask Lovable in the project chat.” “Your policies do not apply to `service_role`, so server code that uses `service_role` must check permissions itself.”
+- [Built-in backend](https://docs.lovable.dev/features/cloud)：“Lovable hosts your app and includes a built-in backend with database, authentication, storage, edge functions, and AI.” 內建後端是相對於“as opposed to an external backend you connect yourself, such as Supabase”而言的。
+- [Audit logs](https://docs.lovable.dev/features/audit-logs)：“Available on: Enterprise plans”。示例事件包括“Prompt sent”和“Database query executed”。“Logs are retained for 13 weeks, or approximately 90 days.”
+- [Logs](https://docs.lovable.dev/features/logs)，即後端診斷日誌。FAQ 問題：“Can I use these logs as audit evidence?” 回答：“Not on their own. Logs help you diagnose problems, but they do not prove who made a particular database change.”
+- [Deployment, hosting, and ownership options](https://docs.lovable.dev/tips-tricks/deployment-hosting-ownership)：“Lovable is intentionally built so that **you are never locked in**. You can export your code, migrate your data, self-host parts or all of your stack, or move to another provider at any time.” 如果停用 Lovable，你要負責的事情之一是“Implementing authentication and enforcing data isolation policies”。
+
+**ObjectStack 文件**，18.5.0 釋出標籤處（commit [`b914e72`](https://github.com/objectstack-ai/objectstack/commit/b914e7247f692a79804f9b7eba278add46d57625)）：[“ObjectStack is younger; expect to build more of it yourself.”](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/content/docs/concepts/compare.mdx#L115-L117) 以及 [“Reads walk top-to-bottom: the first non-null layer wins. Writes always route to the topmost writable layer (the overlay).”](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/content/docs/concepts/metadata-lifecycle.mdx#L43)，其中覆蓋層（overlay）儲存執行環境中的編輯，位於檔案之上。
+
+### 應用
+
+ObjectStack 倉庫中標籤 `@objectstack/cli@18.5.0` 處的 `examples/app-crm`，依賴固定為已釋出的 18.5.0 包。它的安全檔案把 `crm_sales_user` 權限集授予 `crm_sales_rep` 崗位，該權限集可以讀取、建立和編輯 `crm_opportunity`（商機），但不能刪除。這個應用開啟了訪問矩陣檢查：`objectstack.config.ts` 旁邊放著一份 `access-matrix.json`。
+
+```text
+$ npx os --version
+@objectstack/cli/18.5.0 linux-x64 node-v22.22.0
+```
+
+### 1. AI 的改動、構建的拒絕、評審的 diff
+
+改動位於 `src/security/sales-positions.ts` 第 50 行：
+
+```diff
+-    crm_opportunity: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: false },
++    crm_opportunity: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: true },
+```
+
+`npx os validate` 輸出 `✓ Validation passed` 和四條無關的欄位警告，退出碼 0。`npx os compile` 運行同樣的 68 條編寫期規則，然後：
+
+```text
+  → Checking access-matrix snapshot (ADR-0090 D6)...
+  ✗ Access matrix drift (1 change) — capability changes must be reviewed
+  • 'crm_sales_user' gains delete on 'crm_opportunity'
+  If intended, re-run with --update-access-matrix and commit the snapshot — its diff IS the review artifact.
+compile exit 1
+```
+
+接受它，即執行 `npx os compile --update-access-matrix`，退出碼 0，輸出 `Access matrix snapshot written to access-matrix.json (ADR-0090 D6) — review the diff.` 快照的 diff：
+
+```diff
+@@ -51,7 +51,7 @@
+       "create": true,
+       "read": true,
+       "edit": true,
+-      "delete": false,
++      "delete": true,
+       "viewAllRecords": false,
+       "modifyAllRecords": false,
+       "sharingModel": "public_read_write"
+```
+
+隨後撤銷了這次改動，所以下面執行的應用用的是原來的權限集。
+
+### 2. 被拒絕的刪除
+
+應用用 `npx os dev --compile --no-watch` 啟動。啟動時輸出 `Tenancy: single` 和 `Seeds: com.example.crm 28 rows`。通過管理 API 建立了兩個賬號 `rep@crm.example` 和 `agent-svc@crm.example`，各自被授予 `crm_sales_rep` 崗位。兩者登入後的崗位均為 `["org_member","crm_sales_rep","everyone"]`。`agent-svc` 生成了一個 API 金鑰，也就是 AI Agent 連線時使用的身份。
+
+銷售代表，通過 REST API：
+
+```text
+$ curl -X DELETE -b rep.cookies http://localhost:49890/api/v1/data/crm_opportunity/CRePs-1Ar5tJyIQl
+{"error":"You do not have permission to perform this action. Contact your administrator if you need access.","code":"PERMISSION_DENIED","object":"crm_opportunity"}
+HTTP 403
+```
+
+Agent 用它的金鑰通過 MCP 呼叫：`tools/call` `delete_record` `{ objectName: "crm_opportunity", recordId: "CRePs-1Ar5tJyIQl" }`，第一次的回答是：
+
+```json
+{ "error": { "code": "ACTION_CONFIRMATION_REQUIRED",
+  "message": "delete_record on 'crm_opportunity' record 'CRePs-1Ar5tJyIQl' carries no confirmation — nothing was deleted. A delete over MCP is permanent: confirm with the human in the loop, then retry this call with 'confirm': true on the request.",
+  "status": 428 } }
+```
+
+帶上 `"confirm": true` 重試後：
+
+```json
+{ "error": { "code": "PERMISSION_DENIED",
+  "message": "You do not have permission to perform this action. Contact your administrator if you need access.",
+  "status": 403 } }
+```
+
+兩次拒絕對應的伺服器日誌：
+
+```text
+WARN [Security] Access denied: operation 'delete' on object 'crm_opportunity' is not permitted for positions [org_member, crm_sales_rep, everyone] {"userId":"rs2E3SiqdiZ0yUKxlychP97F8jXH9LXO", …}
+WARN [Security] Access denied: operation 'delete' on object 'crm_opportunity' is not permitted for positions [org_member, crm_sales_rep, everyone] {"userId":"canMMQfNf6nm4XKqWnX727gPPnaWrtZI", …}
+```
+
+### 3. Agent 的編輯及其審計記錄
+
+通過 MCP 呼叫 `update_record` `{ objectName: "crm_opportunity", recordId: "CRePs-1Ar5tJyIQl", data: { stage: "qualification" } }`，返回的記錄帶有 `"stage": "qualification"` 和 `"updated_by": "canMMQfNf6nm4XKqWnX727gPPnaWrtZI"`，即 Agent 的賬號。管理員隨後按 `crm_opportunity` 查詢審計日誌，返回 `"total": 1`，就是這一行：
+
+```json
+{
+  "created_at": "2026-11-17T04:20:41.516Z",
+  "action": "update",
+  "user_id": "canMMQfNf6nm4XKqWnX727gPPnaWrtZI",
+  "actor": "canMMQfNf6nm4XKqWnX727gPPnaWrtZI",
+  "object_name": "crm_opportunity",
+  "record_id": "CRePs-1Ar5tJyIQl",
+  "old_value": "{\"stage\":\"prospecting\"}",
+  "new_value": "{\"stage\":\"qualification\"}",
+  "ip_address": null,
+  "user_agent": null,
+  "tenant_id": "org_mwk6o8jvyc54copi",
+  "metadata": null
+}
+```
+
+兩次被拒的刪除都沒有對應的記錄。用銷售代表的會話傳送同樣的查詢，回答是 `HTTP 403`。
+
+### 4. 新專案沒有訪問表
+
+`npm create objectstack@latest` 今天執行的 `create-objectstack@18.5.0` 包，其模板裡沒有 `access-matrix.json`，模板的 CI 工作流執行的是 `pnpm validate`，而不是構建。在新專案裡第一次執行 `os compile --update-access-matrix`，就是開啟這項檢查。

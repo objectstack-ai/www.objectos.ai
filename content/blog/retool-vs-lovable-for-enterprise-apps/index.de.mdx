@@ -1,0 +1,242 @@
+---
+title: "Retool oder Lovable für Unternehmensanwendungen: Was sollten Sie wählen?"
+description: "Wer eine KI-gebaute App ändern darf, wer freigibt, unter welchen Rechten sie läuft, was das Audit-Log festhält und wie man wechselt: Retool und Lovable nach eigenen Dokumenten, daneben ObjectStack 18.5.0 gemessen."
+author: ObjectStack Team
+date: 2026-11-25
+status: published
+topic: app-building
+audience: it
+solutions: []
+industries: []
+cover: ./cover.svg
+tags:
+  - Retool
+  - Lovable
+  - KI-App-Builder
+  - Audit-Trail
+---
+
+Wählen Sie danach, wer die App ändern wird. Bauen Ingenieure Werkzeuge auf bestehenden Datenbanken, nehmen Sie Retool: Seine KI bleibt innerhalb der Zugriffe, die Sie vergeben haben, und das Audit-Log gibt es ab dem Business-Tarif; aber in Free und Team darf die Gruppe All Users jede App bearbeiten, und die Prüfung jeder Änderung per Pull-Request erfordert den höchsten Tarif. Erzeugen Fachteams ganze Apps, nehmen Sie Lovable: Es baut und hostet die App, seine Git-Synchronisation erlaubt in jedem Tarif die Prüfung per Pull-Request, und der höchste Tarif kann öffentliche Apps bis zur Freigabe durch einen Admin oder Owner zurückhalten. Aber die Regeln, wer welche Daten sieht, schreibt seine KI, und sie gelten nicht für das privilegierte Serverkonto der App. So oder so muss jemand für das geradestehen, was die KI gebaut hat.
+
+*Jede Aussage zu Retool und Lovable unten ist aus den öffentlichen Dokumenten oder der Preisseite des jeweiligen Anbieters zitiert, gelesen am 17. November 2026. Die Ergebnisse zu ObjectStack wurden auf ObjectStack 18.5.0 gemessen, der Version, die eine Neuinstallation heute bekommt. Quellen und Protokolle stehen in [Der Beweis](#der-beweis).*
+
+## Die Frage hinter dem Vergleich
+
+Wer nach diesem Vergleich sucht, hat meist schon akzeptiert, dass eine KI die App bauen wird. Offen ist, was danach passiert. Drei Anfragen erreichen die IT-Leitung, meist in dieser Reihenfolge: Ein Fachverantwortlicher will eine Änderung, ein Prüfer fragt, wer die letzte freigegeben hat, und jemand fragt, was die App an einem bestimmten Tag mit einem bestimmten Datensatz gemacht hat. Der nützliche Vergleich ist also nicht, wie schnell ein Werkzeug baut, sondern wo in jedem Werkzeug diese drei Anfragen beantwortet werden, und von wem.
+
+Retools Dokumentation beschreibt einen App-Builder, bei dem „the primary development experience of apps is by prompting an AI agent with natural language“ (Apps entstehen vor allem, indem man einem KI-Agenten Anweisungen in natürlicher Sprache gibt), und zwar mit den Datenbanken und Diensten, die Ihr Unternehmen schon an Retool angebunden hat. Dieser Beitrag beschreibt diesen KI-App-Builder, den Retool Apps nennt, nicht die klassischen Drag-and-Drop-Apps. Lovables Dokumentation beschreibt ein Werkzeug, das die ganze App erzeugt (Oberflächen, Server und Datenbank) und sie standardmäßig hostet. Beide haben wir einzeln behandelt, im [Retool-Beitrag](/de/blog/retool-vs-ai-native-app-platform/) und im [Lovable-Beitrag](/de/blog/is-lovable-safe-for-production/); weitere Plattformen vergleicht unsere [Vergleichsseite](/en/compare/).
+
+## Sieben Fragen, zwei Anbieter
+
+Jede Zelle gibt wieder, was die Dokumentation oder Preisseite des Anbieters sagt. Ein fettes Etikett nennt den Tarif, auf den der Anbieter eine Funktion beschränkt. Drei Begriffe kommen vor: Ein **Pull-Request** ist ein Änderungsvorschlag in Ihrem Code-Repository (zum Beispiel GitHub), den jemand freigibt, bevor er wirkt; **Git-Synchronisation** ist Lovables Zwei-Wege-Kopie des App-Codes in Ihr Code-Repository; **MCP** ist das Protokoll, mit dem sich KI-Assistenten mit anderer Software verbinden.
+
+| Die Frage, die man Ihnen stellen wird | Retool | Lovable |
+|:--|:--|:--|
+| **Wer darf die App ändern?** | Builder, die auch veröffentlichen dürfen, und „internal users“ (Mitarbeitende, die Apps nutzen), die Apps anlegen, aber nicht veröffentlichen dürfen. **Free, Team:** feste Gruppen; All Users darf jede App bearbeiten. | Editoren und höher. Workspace-Mitglieder „can see, edit, and publish the workspace's projects“ (dürfen die Projekte des Workspace sehen, bearbeiten und veröffentlichen). **Business, Enterprise:** Ein Projekt lässt sich auf eingeladene Personen beschränken. |
+| **Wie wird eine Änderung geprüft, bevor Nutzer sie sehen?** | Änderungen bleiben in einer eigenen Arbeitskopie mit eigener Vorschau. Die KI fragt, bevor sie etwas ausführt, das Daten schreibt. | Entwürfe zeigen „a one-line summary of what the draft changes“ (eine Zeile, was der Entwurf ändert) und die Änderungen, bevor jemand sie annimmt. **Alle Tarife:** Git-Synchronisation kann eine Pull-Request-Prüfung ergänzen. |
+| **Wer gibt frei?** | Ein Builder veröffentlicht; die App eines internen Nutzers braucht einen Builder. **Enterprise:** Bei einer App unter Versionsverwaltung veröffentlicht das Mergen eines Pull-Requests, mit App-Vorschau für die Prüfer. | Standardmäßig „editors and above can publish“ (Editoren und höher dürfen veröffentlichen). **Enterprise:** Richtlinien können die Freigabe durch Admin oder Owner verlangen, für öffentliche Apps, Apps mit Konnektoren oder Veröffentlichungen externer Mitarbeitender. |
+| **Welche Rechte setzt die laufende App durch?** | Nutzer brauchen Zugriff auf eine Datenquelle, um deren Abfragen auszuführen. **Business, Enterprise:** Steuerung pro Gruppe. Auf PostgreSQL-Ressourcen mit eingeschalteter Durchsetzung gelten Richtlinien für jede Abfrage, „including … agents“ (auch von Agents). | Datenbankregeln, die seine KI schreibt; Sie lesen sie und ändern sie per Chat. Sie gelten nicht für das privilegierte Serverkonto der App (`service_role`). Ein Scan bei jeder Veröffentlichung „checks database access rules“ (prüft die Datenbank-Zugriffsregeln). |
+| **Was hält das Audit-Log fest?** | **Business, Enterprise:** jede Abfrage und Nutzeraktionen in Retool, MCP-Clients markiert. Ein Jahr Aufbewahrung in Retools Cloud. **Enterprise:** Streaming an Datadog oder Splunk. | **Enterprise:** Workspace-Aktivität, darunter Mitglieder, Projekte, Prompts und Veröffentlichungen. 13 Wochen Aufbewahrung; geplanter Export an Ihr Sicherheits-Monitoring. |
+| **Wo liegen Daten und Definition?** | Apps nutzen Ihre angebundenen Datenbanken und Dienste; die App selbst liegt in Retool. Enterprise-Karte: „Retool Cloud, self-hosted, or air-gapped“ (air-gapped: ohne Internetverbindung). | Code standardmäßig in „Lovable's managed infrastructure“ (Lovables verwalteter Infrastruktur); Git-Synchronisation (alle Tarife) kann eine Kopie in Ihrem Repository halten. Datenbank: von Lovable oder eine eigene, etwa Supabase. |
+| **Wo endet es, und wie steigt man aus?** | Eine exportierte App aus dem KI-Builder außerhalb von Retool zu betreiben, ist als noch nicht unterstützt aufgeführt (bei klassischen Apps evtl. anders). **Enterprise:** Eine App unter Versionsverwaltung hat ihren Quellcode in Ihrem Repository. | Dokumentation: „you are never locked in“ (Sie sind nie gebunden); Code und Daten lassen sich exportieren. Einen Entwurf anzunehmen „can change your live app's backend immediately“ (kann das Live-Backend sofort ändern). Backend-Logs (getrennt vom Audit-Log) „do not prove who made a particular database change“ (belegen nicht, wer eine Datenbankänderung vorgenommen hat). |
+
+Was die Tabelle zeigt:
+
+- **Die Freigabe passiert an einer anderen Stelle.** Bei Retool ist es das Veröffentlichen, in Enterprise das Mergen eines Pull-Requests. Bei Lovable ist es das Annehmen eines Entwurfs und dann das Veröffentlichen, in Enterprise mit Freigabe durch Admin oder Owner für die Arten von Veröffentlichung, die eine Richtlinie nennt. Beide unterscheiden sich darin, was die freigebende Person zu sehen bekommt.
+- **Die beiden Audit-Logs beantworten verschiedene Fragen.** Retools Log hält Nutzeraktionen in Retool fest, „such as query runs and password resets“ (etwa ausgeführte Abfragen und Passwort-Resets). Lovables Log hält Workspace-Aktivität fest; zu den aufgeführten Ereignissen gehören „Prompt sent“ (Prompt gesendet), „Project published externally“ (Projekt extern veröffentlicht) und „Database query executed“ (Datenbankabfrage ausgeführt). Schreiben Sie zuerst die Frage Ihres Prüfers auf und prüfen Sie dann, welches Log sie beantwortet.
+- **Die Kontrollen kosten einen höheren Tarif.** Retools Preisseite führt umfangreiche Berechtigungssteuerung und Audit-Logs ab Business und Git-Versionsverwaltung nur in Enterprise; Lovables Dokumentation kennzeichnet Audit-Logs und Freigabe von Veröffentlichungen als nur Enterprise.
+
+## Wann Retool die bessere Wahl ist
+
+Nehmen Sie Retool, wenn die Apps interne Werkzeuge auf Systemen sind, die Sie schon betreiben, und wenn Ingenieure oder technisches Personal sie bauen. Sein stärkstes Argument für die IT-Leitung: Die KI reicht nie weiter als der Builder selbst. Die Sicherheitsseite sagt „the LLM cannot read or write any resource data the user is not already authorized to access“ (das LLM kann keine Ressourcendaten lesen oder schreiben, auf die der Nutzer nicht ohnehin zugreifen darf), und die KI fragt den Builder, bevor sie etwas ausführt, das Daten schreibt, einfügt, aktualisiert oder löscht. Das Audit-Log hält jede Abfrage der App-Nutzer fest, mit genauer Abfrage und Parametern, und markiert Aktionen von KI-Assistenten, die über Retools MCP-Server verbunden sind. Fragt Ihr Prüfer, was ein Nutzer in einem internen Werkzeug getan hat, antwortet dieses Log direkt. Die Grenze, die man kennen sollte: Eine im KI-App-Builder gebaute App außerhalb von Retool zu betreiben, ist als noch nicht unterstützt aufgeführt. Planen Sie Business ein, wenn Sie Berechtigungen pro Gruppe und das Audit-Log brauchen, und Enterprise, wenn jede Änderung per Pull-Request durch Ihr eigenes Repository gehen muss.
+
+## Wann Lovable die bessere Wahl ist
+
+Nehmen Sie Lovable, wenn Fachteams selbst von einer Idee zu einer funktionierenden App kommen müssen und die App auf einem Server und einer Datenbank laufen darf, die Lovable für Sie betreibt. Es baut Oberflächen, Server und Datenbank zusammen, hostet sie und lässt Änderungen erst in einem Entwurf ausprobieren, bevor man sie annimmt. Die Git-Synchronisation gibt es in jedem Tarif, sodass Ihre Entwickler seine Änderungen durch dieselbe Pull-Request-Prüfung schicken können, die sie schon nutzen; das Veröffentlichen der App bleibt ein eigener Schritt. Lovable bietet Single Sign-on ab dem Business-Tarif, Retool führt es nur in Enterprise. Planen Sie Enterprise ein, wenn ein Admin oder Owner freigeben soll, bevor eine App öffentlich wird, einen Konnektor nutzt oder von einer externen Person veröffentlicht wird; auch das Audit-Log und geplante Sicherheitsscans sind Enterprise. Zum Ausstieg gibt die Dokumentation ein klares Versprechen: „you are never locked in. You can export your code, migrate your data, self-host parts or all of your stack, or move to another provider at any time.“ (Sie sind nie gebunden. Sie können Ihren Code exportieren, Ihre Daten migrieren, Teile oder Ihren ganzen Stack selbst hosten oder jederzeit zu einem anderen Anbieter wechseln.) Dieselbe Seite nennt, was Sie beim Ausstieg übernehmen, darunter „Implementing authentication and enforcing data isolation policies“ (Authentifizierung umsetzen und Richtlinien zur Datentrennung durchsetzen).
+
+## Was wir an ObjectStack gemessen haben
+
+ObjectStack, das wir entwickeln, geht einen dritten Weg: Die Definition der App ist ein Satz einfacher Dateien, und die laufende App setzt durch, was darin steht. Wir haben diese Prüfungen am Open-Source-CRM-Beispiel durchgeführt, das mit ObjectStack 18.5.0 ausgeliefert wird, einer Demo-App, keinem Kundensystem. Die Rolle Vertriebsmitarbeiter darf Deals lesen, anlegen und bearbeiten, aber nicht löschen.
+
+| Was wir getan haben | Was das System antwortete | Was das für Sie bedeutet |
+|:--|:--|:--|
+| Ein KI-Agent versuchte mit einem Zugriffsschlüssel, der für ein Vertriebskonto erstellt wurde, über MCP einen Deal zu löschen. | Zweimal abgelehnt: zuerst, weil kein Mensch eine endgültige Löschung bestätigt hatte, dann, mit Bestätigung, weil Vertriebsmitarbeiter keine Deals löschen dürfen. | Eine endgültige Löschung braucht die Bestätigung eines Menschen, und selbst dann hat der Agent nur die Rechte des Kontos, das er nutzt. |
+| Ein Vertriebsmitarbeiter versuchte dieselbe Löschung über die API der App. | Abgelehnt. | Die Regel gilt für Menschen und Agents gleichermaßen. |
+| Der Agent setzte den Deal von „prospecting“ (Erstkontakt) auf „qualification“ (Qualifizierung), was Vertriebsmitarbeiter dürfen. | Eine Audit-Zeile: das Konto des Agents, der Deal, die Phase vorher und nachher. Die abgelehnten Löschungen hinterließen keine Zeile. | Sie können zeigen, was ein Agent wann geändert hat. Ablehnungen stehen nur im Server-Log. |
+| Der Vertriebsmitarbeiter wollte das Audit-Log lesen. | Abgelehnt. | Ein Vertriebsmitarbeiter kann nicht sehen, wer was getan hat; dazu braucht es eine Rolle, die das gewährt. |
+| Ein KI-Agent änderte die Dateien der App, sodass die Vertriebsrolle Deals löschen darf. | Die erste Prüfung der Dateien durch die Plattform bestand. Der Build stoppte mit einer Zeile, die die Änderung benennt, und blieb gestoppt, bis der Annahmebefehl ausgeführt wurde (in unserem Lauf vom selben Agenten; siehe die Grenzen unten). | Die Änderung kann nicht unbemerkt wirksam werden, aber ein Mensch muss die einzeilige Änderung, die das Annehmen erzeugt, noch prüfen. |
+
+Den Mechanismus hinter der letzten Prüfung erklären [Gehört Ihre Business-App in eine Datenbank oder in ein Repository?](/de/blog/where-should-a-business-app-definition-live/) und [Wie fängt man eine stille Rechteänderung einer AI ab, bevor sie ausgeliefert wird?](/de/blog/catch-ai-silent-permission-change-access-matrix-gate/) vollständig. Wie das Öffnen eines Datensatzes protokolliert wird und wo diese Aufzeichnung endet, steht in [Können Sie beweisen, wer einen Kundendatensatz geöffnet hat, auch ein AI-Agent?](/de/blog/prove-who-opened-a-customer-record-view-auditing/)
+
+## Was ObjectStack nicht tut
+
+- **Es beurteilt nicht, ob eine Änderung richtig ist.** Die erste Prüfung der Plattform ließ das Löschrecht kommentarlos durch. Der Build stoppte nur, weil diese Beispiel-App eine Zugriffstabelle führt. Eine neue App hat keine, bis Sie sie einschalten, und die automatischen Prüfungen, die ein neues Projekt mitbringt, führen die erste Prüfung aus, nicht den Build.
+- **Es hindert den Agenten nicht daran, seine eigene Änderung anzunehmen.** Annehmen ist ein Befehl, den jeder Mensch und jedes Programm mit Zugriff auf die Dateien ausführen kann. Zur Prüfung wird es erst, wenn diese einzeilige Änderung mit der Freigabe eines Menschen durch Ihren Pull-Request-Prozess geht.
+- **Es schreibt abgelehnte Versuche nicht ins Audit-Log.** Beide abgelehnten Löschungen erscheinen nur im Server-Log, einem anderen Ort als dem Audit-Log.
+- **Es unterscheidet keinen Agenten von einem Menschen.** Die Audit-Zeile nennt das Konto, dem der Zugriffsschlüssel des Agents gehört, und nichts in der Zeile sagt „KI“. Geben Sie jedem Agenten ein eigenes Konto, sonst schreibt das Log einer Person zu, was der Agent getan hat.
+- **Es hält nicht jede Änderung in Dateien fest.** Eine laufende Umgebung kann auch Änderungen aus ihren Admin-Oberflächen oder über ihre API halten, und diese haben Vorrang vor den Dateien. Welche Änderungen durch die Dateien gehen müssen, legen Sie per Richtlinie fest.
+- **Es ist jünger als beide Anbieter.** ObjectStacks eigene Vergleichsseite sagt: „ObjectStack is younger; expect to build more of it yourself.“ (ObjectStack ist jünger; rechnen Sie damit, mehr selbst zu bauen.)
+
+## Wie man wählt
+
+Retool und Lovable passen jeweils zu den oben beschriebenen Fällen. Schauen Sie sich eine dritte Option an, wenn die Person, die für die App geradesteht, wer-darf-was als kurze Tabelle statt als Code lesen und jede Änderung daran sehen muss, bevor sie wirkt. Für diesen Fall ist ObjectStack gebaut, mit den oben genannten Grenzen; um es an Ihrem eigenen Prozess zu testen, [richten Sie Ihren Agenten auf ObjectStack](/en/blog/how-to-point-your-agent-at-objectstack/).
+
+Welche Wahl Sie auch treffen: Stellen Sie dem Anbieter drei Fragen und bewahren Sie die Antworten auf.
+
+1. Wenn die KI ändert, wer was sehen oder tun darf: Was genau sieht die freigebende Person, bevor die Nutzer es bekommen?
+2. Kann die freigebende Person jemand anderes sein als die Person, die die Änderung gemacht hat?
+3. Welches Log beantwortet „was hat dieser Nutzer oder dieser Agent mit jenem Datensatz gemacht“, und wie lange wird es aufbewahrt?
+
+{/* the-proof */}
+## Der Beweis
+
+Alles Folgende wurde am 2026-11-17 gelesen oder ausgeführt.
+
+```text
+$ npm view @objectstack/cli dist-tags
+{ next: '18.5.0', latest: '18.5.0' }
+```
+
+### Quellen der Anbieter
+
+Jedes Zitat oben stammt von der hier aufgeführten Seite, gelesen am 17. November 2026 (Retools Berechtigungsseite „Free and Team“ um 04:34 UTC, der Rest zwischen 04:16 und 04:18 UTC). Angaben zu Tarifen stammen von der Preisseite des Anbieters oder von der Tarifkennzeichnung auf der Dokumentationsseite. Die Retool-Spalte beschreibt den KI-App-Builder („Apps“), nicht die klassischen Apps. Die Zitate bleiben als prüfbarer Beleg im englischen Original.
+
+**Retool**
+
+- [Introduction to apps](https://docs.retool.com/build/apps/concepts/intro): "The primary development experience of apps is by prompting an AI agent with natural language in threads." "Retool only explores and connects resources for which the user has Edit permission." "Enterprise users can also utilize Source Control to version apps and track changes using a git-based workflow." "Apps use resources to connect to your business data."
+- [App builder](https://docs.retool.com/build/apps/concepts/app-builder): "It is available to both internal users and builders, but only builders can publish apps."
+- [Permission levels](https://docs.retool.com/permissions/reference/permission-levels): Edit auf einer App bedeutet "Build and modify the app. Release, rename, export, delete the app."; Use bedeutet "Interact with the app as an end user. Cannot open the editor."
+- [Permissions on Free and Team plans](https://docs.retool.com/permissions/guides/free-and-team/): "On Free and Team plans, Retool provides a fixed set of default groups that control what users can do with apps, workflows, agents, and resources. You cannot create custom groups or configure role-based access control on these plans." In der Tabelle für diese Tarife hat die Gruppe All Users Edit auf Apps, Workflows und Agents und Own auf Resources, und "The following built-in permission groups cannot be modified or removed, and the access levels cannot be changed." "Business and Enterprise plan users have more granular control over groups, and can create their own custom groups."
+- [Publish an app](https://docs.retool.com/build/apps/guides/publishing): "You must be a builder to publish an app. Internal users can create apps, but they cannot publish them." Der Reiter Limitations beginnt mit "Limitations describe functionality that isn't yet supported in apps but may exist in classic apps." und nennt "Exported apps for use outside of Retool."
+- [Threads and branches](https://docs.retool.com/build/apps/concepts/threads-branches): "A branch is a set of changes to your app, associated with an app preview, and with its own change history. A branch is the unit of work that you publish."
+- [App security](https://docs.retool.com/build/apps/concepts/security): "The LLM cannot read or write any resource data the user is not already authorized to access." "The agent always requests permission from the builder to run functions that change data in your resources, such as those that write, create, insert, update, or delete data."
+- [Edit and publish protected apps](https://docs.retool.com/build/apps/guides/source-control/edit-publish): "Opening a pull request and integrating changes into the main branch of the repository creates a new published version of your app." Die Veröffentlichungs-Checkliste bestätigt "The shared preview is ready. This allows your PR reviewers to see your changes in an app preview." [Protect apps](https://docs.retool.com/build/apps/guides/source-control/protect-app): "Each protected app is stored as its own directory in your repository at the /apps-v2 path."
+- [Data](https://docs.retool.com/build/apps/concepts/data): "Users need Use access to a resource in an environment to run functions against it."
+- [Access policies](https://docs.retool.com/data-sources/concepts/access-policies): Richtlinien gelten für "every query Retool runs against the resource, including queries from apps, the query library, raw SQL, and agents." "Access policies apply only to PostgreSQL resources."
+- [Audit logs](https://docs.retool.com/org-users/guides/audit-logs): "Retool automatically logs user actions, such as query runs and password resets." Die Details umfassen "the exact query, the parameters passed". Ereignisse aus MCP tragen eine Markierung für "An AI client connected to Retool's MCP server." In der Cloud: "Audit logs are retained for one year."
+- [Pricing](https://retool.com/pricing), Tarifvergleichstabelle:
+  - "Rich permission controls" ("Grant data-level and role-based permissions for granular control over app and data access.") steht bei Free und Team auf „—“, bei Business und Enterprise auf „Included“.
+  - "Audit logs" ("Track every query run against your databases and APIs, as well as user actions taken in Retool.") steht bei Free und Team auf „—“, bei Business und Enterprise auf „Included“.
+  - "Source control" ("Use branch-based editing processes that are compatible with Git.") und „Custom SSO“ sind nur in Enterprise enthalten. Die Tarifkarten führen "Git source control" and "SSO, SCIM, 2FA" bei Business als „Not included“.
+  - Die Enterprise-Karte nennt "Retool Cloud, self-hosted, or air-gapped" and "Audit logs + streaming".
+
+**Lovable**
+
+- [Lovable for Enterprise](https://docs.lovable.dev/introduction/lovable-for-enterprise): "By default, project code lives in Lovable's managed infrastructure." Rollen: "All paid plans. Owner, admin, editor, viewer, and external-collaborator." "Quick scan runs on every publish and checks database access rules, dependencies, and MCP server exposure." Workspace-SSO ist gekennzeichnet mit "Business and Enterprise". Datenexporte: "Enterprise only. Scheduled exports of audit logs to Splunk, Azure Log Analytics, Amazon S3, Google Cloud Storage, or Azure Blob Storage." Geplante Deep-Scans, Freigabe von Veröffentlichungen und Audit-Logs sind gekennzeichnet mit "Enterprise only".
+- [Collaboration](https://docs.lovable.dev/features/collaboration): "By default, editors and above can publish projects on all plans." In der Tabelle der Projektberechtigungen steht „Edit project“ bei Viewer auf „No“ und bei Editor, Admin und Owner auf „Yes“. Workspace-Mitglieder "can see, edit, and publish the workspace's projects (unless a project's access is restricted)". "A draft's edits reach the project only when someone accepts it."
+- [Drafts](https://docs.lovable.dev/features/drafts): "Lovable shows you a one-line summary of what the draft changes, followed by the draft's edits." "Accepting can change your live app's backend immediately, before you publish."
+- [Workspace policies](https://docs.lovable.dev/features/workspace-policies): Die Richtlinien beschränken Veröffentlichungen „with unresolved sensitive data findings“, Veröffentlichungen „by external collaborators“, Veröffentlichungen, „that makes an app public“, die Veröffentlichung von „apps that use connectors“ und das Aktivieren von „Lovable backend services“. "When no policy applies, Lovable publishes the app or enables the backend without a review." "You cannot write your own conditions, choose different approvers, or send requests to specific people."
+- [Git sync](https://docs.lovable.dev/integrations/git-sync-overview): Zwei-Wege-Synchronisation mit github.com, GitLab.com und Bitbucket Cloud, jeweils gekennzeichnet mit "(all plans)". "If your team requires a pull or merge request for every change to `main`, switch Lovable to a feature branch of its own and merge its work through the same review process." "Lovable edits and syncs one branch at a time."
+- [Control who can access your app's data](https://docs.lovable.dev/features/database-access): "Lovable sets up these rules automatically when it builds features that store user data." "The policies view is read-only. To change a policy, ask Lovable in the project chat." "Your policies do not apply to `service_role`, so server code that uses `service_role` must check permissions itself."
+- [Built-in backend](https://docs.lovable.dev/features/cloud): "Lovable hosts your app and includes a built-in backend with database, authentication, storage, edge functions, and AI." Das eingebaute Backend wird abgegrenzt "as opposed to an external backend you connect yourself, such as Supabase".
+- [Audit logs](https://docs.lovable.dev/features/audit-logs): "Available on: Enterprise plans". Beispielereignisse sind „Prompt sent“ und „Database query executed“. "Logs are retained for 13 weeks, or approximately 90 days."
+- [Logs](https://docs.lovable.dev/features/logs), die Diagnose-Logs des Backends. FAQ-Frage: "Can I use these logs as audit evidence?" Antwort: "Not on their own. Logs help you diagnose problems, but they do not prove who made a particular database change."
+- [Deployment, hosting, and ownership options](https://docs.lovable.dev/tips-tricks/deployment-hosting-ownership): "Lovable is intentionally built so that **you are never locked in**. You can export your code, migrate your data, self-host parts or all of your stack, or move to another provider at any time." Wer Lovable nicht mehr nutzt, ist unter anderem verantwortlich für "Implementing authentication and enforcing data isolation policies".
+
+**ObjectStack-Dokumentation**, am Release-Tag 18.5.0 (Commit [`b914e72`](https://github.com/objectstack-ai/objectstack/commit/b914e7247f692a79804f9b7eba278add46d57625)): ["ObjectStack is younger; expect to build more of it yourself."](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/content/docs/concepts/compare.mdx#L115-L117) und ["Reads walk top-to-bottom: the first non-null layer wins. Writes always route to the topmost writable layer (the overlay)."](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/content/docs/concepts/metadata-lifecycle.mdx#L43); die Überlagerung (overlay) enthält Änderungen in einer laufenden Umgebung und liegt über den Dateien
+
+### Die App
+
+`examples/app-crm` aus dem ObjectStack-Repository am Tag `@objectstack/cli@18.5.0`, mit Abhängigkeiten, die auf die veröffentlichten 18.5.0-Pakete festgelegt sind. Ihre Sicherheitsdatei gibt der Position `crm_sales_rep` das Berechtigungsset `crm_sales_user`, das `crm_opportunity` (Deals) lesen, anlegen und bearbeiten, aber nicht löschen darf. Die App nutzt die Access-Matrix-Prüfung: Neben `objectstack.config.ts` liegt eine `access-matrix.json`.
+
+```text
+$ npx os --version
+@objectstack/cli/18.5.0 linux-x64 node-v22.22.0
+```
+
+### 1. Die Änderung der KI, die Ablehnung des Builds, der geprüfte Diff
+
+Die Änderung, in Zeile 50 von `src/security/sales-positions.ts`:
+
+```diff
+-    crm_opportunity: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: false },
++    crm_opportunity: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: true },
+```
+
+`npx os validate` gab `✓ Validation passed` mit vier unabhängigen Feldwarnungen aus und endete mit 0. `npx os compile` lief durch dieselben 68 Regeln zur Autorenzeit und dann:
+
+```text
+  → Checking access-matrix snapshot (ADR-0090 D6)...
+  ✗ Access matrix drift (1 change) — capability changes must be reviewed
+  • 'crm_sales_user' gains delete on 'crm_opportunity'
+  If intended, re-run with --update-access-matrix and commit the snapshot — its diff IS the review artifact.
+compile exit 1
+```
+
+Das Akzeptieren, `npx os compile --update-access-matrix`, endete mit 0 und `Access matrix snapshot written to access-matrix.json (ADR-0090 D6) — review the diff.` Der Diff des Snapshots:
+
+```diff
+@@ -51,7 +51,7 @@
+       "create": true,
+       "read": true,
+       "edit": true,
+-      "delete": false,
++      "delete": true,
+       "viewAllRecords": false,
+       "modifyAllRecords": false,
+       "sharingModel": "public_read_write"
+```
+
+Danach wurde die Änderung zurückgenommen, sodass die App unten mit dem ursprünglichen Berechtigungsset läuft.
+
+### 2. Die abgelehnten Löschungen
+
+Die App wurde mit `npx os dev --compile --no-watch` gestartet. Beim Start erschienen `Tenancy: single` und `Seeds: com.example.crm 28 rows`. Über die Admin-API wurden zwei Konten angelegt, `rep@crm.example` und `agent-svc@crm.example`, und beide erhielten die Position `crm_sales_rep`. Beide meldeten sich mit den Positionen `["org_member","crm_sales_rep","everyone"]` an. `agent-svc` erzeugte einen API-Schlüssel, die Identität, mit der sich ein KI-Agent verbindet.
+
+Der Vertriebsmitarbeiter, über die REST-API:
+
+```text
+$ curl -X DELETE -b rep.cookies http://localhost:49890/api/v1/data/crm_opportunity/CRePs-1Ar5tJyIQl
+{"error":"You do not have permission to perform this action. Contact your administrator if you need access.","code":"PERMISSION_DENIED","object":"crm_opportunity"}
+HTTP 403
+```
+
+Der Agent, über MCP mit seinem Schlüssel: `tools/call` `delete_record` `{ objectName: "crm_opportunity", recordId: "CRePs-1Ar5tJyIQl" }` antwortete zuerst:
+
+```json
+{ "error": { "code": "ACTION_CONFIRMATION_REQUIRED",
+  "message": "delete_record on 'crm_opportunity' record 'CRePs-1Ar5tJyIQl' carries no confirmation — nothing was deleted. A delete over MCP is permanent: confirm with the human in the loop, then retry this call with 'confirm': true on the request.",
+  "status": 428 } }
+```
+
+und, erneut gesendet mit `"confirm": true`:
+
+```json
+{ "error": { "code": "PERMISSION_DENIED",
+  "message": "You do not have permission to perform this action. Contact your administrator if you need access.",
+  "status": 403 } }
+```
+
+Das Server-Log zu den beiden Ablehnungen:
+
+```text
+WARN [Security] Access denied: operation 'delete' on object 'crm_opportunity' is not permitted for positions [org_member, crm_sales_rep, everyone] {"userId":"rs2E3SiqdiZ0yUKxlychP97F8jXH9LXO", …}
+WARN [Security] Access denied: operation 'delete' on object 'crm_opportunity' is not permitted for positions [org_member, crm_sales_rep, everyone] {"userId":"canMMQfNf6nm4XKqWnX727gPPnaWrtZI", …}
+```
+
+### 3. Die Änderung des Agents und ihre Audit-Zeile
+
+Über MCP lieferte `update_record` `{ objectName: "crm_opportunity", recordId: "CRePs-1Ar5tJyIQl", data: { stage: "qualification" } }` den Datensatz mit `"stage": "qualification"` und `"updated_by": "canMMQfNf6nm4XKqWnX727gPPnaWrtZI"` zurück, dem Konto des Agents. Die Abfrage des Admins im Audit-Log für `crm_opportunity` ergab danach `"total": 1`, diese Zeile:
+
+```json
+{
+  "created_at": "2026-11-17T04:20:41.516Z",
+  "action": "update",
+  "user_id": "canMMQfNf6nm4XKqWnX727gPPnaWrtZI",
+  "actor": "canMMQfNf6nm4XKqWnX727gPPnaWrtZI",
+  "object_name": "crm_opportunity",
+  "record_id": "CRePs-1Ar5tJyIQl",
+  "old_value": "{\"stage\":\"prospecting\"}",
+  "new_value": "{\"stage\":\"qualification\"}",
+  "ip_address": null,
+  "user_agent": null,
+  "tenant_id": "org_mwk6o8jvyc54copi",
+  "metadata": null
+}
+```
+
+Für keine der beiden abgelehnten Löschungen gibt es eine Zeile. Dieselbe Abfrage mit der Sitzung des Vertriebsmitarbeiters ergab `HTTP 403`.
+
+### 4. Ein neues Projekt hat keine Zugriffstabelle
+
+Das Paket `create-objectstack@18.5.0`, das `npm create objectstack@latest` heute ausführt, enthält in seiner Vorlage keine `access-matrix.json`, und der CI-Workflow der Vorlage führt `pnpm validate` aus, nicht den Build. Das erste `os compile --update-access-matrix` in einem neuen Projekt ist die Aktivierung.
