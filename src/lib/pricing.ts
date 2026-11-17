@@ -62,8 +62,9 @@ export interface ComparisonGroup {
 
 /**
  * The comparison table under the Self-hosted cards, in the maintainer's
- * short wording and order (2026-11-17: price, then what both editions have,
- * then what Enterprise adds; one line per row, ✓ / — or a few words). Every
+ * short wording and order (2026-11-17: price, then "Core platform", what
+ * both editions have, then "Enterprise adds"; one line per row, ✓ / — or a
+ * few words). Every
  * shipped row is sourced from the docs edition matrix and licensing pages
  * (docs.objectos.ai/docs/editions/compare, /docs/editions/license,
  * /docs/deploy/licensing, /docs/deploy/air-gapped, /docs/configure/mcp,
@@ -259,7 +260,7 @@ const pricingEn: PricingCopy = {
             ],
           },
           {
-            heading: 'In both editions',
+            heading: 'Core platform',
             rows: [
               {
                 id: 'data-modeling',
@@ -533,7 +534,7 @@ const pricingZhHans: PricingCopy = {
             ],
           },
           {
-            heading: '两个版本都有',
+            heading: '平台核心能力',
             rows: [
               {
                 id: 'data-modeling',
@@ -642,7 +643,7 @@ const pricingZhHans: PricingCopy = {
             ],
           },
           {
-            heading: '企业版增加',
+            heading: '企业版增值能力',
             rows: [
               {
                 id: 'in-app-ai',
