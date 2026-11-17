@@ -13,7 +13,7 @@ export default ({ C, person, agent, box, line, arrow, tile, DOTTED }) => {
   ]);
   return [
     person(262, 280, { s: 0.98, withFace: true }),
-    line('M352 330C378 330 398 324 422 316', C.ink, 9, DOTTED),
+    line('M352 330C378 330 398 324 422 316', C.ink, 15, DOTTED),
     tile(446, 120, 308, 420, { color: C.brand, tint: C.brandTint, deg: -2, inner }),
     agent(944, 284, { s: 0.94 }),
     arrow('M872 300C842 300 826 290 812 282'),
