@@ -1,6 +1,6 @@
 import { s2t } from './zhconvert';
 import type { Locale } from './i18n';
-import { CLOUD_SIGNUP_URL, positioning } from './positioning';
+import { CLOUD_SIGNUP_URL } from './positioning';
 import { CONTACT_URL } from './contact';
 
 export interface PricingPlan {
@@ -21,6 +21,83 @@ export interface PricingPlan {
   highlight?: boolean;
 }
 
+/**
+ * One cell of the edition comparison. `mark` draws ✓ (`yes`) or — (`no`)
+ * with a spoken label; `text` is the qualifier beside it, or the whole cell
+ * when there is no mark.
+ */
+export interface ComparisonCell {
+  mark?: 'yes' | 'no';
+  text?: string;
+}
+
+/**
+ * One row of the Community | ObjectOS Enterprise comparison. `id` is stable
+ * across locales, so a row the maintainer re-rules (wording, or which column
+ * holds it) is found by id in both copies.
+ */
+export interface ComparisonRow {
+  id: string;
+  feature: string;
+  /** A marketing page slug the feature name links to, resolved per locale. */
+  link?: string;
+  community: ComparisonCell;
+  enterprise: ComparisonCell;
+}
+
+/** A roadmap row: an Enterprise feature that has not shipped, no date. */
+export interface RoadmapRow {
+  id: string;
+  feature: string;
+  status: 'soon' | 'dev';
+}
+
+/** A run of rows under an optional sub-heading row. */
+export interface ComparisonGroup {
+  heading?: string;
+  rows: ComparisonRow[];
+}
+
+/**
+ * The comparison table under the Self-hosted cards, in the maintainer's
+ * short wording and order (2026-11-17: price, then what both editions have,
+ * then what Enterprise adds; one line per row, ✓ / — or a few words). Every
+ * shipped row is sourced from the docs edition matrix and licensing pages
+ * (docs.objectos.ai/docs/editions/compare, /docs/editions/license,
+ * /docs/deploy/licensing, /docs/deploy/air-gapped, /docs/configure/mcp,
+ * /docs/configure/permissions/hierarchy-visibility, /docs/operate/audit-logs).
+ * Several organizations on one deployment is Community ✓ by the
+ * maintainer's ruling of 2026-11-17, which wins over the docs until they are
+ * corrected. Single sign-on and SCIM (maintainer, 2026-11-17) are one
+ * "Enterprise adds" row whose Community cell is left empty, never —:
+ * nothing here says Community lacks them. `roadmap` holds what has not shipped:
+ * "Coming soon", Enterprise features in the product but not yet in the
+ * docs, and "In development", roadmap items (two of them are the ones the
+ * connect-existing-systems page lists); all are published with no date
+ * (maintainer, 2026-11-17), and none says external MCP calls are in the AI
+ * audit today. The two "Connect existing systems" rows link to that page.
+ */
+export interface PricingComparison {
+  title: string;
+  featureHeader: string;
+  communityHeader: string;
+  enterpriseHeader: string;
+  /** Spoken labels for the ✓ and — marks; the visible status chips. */
+  yesLabel: string;
+  noLabel: string;
+  soonLabel: string;
+  devLabel: string;
+  groups: ComparisonGroup[];
+  /**
+   * The second, smaller table under the main one, with an Enterprise column
+   * only: what has not shipped, each "Coming soon" or "In development".
+   */
+  roadmap: { title: string; rows: RoadmapRow[] };
+  footer: string;
+  footerLinkLabel: string;
+  footerHref: string;
+}
+
 /** One deployment tab of the pricing page: its own intro, plans and billing note. */
 export interface PricingTab {
   /** The switch label: "ObjectOS Cloud", "Self-hosted". */
@@ -28,6 +105,8 @@ export interface PricingTab {
   intro: string;
   billingNote: string;
   plans: PricingPlan[];
+  /** The edition comparison under the cards (Self-hosted only). */
+  comparison?: PricingComparison;
 }
 
 export interface PricingCopy {
@@ -48,7 +127,7 @@ export interface PricingCopy {
 
 // CTA targets. The Free and Team buttons open the ObjectOS Cloud sign-up page;
 // Enterprise opens the locale's /contact/ page (#397), which names sales@ —
-// the address the public licence page (docs.objectos.ai/docs/resources/license)
+// the address the public licence page (docs.objectos.ai/docs/editions/license)
 // names for "contact sales" on Enterprise and OEM terms — beside support@, the
 // billing and refunds address. Enterprise shows no price and no buy button: it
 // is sold by contract only (cloud#3844 D9, cloud#3583).
@@ -57,6 +136,11 @@ const CONTACT = (locale: Locale): string => CONTACT_URL[locale];
 // ObjectOS Community has no checkout: its button goes to the objectstack
 // deployment docs (the runtime image and `os start` live in that repository).
 const COMMUNITY = 'https://objectstack.ai/docs/deployment';
+const COMPARE_DOCS = 'https://docs.objectos.ai/docs/editions/compare';
+
+const yes = (text?: string): ComparisonCell => ({ mark: 'yes', text });
+const no = (text?: string): ComparisonCell => ({ mark: 'no', text });
+const text = (t: string): ComparisonCell => ({ text: t });
 
 // Prices/quotas mirror the product's source of truth:
 // cloud `packages/service-cloud/src/plan-entitlements.ts` (PLAN_PRICING +
@@ -65,15 +149,16 @@ const COMMUNITY = 'https://objectstack.ai/docs/deployment';
 // the headline is the annual-billed price; monthly is shown as the alt price.
 const pricingEn: PricingCopy = {
   title: 'Pricing',
-  description: `Straightforward pricing for ${positioning.en.descriptor}. Pay for AI seats only; viewers and non-AI users are free.`,
+  description:
+    "ObjectOS pricing: Community is free and open source, Cloud is free or billed per AI seat, and Enterprise is licensed per AI user. People who don't use the in-app AI are free.",
   switchLabel: 'Deployment',
   tabs: {
     cloud: {
       label: 'ObjectOS Cloud',
       intro:
-        'Start on the free plan and upgrade when you need more. Paid plans are billed per AI seat: you pay for the people who use AI, while viewers and non-AI users stay free. On Cloud, one organization has one environment and many apps; complex apps use source-level development (os dev + Git) and package install.',
+        "ObjectOS Cloud is ObjectOS hosted for you: sign up and build in the browser, with nothing to install. Start free; on Team you pay per AI seat, and everyone who doesn't use the in-app AI is free.",
       billingNote:
-        'Prices are in USD per AI seat. The headline price is billed annually (about two months free); monthly billing is also available. Cancel anytime. Exact quotas are shown in the app and at checkout. ObjectOS Cloud is Free and Team.',
+        'Prices in USD. Annual billing saves about two months; cancel anytime, and your data stays. Cloud has no Enterprise plan — for a private deployment, see Self-hosted.',
       plans: [
         {
           name: 'Free',
@@ -111,41 +196,220 @@ const pricingEn: PricingCopy = {
     selfHosted: {
       label: 'Self-hosted',
       intro:
-        'Prefer to run it yourself? ObjectOS Community is the open-source runtime and Console, self-hosted and free under Apache-2.0: bring your own AI through MCP, author metadata as source files, and review changes as diffs. ObjectStack is the open protocol it runs. ObjectOS Cloud and Enterprise add hosting or a licensed private deployment, the in-app AI Build and Ask experience, and commercial support; single sign-on with your own identity provider is open source and free.',
+        'Run ObjectOS on your own servers. ObjectOS Community is open source and free; ObjectOS Enterprise is the licensed edition, sold by annual contract.',
       billingNote:
-        'ObjectOS Enterprise is one edition, a private deployment on your own infrastructure, and has no public price: it is licensed per AI user per year, with a 25-user minimum, by contract with invoice payment — contact sales.',
+        "Enterprise is priced per AI user, with a 25-user minimum, billed annually by invoice; there is no public price. People who don't use the in-app AI are free; an agent that connects over MCP with its own API key counts as one AI user.",
       plans: [
         {
           name: 'Community',
           price: 'Free',
           cadence: 'self-hosted',
-          tagline: 'The open-source runtime and Console, on your own infrastructure.',
+          tagline: 'The open-source edition: build, run and self-host your apps for free.',
           features: [
-            'Apache-2.0, free forever — no seats, no license key',
-            'Runtime, Console, permissions and sharing, audit',
-            'AI through MCP — bring your own model',
-            'Every protocol capability of ObjectStack',
-            'Docker image or npm create objectstack@latest; community support',
+            'Apache-2.0, free forever, no license key',
+            'Build apps and ask your data with your own AI through MCP',
+            'Community support',
           ],
           cta: 'Run it yourself',
           ctaHref: COMMUNITY,
         },
         {
-          name: 'Enterprise',
+          name: 'ObjectOS Enterprise',
           price: 'Contact sales',
-          tagline: 'For organizations that run ObjectOS on their own infrastructure, including air-gapped, with AI governance and hierarchy-based record access.',
+          tagline: 'For organizations that want the in-app AI and enterprise controls on their own infrastructure.',
           features: [
-            'One edition: a private deployment on your own infrastructure, including air-gapped',
-            'Every feature included; bring your own model or key',
-            'Licensed per AI user, 25-user minimum, by contract',
-            'SCIM 2.0 provisioning, enabled by default',
-            'High availability (HA): in development, not yet offered',
-            'Priority and SLA support by contract',
+            'Everything in Community, plus the in-app AI (preview) and AI governance',
+            'Single sign-on (OIDC, SAML 2.0) and SCIM 2.0 provisioning, on by default, with our support; a SCIM provisioning console is coming soon',
+            'Standard support; priority and SLA by contract',
           ],
           cta: 'Contact sales',
           ctaHref: CONTACT,
         },
       ],
+      comparison: {
+        title: 'Community and ObjectOS Enterprise compared',
+        featureHeader: 'Feature',
+        communityHeader: 'Community',
+        enterpriseHeader: 'ObjectOS Enterprise',
+        yesLabel: 'Included',
+        noLabel: 'Not included',
+        soonLabel: 'Coming soon',
+        devLabel: 'In development',
+        groups: [
+          {
+            rows: [
+              {
+                id: 'price',
+                feature: 'Price',
+                community: text('Free (Apache-2.0)'),
+                enterprise: text('Per AI user, yearly, 25 minimum'),
+              },
+            ],
+          },
+          {
+            heading: 'In both editions',
+            rows: [
+              {
+                id: 'data-modeling',
+                feature: 'Data modeling: objects, fields, relationships, formulas, validation',
+                community: yes(),
+                enterprise: yes(),
+              },
+              {
+                id: 'app-ui',
+                feature: 'App UI: views, forms, pages, buttons',
+                community: yes(),
+                enterprise: yes(),
+              },
+              {
+                id: 'dashboards-reports',
+                feature: 'Dashboards and reports',
+                community: yes(),
+                enterprise: yes(),
+              },
+              {
+                id: 'packages',
+                feature: 'Packages, templates and marketplace',
+                community: yes(),
+                enterprise: yes(),
+              },
+              {
+                id: 'integration',
+                feature: 'REST API, webhooks, email and notifications',
+                community: yes(),
+                enterprise: yes(),
+              },
+              {
+                id: 'localization',
+                feature: 'Multiple languages',
+                community: yes(),
+                enterprise: yes(),
+              },
+              {
+                id: 'mcp-build',
+                feature: 'Build apps with your own AI over MCP',
+                community: yes(),
+                enterprise: yes(),
+              },
+              {
+                id: 'mcp-ask',
+                feature: 'Ask your data with your own AI over MCP',
+                community: yes(),
+                enterprise: yes(),
+              },
+              {
+                id: 'record-security',
+                feature: 'Record- and field-level security',
+                community: yes(),
+                enterprise: yes(),
+              },
+              {
+                id: 'audit',
+                feature: 'Audit log and field history',
+                community: yes(),
+                enterprise: yes(),
+              },
+              {
+                id: 'automation',
+                feature: 'Approvals and scheduled flows',
+                community: yes(),
+                enterprise: yes(),
+              },
+              {
+                id: 'federation',
+                feature: 'Connect an existing database (read-only by default)',
+                link: 'connect-existing-systems',
+                community: yes(),
+                enterprise: yes(),
+              },
+              {
+                id: 'sync-in',
+                feature: 'One-way sync from external systems',
+                link: 'connect-existing-systems',
+                community: yes(),
+                enterprise: yes(),
+              },
+              {
+                id: 'multi-tenancy',
+                feature: 'Multi-tenancy on one database',
+                community: yes(),
+                enterprise: yes(),
+              },
+              {
+                id: 'offline',
+                feature: 'Offline operation',
+                community: yes(),
+                enterprise: yes('(air-gap license, by contract)'),
+              },
+              {
+                id: 'high-availability',
+                feature: 'High availability',
+                community: text('One node + backup/restore'),
+                enterprise: text('One node + backup/restore; multi-replica preview'),
+              },
+              {
+                id: 'support',
+                feature: 'Support',
+                community: text('Community'),
+                enterprise: text('Standard; priority and SLA by contract'),
+              },
+            ],
+          },
+          {
+            heading: 'Enterprise adds',
+            rows: [
+              {
+                id: 'in-app-ai',
+                feature: 'In-app AI Builder and Ask',
+                community: no(),
+                enterprise: yes('(preview)'),
+              },
+              {
+                id: 'ai-governance',
+                feature: 'AI governance: call audit, permission checks, field masking',
+                community: no(),
+                enterprise: yes(),
+              },
+              {
+                id: 'hierarchy-security',
+                feature: 'Visibility by org hierarchy',
+                community: no(),
+                enterprise: yes(),
+              },
+              {
+                id: 'sso-scim',
+                feature: 'Single sign-on and SCIM, on by default, with our support',
+                community: {},
+                enterprise: yes(),
+              },
+              {
+                id: 'customer-managed-keys',
+                feature: 'Customer-managed keys',
+                community: no(),
+                enterprise: yes(),
+              },
+            ],
+          },
+        ],
+        roadmap: {
+          title: 'Enterprise roadmap',
+          rows: [
+            { id: 'audit-export', feature: 'Audit export and SIEM streaming', status: 'soon' },
+            { id: 'access-policy-console', feature: 'Access-policy console', status: 'soon' },
+            { id: 'ai-tracing-reports', feature: 'AI call tracing and governance reports', status: 'soon' },
+            { id: 'ai-usage-inventory', feature: 'AI usage inventory', status: 'soon' },
+            { id: 'ai-write-approval', feature: 'AI writes approved by risk', status: 'soon' },
+            { id: 'scim-console', feature: 'SCIM console', status: 'soon' },
+            { id: 'data-markings', feature: 'Data markings and purpose limits', status: 'dev' },
+            { id: 'record-lineage', feature: 'Record-level lineage', status: 'dev' },
+            { id: 'ai-workforce-console', feature: 'AI workforce console', status: 'dev' },
+            { id: 'external-ai-approval', feature: "A person approves an external AI's irreversible actions", status: 'dev' },
+          ],
+        },
+        footer: 'The full matrix is in the docs:',
+        footerLinkLabel: 'Compare editions',
+        footerHref: COMPARE_DOCS,
+      },
     },
   },
   morNote:
@@ -155,15 +419,16 @@ const pricingEn: PricingCopy = {
 
 const pricingZhHans: PricingCopy = {
   title: '定价',
-  description: `${positioning['zh-Hans'].descriptor} 的定价：按 AI 席位计费，只为使用 AI 的人付费，查看者与非 AI 用户免费。`,
+  description:
+    'ObjectOS 定价：Community 开源免费；Cloud 有免费方案，付费方案按 AI 席位计费；ObjectOS 企业版按 AI 用户数授权。不使用产品内 AI 的人免费。',
   switchLabel: '部署方式',
   tabs: {
     cloud: {
       label: 'ObjectOS Cloud',
       intro:
-        '从 Free（免费方案）开始，需要更多时再升级。付费套餐按 AI 席位计费——只为真正使用 AI 的人付费；查看者与非 AI 用户免费。在 Cloud 上，一个组织对应一个环境、多个应用；复杂应用使用源码级开发（os dev + Git）和包安装。',
+        'ObjectOS Cloud 是我们为你托管的 ObjectOS：注册后直接在浏览器里搭建，无需安装。从免费方案开始；Team 方案按 AI 席位计费，不使用产品内 AI 的人免费。',
       billingNote:
-        '价格以美元计，按 AI 席位计费。标价为年付价（约省两个月）；也可选择月付。可随时取消。具体配额在应用内和结账时显示。ObjectOS Cloud 包含 Free（免费）与 Team（团队）两个方案。',
+        '价格以美元计。年付约省两个月；可随时取消，数据保留。Cloud 没有企业版方案——需要私有部署，请看「私有部署」页签。',
       plans: [
         {
           name: 'Free',
@@ -201,41 +466,216 @@ const pricingZhHans: PricingCopy = {
     selfHosted: {
       label: '私有部署',
       intro:
-        '想自己运行？ObjectOS Community（开源自托管）是开源的运行时与 Console，自托管、免费，采用 Apache-2.0：经 MCP 自带 AI，以源码方式编写元数据并审阅 diff。ObjectStack 是它运行的开放协议。ObjectOS Cloud（托管版）与 ObjectOS 企业版（私有部署）在此之上增加托管或带许可的私有部署、产品内 AI Build 与 Ask，以及商业支持；对接你自己身份提供商的单点登录是开源能力，免费提供。',
+        '在你自己的服务器上运行 ObjectOS。ObjectOS Community 开源免费；ObjectOS 企业版（私有部署）是需要许可的版本，按年度合同销售。',
       billingNote:
-        'ObjectOS 企业版只有一个版本，即部署在你自己基础设施上的私有部署，不公开报价：按 AI 用户数年付，最低 25 人起，通过合同购买、开票付款——请联系销售。',
+        'ObjectOS 企业版按 AI 用户数计价，最低 25 人，按年开票付款，不公开报价。不使用产品内 AI 的人免费；以自己的 API 密钥经 MCP 接入的 Agent 计为一个 AI 用户。',
       plans: [
         {
           name: 'Community',
           price: '免费',
           cadence: '自托管',
-          tagline: '开源的运行时与 Console，部署在你自己的基础设施上。',
-          features: [
-            'Apache-2.0，永久免费——无席位、无许可证密钥',
-            '运行时、Console、权限与共享、审计',
-            'AI 经 MCP — 自带模型',
-            'ObjectStack 协议的全部能力',
-            'Docker 镜像或 npm create objectstack@latest；社区支持',
-          ],
+          tagline: '开源版本：免费搭建、运行并自托管你的应用。',
+          features: ['Apache-2.0，永久免费，无需许可证密钥', '用你自己的 AI 通过 MCP 搭建应用、问数据', '社区支持'],
           cta: '自己运行',
           ctaHref: COMMUNITY,
         },
         {
           name: 'ObjectOS 企业版',
           price: '联系销售',
-          tagline: '面向在自己基础设施上运行 ObjectOS 的组织，含离线隔离部署，提供 AI 治理与按组织架构控制记录可见范围。',
+          tagline: '面向要在自己基础设施上使用产品内 AI 与企业级管控的组织。',
           features: [
-            '只有一个版本：部署在你自己基础设施上的私有部署，含离线隔离（air-gap）',
-            '功能全部包含；自带模型或密钥',
-            '按 AI 用户数授权，最低 25 人起，通过合同购买',
-            '默认开启的 SCIM 2.0',
-            '高可用（HA）：开发中，暂不提供',
-            '优先支持与 SLA 支持按合同提供',
+            'Community 的全部能力，另加产品内 AI（预览版）与 AI 治理',
+            '单点登录（OIDC、SAML 2.0）与 SCIM 2.0 用户同步，默认开启，享官方支持；SCIM 用户同步管理台即将发布',
+            '标准支持；优先支持与 SLA 按合同提供',
           ],
           cta: '联系销售',
           ctaHref: CONTACT,
         },
       ],
+      comparison: {
+        title: 'Community 与 ObjectOS 企业版对比',
+        featureHeader: '功能',
+        communityHeader: 'Community',
+        enterpriseHeader: 'ObjectOS 企业版',
+        yesLabel: '包含',
+        noLabel: '不包含',
+        soonLabel: '即将发布',
+        devLabel: '开发中',
+        groups: [
+          {
+            rows: [
+              {
+                id: 'price',
+                feature: '价格',
+                community: text('免费（Apache-2.0）'),
+                enterprise: text('按 AI 用户年付，25 人起'),
+              },
+            ],
+          },
+          {
+            heading: '两个版本都有',
+            rows: [
+              {
+                id: 'data-modeling',
+                feature: '数据建模：对象、字段、关系、公式、校验',
+                community: yes(),
+                enterprise: yes(),
+              },
+              {
+                id: 'app-ui',
+                feature: '应用界面：视图、表单、页面、按钮',
+                community: yes(),
+                enterprise: yes(),
+              },
+              {
+                id: 'dashboards-reports',
+                feature: '仪表盘与报表',
+                community: yes(),
+                enterprise: yes(),
+              },
+              {
+                id: 'packages',
+                feature: '应用包、模板与市场',
+                community: yes(),
+                enterprise: yes(),
+              },
+              {
+                id: 'integration',
+                feature: 'REST API、Webhook、邮件与通知',
+                community: yes(),
+                enterprise: yes(),
+              },
+              {
+                id: 'localization',
+                feature: '多语言',
+                community: yes(),
+                enterprise: yes(),
+              },
+              {
+                id: 'mcp-build',
+                feature: '用你自己的 AI 经 MCP 搭建应用',
+                community: yes(),
+                enterprise: yes(),
+              },
+              {
+                id: 'mcp-ask',
+                feature: '用你自己的 AI 经 MCP 问数据',
+                community: yes(),
+                enterprise: yes(),
+              },
+              {
+                id: 'record-security',
+                feature: '记录级、字段级安全',
+                community: yes(),
+                enterprise: yes(),
+              },
+              {
+                id: 'audit',
+                feature: '审计日志与字段历史',
+                community: yes(),
+                enterprise: yes(),
+              },
+              {
+                id: 'automation',
+                feature: '审批与定时流程',
+                community: yes(),
+                enterprise: yes(),
+              },
+              {
+                id: 'federation',
+                feature: '直连现有数据库（默认只读）',
+                link: 'connect-existing-systems',
+                community: yes(),
+                enterprise: yes(),
+              },
+              {
+                id: 'sync-in',
+                feature: '外部系统单向同步',
+                link: 'connect-existing-systems',
+                community: yes(),
+                enterprise: yes(),
+              },
+              {
+                id: 'multi-tenancy',
+                feature: '单库多租户',
+                community: yes(),
+                enterprise: yes(),
+              },
+              {
+                id: 'offline',
+                feature: '离线运行',
+                community: yes(),
+                enterprise: yes('（离线许可，按合同）'),
+              },
+              {
+                id: 'high-availability',
+                feature: '高可用',
+                community: text('单节点 + 备份恢复'),
+                enterprise: text('单节点 + 备份恢复；多副本预览'),
+              },
+              {
+                id: 'support',
+                feature: '支持',
+                community: text('社区'),
+                enterprise: text('标准；优先与 SLA 按合同'),
+              },
+            ],
+          },
+          {
+            heading: '企业版增加',
+            rows: [
+              {
+                id: 'in-app-ai',
+                feature: '产品内 AI Builder 与问数据',
+                community: no(),
+                enterprise: yes('（预览）'),
+              },
+              {
+                id: 'ai-governance',
+                feature: 'AI 治理：调用审计、权限校验、敏感字段脱敏',
+                community: no(),
+                enterprise: yes(),
+              },
+              {
+                id: 'hierarchy-security',
+                feature: '按组织架构控制可见范围',
+                community: no(),
+                enterprise: yes(),
+              },
+              {
+                id: 'sso-scim',
+                feature: '单点登录与 SCIM，默认开启，享官方支持',
+                community: {},
+                enterprise: yes(),
+              },
+              {
+                id: 'customer-managed-keys',
+                feature: '客户自管密钥',
+                community: no(),
+                enterprise: yes(),
+              },
+            ],
+          },
+        ],
+        roadmap: {
+          title: '企业版路线',
+          rows: [
+            { id: 'audit-export', feature: '审计导出与 SIEM 推送', status: 'soon' },
+            { id: 'access-policy-console', feature: '访问策略控制台', status: 'soon' },
+            { id: 'ai-tracing-reports', feature: 'AI 调用追踪与治理报告', status: 'soon' },
+            { id: 'ai-usage-inventory', feature: 'AI 用量清单', status: 'soon' },
+            { id: 'ai-write-approval', feature: 'AI 写入按风险审批', status: 'soon' },
+            { id: 'scim-console', feature: 'SCIM 管理台', status: 'soon' },
+            { id: 'data-markings', feature: '数据密级标签与用途限制', status: 'dev' },
+            { id: 'record-lineage', feature: '记录级血缘', status: 'dev' },
+            { id: 'ai-workforce-console', feature: 'AI 员工控制台', status: 'dev' },
+            { id: 'external-ai-approval', feature: '外部 AI 不可逆操作须真人批准', status: 'dev' },
+          ],
+        },
+        footer: '完整对照表见文档：',
+        footerLinkLabel: '版本对比',
+        footerHref: COMPARE_DOCS,
+      },
     },
   },
   morNote:
@@ -255,11 +695,48 @@ const planToHant = (plan: PricingPlan): PricingPlan => ({
   cta: s2t(plan.cta),
 });
 
+const cellToHant = (cell: ComparisonCell): ComparisonCell => ({
+  ...cell,
+  text: cell.text ? s2t(cell.text) : undefined,
+});
+
+const rowToHant = (row: ComparisonRow): ComparisonRow => ({
+  ...row,
+  feature: s2t(row.feature),
+  community: cellToHant(row.community),
+  enterprise: cellToHant(row.enterprise),
+});
+
+const groupToHant = (g: ComparisonGroup): ComparisonGroup => ({
+  heading: g.heading ? s2t(g.heading) : undefined,
+  rows: g.rows.map(rowToHant),
+});
+
+const comparisonToHant = (c: PricingComparison): PricingComparison => ({
+  title: s2t(c.title),
+  featureHeader: s2t(c.featureHeader),
+  communityHeader: s2t(c.communityHeader),
+  enterpriseHeader: s2t(c.enterpriseHeader),
+  yesLabel: s2t(c.yesLabel),
+  noLabel: s2t(c.noLabel),
+  soonLabel: s2t(c.soonLabel),
+  devLabel: s2t(c.devLabel),
+  groups: c.groups.map(groupToHant),
+  roadmap: {
+    title: s2t(c.roadmap.title),
+    rows: c.roadmap.rows.map((r) => ({ ...r, feature: s2t(r.feature) })),
+  },
+  footer: s2t(c.footer),
+  footerLinkLabel: s2t(c.footerLinkLabel),
+  footerHref: c.footerHref,
+});
+
 const tabToHant = (tab: PricingTab): PricingTab => ({
   label: s2t(tab.label),
   intro: s2t(tab.intro),
   billingNote: s2t(tab.billingNote),
   plans: tab.plans.map(planToHant),
+  comparison: tab.comparison ? comparisonToHant(tab.comparison) : undefined,
 });
 
 const toHant = (p: PricingCopy): PricingCopy => ({
