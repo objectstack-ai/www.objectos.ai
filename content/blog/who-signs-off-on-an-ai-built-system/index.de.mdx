@@ -1,0 +1,469 @@
+---
+title: "Wer zeichnet ein von KI gebautes System ab, und was unterschreibt er dabei?"
+description: "Die Fachverantwortlichen unterschreiben ein Blatt, nicht den Code: wer welche Datensätze sieht, wer was genehmigt, was nach außen offen ist, was protokolliert wird. Erzeugt aus einem CRM auf ObjectStack 18.5.0."
+author: ObjectStack Team
+date: 2026-11-27
+status: published
+topic: governance
+audience: business
+solutions:
+  - crm
+industries: []
+cover: ./cover.svg
+tags:
+  - Abnahme
+  - KI-Governance
+  - Genehmigungen
+  - Audit-Trail
+---
+
+**Die kurze Antwort.** Die Leitung der Abteilung, die mit dem System arbeitet, zeichnet es ab, und sie unterschreibt eine Seite, nicht den Code. Diese Seite, das **Abnahmeblatt**, hält vier Dinge fest: wer welche Datensätze sehen und ändern kann, wer was genehmigen kann, was nach außen offen ist und was protokolliert wird. Verlangen Sie es vor dem Go-live und nach jeder KI-Änderung, und lesen Sie nur die geänderten Zeilen. Unterschreibt niemand, hat die KI diese Entscheidungen für Sie getroffen. Das Blatt beweist nicht, dass das System läuft, die Daten sauber sind oder die Logik stimmt: Das muss weiterhin ein Mensch testen.
+
+*Gemessen auf ObjectStack 18.5.0, dem neuesten Release am 17. November 2026, mit dem CRM-Beispiel, das damit ausgeliefert wird. Alle Befehle und Rohausgaben stehen unter [Der Beweis](#der-beweis).*
+
+## Abnahme ist kein Code-Review
+
+Wenn ein KI-Coding-Agent ein internes System baut, stellen sich zwei verschiedene Fragen, und dafür braucht es zwei verschiedene Menschen.
+
+Eine Entwicklerin oder ein Reviewer, der [die Review-Checkliste für KI-generierte App-Änderungen](/en/blog/how-to-review-ai-generated-app-changes/) durchgeht, beantwortet: *Ist das richtig gebaut?*
+
+Die fachlich Verantwortlichen beantworten: *Ist das, was wir erlauben?* Wer in meinem Team darf den Datensatz eines Kunden öffnen, wer darf einem Deal 35 % Rabatt geben, was kann ein Fremder auf der Website tun, und was können wir nächstes Jahr der Prüfung vorlegen. Wenn niemand diese Fragen beantwortet, beantwortet ein KI-Agent sie alle für Sie, denn ein laufendes System kann sie nicht offen lassen.
+
+Also unterschreiben die Verantwortlichen eine Aufstellung dieser Entscheidungen, in ihrer Sprache, erzeugt aus dem System selbst. Diese Aufstellung ist das Blatt.
+
+## Das Blatt vor jeder Änderung
+
+Hier ist das Blatt für das CRM-Beispiel im Auslieferungszustand. Teil 1 und 2 wurden aus der eigenen Definition der App gelesen, ebenso die Felder des Kontaktformulars und die Zeile zum Feldverlauf. Der Rest wurde am laufenden System ausprobiert und bestätigt. Wo es zu einem Teil einen eigenen ausführlichen Beitrag gibt, ist er verlinkt.
+
+### 1. Wer welche Datensätze und Felder sehen und ändern kann
+
+Eine App, die sich dafür entschieden hat, führt einen **Zugriffsmatrix-Snapshot**: eine gespeicherte Tabelle, was jede Rolle mit jeder Art von Datensatz tun darf. Jeder Build erzeugt die Tabelle neu und bricht ab, wenn sie von der gespeicherten Kopie abweicht, bis ein Mensch die Änderung annimmt ([wie der Snapshot eine stille Berechtigungsänderung erkennt](/de/blog/catch-ai-silent-permission-change-access-matrix-gate/)). In Klartext übersetzt, mit den Rollen (die Plattform nennt sie Positionen) als Zeilen, sagt der Snapshot des CRM Folgendes (die letzte Zeile ist der eingebaute Administrator der Plattform, den der Snapshot nicht aufführt):
+
+| Rolle | Darf sehen | Darf anlegen und bearbeiten | Darf löschen | Wessen Datensätze | Feldbeschränkungen |
+|:--|:--|:--|:--|:--|:--|
+| Vertriebsmitarbeiter | Accounts, Kontakte, Leads, Deals, Deal-Positionen, Aktivitäten | dieselben sechs | nichts | die aller | keine |
+| Vertriebsleiter | wie ein Vertriebsmitarbeiter | dasselbe | nichts | die aller | keine |
+| Finanzfreigabe | wie ein Vertriebsmitarbeiter | dasselbe | nichts | die aller | keine |
+| Website-Besucher (nicht angemeldet) | nichts | einen neuen Lead, nur über das Kontaktformular | nichts | keine | fünf Felder (Teil 3) |
+| Administrator | alle Datensätze, dazu die Einrichtung | alle Datensätze | alle Datensätze (laut Beschreibung der Plattform; wir haben einen gelöscht) | die aller | keine |
+
+**Was beim Unterschreiben auffallen sollte:** Die drei Mitarbeiterrollen sind identisch. Eine Vertriebsleiterin kann nichts, was ein Vertriebsmitarbeiter nicht auch kann, ein Vertriebsmitarbeiter kann jeden Deal im Unternehmen bearbeiten und nicht nur die eigenen, und kein Feld eines Datensatzes ist vor jemandem verborgen, der ihn öffnen kann. Für ein kleines Team mag das alles in Ordnung sein. Es bleibt eine Entscheidung, und in dieser Tabelle treffen Sie sie oder bemerken, dass jemand sie ohne Sie getroffen hat.
+
+### 2. Wer was genehmigen kann
+
+Ein **Genehmigungsschritt** ist eine Stelle, an der das System eine Änderung anhält und auf das Ja oder Nein einer benannten Rolle wartet.
+
+| Was eine Genehmigung braucht | Wer genehmigt | Anmerkung |
+|:--|:--|:--|
+| Nichts | — | Eine Rolle heißt Finanzfreigabe und ist beschrieben als „berechtigt, Rabatte über 30 % zu genehmigen“, aber es gibt keinen Genehmigungsschritt. |
+
+**Was beim Unterschreiben auffallen sollte:** eine Rolle, deren Beschreibung eine Kontrolle verspricht, die das System nicht hat. Wir haben es ausprobiert: Der Rabatt eines Deals ging von 0 % auf 35 %, wurde gespeichert, und niemand wurde gefragt. Eine separate Regel stoppt Rabatte über 40 %, mit der Meldung „Discount cannot exceed 40% without an approved exception“ (ohne genehmigte Ausnahme keine Rabatte über 40 %), und auch eine solche Ausnahme lässt sich nirgends beantragen.
+
+### 3. Was nach außen offen ist
+
+| Zugang | Wer ihn nutzen kann | Was er erlaubt |
+|:--|:--|:--|
+| Kontaktformular der Website | jeder, ohne Anmeldung | legt einen neuen Lead an, aus 5 der 13 Lead-Felder: Name, Firma, E-Mail, Telefon, Titel ([wie ein öffentliches Formular fünf Felder breit bleibt](/de/blog/how-to-let-anonymous-visitors-submit-a-form/)) |
+| Datenschnittstelle (API), die Adresse, über die andere Software Datensätze liest und schreibt | nur angemeldete Benutzer | genau das, was die Rolle des Benutzers erlaubt; ohne Anmeldung verweigert sie |
+| KI-Agent-Anbindung (MCP), der Standardweg, auf dem sich ein KI-Assistent an ein System anschließt | wer einen vom System ausgestellten Schlüssel hat | handelt als die Person, der der Schlüssel gehört, mit deren Rechten, laut Dokumentation der Plattform (zitiert im Beweis); ohne Schlüssel verweigert sie |
+| Eingebaute KI-Agenten, weitere Adressen oder ausgehende Nachrichten an andere Systeme | — | keine deklariert |
+
+**Was beim Unterschreiben auffallen sollte:** Die KI-Agent-Anbindung ist standardmäßig eingeschaltet. Damit wird „wem wurde ein Schlüssel ausgestellt“ zu einer Frage für Ihre Berechtigungsprüfungen.
+
+### 4. Was protokolliert wird
+
+| Was | Protokolliert? |
+|:--|:--|
+| Jeder neue, geänderte oder gelöschte Datensatz, mit wer, wann und den Werten davor und danach | Ja |
+| Anmeldungen | Ja |
+| **Feldverlauf**, die Liste früherer Änderungen auf der Seite eines Datensatzes | Bei Accounts, Kontakten, Leads und Deals; nicht bei Aktivitäten oder Deal-Positionen |
+| **Datensatzaufrufe**, wer welchen Datensatz geöffnet hat | Nein; für keine Art von Datensatz eingeschaltet ([was das Aufruf-Audit protokolliert](/de/blog/prove-who-opened-a-customer-record-view-auditing/)) |
+
+**Was beim Unterschreiben auffallen sollte:** Änderungen werden protokolliert, das Öffnen eines Datensatzes nicht. Wenn zu Ihren Pflichten gehört, „wer hat die Akte dieses Kunden angesehen“, ist das eine Zeile, die vor dem Go-live geändert werden muss, nicht nach der ersten Anfrage einer Prüferin.
+
+## Eine KI-Änderung und das zweite Blatt
+
+Nun der Auftrag, den eine Vertriebsleiterin dem Agenten tippen könnte: *„Rabatte über 30 % brauchen eine Freigabe durch Finance.“*
+
+Die Änderung ist eine neue Datei mit 38 Zeilen und drei geänderte Zeilen an anderer Stelle. Der Entwurf ist bewusst minimal: ein Genehmigungsschritt auf Deals, an die Rolle Finanzfreigabe geleitet, mit dem Standardwert der Plattform für alles, was der Auftrag nicht erwähnte. Wir haben nichts hinzugefügt, um das Ergebnis interessanter zu machen. Er bestand die 68 automatischen Prüfungen der Plattform. Eine davon gab einen Hinweis aus: Wenn niemand die Rolle innehat, geht die Anfrage an die Administratoren. Es war ein Hinweis, keine Ablehnung.
+
+Der Zugriffsmatrix-Snapshot blieb unverändert. Niemandes Zugriff hat sich geändert, also blieb die Berechtigungsprüfung stumm. Die drei Entscheidungen unten liegen im Genehmigungsschritt, und den deckt diese Prüfung nicht ab. Teil 1 und 3 des Blatts sind dieselben wie vorher. Teil 2 hat sich geändert, und Teil 4 hat Zeilen dazubekommen:
+
+| Zeile auf dem Blatt | Vorher | Nachher | Was beim Unterschreiben gefragt wird |
+|:--|:--|:--|:--|
+| Was eine Genehmigung braucht | nichts | der Rabatt auf einem **bestehenden** Deal wird über 30 % angehoben | „Und ein neuer Deal, der mit 35 % angelegt wird?“ |
+| Wer genehmigt | — | jeder mit der Rolle Finanzfreigabe | „Wer hat sie heute?“ |
+| Wenn niemand die Rolle hat | — | die Administratoren des Systems entscheiden | „Sollen unsere Systemadministratoren Rabatte genehmigen?“ |
+| Kann der Antragsteller selbst genehmigen? | — | ja, wenn er die Rolle Finanzfreigabe hat | „Kann Finance die eigenen Rabatte genehmigen?“ |
+| Kann der Deal während der Wartezeit bearbeitet werden? | — | nein, er ist gesperrt | „Ist ein gesperrter Deal akzeptabel, solange Finance entscheidet?“ |
+| Protokolliert | Änderungen und Anmeldungen | zusätzlich jede Genehmigungsanfrage, wer entschieden hat und wann | Keine Frage |
+
+Wir haben jede davon am laufenden System ausprobiert:
+
+| Was wir getan haben | Was das System geantwortet hat | Was es für das Geschäft bedeutet |
+|:--|:--|:--|
+| Einen neuen Deal mit 35 % Rabatt angelegt | Gespeichert. Keine Anfrage. | Nur Änderungen starten eine Genehmigung. Ein neuer Deal mit 35 % nicht. |
+| Der Administrator hob einen bestehenden Deal auf 35 % an | Eine Genehmigungsanfrage wurde eröffnet und dem Administrator zugewiesen, weil auf unserer frischen Testinstallation niemand die Rolle Finanzfreigabe hatte; der Deal wurde gesperrt | Vom ersten Tag an genehmigen die Systemadministratoren Rabatte, solange niemand die Rolle bekommt. |
+| Fiona, der die Rolle Finanzfreigabe gegeben wurde, hob einen anderen Deal auf 38 % an | Eine Anfrage mit Fiona als einziger Genehmigerin (sie war die einzige Rolleninhaberin); sie genehmigte sie, und der Deal zeigte „genehmigt“ | Die Person, die den Rabatt beantragt hat, hat ihn selbst genehmigt. |
+| Versucht, den gesperrten Deal zu bearbeiten | Abgelehnt: „locked while an approval is in progress“ (gesperrt, solange eine Genehmigung läuft) | Niemand kann den Deal ändern, während die Genehmigerin entscheidet. |
+| Das Audit-Log gelesen | Eine Zeile für die Rabattänderung, eine für die Anfrage, eine für Fionas Entscheidung, jeweils mit wer und wann | Jede dieser Entscheidungen hinterlässt einen Eintrag und lässt sich nachträglich prüfen. |
+| Nach der Änderung 45 % versucht | Weiterhin an der 40-%-Grenze abgelehnt | Die „genehmigte Ausnahme“ aus dieser Meldung gibt es weiterhin nicht. |
+
+Der Entwurf hat getan, was der Satz verlangte. Er hat außerdem drei Dinge entschieden, nach denen niemand gefragt hat: dass neue Deals ausgenommen sind, dass ein Antragsteller den eigenen Rabatt genehmigen kann und dass die Systemadministratoren entscheiden, wann immer niemand die Finance-Rolle hat. Keines der drei ist ein Programmierfehler, und alle drei stehen in Klartext auf dem Blatt.
+
+## Was das Blatt nicht beweist
+
+Das Blatt ist eine Aussage darüber, was das System *erlaubt*. Drei Dinge kann es Ihnen nicht sagen, und die muss vor dem Go-live weiterhin jemand testen.
+
+- **Dass es tatsächlich läuft.** Ein früherer Entwurf derselben Änderung ergab dasselbe Blatt, weil das Blatt nicht prüft, welche Teile der Plattform eingeschaltet sind, und er bestand dieselben Prüfungen. Am laufenden System wurde dann ein Rabatt von 35 % gespeichert, und niemand wurde gefragt: Der Teil, der Genehmigungen ausführt, war aus. Die einzigen Anzeichen waren eine Warnung und ein Fehler im Server-Log. Nur das Ausprobieren hat es gezeigt. Unterschreiben Sie das Blatt, und probieren Sie dann jede geänderte Zeile einmal auf einer Testkopie aus.
+- **Dass die Daten stimmen.** Das Blatt sagt, wer einen Deal bearbeiten darf. Es sagt nichts darüber, ob die aus dem Altsystem importierten Deals die richtigen Verantwortlichen haben, keine Dubletten und keine leeren Beträge. Datenqualität prüft man, indem man sich die Daten ansieht.
+- **Dass die Geschäftslogik stimmt.** Auf dem Blatt steht „über 30 %“. Ob 30 % die Zahl Ihres Unternehmens ist, ob die Schwelle für die Gesamtsumme oder je Produktposition gelten soll und ob eine feste Grenze von 40 % mit einer versprochenen, aber fehlenden Ausnahme akzeptabel ist, sind Fragen für die Menschen, die den Prozess verantworten. Testen Sie sie mit echten Fällen.
+
+Das Blatt listet vier Teile, nicht jede Regel. Die 40-%-Grenze steht nicht darauf; wir haben sie durch Ausprobieren gefunden.
+
+Das Blatt nennt Rollen, keine Menschen. Prüfen Sie, wer welche Rolle innehat, im selben Rhythmus wie Ihre Berechtigungsprüfungen.
+
+## Der berechtigte Einwand: „Das soll die IT unterschreiben, nicht ich“
+
+Für die IT als Unterzeichnerin spricht viel. Sie versteht die Plattform, führt die Änderungsfreigabe für andere Systeme ohnehin durch, und eine Abteilungsleitung hat anderes zu tun.
+
+Die IT kann bestätigen, dass das System dem Auftrag entspricht. Sie kann nicht bestätigen, dass der Auftrag das ist, was das Geschäft akzeptiert. „Finance genehmigt Rabatte über 30 %“ wurde getreu umgesetzt, und die drei Entscheidungen, die darin steckten, kamen aus dem Entwurf und den Standardwerten der Plattform, nicht von jemandem aus der IT. Jemand, der für die Rabattpolitik verantwortlich ist, muss sagen, ob ein selbst genehmigter Rabatt von 38 % in Ordnung ist. Die praktikable Aufteilung: Die IT zeichnet den Build ab, die Fachverantwortlichen zeichnen das Blatt ab.
+
+Ein einseitiges Blatt wird schnell gelesen. Genau deshalb ist es kurz: Nach dem ersten Go-live lesen die Verantwortlichen nur die geänderten Zeilen.
+
+## So bekommen Sie das Blatt für Ihr eigenes System
+
+Lassen Sie es von Ihrem Agenten erstellen. ObjectStack 18.5.0 hat keinen Befehl, der dieses Blatt ausgibt. Wir haben für diesen Beitrag ein Skript mit 51 Zeilen geschrieben, und die Zeilen zur Datenschnittstelle, zur KI-Agent-Anbindung und zum Audit-Log stammen aus Versuchen am laufenden System, nicht aus dem Skript. Die vier Teile entsprechen Dingen, die ein Agent aus der eigenen Definition einer ObjectStack-App lesen kann: dem Zugriffsmatrix-Snapshot, den Genehmigungsschritten, den öffentlichen Formularen und Anbindungen und den Audit-Einstellungen. Ein neues Projekt hat keinen Snapshot, bis jemand den ersten erstellt. Schreiben Sie den Auftrag in die Anweisungen, die der Agent jedes Mal liest, damit das Blatt jede Änderung begleitet:
+
+```text
+With every change you make to this app, produce the sign-off sheet:
+1. Who can see and change which records and fields (from the access-matrix snapshot).
+2. Who can approve what: for each approval step, when it starts, who approves,
+   what happens if nobody holds that role, and whether the requester can approve.
+3. What is open to the outside: public forms and their fields, API and agent access,
+   custom endpoints, outgoing calls to other systems.
+4. What is recorded: change log, field history, record-view auditing.
+Then list the lines that differ from the previous sheet, in plain words.
+```
+
+Der [Leitfaden, wie Sie Ihren Coding-Agenten auf ObjectStack ausrichten](/en/blog/how-to-point-your-agent-at-objectstack/), beschreibt, wie solche Anweisungen den Agenten erreichen. In ObjectStack ist eine App eine schriftliche Beschreibung, die die Plattform durchsetzt, deshalb sind Rollen, Genehmigungen, öffentliche Zugänge und Audit-Einstellungen an einer Stelle deklariert, statt über den Code verstreut zu sein.
+
+Zum Selbst-Ausprobieren liefert das ObjectStack-Repository ObjectOS Community aus: das Image ghcr.io/objectstack-ai/objectstack, `os start` und die Console, kostenlos und selbst gehostet. ObjectOS Cloud ist die gehostete Edition, ObjectOS Enterprise die selbst verwaltete, lizenzierte.
+
+{/* the-proof */}
+## Der Beweis
+
+**Version.** Gemessen am 2026-11-17.
+
+```text
+$ npm view @objectstack/cli dist-tags
+{ next: '18.5.0', latest: '18.5.0' }
+
+$ npx os --version
+@objectstack/cli/18.5.0 linux-x64 node-v22.22.0
+```
+
+**Die App.** `examples/app-crm` aus dem ObjectStack-Repository beim Tag `@objectstack/cli@18.5.0`, die `workspace:*`-Abhängigkeiten auf die veröffentlichten 18.5.0-Pakete umgestellt und mit pnpm installiert. Sie ist ab Werk für das Zugriffsmatrix-Gate aktiviert, mit einer `access-matrix.json` neben `objectstack.config.ts`.
+
+```bash
+git archive '@objectstack/cli@18.5.0' examples/app-crm | tar -x
+cd examples/app-crm
+sed -i 's/"workspace:\*"/"18.5.0"/' package.json
+pnpm install --ignore-workspace
+npx os compile
+```
+
+```text
+  → Running author-time rules (68)...
+  → Checking access-matrix snapshot (ADR-0090 D6)...
+  ✓ Build complete (378ms)
+  ⚠ 4 author-time warning(s) — see above
+
+  Data: 6 Objects  49 Fields  2 Datasources
+  Logic: 1 Flows
+  Security: 3 Positions  2 Permissions
+```
+
+Weder die Vorlagen von `packages/create-objectstack` noch irgendetwas anderes beim Tag enthält außer den beiden Beispielen eine `access-matrix.json` (`git ls-tree -r --name-only '@objectstack/cli@18.5.0' | grep 'access-matrix\.json$'` gibt `examples/app-crm/access-matrix.json` und `examples/app-showcase/access-matrix.json` aus); deshalb startet ein neues Projekt ohne Snapshot.
+
+Die vier Warnungen sind `field-no-consumers` auf vier Feldern von `crm_opportunity`, eines davon `approval_status`: ein Feld, das ein Genehmigungsergebnis zeigen soll und das nichts in der App liest oder anzeigt. `os info` listet `crm_lead (13 fields, user) — Lead`, die 13 aus Teil 3.
+
+**Der Blatt-Generator.** Das Blatt stammt aus zwei Dateien, die `os compile` liest oder schreibt: der eingecheckten `access-matrix.json` und der kompilierten `dist/objectstack.json`. Die Standardwerte der Genehmigungsknoten werden ergänzt, indem jeder Knoten mit dem spec-eigenen `ApprovalNodeConfigSchema` geparst wird, sodass das Blatt den Wert zeigt, den die Runtime anwendet, nicht nur das, was der Autor geschrieben hat.
+
+`sheet.mjs`, 51 Zeilen:
+
+```js
+// Prints the four-part sign-off sheet for an ObjectStack app, from its compiled
+// artifact and its committed access-matrix snapshot. Run from the app directory
+// after `os compile`:  node sheet.mjs
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+const require = createRequire(`${process.cwd()}/package.json`);
+const { ApprovalNodeConfigSchema } = require('@objectstack/spec/automation');
+
+const app = JSON.parse(readFileSync('dist/objectstack.json', 'utf8'));
+const matrix = JSON.parse(readFileSync('access-matrix.json', 'utf8')).entries;
+const bits = (e) => ['create', 'read', 'edit', 'delete'].filter((b) => e[b]).join(' · ') || 'nothing';
+
+console.log('1. Who can see and change which records and fields');
+for (const pos of app.positions) {
+  const sets = pos.permissionSets ?? [];
+  console.log(`  ${pos.label} → ${sets.join(', ')}`);
+}
+for (const e of matrix) {
+  const set = app.permissions.find((p) => p.name === e.permissionSet);
+  const fieldRules = Object.keys(set?.fields ?? {}).length;
+  console.log(`  ${e.permissionSet} | ${e.object} | ${bits(e)} | view all: ${e.viewAllRecords} | modify all: ${e.modifyAllRecords} | records: ${e.sharingModel} | field rules: ${fieldRules}`);
+}
+
+console.log('2. Who can approve what');
+const approvalNodes = app.flows.flatMap((f) =>
+  f.nodes.filter((n) => n.type === 'approval').map((n) => ({ f, n, cfg: ApprovalNodeConfigSchema.parse(n.config) })));
+if (!approvalNodes.length) console.log('  no approval step in this app');
+for (const { f, n, cfg } of approvalNodes) {
+  const start = f.nodes.find((x) => x.type === 'start')?.config ?? {};
+  console.log(`  ${f.label} / ${n.label} | object: ${start.objectName} | when: ${start.triggerType} if ${start.condition}`);
+  console.log(`    approvers: ${cfg.approvers.map((a) => `${a.type}:${a.value ?? ''}`).join(', ')} | decides: ${cfg.behavior}`);
+  console.log(`    nobody staffed → ${cfg.onEmptyApprovers} | requester removed from approvers: ${cfg.excludeSubmitter === true} | record locked while pending: ${cfg.lockRecord}`);
+}
+const routed = new Set(approvalNodes.flatMap(({ cfg }) => cfg.approvers.filter((a) => a.type === 'position').map((a) => a.value)));
+for (const pos of app.positions) {
+  if (/approv/i.test(`${pos.label} ${pos.description ?? ''}`) && !routed.has(pos.name))
+    console.log(`  position "${pos.label}" says: "${pos.description}" — no approval step routes to it`);
+}
+
+console.log('3. What is exposed to the outside');
+for (const v of app.views) for (const [name, fv] of Object.entries(v.formViews ?? {})) {
+  if (fv.sharing?.allowAnonymous) {
+    const fields = fv.sections.flatMap((s) => s.fields.map((x) => x.field));
+    console.log(`  public form ${fv.sharing.publicLink} | creates: ${fv.data.object} | ${fields.length} fields: ${fields.join(', ')}`);
+  }
+}
+for (const k of ['agents', 'apis', 'webhooks', 'connectors', 'portals']) console.log(`  ${k} declared: ${(app[k] ?? []).length}`);
+
+console.log('4. What is recorded');
+for (const o of app.objects) console.log(`  ${o.name} | field history on record page: ${o.enable?.trackHistory === true}`);
+console.log(`  plugins configured in the app (record-view audit lives here): ${(app.plugins ?? []).length}`);
+```
+
+**Blatt 1, vor der Änderung** (`node sheet.mjs`):
+
+```text
+1. Who can see and change which records and fields
+  Sales Representative → crm_sales_user
+  Sales Manager → crm_sales_user
+  Finance Approver → crm_sales_user
+  crm_sales_user | crm_account | create · read · edit | view all: false | modify all: false | records: public_read_write | field rules: 0
+  crm_sales_user | crm_activity | create · read · edit | view all: false | modify all: false | records: public_read_write | field rules: 0
+  crm_sales_user | crm_contact | create · read · edit | view all: false | modify all: false | records: public_read_write | field rules: 0
+  crm_sales_user | crm_lead | create · read · edit | view all: false | modify all: false | records: public_read_write | field rules: 0
+  crm_sales_user | crm_opportunity | create · read · edit | view all: false | modify all: false | records: public_read_write | field rules: 0
+  crm_sales_user | crm_opportunity_line_item | create · read · edit | view all: false | modify all: false | records: controlled_by_parent | field rules: 0
+  guest_portal | crm_lead | create | view all: false | modify all: false | records: public_read_write | field rules: 0
+2. Who can approve what
+  no approval step in this app
+  position "Finance Approver" says: "Finance team member authorised to approve discounts above 30%." — no approval step routes to it
+3. What is exposed to the outside
+  public form /forms/contact-us | creates: crm_lead | 5 fields: name, company, email, phone, title
+  agents declared: 0
+  apis declared: 0
+  webhooks declared: 0
+  connectors declared: 0
+  portals declared: 0
+4. What is recorded
+  crm_account | field history on record page: true
+  crm_activity | field history on record page: false
+  crm_contact | field history on record page: true
+  crm_lead | field history on record page: true
+  crm_opportunity | field history on record page: true
+  crm_opportunity_line_item | field history on record page: false
+  plugins configured in the app (record-view audit lives here): 0
+```
+
+`public_read_write` ist das „die aller“ in Teil 1: Jeder Benutzer mit Zugriff auf das Objekt liest und bearbeitet jeden Datensatz. `controlled_by_parent` bedeutet, dass eine Deal-Position ihrem Deal folgt. Die Zeile `guest_portal` ist die Zeile des Website-Besuchers; der [Beitrag zu öffentlichen Formularen](/de/blog/how-to-let-anonymous-visitors-submit-a-form/) erklärt, warum das Formular ohne sie funktioniert. Die Administratorzeile steht nicht in der Matrix; sie stammt aus dem Boot-Banner des Dev-Servers, das das vorbereitete Konto als „platform admin — Setup, Studio and every record“ beschreibt. Das Aufruf-Audit wird nur als Plugin-Option in der App konfiguriert, also bedeuten null konfigurierte Plugins, dass kein Objekt aktiviert ist.
+
+**Teil 2 bis 4, am laufenden System geprüft.** `npx os dev --fresh` auf einer leeren Datenbank. Die Mitschnitte unten sind auf die Anfrage, ihren Statuscode und den relevanten Teil der Antwort verkürzt. Ohne Anmeldung:
+
+```text
+$ curl -s -w ' %{http_code}' localhost:49961/api/v1/data/crm_opportunity
+{"error":"UNAUTHENTICATED","code":"UNAUTHENTICATED","message":"Authentication is required to access this endpoint."} 401
+
+$ curl -s -w ' %{http_code}' localhost:49961/api/v1/forms/contact-us
+{"slug":"contact-us","object":"crm_lead","form":{ … "fields":[{"field":"name","required":true, …},{"field":"company", …},
+ {"field":"email","required":true, …},{"field":"phone", …},{"field":"title", …}]}], … } 200
+
+$ curl -s -w ' %{http_code}' -X POST localhost:49961/api/v1/mcp -H 'content-type: application/json' \
+    -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+{"success":false,"error":{"code":"UNAUTHENTICATED","message":"Unauthorized: a valid OAuth access token or API key is required","httpStatus":401}} 401
+```
+
+Ein anonymer Schreibzugriff auf die Datenadresse der Leads, am Formular vorbei, wurde ebenso abgewiesen (auf der geänderten App ausgeführt, siehe unten):
+
+```text
+$ curl -s -w ' %{http_code}' -X POST localhost:49961/api/v1/data/crm_lead -H 'content-type: application/json' \
+    -d '{"name":"Anon","email":"anon@example.com","status":"qualified"}'
+{"error":"UNAUTHENTICATED","code":"UNAUTHENTICATED","message":"Authentication is required to access this endpoint."} 401
+```
+
+Das Boot-Banner zeigt die KI-Agent-Anbindung als standardmäßig eingeschaltet: `MCP: http://localhost:49961/api/v1/mcp`, mit `Disable OS_MCP_SERVER_ENABLED=false`. Was ein Schlüssel tun kann, sobald er akzeptiert ist, wurde hier nicht getestet. Der MCP-Leitfaden beim Tag (`content/docs/ai/connect-mcp.mdx`, Zeilen 243–244 und 255–257) sagt: „<span lang="en">The HTTP surface authenticates **each caller** (OAuth as a person, or their own API key)</span>“, und rät für einen eingeschränkten Agenten: „<span lang="en">mint it on a user with exactly the access it should have.</span>“
+
+Angemeldet als vorbereiteter Administrator, der Rabatttest und die Audit-Zeile, die er hinterließ:
+
+```text
+PATCH /api/v1/data/crm_opportunity/1guy5QfI1dxYqC_a  {"discount_percent":35}   → 200
+PATCH /api/v1/data/crm_opportunity/1guy5QfI1dxYqC_a  {"discount_percent":45}   → 400
+  {"error":"Discount cannot exceed 40% without an approved exception.","code":"VALIDATION_FAILED", … }
+GET /api/v1/approvals/requests                                               → 200 {"data":[]}
+
+GET /api/v1/data/sys_audit_log?sort=-created_at&limit=1
+  {"action":"update","object_name":"crm_opportunity","record_id":"1guy5QfI1dxYqC_a",
+   "user_id":"oK3bdOQRcKqg6bhRmok9rDGAgwHotqpH",
+   "old_value":"{\"discount_percent\":0}","new_value":"{\"discount_percent\":35}",
+   "created_at":"2026-11-17T04:19:56.758Z"}
+```
+
+Das anschließende Lesen dieses Deals per ID fügte keine `read`-Zeile hinzu: Das Log enthielt `config_change` 2, `create` 3, `update` 4, `login` 2 und sonst nichts. Die 40-%-Ablehnung ist eine Validierungsregel auf `crm_opportunity` in `src/objects/opportunity.object.ts`, ohne irgendeinen Ausnahmeweg in der App:
+
+```ts
+condition: P`record.discount_percent != null && record.discount_percent > 40`,
+message: 'Discount cannot exceed 40% without an approved exception.',
+```
+
+Das Löschen in Teil 4 und die Administratorzeile in Teil 1, bei einem späteren frischen Start als Administrator:
+
+```text
+DELETE /api/v1/data/crm_activity/3faQC9ppNgMiJIZS  → 200
+  {"object":"crm_activity","id":"3faQC9ppNgMiJIZS","success":true,"recycleBinEntryId":"m2JEV5EL4Tn_HTqM"}
+GET /api/v1/data/sys_audit_log?sort=-created_at&limit=1
+  {"action":"delete","object_name":"crm_activity","record_id":"3faQC9ppNgMiJIZS",
+   "user_id":"I7JqyNY3c2CMRzcLBpUlI0ykgjPAF9U4",
+   "old_value":"{\"id\":\"3faQC9ppNgMiJIZS\", … }","new_value":null,"created_at":"2026-11-17T04:36:40.312Z"}
+```
+
+**Die Änderung.** Eine neue Datei, dazu zwei geänderte Zeilen in `src/flows/index.ts`, die sie registrieren, und eine in `objectstack.config.ts`:
+
+```ts
+import { defineFlow } from '@objectstack/spec';
+
+// Request: "Discounts above 30% need Finance approval."
+export const DiscountApprovalFlow = defineFlow({
+  name: 'crm_discount_approval',
+  label: 'Discount Approval',
+  description: 'Finance approves any discount above 30%.',
+  type: 'autolaunched',
+  status: 'active',
+  nodes: [
+    {
+      id: 'start',
+      type: 'start',
+      label: 'On Discount Above 30%',
+      config: {
+        objectName: 'crm_opportunity',
+        triggerType: 'record-after-update',
+        condition: 'discount_percent != null && discount_percent > 30 && discount_percent != previous.discount_percent',
+      },
+    },
+    {
+      id: 'finance_review',
+      type: 'approval',
+      label: 'Finance Review',
+      config: {
+        approvers: [{ type: 'position', value: 'crm_finance_approver' }],
+        approvalStatusField: 'approval_status',
+      },
+    },
+    { id: 'approved', type: 'end', label: 'Approved' },
+    { id: 'rejected', type: 'end', label: 'Rejected' },
+  ],
+  edges: [
+    { id: 'e1', source: 'start', target: 'finance_review' },
+    { id: 'e2', source: 'finance_review', target: 'approved', label: 'approve' },
+    { id: 'e3', source: 'finance_review', target: 'rejected', label: 'reject' },
+  ],
+});
+```
+
+```diff
+-  requires: ['ui', 'automation'],
++  requires: ['ui', 'automation', 'triggers', 'approvals'],
+```
+
+Der Auslöser folgt dem Genehmigungsbeispiel der Plattform selbst in `examples/app-showcase`, das ebenfalls mit `record-after-update` beginnt. Die `requires`-Zeile brauchte zwei Entwürfe. Ohne `'triggers'` lehnte `os validate` die App ab:
+
+```text
+✗ flow 'crm_discount_approval' declares a 'record_change' trigger but `requires` does not include 'triggers' — no 'record_change' trigger would be registered, so the flow would never auto-launch.
+```
+
+Mit `'triggers'`, aber ohne `'approvals'` bestand `os validate`, und das Blatt ebenso. In der laufenden App wurde die 35-%-Änderung gespeichert, `approval_status` blieb `null`, `/api/v1/approvals/requests` blieb leer, und das Server-Log enthielt:
+
+```text
+WARN [Automation] 1 flow(s) reference node types no installed plugin provides (approval) — install/enable the plugin that contributes them (e.g. 'approval' ⇐ @objectstack/plugin-approvals).
+ERROR Trigger-fired run of flow 'crm_discount_approval' failed (trigger 'record_change') — no caller holds this result and nothing retries the run; … {"error":"No executor registered for node type 'approval'"}
+```
+
+Das ist der Fall „dass es tatsächlich läuft“ im Text. Mit beiden Einträgen besteht `os validate` und fügt einen Hinweis hinzu, wer entscheidet, wenn die Rolle unbesetzt ist:
+
+```text
+  ✓ Validation passed (409ms)
+  ℹ flow "crm_discount_approval" · node "finance_review": every approver on this node routes to a group (position/team/department/queue), so if none is staffed the request opens on the organization's administrators, and (lockRecord) the record stays locked
+```
+
+`os compile` besteht die Zugriffsmatrix-Prüfung ohne Drift (`Logic: 2 Flows`, `Security: 3 Positions  2 Permissions`), und `git diff --quiet -- access-matrix.json` endet mit 0: Teil 1 und 3 sind unverändert.
+
+**Blatt 2, die abweichenden Zeilen** (`diff sheet-before.txt sheet-after.txt`):
+
+```diff
+13,14c13,15
+<   no approval step in this app
+<   position "Finance Approver" says: "Finance team member authorised to approve discounts above 30%." — no approval step routes to it
+---
+>   Discount Approval / Finance Review | object: crm_opportunity | when: record-after-update if discount_percent != null && discount_percent > 30 && discount_percent != previous.discount_percent
+>     approvers: position:crm_finance_approver | decides: first_response
+>     nobody staffed → admin_rescue | requester removed from approvers: false | record locked while pending: true
+```
+
+`admin_rescue`, ein nicht gesetztes `excludeSubmitter` und `lockRecord: true` sind die Schema-Standardwerte, die der Entwurf übernommen hat. Die Spec beschreibt `excludeSubmitter` als „Stops people approving their own requests … Off by default: the approvers stay as found“ und `onEmptyApprovers` als „'admin_rescue' (default) opens the request on the administrators“. `record-after-update` ist der Grund, warum neue Deals ausgenommen sind.
+
+**Die Genehmigung, in der laufenden App** (ein frisches `os dev --fresh` mit der Änderung). Der Administrator hebt einen Deal auf 35 % an:
+
+```text
+PATCH /api/v1/data/crm_opportunity/Br_N2OGg7JQQToKh {"discount_percent":35}  → 200
+GET  /api/v1/data/crm_opportunity/Br_N2OGg7JQQToKh?select=…  → "discount_percent":35,"approval_status":"pending"
+GET  /api/v1/approvals/requests
+  {"id":"areq_6e2a35bb-1d48-4a0d-9f7c-ca628617ff68","process_name":"flow:crm_discount_approval",
+   "status":"pending","current_step":"finance_review","submitter_name":"Dev Admin",
+   "pending_approver_names":{"UO93S2l58Cv0XEjBT71Iw5ORVEQ3wxTe":"Dev Admin"},"lock_record":true,
+   "viewer":{"can_act":true,"is_submitter":true,"can_override":true}, … }
+PATCH /api/v1/data/crm_opportunity/Br_N2OGg7JQQToKh {"amount":90000}  → 409
+  {"error":"Opportunity 'Initech — Expansion' is locked while an approval is in progress, and cannot be edited until that approval is complete","code":"RECORD_LOCKED", … }
+```
+
+`sys_user_position` enthielt 0 Zeilen: Niemand hatte irgendeine Rolle, also ging die Anfrage an den Administrator. Dann legte der Administrator eine Benutzerin, Fiona, an und gab ihr die Rolle Finanzfreigabe (eine Zeile in `sys_user_position`, `position: "crm_finance_approver"`). Angemeldet als Fiona, auf einem Deal, der dem Administrator gehört (der Inhalt der Anfrage enthält `"owner_id":"UO93S2l5…"`, angezeigt als `"Dev Admin"`):
+
+```text
+PATCH /api/v1/data/crm_opportunity/FoDMAMOEtRWdCABw {"discount_percent":38}  → 200
+GET  /api/v1/approvals/requests
+  areq_88f8936f-e8f6-40fd-aefb-86e747a30ce1 Globex — New CRM Rollout pending submitter=Fiona (Finance)
+  approvers={"uFVoHYOSbqt55MeAEX0O2R77NyX1dUnN":"Fiona (Finance)"} {"can_act":true,"is_submitter":true,"can_override":false}
+POST /api/v1/approvals/requests/areq_88f8936f-…/approve {"comment":"approved"}  → 200  status: approved
+GET  /api/v1/data/crm_opportunity/FoDMAMOEtRWdCABw?select=…  → "discount_percent":38,"approval_status":"approved"
+
+POST /api/v1/data/crm_opportunity {"name":"New deal at 35%", …, "discount_percent":35}  → 201
+GET  /api/v1/approvals/requests  → only the two requests above; "New deal at 35%" has "approval_status":null
+
+PATCH /api/v1/data/crm_opportunity/KJLStdCxbBdKWQgm {"discount_percent":45}  → 400
+  {"error":"Discount cannot exceed 40% without an approved exception.","code":"VALIDATION_FAILED", … }
+```
+
+Das Audit-Log zu Fionas Anfrage, neueste zuerst (`GET /api/v1/data/sys_audit_log?sort=-created_at`, gekürzt):
+
+```text
+04:24:28.724Z update crm_opportunity      FoDMAMOEtRWdCABw  {"approval_status":"approved"}
+04:24:28.691Z update sys_approval_request areq_88f8936f-…   {"status":"approved","pending_approvers":null, … }
+04:24:28.684Z create sys_approval_action  aact_9842e363-…
+04:24:18.692Z update crm_opportunity      FoDMAMOEtRWdCABw  {"approval_status":"pending"}
+04:24:18.665Z create sys_approval_request areq_88f8936f-…
+04:24:18.647Z update crm_opportunity      FoDMAMOEtRWdCABw  {"discount_percent":38}
+```
+
+Jede Zeile enthält außerdem die `user_id`, die sie verursacht hat. Bei erneuter Prüfung der äußeren Zugänge in diesem Lauf antworteten Datenschnittstelle und KI-Agent-Anbindung ohne Anmeldedaten weiterhin mit `401` und das Kontaktformular mit `200`.

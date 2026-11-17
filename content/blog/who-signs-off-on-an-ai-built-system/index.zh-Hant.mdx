@@ -1,0 +1,470 @@
+---
+# @generated zh-Hant from zh-Hans (s2twp) — edit the zh-Hans file; delete this line to hand-maintain.
+title: AI 做出來的內部系統，該由誰簽字？籤的到底是什麼？
+description: 簽字的是業務負責人，籤的是一頁簽字單而不是程式碼：誰能看到哪些記錄、誰能批什麼、對外開放了什麼、記錄了什麼。用 ObjectStack 18.5.0 上的 CRM 示例實際生成，一次 AI 改動前後各一份。
+author: ObjectStack Team
+date: 2026-11-27
+status: published
+topic: governance
+audience: business
+solutions:
+  - crm
+industries: []
+cover: ./cover.svg
+tags:
+  - 上線簽字
+  - AI 治理
+  - 審批
+  - 審計留痕
+---
+
+**先給結論。** 系統上線由依賴它運轉的那個部門的負責人簽字，籤的是一頁紙，不是程式碼。這頁紙就是**簽字單**，寫明四件事：誰能看到、修改哪些記錄，誰能批准什麼，什麼對外開放，什麼會被記錄下來。上線前要一份，每次 AI 改動之後再要一份，只看變了的那幾行。如果沒有人籤，這些決定就等於由 AI 替你做了。簽字單證明不了系統真的能跑、資料是乾淨的、業務邏輯是對的：這幾樣仍然要有人去測。
+
+*實測環境：ObjectStack 18.5.0（2026 年 11 月 17 日的最新版本），使用隨版本釋出的 CRM 示例。每條命令和原始輸出都在文末的[證據](#證據)裡。*
+
+## 上線簽字不是程式碼評審
+
+AI 程式設計代理做出一個內部系統之後，有兩個不同的問題，需要兩個不同的人來回答。
+
+開發人員，或者按照 [AI 生成應用改動的評審清單](/en/blog/how-to-review-ai-generated-app-changes/) 逐項檢查的評審人，回答的是：*它做得對不對？*
+
+業務負責人回答的是：*這是不是我們允許的？* 我團隊裡誰能開啟一個客戶的記錄，誰能給一單生意批 35% 的折扣，網站上的陌生人能做什麼，明年審計來了我們拿得出什麼。沒有人回答的話，AI 代理會把這些問題全部替你回答掉，因為一個執行中的系統不可能把它們留空。
+
+所以負責人籤的是一份關於這些決定的說明：用他自己的語言，從系統本身生成。這份說明就是簽字單。
+
+## 改動之前的簽字單
+
+下面是 CRM 示例出廠狀態的簽字單。第 1、2 部分，以及聯絡表單的欄位和欄位歷史那一行，讀自應用自身的定義；其餘部分通過實際操作執行中的系統確認。某一部分有專門的深度文章時，會附上鍊接。
+
+### 1. 誰能看到、修改哪些記錄和欄位
+
+開啟了這項功能的應用會儲存一份**訪問矩陣快照**：一張表，寫明每個角色能對每類記錄做什麼。每次構建都會重新生成這張表，只要它和儲存的那份不一致，構建就會停下，直到有人確認這次變化（[訪問矩陣快照怎樣抓住一次悄無聲息的權限變更](/zh-Hant/blog/catch-ai-silent-permission-change-access-matrix-gate/)）。把 CRM 的快照翻譯成大白話，以角色（平台裡叫"崗位"）為行，就是下表（最後一行是平台內建的管理員，快照裡不列它）：
+
+| 角色 | 能看到 | 能新建和修改 | 能刪除 | 誰的記錄 | 欄位限制 |
+|:--|:--|:--|:--|:--|:--|
+| 銷售代表 | 客戶、聯絡人、線索、商機、商機明細、活動 | 同樣這六類 | 無 | 所有人的 | 無 |
+| 銷售經理 | 與銷售代表相同 | 相同 | 無 | 所有人的 | 無 |
+| 財務審批人 | 與銷售代表相同 | 相同 | 無 | 所有人的 | 無 |
+| 網站訪客（未登入） | 無 | 新線索，只能通過聯絡表單 | 無 | 無 | 五個欄位（見第 3 部分） |
+| 管理員 | 所有記錄，外加系統設定 | 所有記錄 | 所有記錄（按平台的描述；我們刪過一條） | 所有人的 | 無 |
+
+**簽字人應該注意到的：** 三個員工角色完全相同。銷售經理能做的，銷售代表都能做；銷售代表能修改公司裡的每一單商機，而不只是自己的；任何能開啟記錄的人，都能看到記錄上的每一個欄位。對一個小團隊來說這些也許都沒問題。但這仍然是一個決定，而這張表就是你做出這個決定、或者發現有人沒經過你就做了這個決定的地方。
+
+### 2. 誰能批准什麼
+
+**審批步驟**是系統把一次改動攔下來、等某個指定角色說"同意"或"不同意"的環節。
+
+| 什麼需要審批 | 誰來批 | 說明 |
+|:--|:--|:--|
+| 沒有 | — | 有一個角色叫"財務審批人"，描述是"有權批准 30% 以上的折扣"，但系統裡沒有任何審批步驟。 |
+
+**簽字人應該注意到的：** 一個角色的描述承諾了一項系統並不存在的控制。我們試過：把一單商機的折扣從 0% 改成 35%，儲存成功，沒有任何人被詢問。另有一條規則會攔住 40% 以上的折扣，提示是"Discount cannot exceed 40% without an approved exception"（沒有獲批的例外，折扣不能超過 40%），但同樣沒有任何途徑能拿到這種例外。
+
+### 3. 什麼對外開放
+
+| 入口 | 誰能用 | 允許做什麼 |
+|:--|:--|:--|
+| 網站聯絡表單 | 任何人，無需登入 | 新建一條線索，只能填線索 13 個欄位中的 5 個：姓名、公司、郵箱、電話、職位（[公開表單怎樣只開五個欄位](/zh-Hant/blog/how-to-let-anonymous-visitors-submit-a-form/)） |
+| 資料介面（API），其他軟體讀寫記錄時用的地址 | 只限已登入使用者 | 正好是該使用者角色允許的範圍；未登入則拒絕 |
+| AI 代理連線（MCP），AI 助手接入一個系統的標準方式 | 持有系統簽發的金鑰的人 | 以金鑰所屬的那個人的身份、按那個人的權限行事，依據平台文件（原文見證據部分）；沒有金鑰則拒絕 |
+| 內建 AI 代理、其他介面地址、發往其他系統的外發訊息 | — | 均未宣告 |
+
+**簽字人應該注意到的：** AI 代理連線預設是開啟的。於是"給誰發過金鑰"就成了你做權限複核時要問的問題。
+
+### 4. 什麼會被記錄
+
+| 內容 | 是否記錄 |
+|:--|:--|
+| 每一次新建、修改或刪除記錄，包括誰、什麼時間、改動前後的值 | 是 |
+| 登入 | 是 |
+| **欄位歷史**，即記錄頁面上顯示的歷次修改 | 客戶、聯絡人、線索和商機有；活動和商機明細沒有 |
+| **記錄檢視**，即誰開啟過哪條記錄 | 否；任何一類記錄都沒有開啟（[記錄檢視審計會記什麼](/zh-Hant/blog/prove-who-opened-a-customer-record-view-auditing/)） |
+
+**簽字人應該注意到的：** 修改會被記錄，開啟記錄不會。如果你的合規義務裡包括"誰看過這位客戶的檔案"，這一行要在上線前改，而不是等審計第一次來要的時候。
+
+## 一次 AI 改動，和第二份簽字單
+
+現在，銷售總監可能會對 AI 代理說這樣一句話：*"30% 以上的折扣需要財務審批。"*
+
+改動是一個 38 行的新檔案，外加別處改了三行。這份草稿刻意做得最小：在商機上加一個審批步驟，交給"財務審批人"這個角色，凡是這句話沒提到的地方，一律採用平台的預設值。我們沒有為了讓結果更有看頭而往裡加任何東西。它通過了平台的 68 項自動檢查。其中一項列印了一條提示：如果沒有人擔任這個角色，審批請求會交給管理員。那只是一條提示，不是拒絕。
+
+訪問矩陣快照沒有變化。沒有任何人的權限變了，所以權限檢查一聲不吭。下面這三個決定都在審批步驟裡，而那項檢查管不到審批步驟。簽字單的第 1、3 部分與之前相同。第 2 部分變了，第 4 部分多了幾行：
+
+| 簽字單上的行 | 之前 | 之後 | 簽字人會問 |
+|:--|:--|:--|:--|
+| 什麼需要審批 | 沒有 | 把一單**已有**商機的折扣提到 30% 以上 | "那新建時就填 35% 的商機呢？" |
+| 誰來批 | — | 任何擔任"財務審批人"角色的人 | "現在誰擔任這個角色？" |
+| 沒人擔任這個角色時 | — | 由系統管理員決定 | "折扣該由我們的系統管理員來批嗎？" |
+| 提出申請的人能自己批嗎？ | — | 能，只要他擔任"財務審批人"角色 | "財務能批自己提的折扣嗎？" |
+| 等待審批期間能改這單嗎？ | — | 不能，記錄被鎖定 | "財務決定之前鎖住這單，可以接受嗎？" |
+| 記錄 | 修改和登入 | 另外記錄每個審批請求、誰做的決定、什麼時間 | 無需追問 |
+
+我們在執行中的系統上逐一試過：
+
+| 我們做了什麼 | 系統的反應 | 對業務意味著什麼 |
+|:--|:--|:--|
+| 新建一單商機，折扣直接填 35% | 儲存成功，沒有審批請求 | 只有修改才會發起審批，新建時就填 35% 的商機不會。 |
+| 管理員把一單已有商機的折扣提到 35% | 發起了一個審批請求，指派給了管理員，因為在我們新裝的測試環境裡沒有人擔任"財務審批人"；這單被鎖定 | 從第一天起，只要沒人被分配這個角色，折扣就由系統管理員來批。 |
+| Fiona 被分配了"財務審批人"角色，把另一單的折扣提到 38% | 發起的請求只有 Fiona 一個審批人（她是唯一擔任這個角色的人）；她批准了，這單顯示"已批准" | 申請折扣的人自己批准了它。 |
+| 試圖修改被鎖定的那單 | 被拒絕："locked while an approval is in progress"（審批進行中，已鎖定） | 審批人做決定期間，沒人能改這單。 |
+| 檢視審計日誌 | 折扣修改一行、審批請求一行、Fiona 的決定一行，每一行都有是誰、什麼時間 | 這些決定都留下了記錄，事後可以複查。 |
+| 改動之後再試 45% | 仍被 40% 的上限拒絕 | 提示裡說的"獲批的例外"依然不存在。 |
+
+這份草稿做到了那句話要求的事。它還替你決定了三件沒人提過的事：新建的商機不用審批；申請人可以批准自己的折扣；沒人擔任財務角色時由系統管理員決定。這三件都不是程式碼錯誤，而且都以大白話的形式出現在簽字單上。
+
+## 簽字單證明不了什麼
+
+簽字單說明的是系統*允許*什麼。有三件事它告訴不了你，上線前仍然要有人去測。
+
+- **系統真的能跑。** 同一個改動的早一版草稿，生成的簽字單一模一樣，因為簽字單並不看平台的哪些部分已經開啟；它也通過了同樣的檢查。可在執行中的系統上，35% 的折扣直接儲存，沒有任何人被詢問：負責執行審批的那部分沒有開啟。唯一的跡象是伺服器日誌裡的一條警告和一條錯誤。只有實際試一下才發現了它。先簽簽字單，再在測試環境裡把每一行改動都試一遍。
+- **資料是對的。** 簽字單說的是誰可以修改商機。它不會告訴你，從舊系統匯入的商機負責人對不對、有沒有重複、金額是不是空的。資料質量要靠看資料來檢查。
+- **業務邏輯是對的。** 簽字單上寫著"30% 以上"。30% 是不是貴公司的數字，這個門檻該按總額算還是按每條產品明細算，一個 40% 的固定上限配上一個承諾了卻不存在的例外能不能接受，這些問題要交給實際管這個流程的人。用真實的案例去測。
+
+簽字單隻列四個部分，不列每一條規則。40% 的上限就不在上面；我們是試出來的。
+
+簽字單寫的是角色，不是人。誰擔任哪個角色，要和你的權限複核按同樣的週期去複查。
+
+## 有道理的反對意見："這該 IT 籤，不該我籤"
+
+主張讓 IT 來籤的理由很充分。IT 懂這個平台，本來就在給其他系統做變更審批，而部門負責人還有別的工作。
+
+IT 能確認的是：系統和需求一致。它確認不了：需求本身是不是業務能接受的。"30% 以上的折扣需要財務審批"被忠實地實現了，而它附帶的三個決定來自草稿和平台的預設值，不是來自 IT 的任何人。必須有一個對摺扣政策負責的人來說，自己批給自己的 38% 行不行。可行的分工是：IT 籤構建，業務負責人籤簽字單。
+
+一頁的簽字單會被很快地讀完。正因為如此它才要短：第一次上線之後，負責人只看變了的那幾行。
+
+## 怎樣為你自己的系統拿到簽字單
+
+讓你的 AI 代理去生成。ObjectStack 18.5.0 沒有能直接列印這份簽字單的命令。我們為這篇文章寫了一個 51 行的腳本，而關於資料介面、AI 代理連線和審計日誌的那幾行，來自實際操作執行中的系統，不是來自腳本。這四個部分對應的，都是代理能從 ObjectStack 應用自身定義裡讀到的東西：訪問矩陣快照、審批步驟、公開表單和各類連線、審計設定。新專案在有人生成第一份快照之前，是沒有快照的。把下面這段要求放進代理每次都會讀的指令裡，簽字單就會隨每次改動一起交付：
+
+```text
+With every change you make to this app, produce the sign-off sheet:
+1. Who can see and change which records and fields (from the access-matrix snapshot).
+2. Who can approve what: for each approval step, when it starts, who approves,
+   what happens if nobody holds that role, and whether the requester can approve.
+3. What is open to the outside: public forms and their fields, API and agent access,
+   custom endpoints, outgoing calls to other systems.
+4. What is recorded: change log, field history, record-view auditing.
+Then list the lines that differ from the previous sheet, in plain words.
+```
+
+[怎樣把你的程式設計代理指向 ObjectStack](/en/blog/how-to-point-your-agent-at-objectstack/) 講了這類指令怎樣送達代理。在 ObjectStack 裡，一個應用就是一份由平台強制執行的書面描述，所以角色、審批、對外入口和審計設定都宣告在同一個地方，而不是散落在程式碼裡。
+
+想自己跑一遍：ObjectStack 倉庫提供 ObjectOS 社群版——ghcr.io/objectstack-ai/objectstack 映像、`os start` 和控制台，免費、自託管。ObjectOS Cloud 是託管版，ObjectOS 企業版是自管理的授權版本。
+
+{/* the-proof */}
+## 證據
+
+**版本。** 實測日期 2026-11-17。
+
+```text
+$ npm view @objectstack/cli dist-tags
+{ next: '18.5.0', latest: '18.5.0' }
+
+$ npx os --version
+@objectstack/cli/18.5.0 linux-x64 node-v22.22.0
+```
+
+**應用。** ObjectStack 倉庫在標籤 `@objectstack/cli@18.5.0` 下的 `examples/app-crm`，把其中的 `workspace:*` 依賴指向已釋出的 18.5.0 包，用 pnpm 安裝。它出廠就開啟了訪問矩陣門禁，`objectstack.config.ts` 旁邊放著一份 `access-matrix.json`。
+
+```bash
+git archive '@objectstack/cli@18.5.0' examples/app-crm | tar -x
+cd examples/app-crm
+sed -i 's/"workspace:\*"/"18.5.0"/' package.json
+pnpm install --ignore-workspace
+npx os compile
+```
+
+```text
+  → Running author-time rules (68)...
+  → Checking access-matrix snapshot (ADR-0090 D6)...
+  ✓ Build complete (378ms)
+  ⚠ 4 author-time warning(s) — see above
+
+  Data: 6 Objects  49 Fields  2 Datasources
+  Logic: 1 Flows
+  Security: 3 Positions  2 Permissions
+```
+
+在這個標籤下，除了兩個示例之外，`packages/create-objectstack` 的模板以及其他任何地方都沒有 `access-matrix.json`（`git ls-tree -r --name-only '@objectstack/cli@18.5.0' | grep 'access-matrix\.json$'` 只打印出 `examples/app-crm/access-matrix.json` 和 `examples/app-showcase/access-matrix.json`），所以新專案一開始是沒有快照的。
+
+四條警告都是 `field-no-consumers`，落在 `crm_opportunity` 的四個欄位上，其中一個是 `approval_status`：一個用來顯示審批結果、卻沒有任何地方讀取或顯示的欄位。`os info` 列出 `crm_lead (13 fields, user) — Lead`，就是第 3 部分裡的 13。
+
+**簽字單生成腳本。** 簽字單來自 `os compile` 讀寫的兩個檔案：已提交的 `access-matrix.json` 和編譯產物 `dist/objectstack.json`。審批節點的預設值，是用規範自帶的 `ApprovalNodeConfigSchema` 解析每個節點補齊的，所以簽字單顯示的是執行環境實際採用的值，而不只是作者寫下的值。
+
+`sheet.mjs`，51 行：
+
+```js
+// Prints the four-part sign-off sheet for an ObjectStack app, from its compiled
+// artifact and its committed access-matrix snapshot. Run from the app directory
+// after `os compile`:  node sheet.mjs
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+const require = createRequire(`${process.cwd()}/package.json`);
+const { ApprovalNodeConfigSchema } = require('@objectstack/spec/automation');
+
+const app = JSON.parse(readFileSync('dist/objectstack.json', 'utf8'));
+const matrix = JSON.parse(readFileSync('access-matrix.json', 'utf8')).entries;
+const bits = (e) => ['create', 'read', 'edit', 'delete'].filter((b) => e[b]).join(' · ') || 'nothing';
+
+console.log('1. Who can see and change which records and fields');
+for (const pos of app.positions) {
+  const sets = pos.permissionSets ?? [];
+  console.log(`  ${pos.label} → ${sets.join(', ')}`);
+}
+for (const e of matrix) {
+  const set = app.permissions.find((p) => p.name === e.permissionSet);
+  const fieldRules = Object.keys(set?.fields ?? {}).length;
+  console.log(`  ${e.permissionSet} | ${e.object} | ${bits(e)} | view all: ${e.viewAllRecords} | modify all: ${e.modifyAllRecords} | records: ${e.sharingModel} | field rules: ${fieldRules}`);
+}
+
+console.log('2. Who can approve what');
+const approvalNodes = app.flows.flatMap((f) =>
+  f.nodes.filter((n) => n.type === 'approval').map((n) => ({ f, n, cfg: ApprovalNodeConfigSchema.parse(n.config) })));
+if (!approvalNodes.length) console.log('  no approval step in this app');
+for (const { f, n, cfg } of approvalNodes) {
+  const start = f.nodes.find((x) => x.type === 'start')?.config ?? {};
+  console.log(`  ${f.label} / ${n.label} | object: ${start.objectName} | when: ${start.triggerType} if ${start.condition}`);
+  console.log(`    approvers: ${cfg.approvers.map((a) => `${a.type}:${a.value ?? ''}`).join(', ')} | decides: ${cfg.behavior}`);
+  console.log(`    nobody staffed → ${cfg.onEmptyApprovers} | requester removed from approvers: ${cfg.excludeSubmitter === true} | record locked while pending: ${cfg.lockRecord}`);
+}
+const routed = new Set(approvalNodes.flatMap(({ cfg }) => cfg.approvers.filter((a) => a.type === 'position').map((a) => a.value)));
+for (const pos of app.positions) {
+  if (/approv/i.test(`${pos.label} ${pos.description ?? ''}`) && !routed.has(pos.name))
+    console.log(`  position "${pos.label}" says: "${pos.description}" — no approval step routes to it`);
+}
+
+console.log('3. What is exposed to the outside');
+for (const v of app.views) for (const [name, fv] of Object.entries(v.formViews ?? {})) {
+  if (fv.sharing?.allowAnonymous) {
+    const fields = fv.sections.flatMap((s) => s.fields.map((x) => x.field));
+    console.log(`  public form ${fv.sharing.publicLink} | creates: ${fv.data.object} | ${fields.length} fields: ${fields.join(', ')}`);
+  }
+}
+for (const k of ['agents', 'apis', 'webhooks', 'connectors', 'portals']) console.log(`  ${k} declared: ${(app[k] ?? []).length}`);
+
+console.log('4. What is recorded');
+for (const o of app.objects) console.log(`  ${o.name} | field history on record page: ${o.enable?.trackHistory === true}`);
+console.log(`  plugins configured in the app (record-view audit lives here): ${(app.plugins ?? []).length}`);
+```
+
+**簽字單 1，改動之前**（`node sheet.mjs`）：
+
+```text
+1. Who can see and change which records and fields
+  Sales Representative → crm_sales_user
+  Sales Manager → crm_sales_user
+  Finance Approver → crm_sales_user
+  crm_sales_user | crm_account | create · read · edit | view all: false | modify all: false | records: public_read_write | field rules: 0
+  crm_sales_user | crm_activity | create · read · edit | view all: false | modify all: false | records: public_read_write | field rules: 0
+  crm_sales_user | crm_contact | create · read · edit | view all: false | modify all: false | records: public_read_write | field rules: 0
+  crm_sales_user | crm_lead | create · read · edit | view all: false | modify all: false | records: public_read_write | field rules: 0
+  crm_sales_user | crm_opportunity | create · read · edit | view all: false | modify all: false | records: public_read_write | field rules: 0
+  crm_sales_user | crm_opportunity_line_item | create · read · edit | view all: false | modify all: false | records: controlled_by_parent | field rules: 0
+  guest_portal | crm_lead | create | view all: false | modify all: false | records: public_read_write | field rules: 0
+2. Who can approve what
+  no approval step in this app
+  position "Finance Approver" says: "Finance team member authorised to approve discounts above 30%." — no approval step routes to it
+3. What is exposed to the outside
+  public form /forms/contact-us | creates: crm_lead | 5 fields: name, company, email, phone, title
+  agents declared: 0
+  apis declared: 0
+  webhooks declared: 0
+  connectors declared: 0
+  portals declared: 0
+4. What is recorded
+  crm_account | field history on record page: true
+  crm_activity | field history on record page: false
+  crm_contact | field history on record page: true
+  crm_lead | field history on record page: true
+  crm_opportunity | field history on record page: true
+  crm_opportunity_line_item | field history on record page: false
+  plugins configured in the app (record-view audit lives here): 0
+```
+
+`public_read_write` 就是第 1 部分裡的"所有人的"：每個有該物件權限的使用者都能讀取、修改每一條記錄。`controlled_by_parent` 表示商機明細跟隨所屬商機。`guest_portal` 那一行就是網站訪客那一行；[公開表單那篇](/zh-Hant/blog/how-to-let-anonymous-visitors-submit-a-form/)解釋了為什麼表單不需要它也能工作。管理員那一行不在矩陣裡；它來自開發伺服器的啟動橫幅，橫幅把預置賬號描述為"platform admin — Setup, Studio and every record"。記錄檢視審計只能作為應用裡的外掛選項來配置，所以配置的外掛數為零，就意味著沒有任何物件開啟。
+
+**第 2 到第 4 部分，在執行中的應用上核對。** 在空資料庫上執行 `npx os dev --fresh`。下面的記錄壓縮為請求、狀態碼和響應體裡要緊的部分。未登入時：
+
+```text
+$ curl -s -w ' %{http_code}' localhost:49961/api/v1/data/crm_opportunity
+{"error":"UNAUTHENTICATED","code":"UNAUTHENTICATED","message":"Authentication is required to access this endpoint."} 401
+
+$ curl -s -w ' %{http_code}' localhost:49961/api/v1/forms/contact-us
+{"slug":"contact-us","object":"crm_lead","form":{ … "fields":[{"field":"name","required":true, …},{"field":"company", …},
+ {"field":"email","required":true, …},{"field":"phone", …},{"field":"title", …}]}], … } 200
+
+$ curl -s -w ' %{http_code}' -X POST localhost:49961/api/v1/mcp -H 'content-type: application/json' \
+    -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+{"success":false,"error":{"code":"UNAUTHENTICATED","message":"Unauthorized: a valid OAuth access token or API key is required","httpStatus":401}} 401
+```
+
+不經過表單、直接向線索的資料地址匿名寫入，同樣被拒絕（在改動後的應用上執行，見下文）：
+
+```text
+$ curl -s -w ' %{http_code}' -X POST localhost:49961/api/v1/data/crm_lead -H 'content-type: application/json' \
+    -d '{"name":"Anon","email":"anon@example.com","status":"qualified"}'
+{"error":"UNAUTHENTICATED","code":"UNAUTHENTICATED","message":"Authentication is required to access this endpoint."} 401
+```
+
+啟動橫幅顯示 AI 代理連線預設開啟：`MCP: http://localhost:49961/api/v1/mcp`，以及 `Disable OS_MCP_SERVER_ENABLED=false`。金鑰被接受之後能做什麼，這裡沒有測。該標籤下的 MCP 指南（`content/docs/ai/connect-mcp.mdx`，第 243–244 行和第 255–257 行）寫道："<span lang="en">The HTTP surface authenticates **each caller** (OAuth as a person, or their own API key)</span>"，並建議對權限受限的代理："<span lang="en">mint it on a user with exactly the access it should have.</span>"
+
+以預置管理員身份登入後，折扣測試和它留下的審計行：
+
+```text
+PATCH /api/v1/data/crm_opportunity/1guy5QfI1dxYqC_a  {"discount_percent":35}   → 200
+PATCH /api/v1/data/crm_opportunity/1guy5QfI1dxYqC_a  {"discount_percent":45}   → 400
+  {"error":"Discount cannot exceed 40% without an approved exception.","code":"VALIDATION_FAILED", … }
+GET /api/v1/approvals/requests                                               → 200 {"data":[]}
+
+GET /api/v1/data/sys_audit_log?sort=-created_at&limit=1
+  {"action":"update","object_name":"crm_opportunity","record_id":"1guy5QfI1dxYqC_a",
+   "user_id":"oK3bdOQRcKqg6bhRmok9rDGAgwHotqpH",
+   "old_value":"{\"discount_percent\":0}","new_value":"{\"discount_percent\":35}",
+   "created_at":"2026-11-17T04:19:56.758Z"}
+```
+
+之後按 id 讀取這單商機，沒有新增 `read` 行：日誌裡只有 `config_change` 2、`create` 3、`update` 4、`login` 2。40% 的拒絕來自 `src/objects/opportunity.object.ts` 裡 `crm_opportunity` 上的一條校驗規則，整個應用裡沒有任何例外通道：
+
+```ts
+condition: P`record.discount_percent != null && record.discount_percent > 40`,
+message: 'Discount cannot exceed 40% without an approved exception.',
+```
+
+第 4 部分裡的刪除和第 1 部分裡的管理員那一行，在之後的一次全新啟動中以管理員身份測得：
+
+```text
+DELETE /api/v1/data/crm_activity/3faQC9ppNgMiJIZS  → 200
+  {"object":"crm_activity","id":"3faQC9ppNgMiJIZS","success":true,"recycleBinEntryId":"m2JEV5EL4Tn_HTqM"}
+GET /api/v1/data/sys_audit_log?sort=-created_at&limit=1
+  {"action":"delete","object_name":"crm_activity","record_id":"3faQC9ppNgMiJIZS",
+   "user_id":"I7JqyNY3c2CMRzcLBpUlI0ykgjPAF9U4",
+   "old_value":"{\"id\":\"3faQC9ppNgMiJIZS\", … }","new_value":null,"created_at":"2026-11-17T04:36:40.312Z"}
+```
+
+**改動。** 一個新檔案，加上 `src/flows/index.ts` 裡註冊它的兩行改動和 `objectstack.config.ts` 裡的一行：
+
+```ts
+import { defineFlow } from '@objectstack/spec';
+
+// Request: "Discounts above 30% need Finance approval."
+export const DiscountApprovalFlow = defineFlow({
+  name: 'crm_discount_approval',
+  label: 'Discount Approval',
+  description: 'Finance approves any discount above 30%.',
+  type: 'autolaunched',
+  status: 'active',
+  nodes: [
+    {
+      id: 'start',
+      type: 'start',
+      label: 'On Discount Above 30%',
+      config: {
+        objectName: 'crm_opportunity',
+        triggerType: 'record-after-update',
+        condition: 'discount_percent != null && discount_percent > 30 && discount_percent != previous.discount_percent',
+      },
+    },
+    {
+      id: 'finance_review',
+      type: 'approval',
+      label: 'Finance Review',
+      config: {
+        approvers: [{ type: 'position', value: 'crm_finance_approver' }],
+        approvalStatusField: 'approval_status',
+      },
+    },
+    { id: 'approved', type: 'end', label: 'Approved' },
+    { id: 'rejected', type: 'end', label: 'Rejected' },
+  ],
+  edges: [
+    { id: 'e1', source: 'start', target: 'finance_review' },
+    { id: 'e2', source: 'finance_review', target: 'approved', label: 'approve' },
+    { id: 'e3', source: 'finance_review', target: 'rejected', label: 'reject' },
+  ],
+});
+```
+
+```diff
+-  requires: ['ui', 'automation'],
++  requires: ['ui', 'automation', 'triggers', 'approvals'],
+```
+
+觸發方式沿用了平台自己在 `examples/app-showcase` 裡的審批示例，它同樣從 `record-after-update` 開始。`requires` 這一行改了兩稿。沒有 `'triggers'` 時，`os validate` 拒絕了這個應用：
+
+```text
+✗ flow 'crm_discount_approval' declares a 'record_change' trigger but `requires` does not include 'triggers' — no 'record_change' trigger would be registered, so the flow would never auto-launch.
+```
+
+有 `'triggers'` 但沒有 `'approvals'` 時，`os validate` 通過了，簽字單也一樣。在執行中的應用上，35% 的修改儲存成功，`approval_status` 仍是 `null`，`/api/v1/approvals/requests` 一直為空，伺服器日誌裡出現：
+
+```text
+WARN [Automation] 1 flow(s) reference node types no installed plugin provides (approval) — install/enable the plugin that contributes them (e.g. 'approval' ⇐ @objectstack/plugin-approvals).
+ERROR Trigger-fired run of flow 'crm_discount_approval' failed (trigger 'record_change') — no caller holds this result and nothing retries the run; … {"error":"No executor registered for node type 'approval'"}
+```
+
+這就是正文裡"系統真的能跑"那一條說的情況。兩項都加上之後，`os validate` 通過，並附帶一條關於角色無人擔任時由誰決定的提示：
+
+```text
+  ✓ Validation passed (409ms)
+  ℹ flow "crm_discount_approval" · node "finance_review": every approver on this node routes to a group (position/team/department/queue), so if none is staffed the request opens on the organization's administrators, and (lockRecord) the record stays locked
+```
+
+`os compile` 通過訪問矩陣檢查，沒有任何漂移（`Logic: 2 Flows`、`Security: 3 Positions  2 Permissions`），`git diff --quiet -- access-matrix.json` 以 0 退出：第 1、3 部分沒有變化。
+
+**簽字單 2，有差異的行**（`diff sheet-before.txt sheet-after.txt`）：
+
+```diff
+13,14c13,15
+<   no approval step in this app
+<   position "Finance Approver" says: "Finance team member authorised to approve discounts above 30%." — no approval step routes to it
+---
+>   Discount Approval / Finance Review | object: crm_opportunity | when: record-after-update if discount_percent != null && discount_percent > 30 && discount_percent != previous.discount_percent
+>     approvers: position:crm_finance_approver | decides: first_response
+>     nobody staffed → admin_rescue | requester removed from approvers: false | record locked while pending: true
+```
+
+`admin_rescue`、未設定的 `excludeSubmitter` 和 `lockRecord: true`，都是草稿接受下來的 schema 預設值。規範對 `excludeSubmitter` 的描述是 "Stops people approving their own requests … Off by default: the approvers stay as found"，對 `onEmptyApprovers` 的描述是 "'admin_rescue' (default) opens the request on the administrators"。新建的商機之所以不用審批，原因在 `record-after-update`。
+
+**審批，在執行中的應用上**（帶著改動重新 `os dev --fresh`）。管理員把一單商機提到 35%：
+
+```text
+PATCH /api/v1/data/crm_opportunity/Br_N2OGg7JQQToKh {"discount_percent":35}  → 200
+GET  /api/v1/data/crm_opportunity/Br_N2OGg7JQQToKh?select=…  → "discount_percent":35,"approval_status":"pending"
+GET  /api/v1/approvals/requests
+  {"id":"areq_6e2a35bb-1d48-4a0d-9f7c-ca628617ff68","process_name":"flow:crm_discount_approval",
+   "status":"pending","current_step":"finance_review","submitter_name":"Dev Admin",
+   "pending_approver_names":{"UO93S2l58Cv0XEjBT71Iw5ORVEQ3wxTe":"Dev Admin"},"lock_record":true,
+   "viewer":{"can_act":true,"is_submitter":true,"can_override":true}, … }
+PATCH /api/v1/data/crm_opportunity/Br_N2OGg7JQQToKh {"amount":90000}  → 409
+  {"error":"Opportunity 'Initech — Expansion' is locked while an approval is in progress, and cannot be edited until that approval is complete","code":"RECORD_LOCKED", … }
+```
+
+`sys_user_position` 裡是 0 行：沒有人擔任任何角色，所以請求交給了管理員。隨後管理員建立了一個使用者 Fiona，並分配給她"財務審批人"角色（一行 `sys_user_position`，`position: "crm_finance_approver"`）。以 Fiona 身份登入，操作的是一單歸管理員所有的商機（請求內容裡帶有 `"owner_id":"UO93S2l5…"`，顯示為 `"Dev Admin"`）：
+
+```text
+PATCH /api/v1/data/crm_opportunity/FoDMAMOEtRWdCABw {"discount_percent":38}  → 200
+GET  /api/v1/approvals/requests
+  areq_88f8936f-e8f6-40fd-aefb-86e747a30ce1 Globex — New CRM Rollout pending submitter=Fiona (Finance)
+  approvers={"uFVoHYOSbqt55MeAEX0O2R77NyX1dUnN":"Fiona (Finance)"} {"can_act":true,"is_submitter":true,"can_override":false}
+POST /api/v1/approvals/requests/areq_88f8936f-…/approve {"comment":"approved"}  → 200  status: approved
+GET  /api/v1/data/crm_opportunity/FoDMAMOEtRWdCABw?select=…  → "discount_percent":38,"approval_status":"approved"
+
+POST /api/v1/data/crm_opportunity {"name":"New deal at 35%", …, "discount_percent":35}  → 201
+GET  /api/v1/approvals/requests  → only the two requests above; "New deal at 35%" has "approval_status":null
+
+PATCH /api/v1/data/crm_opportunity/KJLStdCxbBdKWQgm {"discount_percent":45}  → 400
+  {"error":"Discount cannot exceed 40% without an approved exception.","code":"VALIDATION_FAILED", … }
+```
+
+Fiona 這個請求的審計日誌，按時間倒序（`GET /api/v1/data/sys_audit_log?sort=-created_at`，已刪減）：
+
+```text
+04:24:28.724Z update crm_opportunity      FoDMAMOEtRWdCABw  {"approval_status":"approved"}
+04:24:28.691Z update sys_approval_request areq_88f8936f-…   {"status":"approved","pending_approvers":null, … }
+04:24:28.684Z create sys_approval_action  aact_9842e363-…
+04:24:18.692Z update crm_opportunity      FoDMAMOEtRWdCABw  {"approval_status":"pending"}
+04:24:18.665Z create sys_approval_request areq_88f8936f-…
+04:24:18.647Z update crm_opportunity      FoDMAMOEtRWdCABw  {"discount_percent":38}
+```
+
+每一行還帶著做出該操作的 `user_id`。這次執行中再次探測了對外入口：未帶憑據時，資料介面和 AI 代理連線仍然返回 `401`，聯絡表單返回 `200`。
