@@ -21,14 +21,15 @@
 //     {/* the-proof */}
 //     ## The proof
 //
-// Why an MDX comment: MDX compiles `{/* … */}` to nothing, so the built page is
-// byte-identical with or without it (checked on #458 by building a post with
-// and without the marker in all eight locales); it is ASCII, so
-// `pnpm gen:zh-hant` (OpenCC) and translators carry it over unchanged; and it
-// adds no id, so it cannot collide with a heading slug. The candidates it beat:
-// a `{#the-proof}` heading id is a JS expression in MDX and fails the build, and
-// an `<a id>` anchor adds an element whose id collides with the English slug
-// `the-proof`. The WeChat export (`scripts/lib/wechat-html.mjs`) drops the line.
+// Why an MDX comment: MDX compiles `{/* … */}` to no element and no text. On
+// #458 a post built with and without the marker, in all eight locales, differed
+// by one whitespace newline between the paragraph and the proof heading, and
+// nothing else. It is ASCII, so `pnpm gen:zh-hant` (OpenCC) and translators
+// carry it over unchanged, and it adds no id, so it cannot collide with a
+// heading slug. The candidates it beat: in MDX a `{#the-proof}` heading id is a
+// JS expression that fails to parse, and an `<a id="the-proof">` anchor adds an
+// element whose id collides with the slug of an English `## The proof`. The
+// WeChat export (`scripts/lib/wechat-html.mjs`) drops the line.
 //
 // A marker inside a code fence is code, not a marker. Only the exact spelling
 // counts; a near miss reads as "no proof section", and the message names the
