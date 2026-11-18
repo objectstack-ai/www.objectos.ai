@@ -26,13 +26,75 @@ interface HomeCopy {
   eyebrow: string;
   hero: [string, string];
   /**
-   * The line under the H1 that names the product category in plain words for
-   * a business reader (#392): what ObjectOS is, before T2 says how it works.
-   * It is the lane's wording, not a canonical line, so it is not read from
-   * `./positioning`; it must stay consistent with T2 (AI writes the app, the
-   * runtime governs it) and must not claim anything T1–T4 or E1 do not.
+   * The line under the H1, in a business reader's words (#392): what AI
+   * writes, what runs it, and what the reader gets — less to write, governed,
+   * in their own environment. It is the lane's wording, not a canonical line,
+   * so it is not read from `./positioning`; it must stay consistent with T2
+   * (AI writes the definition, the runtime runs and governs it) and E1 (the
+   * self-managed editions). No speed multiple here or anywhere on the page:
+   * the advantage is stated as size and governability (AGENTS.md, "the wedge
+   * is trust, not speed").
    */
   heroCategory: string;
+  /**
+   * "Five questions, answered first": the block directly under the hero. Five
+   * question → answer rows a first-time business reader asks, each answer
+   * within what the page's own sections, /ai/, /connect-existing-systems/ and
+   * the trust center already state: the in-product AI's record changes wait
+   * for the user's confirmation (not every agent's), and running in the
+   * reader's environment with their own model is the self-hosted editions.
+   */
+  answersKicker: string;
+  answersTitle: string;
+  answers: { question: string; answer: string }[];
+  /**
+   * "Why there is less to write": two lanes (AI writes code / AI writes the
+   * business definition), three steps each, then three size rows and one
+   * sentence on what stays in the definition and what the runtime derives.
+   * The first size row is a typical order of magnitude, the one the post
+   * `business-app-in-16k-tokens` uses; the other two are measured, and
+   * `lessMethod` says at which commits and over which files:
+   *   hotcrm 94f8d04, `src/sales`, non-test `.ts`, without `translations/`
+   *   and `data/`: 159 files, 28,456 lines (11 objects, 21 flow files, 4
+   *   dashboards); objectstack e61af972, `examples/app-crm/src`: 30 files,
+   *   2,189 lines.
+   * Sizes only: no speed multiple and no build-time figure.
+   */
+  lessKicker: string;
+  lessTitle: [string, string];
+  lessLanes: [{ label: string; steps: [string, string, string] }, { label: string; steps: [string, string, string] }];
+  lessSizeTitle: string;
+  lessSizes: [
+    { label: string; value: string; note: string },
+    { label: string; value: string; note: string },
+    { label: string; value: string; note: string },
+  ];
+  lessMethod: string;
+  lessClosing: string;
+  /** The block's link to the post that makes the argument. */
+  lessLink: string;
+  /**
+   * The product on screen: the hero's framed screenshot (`heroShotAlt`, the
+   * whole screen) and the "see the product" strip after the less-to-write
+   * block — three details cut from full screens so they stay legible in a
+   * third of the page, each with a one-line caption and a text alternative
+   * that says what that part of the screen shows. All four are real screens of HotCRM, the
+   * open-source example app, running on ObjectOS; `screensNote` says so under
+   * the hero screenshot and under the strip. The zh pair shows the app's
+   * Chinese UI and every other locale its English UI (the rule AGENTS.md sets
+   * for diagrams that carry text), so a non-zh alt names the UI's own English
+   * labels. The record and flow names are HotCRM's sample data and are
+   * English in both.
+   */
+  heroShotAlt: string;
+  screensKicker: string;
+  screensTitle: string;
+  screens: [
+    { caption: string; alt: string },
+    { caption: string; alt: string },
+    { caption: string; alt: string },
+  ];
+  screensNote: string;
   /** The first screen's one paragraph: T2, nothing else (the CTA row follows it). */
   heroLead: string;
   /**
@@ -86,7 +148,13 @@ interface HomeCopy {
   positioningCopy: string;
   /** The text link under the positioning copy, to the /[lang]/ontology/ pillar. */
   positioningLink: string;
-  /** Two cards: the business model (→ /data-modeling/), and federating what already runs (→ /connect-existing-systems/). */
+  /**
+   * Four cards: the business model (→ /data-modeling/), then the three ways
+   * in that /connect-existing-systems/ describes, each linking its section
+   * there: federation (live reads, read-only by default), one-way sync into
+   * a read-only object, and write-back through a declared action and a
+   * connector. No two-way sync, and nothing that page does not say.
+   */
   capabilities: { title: string; copy: string }[];
   /**
    * Block 3, "AI in the product" (#411): three cards in business terms —
@@ -158,8 +226,50 @@ const zhHans: HomeCopy = {
   description: `${positioning['zh-Hans'].t2}ObjectOS 有三个版本：${positioning['zh-Hans'].descriptor}。`,
   eyebrow: positioning['zh-Hans'].descriptor,
   hero: positioning['zh-Hans'].t1Hero,
-  heroCategory: '用 AI 构建并治理业务应用的平台。',
+  heroCategory: 'AI 只写业务定义，平台直接运行：写得少、管得住、装在你自己的环境。',
   heroLead: positioning['zh-Hans'].t2,
+  answersKicker: '先说结论',
+  answersTitle: '你最关心的五个问题，先给答案',
+  answers: [
+    { question: '新系统多久能做出来？', answer: 'AI 只写业务定义，平台直接运行；要写的内容少一到两个数量级。' },
+    { question: '现有的系统要不要换？', answer: '不用换。接进来，AI 就能读懂现有的数据。' },
+    { question: '员工要重新学吗？', answer: '不用。在常用的 AI 助手里直接问、直接办。' },
+    { question: 'AI 会不会乱来？', answer: '以使用者本人的权限工作；产品内 AI 改数据先由本人确认，流程里的审批交给审批人。' },
+    { question: '系统和数据在谁手里？', answer: '在你手里：可以装在你自己的环境，私有部署时模型由你选，内核 ObjectStack 开源。' },
+  ],
+  lessKicker: '为什么写得少',
+  lessTitle: ['AI 只写业务定义，', '其余交给平台运行'],
+  lessLanes: [
+    { label: '通常的做法', steps: ['AI 写代码', '每个应用多出一堆新代码', '问题上线后才暴露'] },
+    { label: 'ObjectOS 的做法', steps: ['AI 写业务定义', '平台直接运行', '边写边校验'] },
+  ],
+  lessSizeTitle: '同样是 CRM，要写多少',
+  lessSizes: [
+    { label: '传统手写的 CRM 代码库', value: '30 万–100 万+ 行', note: '典型量级，不是实测值' },
+    { label: 'HotCRM 销售模块（开源）', value: '约 2.8 万行', note: '159 个文件、28,456 行：11 个对象、21 个流程文件、4 个仪表盘' },
+    { label: '随运行时附带的参考 CRM', value: '2,189 行', note: '30 个文件：objectstack 仓库里的 examples/app-crm' },
+  ],
+  lessMethod: '后两行是实测值：HotCRM 取 hotcrm 提交 94f8d04 中 src/sales 下的非测试 .ts 文件，不含 translations/ 与 data/；参考 CRM 取 objectstack 提交 e61af972 中的 examples/app-crm/src。',
+  lessClosing: '决定留在定义里；数据表、增删改查 API、列表页与详情页、权限检查、审计写入这些管道，由运行时推导出来。',
+  lessLink: '阅读完整论证',
+  heroShotAlt: 'HotCRM 的高管总览仪表盘，运行在 ObjectOS 上：年度累计收入 1,290,000、活跃客户 9、联系人 9、未转化线索 21，下方是过去 12 个月的收入趋势图和行业收入分布，左侧是销售应用的导航。',
+  screensKicker: '产品界面',
+  screensTitle: '搭出来的应用长这样',
+  screens: [
+    {
+      caption: '看板：按销售阶段管理商机',
+      alt: 'HotCRM 销售流水线看板的局部：寻找客户、资格审查两列，各有两张商机卡片，卡片上是所属客户、金额和预计成交日期，列头是商机数量与金额合计。',
+    },
+    {
+      caption: '流程：大额商机多走一级审批',
+      alt: '流程设计器里 Large Deal Approval 流程的局部：销售经理审批通过后，经过金额是否超过 50 万美元的条件分支，超过的再走一步销售总监审批；每个审批节点都有通过和驳回两条出线。',
+    },
+    {
+      caption: '接入 AI 助手：Claude、豆包、千问',
+      alt: '连接 AI 助手页面的局部：本系统的连接地址和下载 SKILL.md 的按钮，下方是选择 AI 助手的选项卡：Claude、Codex、Cursor、WorkBuddy、豆包、千问，当前显示 Claude 的接入步骤。',
+    },
+  ],
+  screensNote: '截图来自开源示例应用 HotCRM。',
   editionsCopy: positioning['zh-Hans'].e1,
   primaryCta: '开始使用',
   secondaryCta: '了解工作原理',
@@ -178,12 +288,14 @@ const zhHans: HomeCopy = {
   imageNoteTitle: t2Lead(positioning['zh-Hans'].t2),
   imageNote: '正在连接应用、数据与 Agent',
   connectKicker: '它怎么接进你现有的系统',
-  positioningTitle: ['保留运转良好的系统，', '补上受治理的 Agent 运行时。'],
+  positioningTitle: ['你不迁移，', '你连接。'],
   positioningLink: '什么是可执行的业务本体',
   positioningCopy: '企业 AI 不需要又一次重建，也不需要更多不可审的生成代码。它需要一份 Agent 能写、人能审、运行时能治理的定义，把旧系统、新应用和 AI Agent 接在一起。你的对象与字段、关系、动作、权限、流程，以及 Agent 与工具定义，就是这份定义——你的业务本体：开放、带版本、归你所有，而不是锁在别人平台里的资产。',
   capabilities: [
     { title: '给 Agent 一个业务模型', copy: '把客户、订单、设备、工单和审批建模成对象，让 Agent 能准确读取、关联和操作。' },
-    { title: '接入已在运行的系统——先只读', copy: '把已经在跑的数据库作为外部数据源联邦接入，再把它的表建模成对象。联邦默认只读、尚在早期：记录系统继续写入数据，写权限按对象有意开启。' },
+    { title: '联邦接入：实时读取，先只读', copy: '把已经在跑的数据库或 OData 服务声明为外部数据源，把它的表绑定成对象。数据留在源头，每次读取都实时转发过去。联邦默认只读、尚在早期：写入要在数据源和对象两处有意开启。' },
+    { title: '单向同步：拷贝成只读对象', copy: '由作业把数据单向拷贝进一个普通对象。成员能读、能做报表，但不能改：拉取是它唯一的写入方，每次运行都留下记录。' },
+    { title: '通过声明的动作写回，没有双向同步', copy: '需要改动源系统时，由一个声明的动作通过连接器、用连接器自己的凭据调用它。本地副本不被编辑，下一次拉取把变化带回来；不自动写回，也不做冲突合并。' },
   ],
   aiKicker: '产品里的 AI',
   aiTitle: ['用自然语言提问、改数据、搭应用，', '来源看得见，改动由你确认。'],
@@ -246,8 +358,50 @@ const en: HomeCopy = {
   description: `${positioning.en.t2} ObjectOS comes in three editions, ${positioning.en.descriptor}.`,
   eyebrow: sentenceCase(positioning.en.descriptor),
   hero: positioning.en.t1Hero,
-  heroCategory: 'A platform to build and govern business applications with AI.',
+  heroCategory: 'AI writes only the business definition and the platform runs it: less to write, governed by default, deployed in your environment.',
   heroLead: positioning.en.t2,
+  answersKicker: 'The short version',
+  answersTitle: 'Your five questions, answered first',
+  answers: [
+    { question: 'How fast can we get a new system?', answer: 'AI writes only the business definition and the platform runs it; one to two orders of magnitude less to write.' },
+    { question: 'Do we have to replace what we run?', answer: 'No. Connect it, and AI can read your existing data.' },
+    { question: 'Do employees need retraining?', answer: 'No. They ask and act in the AI assistant they already use.' },
+    { question: 'Will AI go off the rails?', answer: 'It works with the user’s own permissions; record changes by the in-product AI wait for that person’s confirmation, and approval steps in a flow go to the approver.' },
+    { question: 'Who holds the system and the data?', answer: 'You do: it can run in your own environment, with the model you choose when you self-host, on an open-source core.' },
+  ],
+  lessKicker: 'Why there is less to write',
+  lessTitle: ['AI writes only the business definition.', 'The platform runs the rest.'],
+  lessLanes: [
+    { label: 'The usual path', steps: ['AI writes code', 'A pile of new code for every app', 'Problems surface after go-live'] },
+    { label: 'The ObjectOS path', steps: ['AI writes the business definition', 'The platform runs it', 'Validated as it is written'] },
+  ],
+  lessSizeTitle: 'A CRM, by how much has to be written',
+  lessSizes: [
+    { label: 'A traditional hand-written CRM codebase', value: '300k–1M+ lines', note: 'A typical order of magnitude, not a measurement' },
+    { label: 'HotCRM sales module (open source)', value: 'about 28,000 lines', note: '159 files, 28,456 lines: 11 objects, 21 flow files, 4 dashboards' },
+    { label: 'The reference CRM bundled with the runtime', value: '2,189 lines', note: '30 files: examples/app-crm in the objectstack repository' },
+  ],
+  lessMethod: 'The last two rows are measured: HotCRM at hotcrm commit 94f8d04, the non-test .ts files under src/sales, excluding translations/ and data/; the reference CRM at objectstack commit e61af972, examples/app-crm/src.',
+  lessClosing: 'The decisions stay in the definition. The plumbing — tables, the CRUD API, list and detail pages, permission checks, audit writes — is derived by the runtime.',
+  lessLink: 'Read the full argument',
+  heroShotAlt: 'The executive overview dashboard of HotCRM, running on ObjectOS: total revenue year to date 1,290,000, 9 active accounts, 9 contacts and 21 open leads, above a 12-month revenue trend chart and revenue by industry, with the sales app’s navigation on the left.',
+  screensKicker: 'The product',
+  screensTitle: 'What the apps look like',
+  screens: [
+    {
+      caption: 'Kanban: manage deals by stage',
+      alt: 'Part of HotCRM’s sales pipeline kanban board: the Prospecting and Qualification columns, two opportunity cards in each showing account, amount and close date, with each column’s count and total amount in its header.',
+    },
+    {
+      caption: 'Flow: large deals take one more approval',
+      alt: 'Part of the Large Deal Approval flow in the flow designer: after Sales Manager Review approves, a decision checks whether the deal is over $500K, and high-value deals go on to one more step, Sales Director Sign-off; each approval step has an approve and a reject path.',
+    },
+    {
+      caption: 'Connect your AI assistant: Claude, Doubao, Qwen',
+      alt: 'Part of the Connect an AI Assistant page: this system’s connection address and a Download SKILL.md button, above tabs for choosing an assistant — Claude, Codex, Cursor, WorkBuddy, Doubao Work and QwenWork — with the Claude setup steps showing.',
+    },
+  ],
+  screensNote: 'Screens from HotCRM, the open-source example app.',
   editionsCopy: positioning.en.e1,
   primaryCta: 'Get started',
   secondaryCta: 'See how it works',
@@ -266,12 +420,14 @@ const en: HomeCopy = {
   imageNoteTitle: t2Lead(positioning.en.t2),
   imageNote: 'Connecting applications, data, and agents',
   connectKicker: 'How it connects to what you run',
-  positioningTitle: ['Keep the systems that work.', 'Add a governed runtime for agents.'],
+  positioningTitle: ['You don’t migrate.', 'You connect.'],
   positioningLink: 'What an executable business ontology is',
   positioningCopy: 'Enterprise AI does not need another rebuild project or another pile of generated code. It needs one definition agents can write, humans can review, and a runtime can govern across legacy systems, new applications, and AI agents. Your objects and fields, relations, actions, permissions, flows, and agent and tool definitions are that definition — your business ontology: open, versioned, and yours, not an asset locked inside someone else’s platform.',
   capabilities: [
     { title: 'Give agents a business model', copy: 'Model customers, orders, equipment, cases, and approvals as objects agents can read, relate, and act on.' },
-    { title: 'Extend what already runs — read-only first', copy: 'Federate a database you already run as an external datasource and model its tables as objects. Federation is read-only by default and early: the system of record keeps writing the rows, and writes are enabled deliberately, per object.' },
+    { title: 'Federate it — live reads, read-only first', copy: 'Declare a database or OData service you already run as an external datasource and bind its tables as objects. The data stays in the source and every read is forwarded to it, live. Federation is read-only by default and early: writes are enabled deliberately, on both the datasource and the object.' },
+    { title: 'Sync it in one way — into a read-only object', copy: 'A job copies the rows one way into an ordinary object. Members can read it and report on it but not edit it: the pull is its only writer, and every run leaves a record.' },
+    { title: 'Write back through a declared action — no two-way sync', copy: 'When something must change in the source system, a declared action calls it through a connector, with the connector’s own credentials. The local copy is not edited and the next pull brings the change home; there is no automatic write-back and no conflict merging.' },
   ],
   aiKicker: 'AI in the product',
   aiTitle: ['Ask, change, and build in plain language.', 'You see the source and confirm the change.'],
@@ -335,8 +491,50 @@ const ja: HomeCopy = {
   description: `${positioning.ja.t2}ObjectOS には ${positioning.ja.descriptor} の 3 つのエディションがあります。`,
   eyebrow: positioning.ja.descriptor,
   hero: positioning.ja.t1Hero,
-  heroCategory: 'AI で業務アプリケーションを構築し、統制するためのプラットフォーム。',
+  heroCategory: 'AI が書くのは業務定義だけ、プラットフォームがそれを実行します。書く量は少なく、統制が効き、自社の環境で動きます。',
   heroLead: positioning.ja.t2,
+  answersKicker: 'まず結論から',
+  answersTitle: '気になる 5 つの質問に、先に答えます',
+  answers: [
+    { question: '新しいシステムはどれくらいで作れますか？', answer: 'AI が書くのは業務定義だけで、プラットフォームがそれを実行します。書く量は 1〜2 桁少なくなります。' },
+    { question: '今のシステムは入れ替えが必要ですか？', answer: 'いいえ。接続すれば、AI が既存のデータを読めるようになります。' },
+    { question: '従業員は覚え直す必要がありますか？', answer: 'いいえ。普段使っている AI アシスタントで、そのまま質問し、作業できます。' },
+    { question: 'AI が勝手なことをしませんか？', answer: 'AI は使う人本人の権限で動きます。製品内 AI によるデータ変更は本人の確認を待ち、フローの承認は承認者に回ります。' },
+    { question: 'システムとデータは誰の手元にありますか？', answer: 'あなたの手元です。自社の環境で動かせ、自社運用ではモデルを自分で選べ、コアの ObjectStack はオープンソースです。' },
+  ],
+  lessKicker: 'なぜ書く量が少ないのか',
+  lessTitle: ['AI が書くのは業務定義だけ。', '残りはプラットフォームが動かす。'],
+  lessLanes: [
+    { label: 'よくあるやり方', steps: ['AI がコードを書く', 'アプリごとに新しいコードの山', '問題は本番稼働後に表面化'] },
+    { label: 'ObjectOS のやり方', steps: ['AI が業務定義を書く', 'プラットフォームが実行する', '書くそばから検証される'] },
+  ],
+  lessSizeTitle: '同じ CRM で、書く量を比べる',
+  lessSizes: [
+    { label: '従来の手書き CRM コードベース', value: '30 万〜100 万行超', note: '典型的な規模感であり、実測値ではありません' },
+    { label: 'HotCRM の営業モジュール（オープンソース）', value: '約 28,000 行', note: '159 ファイル、28,456 行：オブジェクト 11、フローファイル 21、ダッシュボード 4' },
+    { label: 'ランタイム同梱のリファレンス CRM', value: '2,189 行', note: '30 ファイル：objectstack リポジトリの examples/app-crm' },
+  ],
+  lessMethod: '下の 2 行は実測値です。HotCRM は hotcrm のコミット 94f8d04 における src/sales 配下のテスト以外の .ts ファイル（translations/ と data/ を除く）、リファレンス CRM は objectstack のコミット e61af972 における examples/app-crm/src です。',
+  lessClosing: '意思決定は定義に残ります。テーブル、CRUD API、一覧と詳細の画面、権限チェック、監査ログの書き込みといった配管は、ランタイムが導出します。',
+  lessLink: '根拠を読む',
+  heroShotAlt: 'ObjectOS 上で動く HotCRM のエグゼクティブ概要ダッシュボード（英語 UI）。年初来の売上 1,290,000、アクティブな取引先 9、連絡先 9、未転換のリード 21 が並び、その下に過去 12 か月の売上推移グラフと業種別売上、左側に営業アプリのナビゲーションがあります。',
+  screensKicker: '製品画面',
+  screensTitle: 'できあがるアプリはこう見えます',
+  screens: [
+    {
+      caption: 'カンバン：商談をステージごとに管理',
+      alt: 'HotCRM の営業パイプラインのカンバンボードの一部（英語 UI）。Prospecting と Qualification の 2 列にそれぞれ 2 枚の商談カードがあり、カードには取引先・金額・完了予定日、列の見出しには件数と金額の合計が表示されています。',
+    },
+    {
+      caption: 'フロー：大型商談は承認が一段増える',
+      alt: 'フローデザイナーで開いた Large Deal Approval フローの一部（英語 UI）。Sales Manager Review が承認すると、商談が 50 万ドルを超えるかを判定する分岐に進み、超える場合はもう一段、Sales Director Sign-off の承認を通ります。各承認ステップから approve と reject の線が出ています。',
+    },
+    {
+      caption: 'AI アシスタントを接続：Claude、Doubao、Qwen',
+      alt: 'Connect an AI Assistant ページの一部（英語 UI）。このシステムの接続アドレスと Download SKILL.md ボタンがあり、その下にアシスタントを選ぶタブ（Claude、Codex、Cursor、WorkBuddy、Doubao Work、QwenWork）が並び、Claude の設定手順が表示されています。',
+    },
+  ],
+  screensNote: 'スクリーンショットは、オープンソースのサンプルアプリ HotCRM のものです。',
   editionsCopy: positioning.ja.e1,
   primaryCta: 'はじめる',
   secondaryCta: '仕組みを見る',
@@ -355,12 +553,14 @@ const ja: HomeCopy = {
   imageNoteTitle: t2Lead(positioning.ja.t2),
   imageNote: 'アプリ、データ、エージェントを接続中',
   connectKicker: '既存システムとのつながり方',
-  positioningTitle: ['今あるシステムを活かし、', 'エージェント用の統制ランタイムを加える。'],
+  positioningTitle: ['移行しない。', '接続する。'],
   positioningLink: '実行可能なビジネスオントロジーとは',
   positioningCopy: 'エンタープライズ AI に必要なのは、また一つの再構築プロジェクトでも、レビュー不能な生成コードの山でもありません。エージェントが書き、人がレビューでき、ランタイムが統制する、ひとつの定義です。オブジェクトとフィールド、リレーション、アクション、権限、フロー、そしてエージェントとツールの定義がその定義 — あなたのビジネスオントロジーです。オープンで、バージョン管理され、あなたのもの。誰かのプラットフォームに閉じ込められた資産ではありません。',
   capabilities: [
     { title: 'エージェントに業務モデルを渡す', copy: '顧客、注文、設備、ケース、承認を、エージェントが読み、関連付け、操作できるオブジェクトとしてモデル化します。' },
-    { title: '今あるシステムを活かす — まずは読み取り専用で', copy: 'すでに稼働中のデータベースを外部データソースとしてフェデレートし、そのテーブルをオブジェクトとしてモデル化します。フェデレーションは既定で読み取り専用で、まだ初期段階です。記録システムが行を書き続け、書き込みはオブジェクト単位で意図的に有効化します。' },
+    { title: 'フェデレーション — ライブで読み取り、まずは読み取り専用', copy: 'すでに稼働中のデータベースや OData サービスを外部データソースとして宣言し、そのテーブルをオブジェクトにバインドします。データは元の場所に残り、読み取りは毎回ライブで転送されます。フェデレーションは既定で読み取り専用で、まだ初期段階です。書き込みはデータソースとオブジェクトの両方で意図的に有効化します。' },
+    { title: '一方向の同期 — 読み取り専用オブジェクトへ', copy: 'ジョブがデータを一方向にコピーし、通常のオブジェクトにします。メンバーは読み取りやレポート作成はできますが、編集はできません。書き込むのはプルだけで、実行のたびに記録が残ります。' },
+    { title: '宣言されたアクションで書き戻す — 双方向同期はなし', copy: '元のシステムを変更する必要があるときは、宣言されたアクションがコネクター経由で、コネクター自身の資格情報を使って呼び出します。ローカルのコピーは編集されず、次のプルが変更を持ち帰ります。自動の書き戻しも競合のマージもありません。' },
   ],
   aiKicker: '製品に組み込まれた AI',
   aiTitle: ['質問も、データ変更も、アプリ作りも普段の言葉で。', '出典が見え、変更はあなたが確定します。'],
@@ -424,8 +624,50 @@ const de: HomeCopy = {
   description: `${positioning.de.t2} ObjectOS gibt es in drei Editionen, ${positioning.de.descriptor}.`,
   eyebrow: sentenceCase(positioning.de.descriptor),
   hero: positioning.de.t1Hero,
-  heroCategory: 'Eine Plattform, um Geschäftsanwendungen mit AI zu bauen und zu steuern.',
+  heroCategory: 'AI schreibt nur die Geschäftsdefinition, die Plattform führt sie aus: weniger zu schreiben, von Haus aus kontrolliert, in Ihrer Umgebung betrieben.',
   heroLead: positioning.de.t2,
+  answersKicker: 'Das Wichtigste zuerst',
+  answersTitle: 'Ihre fünf Fragen, zuerst beantwortet',
+  answers: [
+    { question: 'Wie schnell steht ein neues System?', answer: 'AI schreibt nur die Geschäftsdefinition, die Plattform führt sie aus; es ist ein bis zwei Größenordnungen weniger zu schreiben.' },
+    { question: 'Müssen wir bestehende Systeme ablösen?', answer: 'Nein. Binden Sie sie an, und AI kann Ihre vorhandenen Daten lesen.' },
+    { question: 'Müssen Mitarbeitende umlernen?', answer: 'Nein. Sie fragen und handeln im AI-Assistenten, den sie bereits nutzen.' },
+    { question: 'Macht die AI, was sie will?', answer: 'Sie arbeitet mit den Rechten der Person, die sie nutzt; Datenänderungen der In-App-AI warten auf deren Bestätigung, und Freigabeschritte im Flow gehen an die zuständige Person.' },
+    { question: 'Wer hält System und Daten in der Hand?', answer: 'Sie: Es kann in Ihrer eigenen Umgebung laufen, im Eigenbetrieb mit dem Modell Ihrer Wahl, auf einem Open-Source-Kern.' },
+  ],
+  lessKicker: 'Warum weniger zu schreiben ist',
+  lessTitle: ['AI schreibt nur die Geschäftsdefinition.', 'Den Rest führt die Plattform aus.'],
+  lessLanes: [
+    { label: 'Der übliche Weg', steps: ['AI schreibt Code', 'Ein Stapel neuer Code pro Anwendung', 'Probleme zeigen sich nach dem Go-live'] },
+    { label: 'Der ObjectOS-Weg', steps: ['AI schreibt die Geschäftsdefinition', 'Die Plattform führt sie aus', 'Beim Schreiben validiert'] },
+  ],
+  lessSizeTitle: 'Ein CRM, gemessen daran, wie viel zu schreiben ist',
+  lessSizes: [
+    { label: 'Eine herkömmliche, handgeschriebene CRM-Codebasis', value: '300k–1M+ Zeilen', note: 'Eine typische Größenordnung, keine Messung' },
+    { label: 'HotCRM, Vertriebsmodul (Open Source)', value: 'rund 28.000 Zeilen', note: '159 Dateien, 28.456 Zeilen: 11 Objekte, 21 Flow-Dateien, 4 Dashboards' },
+    { label: 'Das mit der Runtime gelieferte Referenz-CRM', value: '2.189 Zeilen', note: '30 Dateien: examples/app-crm im objectstack-Repository' },
+  ],
+  lessMethod: 'Die beiden letzten Zeilen sind gemessen: HotCRM am hotcrm-Commit 94f8d04, die .ts-Dateien unter src/sales ohne Tests, ohne translations/ und data/; das Referenz-CRM am objectstack-Commit e61af972, examples/app-crm/src.',
+  lessClosing: 'Die Entscheidungen bleiben in der Definition. Die Infrastruktur dahinter — Tabellen, die CRUD-API, Listen- und Detailseiten, Rechteprüfungen, Audit-Einträge — leitet die Runtime ab.',
+  lessLink: 'Die Begründung lesen',
+  heroShotAlt: 'Das Dashboard Executive Overview von HotCRM auf ObjectOS (englische Oberfläche): Umsatz seit Jahresbeginn 1.290.000, 9 aktive Accounts, 9 Kontakte und 21 offene Leads, darunter der Umsatzverlauf über 12 Monate und der Umsatz nach Branche, links die Navigation der Vertriebs-App.',
+  screensKicker: 'Das Produkt',
+  screensTitle: 'So sehen die Apps aus',
+  screens: [
+    {
+      caption: 'Kanban: Deals nach Phase steuern',
+      alt: 'Ausschnitt aus dem Kanban-Board der Vertriebspipeline von HotCRM (englische Oberfläche): die Spalten Prospecting und Qualification mit je zwei Opportunity-Karten, darauf Account, Betrag und Abschlussdatum; im Spaltenkopf stehen Anzahl und Gesamtbetrag.',
+    },
+    {
+      caption: 'Flow: Große Deals brauchen eine Freigabe mehr',
+      alt: 'Ausschnitt aus dem Flow Large Deal Approval im Flow-Designer (englische Oberfläche): Nach der Freigabe im Schritt Sales Manager Review prüft eine Entscheidung, ob der Deal über 500.000 US-Dollar liegt; solche Deals durchlaufen einen weiteren Schritt, Sales Director Sign-off. Von jedem Freigabeschritt gehen die Pfade approve und reject ab.',
+    },
+    {
+      caption: 'AI-Assistenten verbinden: Claude, Doubao, Qwen',
+      alt: 'Ausschnitt aus der Seite Connect an AI Assistant (englische Oberfläche): die Verbindungsadresse dieses Systems und die Schaltfläche Download SKILL.md, darunter Tabs zur Auswahl des Assistenten — Claude, Codex, Cursor, WorkBuddy, Doubao Work und QwenWork —, geöffnet sind die Einrichtungsschritte für Claude.',
+    },
+  ],
+  screensNote: 'Screenshots aus HotCRM, der Open-Source-Beispiel-App.',
   editionsCopy: positioning.de.e1,
   primaryCta: 'Loslegen',
   secondaryCta: 'So funktioniert es',
@@ -444,12 +686,14 @@ const de: HomeCopy = {
   imageNoteTitle: t2Lead(positioning.de.t2),
   imageNote: 'Verbindet Anwendungen, Daten und Agents',
   connectKicker: 'So fügt es sich in Ihre Systeme ein',
-  positioningTitle: ['Bewährte Systeme behalten.', 'Eine kontrollierte Runtime für Agents ergänzen.'],
+  positioningTitle: ['Sie migrieren nicht.', 'Sie verbinden.'],
   positioningLink: 'Was eine ausführbare Geschäftsontologie ist',
   positioningCopy: 'Enterprise AI braucht kein weiteres Neuaufbauprojekt und keinen weiteren Stapel generierten Codes. Sie braucht eine Definition, die Agents schreiben, Menschen prüfen und eine Runtime über Legacy-Systeme, neue Anwendungen und AI Agents hinweg kontrolliert. Ihre Objekte und Felder, Beziehungen, Aktionen, Berechtigungen, Flows sowie Agent- und Tool-Definitionen sind diese Definition — Ihre Geschäftsontologie: offen, versioniert und in Ihrem Besitz, kein Asset in der Plattform eines anderen.',
   capabilities: [
     { title: 'Agents ein Geschäftsmodell geben', copy: 'Modellieren Sie Kunden, Aufträge, Anlagen, Fälle und Freigaben als Objekte, die Agents lesen, verknüpfen und bearbeiten können.' },
-    { title: 'Bestehendes erweitern — zuerst nur lesend', copy: 'Föderieren Sie eine Datenbank, die Sie bereits betreiben, als externe Datasource und modellieren Sie ihre Tabellen als Objekte. Föderation ist standardmäßig nur lesend und noch früh: Das Ursprungssystem schreibt die Zeilen weiter, Schreibzugriff wird bewusst pro Objekt freigegeben.' },
+    { title: 'Föderieren — live lesen, zuerst nur lesend', copy: 'Deklarieren Sie eine Datenbank oder einen OData-Dienst, den Sie bereits betreiben, als externe Datasource und binden Sie die Tabellen als Objekte. Die Daten bleiben in der Quelle, jeder Lesezugriff wird live dorthin weitergeleitet. Föderation ist standardmäßig nur lesend und noch früh: Schreibzugriff wird bewusst freigegeben, an der Datasource und am Objekt.' },
+    { title: 'Einweg-Sync — in ein schreibgeschütztes Objekt', copy: 'Ein Job kopiert die Zeilen in eine Richtung in ein gewöhnliches Objekt. Mitglieder können es lesen und auswerten, aber nicht bearbeiten: Der Pull ist der einzige Schreiber, und jeder Lauf hinterlässt einen Eintrag.' },
+    { title: 'Zurückschreiben über eine deklarierte Aktion — kein Zwei-Wege-Sync', copy: 'Muss sich im Quellsystem etwas ändern, ruft eine deklarierte Aktion es über einen Connector auf, mit den Zugangsdaten des Connectors. Die lokale Kopie wird nicht bearbeitet, der nächste Pull holt die Änderung zurück; es gibt kein automatisches Zurückschreiben und kein Zusammenführen von Konflikten.' },
   ],
   aiKicker: 'AI im Produkt',
   aiTitle: ['Fragen, ändern und bauen in Alltagssprache.', 'Sie sehen die Quelle und bestätigen die Änderung.'],
@@ -513,8 +757,50 @@ const es: HomeCopy = {
   description: `${positioning.es.t2} ObjectOS se ofrece en tres ediciones, ${positioning.es.descriptor}.`,
   eyebrow: sentenceCase(positioning.es.descriptor),
   hero: positioning.es.t1Hero,
-  heroCategory: 'Una plataforma para crear y gobernar aplicaciones de negocio con AI.',
+  heroCategory: 'La AI solo escribe la definición de negocio y la plataforma la ejecuta: menos que escribir, gobernada por defecto, desplegada en tu entorno.',
   heroLead: positioning.es.t2,
+  answersKicker: 'En pocas palabras',
+  answersTitle: 'Tus cinco preguntas, respondidas primero',
+  answers: [
+    { question: '¿Cuánto se tarda en tener un sistema nuevo?', answer: 'La AI solo escribe la definición de negocio y la plataforma la ejecuta; hay que escribir entre uno y dos órdenes de magnitud menos.' },
+    { question: '¿Hay que sustituir lo que ya usamos?', answer: 'No. Conéctalo y la AI podrá leer tus datos actuales.' },
+    { question: '¿Los empleados tienen que volver a formarse?', answer: 'No. Preguntan y actúan en el asistente de AI que ya usan.' },
+    { question: '¿La AI hará lo que quiera?', answer: 'Trabaja con los permisos de quien la usa; los cambios de datos de la AI integrada esperan la confirmación de esa persona, y las aprobaciones del flujo van al aprobador.' },
+    { question: '¿Quién tiene el sistema y los datos?', answer: 'Tú: puede funcionar en tu propio entorno, con el modelo que elijas cuando lo alojas tú, sobre un núcleo de código abierto.' },
+  ],
+  lessKicker: 'Por qué hay menos que escribir',
+  lessTitle: ['La AI solo escribe la definición de negocio.', 'La plataforma ejecuta el resto.'],
+  lessLanes: [
+    { label: 'El camino habitual', steps: ['La AI escribe código', 'Un montón de código nuevo por aplicación', 'Los problemas aparecen tras la puesta en marcha'] },
+    { label: 'El camino de ObjectOS', steps: ['La AI escribe la definición de negocio', 'La plataforma la ejecuta', 'Validada mientras se escribe'] },
+  ],
+  lessSizeTitle: 'Un CRM, según cuánto hay que escribir',
+  lessSizes: [
+    { label: 'Una base de código CRM tradicional escrita a mano', value: '300k–1M+ líneas', note: 'Un orden de magnitud típico, no una medición' },
+    { label: 'Módulo de ventas de HotCRM (código abierto)', value: 'unas 28.000 líneas', note: '159 archivos, 28.456 líneas: 11 objetos, 21 archivos de flujo, 4 dashboards' },
+    { label: 'El CRM de referencia incluido con el runtime', value: '2.189 líneas', note: '30 archivos: examples/app-crm en el repositorio objectstack' },
+  ],
+  lessMethod: 'Las dos últimas filas están medidas: HotCRM en el commit 94f8d04 de hotcrm, los archivos .ts de src/sales que no son tests, sin translations/ ni data/; el CRM de referencia en el commit e61af972 de objectstack, examples/app-crm/src.',
+  lessClosing: 'Las decisiones se quedan en la definición. La fontanería — tablas, la API CRUD, páginas de lista y de detalle, comprobaciones de permisos, escrituras de auditoría — la deriva el runtime.',
+  lessLink: 'Lee el argumento completo',
+  heroShotAlt: 'El panel Executive Overview de HotCRM, en ejecución sobre ObjectOS (interfaz en inglés): ingresos acumulados del año 1.290.000, 9 cuentas activas, 9 contactos y 21 leads abiertos; debajo, la tendencia de ingresos de 12 meses y los ingresos por sector, y a la izquierda la navegación de la aplicación de ventas.',
+  screensKicker: 'El producto',
+  screensTitle: 'Así se ven las aplicaciones',
+  screens: [
+    {
+      caption: 'Kanban: gestiona las oportunidades por etapa',
+      alt: 'Parte del tablero kanban del pipeline de ventas de HotCRM (interfaz en inglés): las columnas Prospecting y Qualification, con dos tarjetas de oportunidad cada una que muestran cuenta, importe y fecha de cierre; el encabezado de cada columna indica el número de oportunidades y el importe total.',
+    },
+    {
+      caption: 'Flujo: las operaciones grandes pasan por una aprobación más',
+      alt: 'Parte del flujo Large Deal Approval en el diseñador de flujos (interfaz en inglés): cuando Sales Manager Review aprueba, una decisión comprueba si la operación supera los 500.000 dólares, y las que la superan pasan por un paso más, Sales Director Sign-off; de cada paso de aprobación salen los caminos approve y reject.',
+    },
+    {
+      caption: 'Conecta tu asistente de AI: Claude, Doubao, Qwen',
+      alt: 'Parte de la página Connect an AI Assistant (interfaz en inglés): la dirección de conexión de este sistema y el botón Download SKILL.md, y debajo las pestañas para elegir asistente — Claude, Codex, Cursor, WorkBuddy, Doubao Work y QwenWork —, con los pasos de configuración de Claude a la vista.',
+    },
+  ],
+  screensNote: 'Capturas de HotCRM, la aplicación de ejemplo de código abierto.',
   editionsCopy: positioning.es.e1,
   primaryCta: 'Empezar',
   secondaryCta: 'Cómo funciona',
@@ -533,12 +819,14 @@ const es: HomeCopy = {
   imageNoteTitle: t2Lead(positioning.es.t2),
   imageNote: 'Conectando aplicaciones, datos y agentes',
   connectKicker: 'Cómo se conecta con lo que ya usas',
-  positioningTitle: ['Conserva los sistemas que funcionan.', 'Añade un runtime gobernado para agentes.'],
+  positioningTitle: ['No migras.', 'Conectas.'],
   positioningLink: 'Qué es una ontología de negocio ejecutable',
   positioningCopy: 'La AI empresarial no necesita otro proyecto de reconstrucción ni otra pila de código generado. Necesita una definición que los agentes puedan escribir, las personas revisar y un runtime gobernar entre sistemas heredados, nuevas aplicaciones y agentes de AI. Tus objetos y campos, relaciones, acciones, permisos, flujos y definiciones de agentes y herramientas son esa definición — tu ontología de negocio: abierta, versionada y tuya, no un activo encerrado en la plataforma de otro.',
   capabilities: [
     { title: 'Da a los agentes un modelo de negocio', copy: 'Modela clientes, pedidos, equipos, casos y aprobaciones como objetos que los agentes pueden leer, relacionar y modificar.' },
-    { title: 'Extiende lo que ya funciona — primero en solo lectura', copy: 'Federa una base de datos que ya usas como datasource externa y modela sus tablas como objetos. La federación es de solo lectura por defecto y aún temprana: el sistema de registro sigue escribiendo las filas y las escrituras se habilitan deliberadamente, objeto por objeto.' },
+    { title: 'Federar — lecturas en vivo, primero en solo lectura', copy: 'Declara una base de datos o un servicio OData que ya usas como datasource externa y enlaza sus tablas como objetos. Los datos se quedan en el origen y cada lectura se reenvía allí, en vivo. La federación es de solo lectura por defecto y aún temprana: las escrituras se habilitan deliberadamente, en la datasource y en el objeto.' },
+    { title: 'Sincronizar en un solo sentido — a un objeto de solo lectura', copy: 'Un job copia las filas en un solo sentido a un objeto ordinario. Los miembros pueden leerlo y hacer informes, pero no editarlo: el pull es su único escritor y cada ejecución deja un registro.' },
+    { title: 'Escribir de vuelta mediante una acción declarada — sin sincronización bidireccional', copy: 'Cuando algo debe cambiar en el sistema de origen, una acción declarada lo llama a través de un conector, con las credenciales del propio conector. La copia local no se edita y el siguiente pull trae el cambio; no hay escritura de vuelta automática ni fusión de conflictos.' },
   ],
   aiKicker: 'AI en el producto',
   aiTitle: ['Pregunta, cambia y construye en lenguaje natural.', 'Ves la fuente y confirmas el cambio.'],
@@ -602,8 +890,50 @@ const fr: HomeCopy = {
   description: `${positioning.fr.t2} ObjectOS existe en trois éditions, ${positioning.fr.descriptor}.`,
   eyebrow: sentenceCase(positioning.fr.descriptor),
   hero: positioning.fr.t1Hero,
-  heroCategory: 'Une plateforme pour créer et gouverner des applications métier avec l’AI.',
+  heroCategory: 'L’AI n’écrit que la définition métier et la plateforme l’exécute : moins à écrire, gouvernée par défaut, déployée dans votre environnement.',
   heroLead: positioning.fr.t2,
+  answersKicker: 'En bref',
+  answersTitle: 'Vos cinq questions, les réponses d’abord',
+  answers: [
+    { question: 'En combien de temps obtient-on un nouveau système ?', answer: 'L’AI n’écrit que la définition métier et la plateforme l’exécute ; il y a un à deux ordres de grandeur de moins à écrire.' },
+    { question: 'Faut-il remplacer l’existant ?', answer: 'Non. Connectez-le, et l’AI peut lire vos données existantes.' },
+    { question: 'Faut-il reformer les équipes ?', answer: 'Non. Elles interrogent et agissent dans l’assistant AI qu’elles utilisent déjà.' },
+    { question: 'L’AI peut-elle faire n’importe quoi ?', answer: 'Elle travaille avec les permissions de la personne qui l’utilise ; les modifications de données de l’AI intégrée attendent la confirmation de cette personne, et les validations du flow reviennent au valideur.' },
+    { question: 'Qui détient le système et les données ?', answer: 'Vous : il peut fonctionner dans votre propre environnement, avec le modèle de votre choix en auto-hébergement, sur un cœur open source.' },
+  ],
+  lessKicker: 'Pourquoi il y a moins à écrire',
+  lessTitle: ['L’AI n’écrit que la définition métier.', 'La plateforme exécute le reste.'],
+  lessLanes: [
+    { label: 'La voie habituelle', steps: ['L’AI écrit du code', 'Une pile de code neuf par application', 'Les problèmes apparaissent après la mise en production'] },
+    { label: 'La voie ObjectOS', steps: ['L’AI écrit la définition métier', 'La plateforme l’exécute', 'Validée au moment de l’écriture'] },
+  ],
+  lessSizeTitle: 'Un CRM, selon ce qu’il faut écrire',
+  lessSizes: [
+    { label: 'Une base de code CRM classique écrite à la main', value: '300k–1M+ lignes', note: 'Un ordre de grandeur typique, pas une mesure' },
+    { label: 'Module ventes de HotCRM (open source)', value: 'environ 28 000 lignes', note: '159 fichiers, 28 456 lignes : 11 objets, 21 fichiers de flux, 4 tableaux de bord' },
+    { label: 'Le CRM de référence fourni avec le runtime', value: '2 189 lignes', note: '30 fichiers : examples/app-crm dans le dépôt objectstack' },
+  ],
+  lessMethod: 'Les deux dernières lignes sont mesurées : HotCRM au commit 94f8d04 de hotcrm, les fichiers .ts de src/sales hors tests, sans translations/ ni data/ ; le CRM de référence au commit e61af972 d’objectstack, examples/app-crm/src.',
+  lessClosing: 'Les décisions restent dans la définition. La plomberie — tables, API CRUD, pages de liste et de détail, contrôles de permissions, écritures d’audit — est dérivée par le runtime.',
+  lessLink: 'Lire l’argument complet',
+  heroShotAlt: 'Le tableau de bord Executive Overview de HotCRM, exécuté sur ObjectOS (interface en anglais) : chiffre d’affaires cumulé de l’année 1 290 000, 9 comptes actifs, 9 contacts et 21 leads ouverts ; en dessous, la tendance du chiffre d’affaires sur 12 mois et sa répartition par secteur, et à gauche la navigation de l’application commerciale.',
+  screensKicker: 'Le produit',
+  screensTitle: 'À quoi ressemblent les applications',
+  screens: [
+    {
+      caption: 'Kanban : pilotez les affaires par étape',
+      alt: 'Une partie du tableau kanban du pipeline commercial de HotCRM (interface en anglais) : les colonnes Prospecting et Qualification, avec deux cartes d’opportunité chacune indiquant le compte, le montant et la date de clôture ; l’en-tête de chaque colonne donne le nombre d’opportunités et le montant total.',
+    },
+    {
+      caption: 'Flow : les grosses affaires passent par une validation de plus',
+      alt: 'Une partie du flow Large Deal Approval dans le concepteur de flows (interface en anglais) : une fois l’étape Sales Manager Review validée, une décision vérifie si l’affaire dépasse 500 000 dollars, et les affaires qui la dépassent passent par une étape de plus, Sales Director Sign-off ; de chaque étape de validation partent les chemins approve et reject.',
+    },
+    {
+      caption: 'Connectez votre assistant AI : Claude, Doubao, Qwen',
+      alt: 'Une partie de la page Connect an AI Assistant (interface en anglais) : l’adresse de connexion de ce système et le bouton Download SKILL.md, puis les onglets de choix de l’assistant — Claude, Codex, Cursor, WorkBuddy, Doubao Work et QwenWork —, avec les étapes de configuration de Claude affichées.',
+    },
+  ],
+  screensNote: 'Captures issues de HotCRM, l’application d’exemple open source.',
   editionsCopy: positioning.fr.e1,
   primaryCta: 'Commencer',
   secondaryCta: 'Voir comment ça marche',
@@ -622,12 +952,14 @@ const fr: HomeCopy = {
   imageNoteTitle: t2Lead(positioning.fr.t2),
   imageNote: 'Connexion des applications, données et agents',
   connectKicker: 'Comment il se branche sur l’existant',
-  positioningTitle: ['Conservez les systèmes efficaces.', 'Ajoutez un runtime gouverné pour agents.'],
+  positioningTitle: ['Vous ne migrez pas.', 'Vous connectez.'],
   positioningLink: 'Ce qu’est une ontologie métier exécutable',
   positioningCopy: 'L’AI en entreprise n’a pas besoin d’un nouveau chantier de reconstruction ni d’une nouvelle pile de code généré. Elle a besoin d’une définition que les agents peuvent écrire, que les humains peuvent relire, et qu’un runtime gouverne à travers systèmes existants, nouvelles applications et agents AI. Vos objets et champs, relations, actions, permissions, flux, et définitions d’agents et d’outils sont cette définition — votre ontologie métier : ouverte, versionnée et à vous, pas un actif enfermé dans la plateforme d’un autre.',
   capabilities: [
     { title: 'Donnez aux agents un modèle métier', copy: 'Modélisez clients, commandes, équipements, dossiers et validations comme des objets que les agents peuvent lire, relier et modifier.' },
-    { title: 'Étendez l’existant — en lecture seule d’abord', copy: 'Fédérez une base que vous exploitez déjà comme datasource externe et modélisez ses tables en objets. La fédération est en lecture seule par défaut, et encore récente : le système de référence continue d’écrire les lignes, et l’écriture s’active délibérément, objet par objet.' },
+    { title: 'Fédérer — lecture en direct, en lecture seule d’abord', copy: 'Déclarez une base ou un service OData que vous exploitez déjà comme datasource externe et liez ses tables en objets. Les données restent à la source et chaque lecture lui est transmise, en direct. La fédération est en lecture seule par défaut, et encore récente : l’écriture s’active délibérément, sur la datasource et sur l’objet.' },
+    { title: 'Synchroniser à sens unique — vers un objet en lecture seule', copy: 'Un job copie les lignes à sens unique dans un objet ordinaire. Les membres peuvent le lire et en tirer des rapports, mais pas le modifier : le pull est son seul rédacteur, et chaque exécution laisse une trace.' },
+    { title: 'Écrire en retour par une action déclarée — pas de synchronisation bidirectionnelle', copy: 'Quand quelque chose doit changer dans le système source, une action déclarée l’appelle via un connecteur, avec les identifiants du connecteur. La copie locale n’est pas modifiée et le pull suivant rapporte le changement ; il n’y a ni écriture en retour automatique ni fusion de conflits.' },
   ],
   aiKicker: 'L’AI dans le produit',
   aiTitle: ['Interroger, modifier et construire en langage courant.', 'Vous voyez la source et confirmez le changement.'],
@@ -691,8 +1023,50 @@ const ko: HomeCopy = {
   description: `${positioning.ko.t2} ObjectOS는 ${positioning.ko.descriptor}의 세 가지 에디션으로 제공됩니다.`,
   eyebrow: positioning.ko.descriptor,
   hero: positioning.ko.t1Hero,
-  heroCategory: 'AI로 업무용 애플리케이션을 구축하고 통제하는 플랫폼.',
+  heroCategory: 'AI는 업무 정의만 작성하고 플랫폼이 그대로 실행합니다. 쓸 것은 적고, 기본으로 통제되며, 자체 환경에 배포됩니다.',
   heroLead: positioning.ko.t2,
+  answersKicker: '결론부터',
+  answersTitle: '가장 궁금한 다섯 가지 질문, 답부터 드립니다',
+  answers: [
+    { question: '새 시스템은 얼마나 빨리 만들 수 있나요?', answer: 'AI는 업무 정의만 작성하고 플랫폼이 그대로 실행합니다. 작성할 분량이 한두 자릿수만큼 적습니다.' },
+    { question: '기존 시스템을 바꿔야 하나요?', answer: '아니요. 연결하면 AI가 기존 데이터를 읽을 수 있습니다.' },
+    { question: '직원들이 새로 배워야 하나요?', answer: '아니요. 평소 쓰는 AI 어시스턴트에서 바로 묻고 바로 처리합니다.' },
+    { question: 'AI가 제멋대로 움직이지 않나요?', answer: 'AI는 사용하는 사람 본인의 권한으로 동작합니다. 제품 내 AI의 데이터 변경은 본인의 확인을 기다리고, 플로의 승인은 승인자에게 갑니다.' },
+    { question: '시스템과 데이터는 누가 쥐고 있나요?', answer: '여러분입니다. 자체 환경에서 운영할 수 있고, 자체 운영 시 모델을 직접 고르며, 코어인 ObjectStack은 오픈소스입니다.' },
+  ],
+  lessKicker: '작성할 것이 적은 이유',
+  lessTitle: ['AI는 업무 정의만 작성하고,', '나머지는 플랫폼이 실행합니다'],
+  lessLanes: [
+    { label: '흔한 방식', steps: ['AI가 코드를 작성', '앱마다 새 코드 더미', '문제는 운영 시작 후에 드러남'] },
+    { label: 'ObjectOS 방식', steps: ['AI가 업무 정의를 작성', '플랫폼이 그대로 실행', '작성하는 동안 검증'] },
+  ],
+  lessSizeTitle: '같은 CRM, 작성해야 하는 분량',
+  lessSizes: [
+    { label: '손으로 작성한 전통적인 CRM 코드베이스', value: '30만~100만 줄 이상', note: '일반적인 규모이며 실측값이 아닙니다' },
+    { label: 'HotCRM 영업 모듈(오픈소스)', value: '약 28,000줄', note: '159개 파일, 28,456줄: 객체 11개, 플로 파일 21개, 대시보드 4개' },
+    { label: '런타임에 포함된 레퍼런스 CRM', value: '2,189줄', note: '30개 파일: objectstack 저장소의 examples/app-crm' },
+  ],
+  lessMethod: '아래 두 행은 실측값입니다. HotCRM은 hotcrm 커밋 94f8d04의 src/sales 아래 테스트가 아닌 .ts 파일(translations/와 data/ 제외), 레퍼런스 CRM은 objectstack 커밋 e61af972의 examples/app-crm/src입니다.',
+  lessClosing: '결정은 정의에 남습니다. 테이블, CRUD API, 목록·상세 페이지, 권한 검사, 감사 기록 같은 배관은 런타임이 도출합니다.',
+  lessLink: '전체 근거 읽기',
+  heroShotAlt: 'ObjectOS에서 실행 중인 HotCRM의 경영진 개요 대시보드(영문 UI). 연간 누적 매출 1,290,000, 활성 고객사 9, 연락처 9, 미전환 리드 21이 표시되고, 그 아래에 최근 12개월 매출 추이 차트와 업종별 매출이, 왼쪽에는 영업 앱의 내비게이션이 있습니다.',
+  screensKicker: '제품 화면',
+  screensTitle: '만들어진 앱은 이런 모습입니다',
+  screens: [
+    {
+      caption: '칸반: 영업 단계별로 딜 관리',
+      alt: 'HotCRM 영업 파이프라인 칸반 보드의 일부(영문 UI). Prospecting과 Qualification 두 열에 영업 기회 카드가 두 장씩 있고, 카드에는 고객사·금액·마감 예정일이, 열 머리에는 건수와 금액 합계가 표시됩니다.',
+    },
+    {
+      caption: '플로: 대형 딜은 승인을 한 단계 더 거칩니다',
+      alt: '플로 디자이너에 열린 Large Deal Approval 플로의 일부(영문 UI). Sales Manager Review에서 승인되면 딜이 50만 달러를 넘는지 판단하는 분기로 가고, 넘는 딜은 Sales Director Sign-off 승인을 한 단계 더 거칩니다. 각 승인 단계에서 approve와 reject 경로가 나옵니다.',
+    },
+    {
+      caption: 'AI 어시스턴트 연결: Claude, Doubao, Qwen',
+      alt: 'Connect an AI Assistant 페이지의 일부(영문 UI). 이 시스템의 연결 주소와 Download SKILL.md 버튼이 있고, 그 아래에 어시스턴트를 고르는 탭(Claude, Codex, Cursor, WorkBuddy, Doubao Work, QwenWork)이 있으며 Claude 설정 단계가 표시되어 있습니다.',
+    },
+  ],
+  screensNote: '스크린샷은 오픈소스 예제 앱 HotCRM의 화면입니다.',
   editionsCopy: positioning.ko.e1,
   primaryCta: '시작하기',
   secondaryCta: '작동 방식 보기',
@@ -711,12 +1085,14 @@ const ko: HomeCopy = {
   imageNoteTitle: t2Lead(positioning.ko.t2),
   imageNote: '애플리케이션, 데이터와 에이전트 연결 중',
   connectKicker: '기존 시스템과 연결되는 방식',
-  positioningTitle: ['이미 잘 작동하는 시스템은 유지하고,', '에이전트를 위한 거버넌스 런타임을 더하세요.'],
+  positioningTitle: ['마이그레이션하지 말고,', '연결하세요.'],
   positioningLink: '실행 가능한 비즈니스 온톨로지란',
   positioningCopy: '엔터프라이즈 AI에 필요한 것은 또 하나의 재구축 프로젝트도, 검토하기 어려운 생성 코드 더미도 아닙니다. 에이전트가 작성하고 사람이 검토하며 런타임이 기존 시스템, 새 애플리케이션, AI 에이전트 전반에서 거버넌스를 유지하는 하나의 정의입니다. 객체와 필드, 관계, 작업, 권한, 플로, 그리고 에이전트와 도구 정의가 그 정의 — 당신의 비즈니스 온톨로지입니다. 열려 있고, 버전 관리되며, 당신의 것이지, 남의 플랫폼에 갇힌 자산이 아닙니다.',
   capabilities: [
     { title: '에이전트에 비즈니스 모델 제공', copy: '고객, 주문, 장비, 케이스, 승인을 에이전트가 읽고 연결하고 작업할 수 있는 객체로 모델링합니다.' },
-    { title: '이미 운영 중인 시스템 확장 — 우선 읽기 전용으로', copy: '이미 운영 중인 데이터베이스를 외부 데이터소스로 연합하고 그 테이블을 객체로 모델링합니다. 연합은 기본적으로 읽기 전용이며 아직 초기 단계입니다. 기록 시스템이 계속 행을 쓰고, 쓰기는 객체 단위로 의도적으로 활성화합니다.' },
+    { title: '연합 — 실시간 읽기, 우선 읽기 전용으로', copy: '이미 운영 중인 데이터베이스나 OData 서비스를 외부 데이터소스로 선언하고 그 테이블을 객체로 바인딩합니다. 데이터는 원본에 남고 읽기는 매번 실시간으로 원본에 전달됩니다. 연합은 기본적으로 읽기 전용이며 아직 초기 단계입니다. 쓰기는 데이터소스와 객체 양쪽에서 의도적으로 활성화합니다.' },
+    { title: '단방향 동기화 — 읽기 전용 객체로', copy: '작업이 데이터를 한 방향으로 복사해 일반 객체로 만듭니다. 구성원은 읽고 보고서를 만들 수 있지만 편집할 수는 없습니다. 쓰는 것은 풀뿐이며 실행할 때마다 기록이 남습니다.' },
+    { title: '선언된 액션으로 되쓰기 — 양방향 동기화 없음', copy: '원본 시스템을 바꿔야 할 때는 선언된 액션이 커넥터를 통해 커넥터 자체의 자격 증명으로 원본을 호출합니다. 로컬 사본은 편집되지 않고 다음 풀이 변경을 가져옵니다. 자동 되쓰기도 충돌 병합도 없습니다.' },
   ],
   aiKicker: '제품 속 AI',
   aiTitle: ['평소 말로 묻고, 데이터를 바꾸고, 앱을 만듭니다.', '출처가 보이고, 변경은 직접 확정합니다.'],
