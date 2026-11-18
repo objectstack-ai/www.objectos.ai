@@ -58,11 +58,27 @@ const pricingHref = pricingPath(locale);
 
 // Capability and AI cards deep-link into the capability pages. Index-based:
 // every locale translates the same arrays in the same order. The business
-// model card lands on /data-modeling/, the federation card on
-// /connect-existing-systems/ (#419);
+// model card lands on /data-modeling/; the three ways-in cards land on their
+// sections of /connect-existing-systems/ (#419): federation, sync-in and
+// write-back;
 // the AI cards land on the AI page's Ask section (Ask, and the record edits
 // Ask proposes) and its Build section.
-const capabilityCardHrefs = [marketingPagePath(locale, 'data-modeling'), marketingPagePath(locale, 'connect-existing-systems')];
+const connectHref = marketingPagePath(locale, 'connect-existing-systems');
+const capabilityCardHrefs = [
+  marketingPagePath(locale, 'data-modeling'),
+  `${connectHref}#federation`,
+  `${connectHref}#sync-in`,
+  `${connectHref}#write-back`,
+];
+// "Why there is less to write": the post that makes the argument, and the two
+// measured repositories behind the second and third size rows (the first row
+// is an order of magnitude, with nothing to link).
+const lessPostHref = postPath(locale, 'business-app-in-16k-tokens');
+const lessSizeHrefs = [
+  null,
+  'https://github.com/objectstack-ai/hotcrm',
+  'https://github.com/objectstack-ai/objectstack/tree/main/examples/app-crm',
+];
 const aiHref = marketingPagePath(locale, 'ai');
 const aiCardHrefs = [`${aiHref}#ask`, `${aiHref}#ask`, `${aiHref}#build`];
 for (const [name, cards, hrefs] of [
@@ -227,6 +243,63 @@ const demoCopy = DEMO_COPY[locale];
     </dl>
   </section>
 
+  {/* Five questions, answered first: what a first-time business reader asks,
+      one row each, before any section argues its case. Rows, not cards with
+      links: every answer is expanded by a section further down the page. */}
+  <section class="answers-section" id="answers" aria-labelledby="answers-title">
+    <div class="section-head">
+      <div>
+        <p class="section-kicker">{copy.answersKicker}</p>
+        <h2 id="answers-title" set:html={ph(copy.answersTitle)} />
+      </div>
+    </div>
+    <dl class="answers card-grid">
+      {copy.answers.map((item, index) => (
+        <div class="answer">
+          <span class="cap-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+          <dt>{item.question}</dt>
+          <dd>{item.answer}</dd>
+        </div>
+      ))}
+    </dl>
+  </section>
+
+  {/* Why there is less to write: the two lanes, then three sizes — one
+      typical order of magnitude and two measured repositories (see
+      `lessMethod` in src/lib/home.ts for commits and scope). Sizes and
+      governability only; no speed multiple (AGENTS.md: the wedge is trust). */}
+  <section class="less-section" id="less-to-write" aria-labelledby="less-title">
+    <div class="section-head">
+      <div>
+        <p class="section-kicker">{copy.lessKicker}</p>
+        <h2 id="less-title"><span class="title-line" set:html={ph(copy.lessTitle[0])} />{lineJoin}<span class="title-line" set:html={ph(copy.lessTitle[1])} /></h2>
+      </div>
+      <a class="btn btn-ghost" href={lessPostHref}>{copy.lessLink} <span aria-hidden="true">→</span></a>
+    </div>
+    <div class="lanes">
+      {copy.lessLanes.map((lane, laneIndex) => (
+        <div class:list={['lane', 'card', { 'lane-ours': laneIndex === 1 }]}>
+          <p class="lane-label">{lane.label}</p>
+          <ol class="lane-steps">
+            {lane.steps.map((step) => <li>{step}</li>)}
+          </ol>
+        </div>
+      ))}
+    </div>
+    <h3 class="sizes-title">{copy.lessSizeTitle}</h3>
+    <dl class="sizes card-grid">
+      {copy.lessSizes.map((size, index) => (
+        <div class="size">
+          <dt>{lessSizeHrefs[index] ? <a href={lessSizeHrefs[index]}>{size.label}</a> : size.label}</dt>
+          <dd class="size-value">{size.value}</dd>
+          <dd class="size-note">{size.note}</dd>
+        </div>
+      ))}
+    </dl>
+    <p class="less-method">{copy.lessMethod}</p>
+    <p class="less-closing">{copy.lessClosing}</p>
+  </section>
+
   {/* "How business teams use it" (#359): the block that held three template
       cards now holds three scenario cards, each landing on its team's section
       of /use-cases/; the templates catalog stays one link away, under the
@@ -279,8 +352,9 @@ const demoCopy = DEMO_COPY[locale];
   </section>
 
   {/* How it connects to what you run (#411): the positioning block, the
-      definition-layer diagram, capability cards 01–02 and the run recording,
-      merged. The positioning copy is the one statement of the mechanism; the
+      definition-layer diagram, capability cards 01–04 (the business model,
+      then the three ways in from /connect-existing-systems/) and the run
+      recording, merged. The positioning copy is the one statement of the mechanism; the
       diagram has no body text, and the cards that restated it are gone. The
       id is the old capability section's, kept for existing deep links. */}
   <section class="workflow connect" id="capabilities" aria-labelledby="connect-title">
@@ -868,6 +942,8 @@ const demoCopy = DEMO_COPY[locale];
     display: inline-block;
     margin-top: 0.5rem;
   }
+  .answers-section,
+  .less-section,
   .ai-section,
   .workflow,
   .security-section,
@@ -875,6 +951,152 @@ const demoCopy = DEMO_COPY[locale];
   .articles {
     padding: var(--space-section) 0;
     border-top: 1px solid var(--line);
+  }
+  /* Five questions: one row each in the security block's hairline grid, the
+     capability cards' mono index, the question in the card titles' size and
+     face (sans, like every h3 here) and the answer beside it. One column of rows; the answer drops under the
+     question on a phone. */
+  .answers,
+  .sizes {
+    margin: 0;
+  }
+  .answer {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 0.8fr) minmax(0, 1.2fr);
+    gap: 0 1.5rem;
+    align-items: baseline;
+    padding: 1.35rem 1.5rem;
+  }
+  .answer .cap-index {
+    grid-row: auto;
+    padding-top: 0;
+  }
+  .answer dt {
+    color: var(--ink);
+    font-size: var(--fs-18);
+    font-weight: 700;
+    line-height: var(--lh-ui);
+  }
+  .answer dd {
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: var(--fs-16);
+    line-height: var(--lh-prose);
+  }
+  /* Why there is less to write: two lane cards, each a label and three steps
+     joined by arrows, then the three size rows. The second lane takes the
+     green of the workflow map's outcome cells; the first stays neutral. */
+  .lanes {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 3rem;
+  }
+  .lane {
+    padding: 1.5rem;
+  }
+  .lane-label {
+    margin-bottom: 1rem;
+    color: var(--muted);
+    font-size: var(--fs-12);
+    font-weight: 700;
+  }
+  .lane-ours .lane-label {
+    color: var(--green);
+  }
+  .lane-steps {
+    list-style: none;
+    display: grid;
+    gap: 0.45rem;
+    margin: 0;
+    padding: 0;
+  }
+  .lane-steps li {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    min-height: 54px;
+    padding: 0.6rem 0.9rem;
+    color: var(--ink-soft);
+    background: var(--surface-sunk);
+    border: 1px solid var(--line);
+    border-radius: var(--r-control);
+    font-size: var(--fs-14);
+    font-weight: 700;
+    line-height: var(--lh-ui);
+  }
+  .lane-steps li::before {
+    content: '↓';
+    flex: 0 0 auto;
+    color: var(--muted);
+    font-weight: 400;
+  }
+  .lane-steps li:first-child::before {
+    content: '•';
+  }
+  .lane-ours .lane-steps li {
+    color: color-mix(in srgb, var(--green) 90%, var(--ink));
+    background: color-mix(in srgb, var(--green) 6%, var(--surface));
+    border-color: color-mix(in srgb, var(--green) 25%, var(--line));
+  }
+  .lane-ours .lane-steps li::before {
+    color: inherit;
+  }
+  .sizes-title {
+    font-size: var(--fs-18);
+    margin-bottom: 1rem;
+  }
+  .size {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 13.5rem minmax(0, 1.25fr);
+    gap: 0 1.5rem;
+    align-items: baseline;
+    padding: 1.2rem 1.5rem;
+  }
+  .size dt {
+    font-size: var(--fs-16);
+    font-weight: 700;
+    line-height: var(--lh-ui);
+  }
+  .size dt a {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--brand) 55%, transparent);
+    text-underline-offset: 0.2em;
+  }
+  .size dt a:hover {
+    color: var(--brand);
+  }
+  .size dd {
+    margin: 0;
+  }
+  .size-value {
+    color: var(--ink);
+    font: 700 var(--fs-20)/1.2 var(--font-display);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .size:not(:first-child) .size-value {
+    color: color-mix(in srgb, var(--green) 90%, var(--ink));
+  }
+  .size-note {
+    color: var(--ink-soft);
+    font-size: var(--fs-14);
+    line-height: var(--lh-prose);
+  }
+  .less-section > .less-method {
+    max-width: var(--measure-wide);
+    margin: 1rem 0 0;
+    color: var(--muted);
+    font-size: var(--fs-13);
+    line-height: var(--lh-prose);
+  }
+  .less-section > .less-closing {
+    max-width: var(--measure-prose);
+    margin: 1.75rem 0 0;
+    color: var(--ink-soft);
+    font-size: var(--fs-17);
+    line-height: var(--lh-prose);
   }
   .section-head {
     display: flex;
@@ -1343,6 +1565,21 @@ const demoCopy = DEMO_COPY[locale];
       grid-template-columns: 1fr;
       gap: 2rem;
     }
+    /* The answer and the size note drop under their row's first line. */
+    .answer {
+      grid-template-columns: 40px minmax(0, 1fr);
+    }
+    .answer dd {
+      grid-column: 2;
+      margin-top: 0.4rem;
+    }
+    .size {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+    .size-note {
+      grid-column: 1 / -1;
+      margin-top: 0.4rem;
+    }
     .solution-grid,
     .article-grid {
       grid-template-columns: 1fr 1fr;
@@ -1411,12 +1648,36 @@ const demoCopy = DEMO_COPY[locale];
       grid-template-columns: 1fr;
       gap: 0.9rem;
     }
+    .answers-section,
+    .less-section,
     .ai-section,
     .workflow,
     .security-section,
     .solution-section,
     .articles {
       padding: var(--sp-8) 0;
+    }
+    .answer,
+    .size {
+      padding: 1.1rem 1rem;
+    }
+    .answer {
+      grid-template-columns: 28px minmax(0, 1fr);
+      gap: 0 0.75rem;
+    }
+    .lanes {
+      grid-template-columns: 1fr;
+      margin-bottom: 2.25rem;
+    }
+    .lane {
+      padding: 1rem;
+    }
+    .size {
+      grid-template-columns: 1fr;
+    }
+    .size-value {
+      margin-top: 0.3rem;
+      white-space: normal;
     }
     .section-head {
       display: block;
