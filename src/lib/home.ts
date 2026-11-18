@@ -73,6 +73,28 @@ interface HomeCopy {
   lessClosing: string;
   /** The block's link to the post that makes the argument. */
   lessLink: string;
+  /**
+   * The product on screen: the hero's framed screenshot (`heroShotAlt`, the
+   * whole screen) and the "see the product" strip after the less-to-write
+   * block — three details cut from full screens so they stay legible in a
+   * third of the page, each with a one-line caption and a text alternative
+   * that says what that part of the screen shows. All four are real screens of HotCRM, the
+   * open-source example app, running on ObjectOS; `screensNote` says so under
+   * the hero screenshot and under the strip. The zh pair shows the app's
+   * Chinese UI and every other locale its English UI (the rule AGENTS.md sets
+   * for diagrams that carry text), so a non-zh alt names the UI's own English
+   * labels. The record and flow names are HotCRM's sample data and are
+   * English in both.
+   */
+  heroShotAlt: string;
+  screensKicker: string;
+  screensTitle: string;
+  screens: [
+    { caption: string; alt: string },
+    { caption: string; alt: string },
+    { caption: string; alt: string },
+  ];
+  screensNote: string;
   /** The first screen's one paragraph: T2, nothing else (the CTA row follows it). */
   heroLead: string;
   /**
@@ -230,6 +252,24 @@ const zhHans: HomeCopy = {
   lessMethod: '后两行是实测值：HotCRM 取 hotcrm 提交 94f8d04 中 src/sales 下的非测试 .ts 文件，不含 translations/ 与 data/；参考 CRM 取 objectstack 提交 e61af972 中的 examples/app-crm/src。',
   lessClosing: '决定留在定义里；数据表、增删改查 API、列表页与详情页、权限检查、审计写入这些管道，由运行时推导出来。',
   lessLink: '阅读完整论证',
+  heroShotAlt: 'HotCRM 的高管总览仪表盘，运行在 ObjectOS 上：年度累计收入 1,290,000、活跃客户 9、联系人 9、未转化线索 21，下方是过去 12 个月的收入趋势图和行业收入分布，左侧是销售应用的导航。',
+  screensKicker: '产品界面',
+  screensTitle: '搭出来的应用长这样',
+  screens: [
+    {
+      caption: '看板：按销售阶段管理商机',
+      alt: 'HotCRM 销售流水线看板的局部：寻找客户、资格审查两列，各有两张商机卡片，卡片上是所属客户、金额和预计成交日期，列头是商机数量与金额合计。',
+    },
+    {
+      caption: '流程：大额商机多走一级审批',
+      alt: '流程设计器里 Large Deal Approval 流程的局部：销售经理审批通过后，经过金额是否超过 50 万美元的条件分支，超过的再走一步销售总监审批；每个审批节点都有通过和驳回两条出线。',
+    },
+    {
+      caption: '接入 AI 助手：Claude、豆包、千问',
+      alt: '连接 AI 助手页面的局部：本系统的连接地址和下载 SKILL.md 的按钮，下方是选择 AI 助手的选项卡：Claude、Codex、Cursor、WorkBuddy、豆包、千问，当前显示 Claude 的接入步骤。',
+    },
+  ],
+  screensNote: '截图来自开源示例应用 HotCRM。',
   editionsCopy: positioning['zh-Hans'].e1,
   primaryCta: '开始使用',
   secondaryCta: '了解工作原理',
@@ -344,6 +384,24 @@ const en: HomeCopy = {
   lessMethod: 'The last two rows are measured: HotCRM at hotcrm commit 94f8d04, the non-test .ts files under src/sales, excluding translations/ and data/; the reference CRM at objectstack commit e61af972, examples/app-crm/src.',
   lessClosing: 'The decisions stay in the definition. The plumbing — tables, the CRUD API, list and detail pages, permission checks, audit writes — is derived by the runtime.',
   lessLink: 'Read the full argument',
+  heroShotAlt: 'The executive overview dashboard of HotCRM, running on ObjectOS: total revenue year to date 1,290,000, 9 active accounts, 9 contacts and 21 open leads, above a 12-month revenue trend chart and revenue by industry, with the sales app’s navigation on the left.',
+  screensKicker: 'The product',
+  screensTitle: 'What the apps look like',
+  screens: [
+    {
+      caption: 'Kanban: manage deals by stage',
+      alt: 'Part of HotCRM’s sales pipeline kanban board: the Prospecting and Qualification columns, two opportunity cards in each showing account, amount and close date, with each column’s count and total amount in its header.',
+    },
+    {
+      caption: 'Flow: large deals take one more approval',
+      alt: 'Part of the Large Deal Approval flow in the flow designer: after Sales Manager Review approves, a decision checks whether the deal is over $500K, and high-value deals go on to one more step, Sales Director Sign-off; each approval step has an approve and a reject path.',
+    },
+    {
+      caption: 'Connect your AI assistant: Claude, Doubao, Qwen',
+      alt: 'Part of the Connect an AI Assistant page: this system’s connection address and a Download SKILL.md button, above tabs for choosing an assistant — Claude, Codex, Cursor, WorkBuddy, Doubao Work and QwenWork — with the Claude setup steps showing.',
+    },
+  ],
+  screensNote: 'Screens from HotCRM, the open-source example app.',
   editionsCopy: positioning.en.e1,
   primaryCta: 'Get started',
   secondaryCta: 'See how it works',
@@ -459,6 +517,24 @@ const ja: HomeCopy = {
   lessMethod: '下の 2 行は実測値です。HotCRM は hotcrm のコミット 94f8d04 における src/sales 配下のテスト以外の .ts ファイル（translations/ と data/ を除く）、リファレンス CRM は objectstack のコミット e61af972 における examples/app-crm/src です。',
   lessClosing: '意思決定は定義に残ります。テーブル、CRUD API、一覧と詳細の画面、権限チェック、監査ログの書き込みといった配管は、ランタイムが導出します。',
   lessLink: '根拠を読む',
+  heroShotAlt: 'ObjectOS 上で動く HotCRM のエグゼクティブ概要ダッシュボード（英語 UI）。年初来の売上 1,290,000、アクティブな取引先 9、連絡先 9、未転換のリード 21 が並び、その下に過去 12 か月の売上推移グラフと業種別売上、左側に営業アプリのナビゲーションがあります。',
+  screensKicker: '製品画面',
+  screensTitle: 'できあがるアプリはこう見えます',
+  screens: [
+    {
+      caption: 'カンバン：商談をステージごとに管理',
+      alt: 'HotCRM の営業パイプラインのカンバンボードの一部（英語 UI）。Prospecting と Qualification の 2 列にそれぞれ 2 枚の商談カードがあり、カードには取引先・金額・完了予定日、列の見出しには件数と金額の合計が表示されています。',
+    },
+    {
+      caption: 'フロー：大型商談は承認が一段増える',
+      alt: 'フローデザイナーで開いた Large Deal Approval フローの一部（英語 UI）。Sales Manager Review が承認すると、商談が 50 万ドルを超えるかを判定する分岐に進み、超える場合はもう一段、Sales Director Sign-off の承認を通ります。各承認ステップから approve と reject の線が出ています。',
+    },
+    {
+      caption: 'AI アシスタントを接続：Claude、Doubao、Qwen',
+      alt: 'Connect an AI Assistant ページの一部（英語 UI）。このシステムの接続アドレスと Download SKILL.md ボタンがあり、その下にアシスタントを選ぶタブ（Claude、Codex、Cursor、WorkBuddy、Doubao Work、QwenWork）が並び、Claude の設定手順が表示されています。',
+    },
+  ],
+  screensNote: 'スクリーンショットは、オープンソースのサンプルアプリ HotCRM のものです。',
   editionsCopy: positioning.ja.e1,
   primaryCta: 'はじめる',
   secondaryCta: '仕組みを見る',
@@ -574,6 +650,24 @@ const de: HomeCopy = {
   lessMethod: 'Die beiden letzten Zeilen sind gemessen: HotCRM am hotcrm-Commit 94f8d04, die .ts-Dateien unter src/sales ohne Tests, ohne translations/ und data/; das Referenz-CRM am objectstack-Commit e61af972, examples/app-crm/src.',
   lessClosing: 'Die Entscheidungen bleiben in der Definition. Die Infrastruktur dahinter — Tabellen, die CRUD-API, Listen- und Detailseiten, Rechteprüfungen, Audit-Einträge — leitet die Runtime ab.',
   lessLink: 'Die Begründung lesen',
+  heroShotAlt: 'Das Dashboard Executive Overview von HotCRM auf ObjectOS (englische Oberfläche): Umsatz seit Jahresbeginn 1.290.000, 9 aktive Accounts, 9 Kontakte und 21 offene Leads, darunter der Umsatzverlauf über 12 Monate und der Umsatz nach Branche, links die Navigation der Vertriebs-App.',
+  screensKicker: 'Das Produkt',
+  screensTitle: 'So sehen die Apps aus',
+  screens: [
+    {
+      caption: 'Kanban: Deals nach Phase steuern',
+      alt: 'Ausschnitt aus dem Kanban-Board der Vertriebspipeline von HotCRM (englische Oberfläche): die Spalten Prospecting und Qualification mit je zwei Opportunity-Karten, darauf Account, Betrag und Abschlussdatum; im Spaltenkopf stehen Anzahl und Gesamtbetrag.',
+    },
+    {
+      caption: 'Flow: Große Deals brauchen eine Freigabe mehr',
+      alt: 'Ausschnitt aus dem Flow Large Deal Approval im Flow-Designer (englische Oberfläche): Nach der Freigabe im Schritt Sales Manager Review prüft eine Entscheidung, ob der Deal über 500.000 US-Dollar liegt; solche Deals durchlaufen einen weiteren Schritt, Sales Director Sign-off. Von jedem Freigabeschritt gehen die Pfade approve und reject ab.',
+    },
+    {
+      caption: 'AI-Assistenten verbinden: Claude, Doubao, Qwen',
+      alt: 'Ausschnitt aus der Seite Connect an AI Assistant (englische Oberfläche): die Verbindungsadresse dieses Systems und die Schaltfläche Download SKILL.md, darunter Tabs zur Auswahl des Assistenten — Claude, Codex, Cursor, WorkBuddy, Doubao Work und QwenWork —, geöffnet sind die Einrichtungsschritte für Claude.',
+    },
+  ],
+  screensNote: 'Screenshots aus HotCRM, der Open-Source-Beispiel-App.',
   editionsCopy: positioning.de.e1,
   primaryCta: 'Loslegen',
   secondaryCta: 'So funktioniert es',
@@ -689,6 +783,24 @@ const es: HomeCopy = {
   lessMethod: 'Las dos últimas filas están medidas: HotCRM en el commit 94f8d04 de hotcrm, los archivos .ts de src/sales que no son tests, sin translations/ ni data/; el CRM de referencia en el commit e61af972 de objectstack, examples/app-crm/src.',
   lessClosing: 'Las decisiones se quedan en la definición. La fontanería — tablas, la API CRUD, páginas de lista y de detalle, comprobaciones de permisos, escrituras de auditoría — la deriva el runtime.',
   lessLink: 'Lee el argumento completo',
+  heroShotAlt: 'El panel Executive Overview de HotCRM, en ejecución sobre ObjectOS (interfaz en inglés): ingresos acumulados del año 1.290.000, 9 cuentas activas, 9 contactos y 21 leads abiertos; debajo, la tendencia de ingresos de 12 meses y los ingresos por sector, y a la izquierda la navegación de la aplicación de ventas.',
+  screensKicker: 'El producto',
+  screensTitle: 'Así se ven las aplicaciones',
+  screens: [
+    {
+      caption: 'Kanban: gestiona las oportunidades por etapa',
+      alt: 'Parte del tablero kanban del pipeline de ventas de HotCRM (interfaz en inglés): las columnas Prospecting y Qualification, con dos tarjetas de oportunidad cada una que muestran cuenta, importe y fecha de cierre; el encabezado de cada columna indica el número de oportunidades y el importe total.',
+    },
+    {
+      caption: 'Flujo: las operaciones grandes pasan por una aprobación más',
+      alt: 'Parte del flujo Large Deal Approval en el diseñador de flujos (interfaz en inglés): cuando Sales Manager Review aprueba, una decisión comprueba si la operación supera los 500.000 dólares, y las que la superan pasan por un paso más, Sales Director Sign-off; de cada paso de aprobación salen los caminos approve y reject.',
+    },
+    {
+      caption: 'Conecta tu asistente de AI: Claude, Doubao, Qwen',
+      alt: 'Parte de la página Connect an AI Assistant (interfaz en inglés): la dirección de conexión de este sistema y el botón Download SKILL.md, y debajo las pestañas para elegir asistente — Claude, Codex, Cursor, WorkBuddy, Doubao Work y QwenWork —, con los pasos de configuración de Claude a la vista.',
+    },
+  ],
+  screensNote: 'Capturas de HotCRM, la aplicación de ejemplo de código abierto.',
   editionsCopy: positioning.es.e1,
   primaryCta: 'Empezar',
   secondaryCta: 'Cómo funciona',
@@ -804,6 +916,24 @@ const fr: HomeCopy = {
   lessMethod: 'Les deux dernières lignes sont mesurées : HotCRM au commit 94f8d04 de hotcrm, les fichiers .ts de src/sales hors tests, sans translations/ ni data/ ; le CRM de référence au commit e61af972 d’objectstack, examples/app-crm/src.',
   lessClosing: 'Les décisions restent dans la définition. La plomberie — tables, API CRUD, pages de liste et de détail, contrôles de permissions, écritures d’audit — est dérivée par le runtime.',
   lessLink: 'Lire l’argument complet',
+  heroShotAlt: 'Le tableau de bord Executive Overview de HotCRM, exécuté sur ObjectOS (interface en anglais) : chiffre d’affaires cumulé de l’année 1 290 000, 9 comptes actifs, 9 contacts et 21 leads ouverts ; en dessous, la tendance du chiffre d’affaires sur 12 mois et sa répartition par secteur, et à gauche la navigation de l’application commerciale.',
+  screensKicker: 'Le produit',
+  screensTitle: 'À quoi ressemblent les applications',
+  screens: [
+    {
+      caption: 'Kanban : pilotez les affaires par étape',
+      alt: 'Une partie du tableau kanban du pipeline commercial de HotCRM (interface en anglais) : les colonnes Prospecting et Qualification, avec deux cartes d’opportunité chacune indiquant le compte, le montant et la date de clôture ; l’en-tête de chaque colonne donne le nombre d’opportunités et le montant total.',
+    },
+    {
+      caption: 'Flow : les grosses affaires passent par une validation de plus',
+      alt: 'Une partie du flow Large Deal Approval dans le concepteur de flows (interface en anglais) : une fois l’étape Sales Manager Review validée, une décision vérifie si l’affaire dépasse 500 000 dollars, et les affaires qui la dépassent passent par une étape de plus, Sales Director Sign-off ; de chaque étape de validation partent les chemins approve et reject.',
+    },
+    {
+      caption: 'Connectez votre assistant AI : Claude, Doubao, Qwen',
+      alt: 'Une partie de la page Connect an AI Assistant (interface en anglais) : l’adresse de connexion de ce système et le bouton Download SKILL.md, puis les onglets de choix de l’assistant — Claude, Codex, Cursor, WorkBuddy, Doubao Work et QwenWork —, avec les étapes de configuration de Claude affichées.',
+    },
+  ],
+  screensNote: 'Captures issues de HotCRM, l’application d’exemple open source.',
   editionsCopy: positioning.fr.e1,
   primaryCta: 'Commencer',
   secondaryCta: 'Voir comment ça marche',
@@ -919,6 +1049,24 @@ const ko: HomeCopy = {
   lessMethod: '아래 두 행은 실측값입니다. HotCRM은 hotcrm 커밋 94f8d04의 src/sales 아래 테스트가 아닌 .ts 파일(translations/와 data/ 제외), 레퍼런스 CRM은 objectstack 커밋 e61af972의 examples/app-crm/src입니다.',
   lessClosing: '결정은 정의에 남습니다. 테이블, CRUD API, 목록·상세 페이지, 권한 검사, 감사 기록 같은 배관은 런타임이 도출합니다.',
   lessLink: '전체 근거 읽기',
+  heroShotAlt: 'ObjectOS에서 실행 중인 HotCRM의 경영진 개요 대시보드(영문 UI). 연간 누적 매출 1,290,000, 활성 고객사 9, 연락처 9, 미전환 리드 21이 표시되고, 그 아래에 최근 12개월 매출 추이 차트와 업종별 매출이, 왼쪽에는 영업 앱의 내비게이션이 있습니다.',
+  screensKicker: '제품 화면',
+  screensTitle: '만들어진 앱은 이런 모습입니다',
+  screens: [
+    {
+      caption: '칸반: 영업 단계별로 딜 관리',
+      alt: 'HotCRM 영업 파이프라인 칸반 보드의 일부(영문 UI). Prospecting과 Qualification 두 열에 영업 기회 카드가 두 장씩 있고, 카드에는 고객사·금액·마감 예정일이, 열 머리에는 건수와 금액 합계가 표시됩니다.',
+    },
+    {
+      caption: '플로: 대형 딜은 승인을 한 단계 더 거칩니다',
+      alt: '플로 디자이너에 열린 Large Deal Approval 플로의 일부(영문 UI). Sales Manager Review에서 승인되면 딜이 50만 달러를 넘는지 판단하는 분기로 가고, 넘는 딜은 Sales Director Sign-off 승인을 한 단계 더 거칩니다. 각 승인 단계에서 approve와 reject 경로가 나옵니다.',
+    },
+    {
+      caption: 'AI 어시스턴트 연결: Claude, Doubao, Qwen',
+      alt: 'Connect an AI Assistant 페이지의 일부(영문 UI). 이 시스템의 연결 주소와 Download SKILL.md 버튼이 있고, 그 아래에 어시스턴트를 고르는 탭(Claude, Codex, Cursor, WorkBuddy, Doubao Work, QwenWork)이 있으며 Claude 설정 단계가 표시되어 있습니다.',
+    },
+  ],
+  screensNote: '스크린샷은 오픈소스 예제 앱 HotCRM의 화면입니다.',
   editionsCopy: positioning.ko.e1,
   primaryCta: '시작하기',
   secondaryCta: '작동 방식 보기',

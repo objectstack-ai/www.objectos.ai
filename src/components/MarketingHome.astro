@@ -3,6 +3,14 @@ import { Image } from 'astro:assets';
 import demoPoster from '../assets/objectos-home-demo-poster.png';
 import demoVideo from '../assets/objectos-home-demo.mp4';
 import demoScript from '../assets/objectos-home-demo.js?url&no-inline';
+import shotExecZh from '../assets/home/hotcrm-exec-zh.png';
+import shotExecEn from '../assets/home/hotcrm-exec-en.png';
+import shotKanbanZh from '../assets/home/hotcrm-kanban-zh.png';
+import shotKanbanEn from '../assets/home/hotcrm-kanban-en.png';
+import shotFlowZh from '../assets/home/hotcrm-flow-zh.png';
+import shotFlowEn from '../assets/home/hotcrm-flow-en.png';
+import shotConnectZh from '../assets/home/hotcrm-connect-zh.png';
+import shotConnectEn from '../assets/home/hotcrm-connect-en.png';
 import { getPostsInLocale } from '../lib/posts';
 import { darkCover } from '../lib/cover-variant';
 import { blogPath, formatDate, postPath, pricingPath, securityPath, ui, type Locale } from '../lib/i18n';
@@ -191,6 +199,37 @@ const DEMO_COPY: Record<Locale, { alt: string; pause: string; play: string }> = 
   },
 };
 const demoCopy = DEMO_COPY[locale];
+
+// The product on screen: real screens of HotCRM, the open-source example app
+// (github.com/objectstack-ai/hotcrm), running on ObjectOS — captured at
+// 1760×1100 and never drawn or retouched. The hero shows a whole screen; the
+// three in the strip are 16:10 details cut from whole screens (two kanban
+// columns, the approval branch of a flow, the assistant tabs of the connect
+// page), because a whole 1760px screen in a 345px column put its text at 3px. The zh pair shows the app's Chinese
+// UI; every other locale shows its English UI, the rule AGENTS.md sets for
+// diagrams that carry text. Captions and text alternatives are in `homeCopy`.
+//
+// The hero screenshot is the page's first image: eager, high priority, served
+// as WebP at the media column's 960px (the 1760px source covers a 1.8x
+// screen). The three strip screens are one of three columns on a desktop
+// (about 345px) and one column of at most 640px at 900px and below, lazy; their
+// sources are 765-864px wide, the detail's own pixels, which covers the
+// desktop column at 2x.
+const zhUi = locale === 'zh-Hans' || locale === 'zh-Hant';
+const heroShot = zhUi ? shotExecZh : shotExecEn;
+const HERO_SHOT_WIDTHS = [480, 720, 960, 1280, 1760];
+const HERO_SHOT_SIZES = '(min-width: 1008px) 960px, calc(100vw - 2rem)';
+const stripShots = zhUi
+  ? [shotKanbanZh, shotFlowZh, shotConnectZh]
+  : [shotKanbanEn, shotFlowEn, shotConnectEn];
+if (stripShots.length !== copy.screens.length) {
+  throw new Error(`homeCopy[${locale}].screens has ${copy.screens.length} entries; MarketingHome has ${stripShots.length} screenshots`);
+}
+const STRIP_SHOT_WIDTHS = [360, 540, 720];
+const STRIP_SHOT_SIZES = '(max-width: 900px) min(calc(100vw - 2rem), 640px), 345px';
+// The source note names HotCRM once; the name is the link to its repository.
+const HOTCRM_URL = 'https://github.com/objectstack-ai/hotcrm';
+const [noteBefore, noteAfter = ''] = copy.screensNote.split('HotCRM');
 ---
 
 <div class:list={['home', `lang-${locale}`]}>
@@ -202,7 +241,7 @@ const demoCopy = DEMO_COPY[locale];
       The first screen is one sentence and one action: eyebrow (the three
       editions' short name), h1 (T1), the category line (#392: what the
       product is, in a business reader's words), lead (T2), the CTA row; then
-      the video, then the proof chips. E1 and the protocol link that sat under the CTA
+      the product screenshot, the proof chips and the video. E1 and the protocol link that sat under the CTA
       row moved to the editions block (#411). Before the hero split (#335)
       the lead ran T2, T4 and E1 together (523 characters in en) and the CTA
       row started at 619px on a 1366×625 laptop and at 1114px on a 390px
@@ -219,6 +258,28 @@ const demoCopy = DEMO_COPY[locale];
       <a class="btn btn-primary" href={CLOUD_SIGNUP_URL}>{copy.primaryCta} <span>→</span></a>
       <a class="btn btn-secondary" href={productTourHref}>{copy.secondaryCta}</a>
     </div>
+    {/* The product, in the first screen: the executive dashboard of the
+        example app, framed like a card. The overview video follows the proof
+        chips instead of sitting here: at 960px wide it took the whole first
+        screen and a first-time visitor saw no product UI at all. */}
+    <figure class="hero-shot">
+      <div class="shot-frame">
+        <Image
+          src={heroShot}
+          alt={copy.heroShotAlt}
+          widths={HERO_SHOT_WIDTHS}
+          sizes={HERO_SHOT_SIZES}
+          format="webp"
+          loading="eager"
+          fetchpriority="high"
+          decoding="async"
+        />
+      </div>
+      <figcaption>{noteBefore}<a href={HOTCRM_URL}>HotCRM</a>{noteAfter}</figcaption>
+    </figure>
+    <dl class="proof">
+      {copy.proof.map(([title, detail]) => <div><dt>{title}</dt><dd>{detail}</dd></div>)}
+    </dl>
     <figure class="hero-video">
       <VideoEmbed
         videoId={OVERVIEW_VIDEO_ID}
@@ -238,9 +299,6 @@ const demoCopy = DEMO_COPY[locale];
         </a>
       </figcaption>
     </figure>
-    <dl class="proof">
-      {copy.proof.map(([title, detail]) => <div><dt>{title}</dt><dd>{detail}</dd></div>)}
-    </dl>
   </section>
 
   {/* Five questions, answered first: what a first-time business reader asks,
@@ -298,6 +356,39 @@ const demoCopy = DEMO_COPY[locale];
     </dl>
     <p class="less-method">{copy.lessMethod}</p>
     <p class="less-closing">{copy.lessClosing}</p>
+  </section>
+
+  {/* See the product: three more screens of the same example app, one line
+      each — the pipeline a salesperson works in, the approval flow behind
+      it, and the page that connects an AI assistant. It follows the two
+      blocks that argue the case, so the reader sees what the definition
+      turns into before the use cases. */}
+  <section class="screens-section" id="product-screens" aria-labelledby="screens-title">
+    <div class="section-head">
+      <div>
+        <p class="section-kicker">{copy.screensKicker}</p>
+        <h2 id="screens-title" set:html={ph(copy.screensTitle)} />
+      </div>
+    </div>
+    <div class="screens">
+      {copy.screens.map((screen, index) => (
+        <figure class="screen">
+          <div class="shot-frame">
+            <Image
+              src={stripShots[index]}
+              alt={screen.alt}
+              widths={STRIP_SHOT_WIDTHS}
+              sizes={STRIP_SHOT_SIZES}
+              format="webp"
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
+          <figcaption>{screen.caption}</figcaption>
+        </figure>
+      ))}
+    </div>
+    <p class="screens-note">{noteBefore}<a href={HOTCRM_URL}>HotCRM</a>{noteAfter}</p>
   </section>
 
   {/* "How business teams use it" (#359): the block that held three template
@@ -669,15 +760,83 @@ const demoCopy = DEMO_COPY[locale];
   }
   /* Wider than the copy column, and the gap the old separate video section
      used to get from the hero's bottom padding. */
+  .hero-shot,
   .hero-video,
   .hero > .proof {
     width: 100%;
     max-width: var(--measure-media);
     margin-inline: auto;
   }
-  .hero-video {
+  .hero-shot {
     margin-top: 2rem;
     margin-bottom: 0;
+  }
+  .hero-video {
+    margin-top: 3rem;
+    margin-bottom: 0;
+  }
+  /* A product screenshot, framed as a card: the card's surface, line and
+     radius, clipped to the radius. The hero's takes the large shadow the run
+     recording's frame has; the strip's take the card's resting shadow. The
+     `height: auto` is load-bearing, as on the article covers: the `height`
+     attribute would otherwise beat the image's own 16:10. In the dark theme
+     the light UI is dimmed with the covers' filter. */
+  /* The line is a 1px ring in the shadow, not a border: a border took 2px
+     from the image, and the 960px hero file drawn at 958px was resampled. */
+  .shot-frame {
+    overflow: hidden;
+    background: var(--surface);
+    border-radius: var(--r-card);
+    box-shadow: 0 0 0 1px var(--line), var(--shadow-sm);
+  }
+  .hero-shot .shot-frame {
+    box-shadow: 0 0 0 1px var(--line), var(--shadow-lg);
+  }
+  .shot-frame img {
+    display: block;
+    width: 100%;
+    height: auto;
+    filter: var(--cover-filter);
+  }
+  .hero-shot figcaption,
+  .screens-section > .screens-note {
+    color: var(--muted);
+    font-size: var(--fs-13);
+    line-height: var(--lh-prose);
+  }
+  .hero-shot figcaption {
+    margin-top: 0.85rem;
+  }
+  .screens-section > .screens-note {
+    margin: 1.5rem 0 0;
+  }
+  .hero-shot figcaption a,
+  .screens-note a {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--brand) 55%, transparent);
+    text-underline-offset: 0.2em;
+  }
+  .hero-shot figcaption a:hover,
+  .screens-note a:hover {
+    color: var(--brand);
+  }
+  /* The strip: three screens in a row, each over its one-line caption. */
+  .screens {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+  }
+  .screen {
+    min-width: 0;
+    margin: 0;
+  }
+  .screen figcaption {
+    margin-top: 0.85rem;
+    color: var(--ink);
+    font-size: var(--fs-14);
+    font-weight: 700;
+    line-height: var(--lh-ui);
   }
   /* The rule is a lead-in glued to the first word, not a column of its own.
      As a flex row the rule and the text were two flex items: the text item
@@ -944,6 +1103,7 @@ const demoCopy = DEMO_COPY[locale];
   }
   .answers-section,
   .less-section,
+  .screens-section,
   .ai-section,
   .workflow,
   .security-section,
@@ -1507,7 +1667,7 @@ const demoCopy = DEMO_COPY[locale];
   }
   /* On phones and small tablets (`max-width: 900px`) the hero's children are
      ordered explicitly: eyebrow, headline, category line, lead, CTAs,
-     video, proof. Since
+     screenshot, proof, video. Since
      E1 and the protocol link left the hero for the editions block (#411)
      that is also the source order; the explicit order stays so the phone
      layout does not depend on it.
@@ -1539,13 +1699,22 @@ const demoCopy = DEMO_COPY[locale];
     .hero > .hero-actions {
       order: 5;
     }
-    .hero-video {
+    .hero-shot {
       order: 6;
       margin-top: 1.75rem;
-      margin-bottom: 0;
     }
     .hero > .proof {
       order: 7;
+    }
+    .hero-video {
+      order: 8;
+      margin-top: 2.25rem;
+      margin-bottom: 0;
+    }
+    .screens {
+      grid-template-columns: 1fr;
+      gap: 2rem;
+      max-width: 40rem;
     }
   }
   @media (max-width: 900px) {
