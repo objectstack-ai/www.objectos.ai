@@ -1,6 +1,6 @@
 ---
 title: 企业应用选 Retool 还是 Lovable？
-description: 谁能改 AI 做出的应用、谁来批准、运行时按什么权限、审计日志记什么、怎么离开：Retool 与 Lovable 以它们自己的文档为准，ObjectStack 18.5.0 实测并列对照。
+description: 谁能改 AI 做出的应用、谁来批准、运行时按什么权限、审计日志记什么、怎么离开：Retool 与 Lovable 以它们自己的文档为准，ObjectStack 18.6.0 实测并列对照。
 author: ObjectStack Team
 date: 2026-11-25
 status: published
@@ -18,7 +18,7 @@ tags:
 
 按谁来改应用来选。如果是工程师在现有数据库上做工具，选 Retool：它的 AI 不会越出你已经授予的访问权限，审计日志从 Business 套餐开始提供；但在 Free 和 Team 套餐上，它的 All Users 组可以编辑每一个应用，而要让每次改动都走拉取请求评审，需要最高套餐。如果是业务团队生成整个应用，选 Lovable：它把应用做出来并负责托管，它的 Git 同步在每个套餐上都能接入拉取请求评审，最高套餐还能把公开应用压住，等管理员或所有者批准。但数据访问规则是它的 AI 写的，而且这些规则约束不了应用的特权服务器账号。无论选哪个，都得有人为 AI 做出的东西负责。
 
-*下文每一条关于 Retool 和 Lovable 的说法，都引自该厂商的公开文档或定价页，阅读日期为 2026 年 11 月 17 日。ObjectStack 的结果实测于 ObjectStack 18.5.0，即今天新安装得到的版本。来源和完整记录见[证据](#证据)。*
+*下文每一条关于 Retool 和 Lovable 的说法，都引自该厂商的公开文档或定价页，阅读日期为 2026 年 11 月 17 日。ObjectStack 的结果实测于 ObjectStack 18.6.0，即今天新安装得到的版本。来源和完整记录见[证据](#证据)。*
 
 ## 这场比较背后的问题
 
@@ -56,11 +56,11 @@ Retool 的文档描述的是这样一个应用构建器：“the primary develop
 
 ## 我们在 ObjectStack 上测了什么
 
-ObjectStack 是我们做的，它走第三条路：应用的定义是一组普通文件，运行中的应用执行这些文件写下的规则。我们在 ObjectStack 18.5.0 自带的开源 CRM 示例上做了这些检查。这是一个演示应用，不是客户系统。销售代表这个角色可以读取、创建和编辑商机，但不能删除。
+ObjectStack 是我们做的，它走第三条路：应用的定义是一组普通文件，运行中的应用执行这些文件写下的规则。我们在 ObjectStack 18.6.0 自带的开源 CRM 示例上做了这些检查。这是一个演示应用，不是客户系统。销售代表这个角色可以读取、创建和编辑商机，但不能删除。
 
 | 我们做了什么 | 系统怎么回答 | 这对你意味着什么 |
 |:--|:--|:--|
-| 一个 AI Agent 用为销售代表账号创建的访问密钥，通过 MCP 尝试删除一条商机。 | 被拒绝两次：第一次因为没有人确认这是一次永久删除；带上确认后，又因为销售代表不能删除商机而被拒。 | 永久删除需要有人确认，而且即便确认了，Agent 也只拥有它所用账号的权限。 |
+| 一个 AI Agent 用为销售代表账号创建的访问密钥，通过 MCP 尝试删除一条商机。 | 被拒绝两次：第一次因为调用没有带确认；带上确认后，又因为销售代表不能删除商机而被拒。 | 通过 MCP 删除必须显式带上确认，而且即便确认了，Agent 也只拥有它所用账号的权限。 |
 | 一位销售代表通过应用的 API 尝试同样的删除。 | 被拒绝。 | 这条规则对人和 Agent 一视同仁。 |
 | Agent 把这条商机从“prospecting”（初步接触）推进到“qualification”（资格确认），这是销售代表可以做的。 | 一行审计记录：Agent 的账号、这条商机，以及阶段改动前后的值。被拒绝的删除没有留下任何记录。 | 你能拿出证据说明 Agent 改了什么、什么时候改的。被拒绝的尝试只出现在服务器日志里。 |
 | 这位销售代表请求读取审计日志。 | 被拒绝。 | 销售代表看不到谁做了什么；要读日志，得有授予该权限的角色。 |
@@ -90,11 +90,11 @@ Retool 和 Lovable 各自适合上面描述的情形。如果为应用负责的�
 {/* the-proof */}
 ## 证据
 
-下面的一切都在 2026-11-17 阅读或运行。
+下面的厂商页面在 2026-11-17 阅读；ObjectStack 的命令在 2026-11-20 运行。
 
 ```text
-$ npm view @objectstack/cli dist-tags
-{ next: '18.5.0', latest: '18.5.0' }
+$ npm view @objectstack/cli dist-tags.latest
+18.6.0
 ```
 
 ### 厂商来源
@@ -133,15 +133,15 @@ $ npm view @objectstack/cli dist-tags
 - [<span lang="en">Logs</span>](https://docs.lovable.dev/features/logs)，即后端诊断日志。FAQ 问题：<span lang="en">“Can I use these logs as audit evidence?”</span> 回答：<span lang="en">“Not on their own. Logs help you diagnose problems, but they do not prove who made a particular database change.”</span>
 - [<span lang="en">Deployment, hosting, and ownership options</span>](https://docs.lovable.dev/tips-tricks/deployment-hosting-ownership)：<span lang="en">“Lovable is intentionally built so that **you are never locked in**. You can export your code, migrate your data, self-host parts or all of your stack, or move to another provider at any time.”</span> 如果停用 Lovable，你要负责的事情之一是<span lang="en">“Implementing authentication and enforcing data isolation policies”</span>。
 
-**ObjectStack 文档**，18.5.0 发布标签处（commit [`b914e72`](https://github.com/objectstack-ai/objectstack/commit/b914e7247f692a79804f9b7eba278add46d57625)）：[<span lang="en">“ObjectStack is younger; expect to build more of it yourself.”</span>](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/content/docs/concepts/compare.mdx#L115-L117) 以及 [<span lang="en">“Reads walk top-to-bottom: the first non-null layer wins. Writes always route to the topmost writable layer (the overlay).”</span>](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/content/docs/concepts/metadata-lifecycle.mdx#L43)，其中覆盖层（overlay）保存运行环境中的编辑，位于文件之上。
+**ObjectStack 文档**，18.6.0 发布标签处（commit [`958ee03`](https://github.com/objectstack-ai/objectstack/commit/958ee03594968c651db1bc40ecb05bfe72f94b2d)）：[<span lang="en">“ObjectStack is younger; expect to build more of it yourself.”</span>](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/concepts/compare.mdx#L115-L117) 以及 [<span lang="en">“Reads walk top-to-bottom: the first non-null layer wins. Writes always route to the topmost writable layer (the overlay).”</span>](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/concepts/metadata-lifecycle.mdx#L43)，其中覆盖层（overlay）保存运行环境中的编辑，位于文件之上。
 
 ### 应用
 
-ObjectStack 仓库中标签 `@objectstack/cli@18.5.0` 处的 `examples/app-crm`，依赖固定为已发布的 18.5.0 包。它的安全文件把 `crm_sales_user` 权限集授予 `crm_sales_rep` 岗位，该权限集可以读取、创建和编辑 `crm_opportunity`（商机），但不能删除。这个应用开启了访问矩阵检查：`objectstack.config.ts` 旁边放着一份 `access-matrix.json`。
+ObjectStack 仓库中标签 `@objectstack/cli@18.6.0` 处的 `examples/app-crm`，依赖固定为已发布的 18.6.0 包。它的安全文件把 `crm_sales_user` 权限集授予 `crm_sales_rep` 岗位，该权限集可以读取、创建和编辑 `crm_opportunity`（商机），但不能删除。这个应用开启了访问矩阵检查：`objectstack.config.ts` 旁边放着一份 `access-matrix.json`。
 
 ```text
 $ npx os --version
-@objectstack/cli/18.5.0 linux-x64 node-v22.22.0
+@objectstack/cli/18.6.0 linux-x64 node-v22.22.0
 ```
 
 ### 1. AI 的改动、构建的拒绝、评审的 diff
@@ -153,7 +153,7 @@ $ npx os --version
 +    crm_opportunity: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: true },
 ```
 
-`npx os validate` 输出 `✓ Validation passed` 和四条无关的字段警告，退出码 0。`npx os compile` 运行同样的 68 条编写期规则，然后：
+`npx os validate` 输出 `✓ Validation passed` 和四条无关的字段警告，退出码 0。`npx os compile` 运行同样的 71 条编写期规则，然后：
 
 ```text
   → Checking access-matrix snapshot (ADR-0090 D6)...
@@ -186,16 +186,16 @@ compile exit 1
 销售代表，通过 REST API：
 
 ```text
-$ curl -X DELETE -b rep.cookies http://localhost:49890/api/v1/data/crm_opportunity/CRePs-1Ar5tJyIQl
+$ curl -X DELETE -b rep.cookies http://localhost:49890/api/v1/data/crm_opportunity/DQ_aJg8_eTxq6Upb
 {"error":"You do not have permission to perform this action. Contact your administrator if you need access.","code":"PERMISSION_DENIED","object":"crm_opportunity"}
 HTTP 403
 ```
 
-Agent 用它的密钥通过 MCP 调用：`tools/call` `delete_record` `{ objectName: "crm_opportunity", recordId: "CRePs-1Ar5tJyIQl" }`，第一次的回答是：
+Agent 用它的密钥通过 MCP 调用：`tools/call` `delete_record` `{ objectName: "crm_opportunity", recordId: "DQ_aJg8_eTxq6Upb" }`，第一次的回答是：
 
 ```json
 { "error": { "code": "ACTION_CONFIRMATION_REQUIRED",
-  "message": "delete_record on 'crm_opportunity' record 'CRePs-1Ar5tJyIQl' carries no confirmation — nothing was deleted. A delete over MCP is permanent: confirm with the human in the loop, then retry this call with 'confirm': true on the request.",
+  "message": "delete_record on 'crm_opportunity' record 'DQ_aJg8_eTxq6Upb' carries no confirmation — nothing was deleted. Deleting is destructive even where the recycle bin keeps the record. When the human's request named exactly this one record, that request is the approval: retry this call with 'confirm': true on the request. When the name matched more than one record, or the request is a bulk delete, ask the human first, then retry.",
   "status": 428 } }
 ```
 
@@ -210,27 +210,27 @@ Agent 用它的密钥通过 MCP 调用：`tools/call` `delete_record` `{ objectN
 两次拒绝对应的服务器日志：
 
 ```text
-WARN [Security] Access denied: operation 'delete' on object 'crm_opportunity' is not permitted for positions [org_member, crm_sales_rep, everyone] {"userId":"rs2E3SiqdiZ0yUKxlychP97F8jXH9LXO", …}
-WARN [Security] Access denied: operation 'delete' on object 'crm_opportunity' is not permitted for positions [org_member, crm_sales_rep, everyone] {"userId":"canMMQfNf6nm4XKqWnX727gPPnaWrtZI", …}
+WARN [Security] Access denied: operation 'delete' on object 'crm_opportunity' is not permitted for positions [org_member, crm_sales_rep, everyone] {"userId":"cD26sPqk1jy4CDl8e1J9QbiqjGBuoJ1U", …}
+WARN [Security] Access denied: operation 'delete' on object 'crm_opportunity' is not permitted for positions [org_member, crm_sales_rep, everyone] {"userId":"DgXiKK9ylkNiTWymVL2FEpBScCRNDZpe", …}
 ```
 
 ### 3. Agent 的编辑及其审计记录
 
-通过 MCP 调用 `update_record` `{ objectName: "crm_opportunity", recordId: "CRePs-1Ar5tJyIQl", data: { stage: "qualification" } }`，返回的记录带有 `"stage": "qualification"` 和 `"updated_by": "canMMQfNf6nm4XKqWnX727gPPnaWrtZI"`，即 Agent 的账号。管理员随后按 `crm_opportunity` 查询审计日志，返回 `"total": 1`，就是这一行：
+通过 MCP 调用 `update_record` `{ objectName: "crm_opportunity", recordId: "DQ_aJg8_eTxq6Upb", data: { stage: "qualification" } }`，返回的记录带有 `"stage": "qualification"` 和 `"updated_by": "DgXiKK9ylkNiTWymVL2FEpBScCRNDZpe"`，即 Agent 的账号。管理员随后按 `crm_opportunity` 查询审计日志，返回 `"total": 1`，就是这一行：
 
 ```json
 {
-  "created_at": "2026-11-17T04:20:41.516Z",
+  "created_at": "2026-11-20T02:35:32.022Z",
   "action": "update",
-  "user_id": "canMMQfNf6nm4XKqWnX727gPPnaWrtZI",
-  "actor": "canMMQfNf6nm4XKqWnX727gPPnaWrtZI",
+  "user_id": "DgXiKK9ylkNiTWymVL2FEpBScCRNDZpe",
+  "actor": "DgXiKK9ylkNiTWymVL2FEpBScCRNDZpe",
   "object_name": "crm_opportunity",
-  "record_id": "CRePs-1Ar5tJyIQl",
+  "record_id": "DQ_aJg8_eTxq6Upb",
   "old_value": "{\"stage\":\"prospecting\"}",
   "new_value": "{\"stage\":\"qualification\"}",
   "ip_address": null,
   "user_agent": null,
-  "tenant_id": "org_mwk6o8jvyc54copi",
+  "tenant_id": "org_mwod7busb94gl9il",
   "metadata": null
 }
 ```
@@ -239,4 +239,4 @@ WARN [Security] Access denied: operation 'delete' on object 'crm_opportunity' is
 
 ### 4. 新项目没有访问表
 
-`npm create objectstack@latest` 今天运行的 `create-objectstack@18.5.0` 包，其模板里没有 `access-matrix.json`，模板的 CI 工作流运行的是 `pnpm validate`，而不是构建。在新项目里第一次运行 `os compile --update-access-matrix`，就是开启这项检查。
+`npm create objectstack@latest` 今天运行的 `create-objectstack@18.6.0` 包，其模板里没有 `access-matrix.json`，模板的 CI 工作流运行的是 `pnpm validate`，而不是构建。在新项目里第一次运行 `os compile --update-access-matrix`，就是开启这项检查。
