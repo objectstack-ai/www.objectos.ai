@@ -1,6 +1,6 @@
 ---
 title: "Who Signs Off on an AI-Built System, and What Do They Sign?"
-description: "The business owner signs a one-page sheet, not the code: who sees which records, who approves what, what faces the outside, what is recorded. Generated from a CRM on ObjectStack 18.5.0, before and after one AI change."
+description: "The business owner signs a one-page sheet, not the code: who sees which records, who approves what, what faces the outside, what is recorded. Generated from a CRM on ObjectStack 18.6.0, before and after one AI change."
 author: ObjectStack Team
 date: 2026-11-27
 status: published
@@ -19,7 +19,7 @@ tags:
 
 **The short answer.** The head of the department that runs on the system signs it off, and signs one page, not the code. That page, the **sign-off sheet**, states four things: who can see and change which records, who can approve what, what is open to the outside, and what gets recorded. Ask for it before release and after every AI change; read only the changed lines. If nobody signs, the AI has made those decisions for you. It does not prove the system runs, the data is clean or the logic is right: a person still tests those.
 
-*Measured on ObjectStack 18.5.0, the latest release on 17 November 2026, using the CRM example that ships with it. Every command and raw output is in [The proof](#the-proof).*
+*Measured on ObjectStack 18.6.0, the latest release on 20 November 2026, using the CRM example that ships with it. Every command and raw output is in [The proof](#the-proof).*
 
 ## Sign-off is not a code review
 
@@ -85,7 +85,7 @@ An **approval step** is a point where the system stops a change and waits for a 
 
 Now the request a sales director might type to the agent: *"Discounts above 30% need Finance approval."*
 
-The change is one new file of 38 lines and three changed lines elsewhere. The draft is deliberately minimal: an approval step on deals, routed to the Finance Approver role, taking the platform's default for everything the request did not mention. We added nothing to it to make the result more interesting. It passed the platform's 68 automatic checks. One of them printed a note that if nobody holds the role, the request goes to the administrators. It was a note, not a refusal.
+The change is one new file of 38 lines and three changed lines elsewhere. The draft is deliberately minimal: an approval step on deals, routed to the Finance Approver role, taking the platform's default for everything the request did not mention. We added nothing to it to make the result more interesting. It passed the platform's 71 automatic checks. One of them printed a note that if nobody holds the role, the request goes to the administrators. It was a note, not a refusal.
 
 The access-matrix snapshot was unchanged. Nobody's access changed, so the permission check stayed silent. The three decisions below sit in the approval step, which that check does not cover. Parts 1 and 3 of the sheet are the same as before. Part 2 changed, and part 4 gained lines:
 
@@ -133,7 +133,7 @@ A one-page sheet will be read quickly. That is why it is short: after the first 
 
 ## How to get the sheet for your own system
 
-Ask your agent for it. ObjectStack 18.5.0 has no command that prints this sheet. We wrote a 51-line script for this post, and the rows about the data interface, the agent connection and the audit log came from trying the running system, not from the script. The four parts map to things an agent can read from an ObjectStack app's own definition: the access-matrix snapshot, the approval steps, the public forms and connections, and the audit settings. A new project has no snapshot until someone creates the first one. Put the request in the instructions the agent reads every time, so the sheet comes with every change:
+Ask your agent for it. ObjectStack 18.6.0 has no command that prints this sheet. We wrote a 51-line script for this post, and the rows about the data interface, the agent connection and the audit log came from trying the running system, not from the script. The four parts map to things an agent can read from an ObjectStack app's own definition: the access-matrix snapshot, the approval steps, the public forms and connections, and the audit settings. A new project has no snapshot until someone creates the first one. Put the request in the instructions the agent reads every time, so the sheet comes with every change:
 
 ```text
 With every change you make to this app, produce the sign-off sheet:
@@ -153,30 +153,30 @@ To run it yourself, the ObjectStack repository ships ObjectOS Community: the ghc
 {/* the-proof */}
 ## The proof
 
-**Version.** Measured on 2026-11-17.
+**Version.** Measured on 2026-11-20.
 
 ```text
-$ npm view @objectstack/cli dist-tags
-{ next: '18.5.0', latest: '18.5.0' }
+$ npm view @objectstack/cli dist-tags.latest
+18.6.0
 
 $ npx os --version
-@objectstack/cli/18.5.0 linux-x64 node-v22.22.0
+@objectstack/cli/18.6.0 linux-x64 node-v22.22.0
 ```
 
-**The app.** `examples/app-crm` from the ObjectStack repository at the tag `@objectstack/cli@18.5.0`, with its `workspace:*` dependencies pointed at the published 18.5.0 packages and installed with pnpm. It ships opted in to the access-matrix gate, with an `access-matrix.json` next to `objectstack.config.ts`.
+**The app.** `examples/app-crm` from the ObjectStack repository at the tag `@objectstack/cli@18.6.0`, with its `workspace:*` dependencies pointed at the published 18.6.0 packages and installed with pnpm. It ships opted in to the access-matrix gate, with an `access-matrix.json` next to `objectstack.config.ts`.
 
 ```bash
-git archive '@objectstack/cli@18.5.0' examples/app-crm | tar -x
+git archive '@objectstack/cli@18.6.0' examples/app-crm | tar -x
 cd examples/app-crm
-sed -i 's/"workspace:\*"/"18.5.0"/' package.json
+sed -i 's/"workspace:\*"/"18.6.0"/' package.json
 pnpm install --ignore-workspace
 npx os compile
 ```
 
 ```text
-  → Running author-time rules (68)...
+  → Running author-time rules (71)...
   → Checking access-matrix snapshot (ADR-0090 D6)...
-  ✓ Build complete (378ms)
+  ✓ Build complete (337ms)
   ⚠ 4 author-time warning(s) — see above
 
   Data: 6 Objects  49 Fields  2 Datasources
@@ -184,7 +184,7 @@ npx os compile
   Security: 3 Positions  2 Permissions
 ```
 
-Neither `packages/create-objectstack`'s templates nor anything else at the tag carries an `access-matrix.json` besides the two examples (`git ls-tree -r --name-only '@objectstack/cli@18.5.0' | grep 'access-matrix\.json$'` prints `examples/app-crm/access-matrix.json` and `examples/app-showcase/access-matrix.json`), which is why a new project starts without a snapshot.
+Neither `packages/create-objectstack`'s templates nor anything else at the tag carries an `access-matrix.json` besides the two examples (`git ls-tree -r --name-only '@objectstack/cli@18.6.0' | grep 'access-matrix\.json$'` prints `examples/app-crm/access-matrix.json` and `examples/app-showcase/access-matrix.json`), which is why a new project starts without a snapshot.
 
 The four warnings are `field-no-consumers` on four `crm_opportunity` fields, one of them `approval_status`: a field meant to show an approval outcome that nothing in the app reads or displays. `os info` lists `crm_lead (13 fields, user) — Lead`, the 13 in part 3.
 
@@ -310,16 +310,16 @@ The boot banner prints the agent connection as on by default: `MCP: http://local
 Signed in as the seeded administrator, the discount test and the audit row it left:
 
 ```text
-PATCH /api/v1/data/crm_opportunity/1guy5QfI1dxYqC_a  {"discount_percent":35}   → 200
-PATCH /api/v1/data/crm_opportunity/1guy5QfI1dxYqC_a  {"discount_percent":45}   → 400
+PATCH /api/v1/data/crm_opportunity/DpO1l0AsxUn_rof_  {"discount_percent":35}   → 200
+PATCH /api/v1/data/crm_opportunity/DpO1l0AsxUn_rof_  {"discount_percent":45}   → 400
   {"error":"Discount cannot exceed 40% without an approved exception.","code":"VALIDATION_FAILED", … }
 GET /api/v1/approvals/requests                                               → 200 {"data":[]}
 
 GET /api/v1/data/sys_audit_log?sort=-created_at&limit=1
-  {"action":"update","object_name":"crm_opportunity","record_id":"1guy5QfI1dxYqC_a",
-   "user_id":"oK3bdOQRcKqg6bhRmok9rDGAgwHotqpH",
+  {"action":"update","object_name":"crm_opportunity","record_id":"DpO1l0AsxUn_rof_",
+   "user_id":"pm6ggEGaFZ7i4Anjcj3LAerlvYPqQ5CO",
    "old_value":"{\"discount_percent\":0}","new_value":"{\"discount_percent\":35}",
-   "created_at":"2026-11-17T04:19:56.758Z"}
+   "created_at":"2026-11-20T02:33:10.899Z"}
 ```
 
 Reading that deal by id afterwards added no `read` row: the log held `config_change` 2, `create` 3, `update` 4, `login` 2, and nothing else. The 40% refusal is a validation rule on `crm_opportunity` in `src/objects/opportunity.object.ts`, with no exception path anywhere in the app:
@@ -332,12 +332,12 @@ message: 'Discount cannot exceed 40% without an approved exception.',
 The delete in part 4 and the administrator row in part 1, on a later fresh boot as the administrator:
 
 ```text
-DELETE /api/v1/data/crm_activity/3faQC9ppNgMiJIZS  → 200
-  {"object":"crm_activity","id":"3faQC9ppNgMiJIZS","success":true,"recycleBinEntryId":"m2JEV5EL4Tn_HTqM"}
+DELETE /api/v1/data/crm_activity/KVFUTkE__ZvKyWJe  → 200
+  {"object":"crm_activity","id":"KVFUTkE__ZvKyWJe","success":true,"recycleBinEntryId":"dxSNtuUA5WAjWELx"}
 GET /api/v1/data/sys_audit_log?sort=-created_at&limit=1
-  {"action":"delete","object_name":"crm_activity","record_id":"3faQC9ppNgMiJIZS",
-   "user_id":"I7JqyNY3c2CMRzcLBpUlI0ykgjPAF9U4",
-   "old_value":"{\"id\":\"3faQC9ppNgMiJIZS\", … }","new_value":null,"created_at":"2026-11-17T04:36:40.312Z"}
+  {"action":"delete","object_name":"crm_activity","record_id":"KVFUTkE__ZvKyWJe",
+   "user_id":"lRCmrwnTsuGCDjTUvNQvFYrJtjp3qELn",
+   "old_value":"{\"id\":\"KVFUTkE__ZvKyWJe\", … }","new_value":null,"created_at":"2026-11-20T02:38:51.187Z"}
 ```
 
 **The change.** One new file, plus two edited lines in `src/flows/index.ts` that register it and one in `objectstack.config.ts`:
@@ -404,7 +404,7 @@ ERROR Trigger-fired run of flow 'crm_discount_approval' failed (trigger 'record_
 That is the "it actually runs" case in the body. With both entries, `os validate` passes and adds one note about who decides when the role is empty:
 
 ```text
-  ✓ Validation passed (409ms)
+  ✓ Validation passed (324ms)
   ℹ flow "crm_discount_approval" · node "finance_review": every approver on this node routes to a group (position/team/department/queue), so if none is staffed the request opens on the organization's administrators, and (lockRecord) the record stays locked
 ```
 
@@ -427,43 +427,48 @@ That is the "it actually runs" case in the body. With both entries, `os validate
 **The approval, on the running app** (a fresh `os dev --fresh` with the change). The administrator raises a deal to 35%:
 
 ```text
-PATCH /api/v1/data/crm_opportunity/Br_N2OGg7JQQToKh {"discount_percent":35}  → 200
-GET  /api/v1/data/crm_opportunity/Br_N2OGg7JQQToKh?select=…  → "discount_percent":35,"approval_status":"pending"
+PATCH /api/v1/data/crm_opportunity/8z_u0hlhk22xoIRF {"discount_percent":35}  → 200
+GET  /api/v1/data/crm_opportunity/8z_u0hlhk22xoIRF?select=…  → "discount_percent":35,"approval_status":"pending"
 GET  /api/v1/approvals/requests
-  {"id":"areq_6e2a35bb-1d48-4a0d-9f7c-ca628617ff68","process_name":"flow:crm_discount_approval",
+  {"id":"areq_5a119a83-6383-4881-9532-6ea9c7739fb3","process_name":"flow:crm_discount_approval",
    "status":"pending","current_step":"finance_review","submitter_name":"Dev Admin",
-   "pending_approver_names":{"UO93S2l58Cv0XEjBT71Iw5ORVEQ3wxTe":"Dev Admin"},"lock_record":true,
-   "viewer":{"can_act":true,"is_submitter":true,"can_override":true}, … }
-PATCH /api/v1/data/crm_opportunity/Br_N2OGg7JQQToKh {"amount":90000}  → 409
+   "pending_approver_names":{"FtQIrsa28IujOkoBodAevfdvWYlE6NYy":"Dev Admin"},"lock_record":true,
+   "viewer":{"can_act":true,"is_submitter":true,"can_override":true,
+   "can_override_approve":false}, … }
+PATCH /api/v1/data/crm_opportunity/8z_u0hlhk22xoIRF {"amount":90000}  → 409
   {"error":"Opportunity 'Initech — Expansion' is locked while an approval is in progress, and cannot be edited until that approval is complete","code":"RECORD_LOCKED", … }
 ```
 
-`sys_user_position` held 0 rows: nobody held any role, so the request opened on the administrator. Then a user, Fiona, was created by the administrator and given the Finance Approver role (one `sys_user_position` row, `position: "crm_finance_approver"`). Signed in as Fiona, on a deal owned by the administrator (the request payload carries `"owner_id":"UO93S2l5…"`, displayed as `"Dev Admin"`):
+`sys_user_position` held 0 rows: nobody held any role, so the request opened on the administrator. Then a user, Fiona, was created by the administrator and given the Finance Approver role (one `sys_user_position` row, `position: "crm_finance_approver"`). Signed in as Fiona, on a deal owned by the administrator (the request payload carries `"owner_id":"FtQIrsa2…"`, displayed as `"Dev Admin"`):
 
 ```text
-PATCH /api/v1/data/crm_opportunity/FoDMAMOEtRWdCABw {"discount_percent":38}  → 200
+PATCH /api/v1/data/crm_opportunity/b1dn22iO0mK2F584 {"discount_percent":38}  → 200
 GET  /api/v1/approvals/requests
-  areq_88f8936f-e8f6-40fd-aefb-86e747a30ce1 Globex — New CRM Rollout pending submitter=Fiona (Finance)
-  approvers={"uFVoHYOSbqt55MeAEX0O2R77NyX1dUnN":"Fiona (Finance)"} {"can_act":true,"is_submitter":true,"can_override":false}
-POST /api/v1/approvals/requests/areq_88f8936f-…/approve {"comment":"approved"}  → 200  status: approved
-GET  /api/v1/data/crm_opportunity/FoDMAMOEtRWdCABw?select=…  → "discount_percent":38,"approval_status":"approved"
+  areq_dc6b1040-772a-40c8-a2f9-272ccf870ea1 Globex — New CRM Rollout pending submitter=Fiona (Finance)
+  approvers={"FMK38dDJipKNVcBFa3wzw1XdyxTYCgTm":"Fiona (Finance)"} {"can_act":true,"is_submitter":true,"can_override":false,"can_override_approve":false}
+POST /api/v1/approvals/requests/areq_dc6b1040-…/approve {"comment":"approved"}  → 200  status: approved
+GET  /api/v1/data/crm_opportunity/b1dn22iO0mK2F584?select=…  → "discount_percent":38,"approval_status":"approved"
 
 POST /api/v1/data/crm_opportunity {"name":"New deal at 35%", …, "discount_percent":35}  → 201
 GET  /api/v1/approvals/requests  → only the two requests above; "New deal at 35%" has "approval_status":null
 
-PATCH /api/v1/data/crm_opportunity/KJLStdCxbBdKWQgm {"discount_percent":45}  → 400
+PATCH /api/v1/data/crm_opportunity/JE8U7eHSROAs_Ib6 {"discount_percent":45}  → 400
   {"error":"Discount cannot exceed 40% without an approved exception.","code":"VALIDATION_FAILED", … }
 ```
 
 The audit log for Fiona's request, newest first (`GET /api/v1/data/sys_audit_log?sort=-created_at`, trimmed):
 
 ```text
-04:24:28.724Z update crm_opportunity      FoDMAMOEtRWdCABw  {"approval_status":"approved"}
-04:24:28.691Z update sys_approval_request areq_88f8936f-…   {"status":"approved","pending_approvers":null, … }
-04:24:28.684Z create sys_approval_action  aact_9842e363-…
-04:24:18.692Z update crm_opportunity      FoDMAMOEtRWdCABw  {"approval_status":"pending"}
-04:24:18.665Z create sys_approval_request areq_88f8936f-…
-04:24:18.647Z update crm_opportunity      FoDMAMOEtRWdCABw  {"discount_percent":38}
+02:36:35.447Z update crm_opportunity       b1dn22iO0mK2F584 user_id FMK38dDJ…  {"approval_status":"approved"}
+02:36:35.423Z delete sys_approval_approver aapr_2f97cc6e-…  user_id null
+02:36:35.412Z update sys_approval_request  areq_dc6b1040-…  user_id null  {"status":"approved","pending_approvers":null, … }
+02:36:35.406Z create sys_approval_action   aact_63c48728-…  user_id null  {"action":"approve","actor_id":"FMK38dDJ…",
+              "acted_as_label":"Fiona (Finance)","comment":"approved", … }
+02:36:21.096Z update crm_opportunity       b1dn22iO0mK2F584 user_id FMK38dDJ…  {"approval_status":"pending"}
+02:36:21.085Z create sys_approval_action   aact_94af7525-…  user_id null  {"action":"submit","actor_id":"FMK38dDJ…", … }
+02:36:21.081Z create sys_approval_approver aapr_2f97cc6e-…  user_id null
+02:36:21.078Z create sys_approval_request  areq_dc6b1040-…  user_id null
+02:36:21.060Z update crm_opportunity       b1dn22iO0mK2F584 user_id FMK38dDJ…  {"discount_percent":38}
 ```
 
-Each row also carries the `user_id` that made it. With the outside doors probed again on this run, the data interface and the agent connection still answered `401` without credentials and the contact form `200`.
+The deal rows carry Fiona's `user_id`. The platform writes the approval rows itself, with `user_id` null; who decided is recorded inside the decision row (`actor_id`, `acted_as_label`). With the outside doors probed again on this run, the data interface and the agent connection still answered `401` without credentials and the contact form `200`.

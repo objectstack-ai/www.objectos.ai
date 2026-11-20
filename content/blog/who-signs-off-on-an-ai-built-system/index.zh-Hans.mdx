@@ -1,6 +1,6 @@
 ---
 title: AI 做出来的内部系统，该由谁签字？签的到底是什么？
-description: 签字的是业务负责人，签的是一页签字单而不是代码：谁能看到哪些记录、谁能批什么、对外开放了什么、记录了什么。用 ObjectStack 18.5.0 上的 CRM 示例实际生成，一次 AI 改动前后各一份。
+description: 签字的是业务负责人，签的是一页签字单而不是代码：谁能看到哪些记录、谁能批什么、对外开放了什么、记录了什么。用 ObjectStack 18.6.0 上的 CRM 示例实际生成，一次 AI 改动前后各一份。
 author: ObjectStack Team
 date: 2026-11-27
 status: published
@@ -19,7 +19,7 @@ tags:
 
 **先给结论。** 系统上线由依赖它运转的那个部门的负责人签字，签的是一页纸，不是代码。这页纸就是**签字单**，写明四件事：谁能看到、修改哪些记录，谁能批准什么，什么对外开放，什么会被记录下来。上线前要一份，每次 AI 改动之后再要一份，只看变了的那几行。如果没有人签，这些决定就等于由 AI 替你做了。签字单证明不了系统真的能跑、数据是干净的、业务逻辑是对的：这几样仍然要有人去测。
 
-*实测环境：ObjectStack 18.5.0（2026 年 11 月 17 日的最新版本），使用随版本发布的 CRM 示例。每条命令和原始输出都在文末的[证据](#证据)里。*
+*实测环境：ObjectStack 18.6.0（2026 年 11 月 20 日的最新版本），使用随版本发布的 CRM 示例。每条命令和原始输出都在文末的[证据](#证据)里。*
 
 ## 上线签字不是代码评审
 
@@ -85,7 +85,7 @@ AI 编程代理做出一个内部系统之后，有两个不同的问题，需�
 
 现在，销售总监可能会对 AI 代理说这样一句话：*"30% 以上的折扣需要财务审批。"*
 
-改动是一个 38 行的新文件，外加别处改了三行。这份草稿刻意做得最小：在商机上加一个审批步骤，交给"财务审批人"这个角色，凡是这句话没提到的地方，一律采用平台的默认值。我们没有为了让结果更有看头而往里加任何东西。它通过了平台的 68 项自动检查。其中一项打印了一条提示：如果没有人担任这个角色，审批请求会交给管理员。那只是一条提示，不是拒绝。
+改动是一个 38 行的新文件，外加别处改了三行。这份草稿刻意做得最小：在商机上加一个审批步骤，交给"财务审批人"这个角色，凡是这句话没提到的地方，一律采用平台的默认值。我们没有为了让结果更有看头而往里加任何东西。它通过了平台的 71 项自动检查。其中一项打印了一条提示：如果没有人担任这个角色，审批请求会交给管理员。那只是一条提示，不是拒绝。
 
 访问矩阵快照没有变化。没有任何人的权限变了，所以权限检查一声不吭。下面这三个决定都在审批步骤里，而那项检查管不到审批步骤。签字单的第 1、3 部分与之前相同。第 2 部分变了，第 4 部分多了几行：
 
@@ -133,7 +133,7 @@ IT 能确认的是：系统和需求一致。它确认不了：需求本身是�
 
 ## 怎样为你自己的系统拿到签字单
 
-让你的 AI 代理去生成。ObjectStack 18.5.0 没有能直接打印这份签字单的命令。我们为这篇文章写了一个 51 行的脚本，而关于数据接口、AI 代理连接和审计日志的那几行，来自实际操作运行中的系统，不是来自脚本。这四个部分对应的，都是代理能从 ObjectStack 应用自身定义里读到的东西：访问矩阵快照、审批步骤、公开表单和各类连接、审计设置。新项目在有人生成第一份快照之前，是没有快照的。把下面这段要求放进代理每次都会读的指令里，签字单就会随每次改动一起交付：
+让你的 AI 代理去生成。ObjectStack 18.6.0 没有能直接打印这份签字单的命令。我们为这篇文章写了一个 51 行的脚本，而关于数据接口、AI 代理连接和审计日志的那几行，来自实际操作运行中的系统，不是来自脚本。这四个部分对应的，都是代理能从 ObjectStack 应用自身定义里读到的东西：访问矩阵快照、审批步骤、公开表单和各类连接、审计设置。新项目在有人生成第一份快照之前，是没有快照的。把下面这段要求放进代理每次都会读的指令里，签字单就会随每次改动一起交付：
 
 ```text
 With every change you make to this app, produce the sign-off sheet:
@@ -153,30 +153,30 @@ Then list the lines that differ from the previous sheet, in plain words.
 {/* the-proof */}
 ## 证据
 
-**版本。** 实测日期 2026-11-17。
+**版本。** 实测日期 2026-11-20。
 
 ```text
-$ npm view @objectstack/cli dist-tags
-{ next: '18.5.0', latest: '18.5.0' }
+$ npm view @objectstack/cli dist-tags.latest
+18.6.0
 
 $ npx os --version
-@objectstack/cli/18.5.0 linux-x64 node-v22.22.0
+@objectstack/cli/18.6.0 linux-x64 node-v22.22.0
 ```
 
-**应用。** ObjectStack 仓库在标签 `@objectstack/cli@18.5.0` 下的 `examples/app-crm`，把其中的 `workspace:*` 依赖指向已发布的 18.5.0 包，用 pnpm 安装。它出厂就开启了访问矩阵门禁，`objectstack.config.ts` 旁边放着一份 `access-matrix.json`。
+**应用。** ObjectStack 仓库在标签 `@objectstack/cli@18.6.0` 下的 `examples/app-crm`，把其中的 `workspace:*` 依赖指向已发布的 18.6.0 包，用 pnpm 安装。它出厂就开启了访问矩阵门禁，`objectstack.config.ts` 旁边放着一份 `access-matrix.json`。
 
 ```bash
-git archive '@objectstack/cli@18.5.0' examples/app-crm | tar -x
+git archive '@objectstack/cli@18.6.0' examples/app-crm | tar -x
 cd examples/app-crm
-sed -i 's/"workspace:\*"/"18.5.0"/' package.json
+sed -i 's/"workspace:\*"/"18.6.0"/' package.json
 pnpm install --ignore-workspace
 npx os compile
 ```
 
 ```text
-  → Running author-time rules (68)...
+  → Running author-time rules (71)...
   → Checking access-matrix snapshot (ADR-0090 D6)...
-  ✓ Build complete (378ms)
+  ✓ Build complete (337ms)
   ⚠ 4 author-time warning(s) — see above
 
   Data: 6 Objects  49 Fields  2 Datasources
@@ -184,7 +184,7 @@ npx os compile
   Security: 3 Positions  2 Permissions
 ```
 
-在这个标签下，除了两个示例之外，`packages/create-objectstack` 的模板以及其他任何地方都没有 `access-matrix.json`（`git ls-tree -r --name-only '@objectstack/cli@18.5.0' | grep 'access-matrix\.json$'` 只打印出 `examples/app-crm/access-matrix.json` 和 `examples/app-showcase/access-matrix.json`），所以新项目一开始是没有快照的。
+在这个标签下，除了两个示例之外，`packages/create-objectstack` 的模板以及其他任何地方都没有 `access-matrix.json`（`git ls-tree -r --name-only '@objectstack/cli@18.6.0' | grep 'access-matrix\.json$'` 只打印出 `examples/app-crm/access-matrix.json` 和 `examples/app-showcase/access-matrix.json`），所以新项目一开始是没有快照的。
 
 四条警告都是 `field-no-consumers`，落在 `crm_opportunity` 的四个字段上，其中一个是 `approval_status`：一个用来显示审批结果、却没有任何地方读取或显示的字段。`os info` 列出 `crm_lead (13 fields, user) — Lead`，就是第 3 部分里的 13。
 
@@ -310,16 +310,16 @@ $ curl -s -w ' %{http_code}' -X POST localhost:49961/api/v1/data/crm_lead -H 'co
 以预置管理员身份登录后，折扣测试和它留下的审计行：
 
 ```text
-PATCH /api/v1/data/crm_opportunity/1guy5QfI1dxYqC_a  {"discount_percent":35}   → 200
-PATCH /api/v1/data/crm_opportunity/1guy5QfI1dxYqC_a  {"discount_percent":45}   → 400
+PATCH /api/v1/data/crm_opportunity/DpO1l0AsxUn_rof_  {"discount_percent":35}   → 200
+PATCH /api/v1/data/crm_opportunity/DpO1l0AsxUn_rof_  {"discount_percent":45}   → 400
   {"error":"Discount cannot exceed 40% without an approved exception.","code":"VALIDATION_FAILED", … }
 GET /api/v1/approvals/requests                                               → 200 {"data":[]}
 
 GET /api/v1/data/sys_audit_log?sort=-created_at&limit=1
-  {"action":"update","object_name":"crm_opportunity","record_id":"1guy5QfI1dxYqC_a",
-   "user_id":"oK3bdOQRcKqg6bhRmok9rDGAgwHotqpH",
+  {"action":"update","object_name":"crm_opportunity","record_id":"DpO1l0AsxUn_rof_",
+   "user_id":"pm6ggEGaFZ7i4Anjcj3LAerlvYPqQ5CO",
    "old_value":"{\"discount_percent\":0}","new_value":"{\"discount_percent\":35}",
-   "created_at":"2026-11-17T04:19:56.758Z"}
+   "created_at":"2026-11-20T02:33:10.899Z"}
 ```
 
 之后按 id 读取这单商机，没有新增 `read` 行：日志里只有 `config_change` 2、`create` 3、`update` 4、`login` 2。40% 的拒绝来自 `src/objects/opportunity.object.ts` 里 `crm_opportunity` 上的一条校验规则，整个应用里没有任何例外通道：
@@ -332,12 +332,12 @@ message: 'Discount cannot exceed 40% without an approved exception.',
 第 4 部分里的删除和第 1 部分里的管理员那一行，在之后的一次全新启动中以管理员身份测得：
 
 ```text
-DELETE /api/v1/data/crm_activity/3faQC9ppNgMiJIZS  → 200
-  {"object":"crm_activity","id":"3faQC9ppNgMiJIZS","success":true,"recycleBinEntryId":"m2JEV5EL4Tn_HTqM"}
+DELETE /api/v1/data/crm_activity/KVFUTkE__ZvKyWJe  → 200
+  {"object":"crm_activity","id":"KVFUTkE__ZvKyWJe","success":true,"recycleBinEntryId":"dxSNtuUA5WAjWELx"}
 GET /api/v1/data/sys_audit_log?sort=-created_at&limit=1
-  {"action":"delete","object_name":"crm_activity","record_id":"3faQC9ppNgMiJIZS",
-   "user_id":"I7JqyNY3c2CMRzcLBpUlI0ykgjPAF9U4",
-   "old_value":"{\"id\":\"3faQC9ppNgMiJIZS\", … }","new_value":null,"created_at":"2026-11-17T04:36:40.312Z"}
+  {"action":"delete","object_name":"crm_activity","record_id":"KVFUTkE__ZvKyWJe",
+   "user_id":"lRCmrwnTsuGCDjTUvNQvFYrJtjp3qELn",
+   "old_value":"{\"id\":\"KVFUTkE__ZvKyWJe\", … }","new_value":null,"created_at":"2026-11-20T02:38:51.187Z"}
 ```
 
 **改动。** 一个新文件，加上 `src/flows/index.ts` 里注册它的两行改动和 `objectstack.config.ts` 里的一行：
@@ -404,7 +404,7 @@ ERROR Trigger-fired run of flow 'crm_discount_approval' failed (trigger 'record_
 这就是正文里"系统真的能跑"那一条说的情况。两项都加上之后，`os validate` 通过，并附带一条关于角色无人担任时由谁决定的提示：
 
 ```text
-  ✓ Validation passed (409ms)
+  ✓ Validation passed (324ms)
   ℹ flow "crm_discount_approval" · node "finance_review": every approver on this node routes to a group (position/team/department/queue), so if none is staffed the request opens on the organization's administrators, and (lockRecord) the record stays locked
 ```
 
@@ -427,43 +427,48 @@ ERROR Trigger-fired run of flow 'crm_discount_approval' failed (trigger 'record_
 **审批，在运行中的应用上**（带着改动重新 `os dev --fresh`）。管理员把一单商机提到 35%：
 
 ```text
-PATCH /api/v1/data/crm_opportunity/Br_N2OGg7JQQToKh {"discount_percent":35}  → 200
-GET  /api/v1/data/crm_opportunity/Br_N2OGg7JQQToKh?select=…  → "discount_percent":35,"approval_status":"pending"
+PATCH /api/v1/data/crm_opportunity/8z_u0hlhk22xoIRF {"discount_percent":35}  → 200
+GET  /api/v1/data/crm_opportunity/8z_u0hlhk22xoIRF?select=…  → "discount_percent":35,"approval_status":"pending"
 GET  /api/v1/approvals/requests
-  {"id":"areq_6e2a35bb-1d48-4a0d-9f7c-ca628617ff68","process_name":"flow:crm_discount_approval",
+  {"id":"areq_5a119a83-6383-4881-9532-6ea9c7739fb3","process_name":"flow:crm_discount_approval",
    "status":"pending","current_step":"finance_review","submitter_name":"Dev Admin",
-   "pending_approver_names":{"UO93S2l58Cv0XEjBT71Iw5ORVEQ3wxTe":"Dev Admin"},"lock_record":true,
-   "viewer":{"can_act":true,"is_submitter":true,"can_override":true}, … }
-PATCH /api/v1/data/crm_opportunity/Br_N2OGg7JQQToKh {"amount":90000}  → 409
+   "pending_approver_names":{"FtQIrsa28IujOkoBodAevfdvWYlE6NYy":"Dev Admin"},"lock_record":true,
+   "viewer":{"can_act":true,"is_submitter":true,"can_override":true,
+   "can_override_approve":false}, … }
+PATCH /api/v1/data/crm_opportunity/8z_u0hlhk22xoIRF {"amount":90000}  → 409
   {"error":"Opportunity 'Initech — Expansion' is locked while an approval is in progress, and cannot be edited until that approval is complete","code":"RECORD_LOCKED", … }
 ```
 
-`sys_user_position` 里是 0 行：没有人担任任何角色，所以请求交给了管理员。随后管理员创建了一个用户 Fiona，并分配给她"财务审批人"角色（一行 `sys_user_position`，`position: "crm_finance_approver"`）。以 Fiona 身份登录，操作的是一单归管理员所有的商机（请求内容里带有 `"owner_id":"UO93S2l5…"`，显示为 `"Dev Admin"`）：
+`sys_user_position` 里是 0 行：没有人担任任何角色，所以请求交给了管理员。随后管理员创建了一个用户 Fiona，并分配给她"财务审批人"角色（一行 `sys_user_position`，`position: "crm_finance_approver"`）。以 Fiona 身份登录，操作的是一单归管理员所有的商机（请求内容里带有 `"owner_id":"FtQIrsa2…"`，显示为 `"Dev Admin"`）：
 
 ```text
-PATCH /api/v1/data/crm_opportunity/FoDMAMOEtRWdCABw {"discount_percent":38}  → 200
+PATCH /api/v1/data/crm_opportunity/b1dn22iO0mK2F584 {"discount_percent":38}  → 200
 GET  /api/v1/approvals/requests
-  areq_88f8936f-e8f6-40fd-aefb-86e747a30ce1 Globex — New CRM Rollout pending submitter=Fiona (Finance)
-  approvers={"uFVoHYOSbqt55MeAEX0O2R77NyX1dUnN":"Fiona (Finance)"} {"can_act":true,"is_submitter":true,"can_override":false}
-POST /api/v1/approvals/requests/areq_88f8936f-…/approve {"comment":"approved"}  → 200  status: approved
-GET  /api/v1/data/crm_opportunity/FoDMAMOEtRWdCABw?select=…  → "discount_percent":38,"approval_status":"approved"
+  areq_dc6b1040-772a-40c8-a2f9-272ccf870ea1 Globex — New CRM Rollout pending submitter=Fiona (Finance)
+  approvers={"FMK38dDJipKNVcBFa3wzw1XdyxTYCgTm":"Fiona (Finance)"} {"can_act":true,"is_submitter":true,"can_override":false,"can_override_approve":false}
+POST /api/v1/approvals/requests/areq_dc6b1040-…/approve {"comment":"approved"}  → 200  status: approved
+GET  /api/v1/data/crm_opportunity/b1dn22iO0mK2F584?select=…  → "discount_percent":38,"approval_status":"approved"
 
 POST /api/v1/data/crm_opportunity {"name":"New deal at 35%", …, "discount_percent":35}  → 201
 GET  /api/v1/approvals/requests  → only the two requests above; "New deal at 35%" has "approval_status":null
 
-PATCH /api/v1/data/crm_opportunity/KJLStdCxbBdKWQgm {"discount_percent":45}  → 400
+PATCH /api/v1/data/crm_opportunity/JE8U7eHSROAs_Ib6 {"discount_percent":45}  → 400
   {"error":"Discount cannot exceed 40% without an approved exception.","code":"VALIDATION_FAILED", … }
 ```
 
 Fiona 这个请求的审计日志，按时间倒序（`GET /api/v1/data/sys_audit_log?sort=-created_at`，已删减）：
 
 ```text
-04:24:28.724Z update crm_opportunity      FoDMAMOEtRWdCABw  {"approval_status":"approved"}
-04:24:28.691Z update sys_approval_request areq_88f8936f-…   {"status":"approved","pending_approvers":null, … }
-04:24:28.684Z create sys_approval_action  aact_9842e363-…
-04:24:18.692Z update crm_opportunity      FoDMAMOEtRWdCABw  {"approval_status":"pending"}
-04:24:18.665Z create sys_approval_request areq_88f8936f-…
-04:24:18.647Z update crm_opportunity      FoDMAMOEtRWdCABw  {"discount_percent":38}
+02:36:35.447Z update crm_opportunity       b1dn22iO0mK2F584 user_id FMK38dDJ…  {"approval_status":"approved"}
+02:36:35.423Z delete sys_approval_approver aapr_2f97cc6e-…  user_id null
+02:36:35.412Z update sys_approval_request  areq_dc6b1040-…  user_id null  {"status":"approved","pending_approvers":null, … }
+02:36:35.406Z create sys_approval_action   aact_63c48728-…  user_id null  {"action":"approve","actor_id":"FMK38dDJ…",
+              "acted_as_label":"Fiona (Finance)","comment":"approved", … }
+02:36:21.096Z update crm_opportunity       b1dn22iO0mK2F584 user_id FMK38dDJ…  {"approval_status":"pending"}
+02:36:21.085Z create sys_approval_action   aact_94af7525-…  user_id null  {"action":"submit","actor_id":"FMK38dDJ…", … }
+02:36:21.081Z create sys_approval_approver aapr_2f97cc6e-…  user_id null
+02:36:21.078Z create sys_approval_request  areq_dc6b1040-…  user_id null
+02:36:21.060Z update crm_opportunity       b1dn22iO0mK2F584 user_id FMK38dDJ…  {"discount_percent":38}
 ```
 
-每一行还带着做出该操作的 `user_id`。这次运行中再次探测了对外入口：未带凭据时，数据接口和 AI 代理连接仍然返回 `401`，联系表单返回 `200`。
+商机的那几行带着 Fiona 的 `user_id`。审批相关的行由平台自己写入，`user_id` 为 null；谁做的决定记在决定那一行里面（`actor_id`、`acted_as_label`）。这次运行中再次探测了对外入口：未带凭据时，数据接口和 AI 代理连接仍然返回 `401`，联系表单返回 `200`。
