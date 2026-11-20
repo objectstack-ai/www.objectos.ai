@@ -1,6 +1,6 @@
 ---
 title: "業務アプリはデータベースに置くべきか、リポジトリに置くべきか？"
-description: "プラットフォームのデータベースにある設定か、あなたのリポジトリにある定義か。オープンソース CRM の権限変更 1 件を ObjectStack 18.5.0 で追跡し、取り消してみると、それぞれの選択で何に答えられるかが見えてきます。"
+description: "プラットフォームのデータベースにある設定か、あなたのリポジトリにある定義か。オープンソース CRM の権限変更 1 件を ObjectStack 18.6.0 で追跡し、取り消してみると、それぞれの選択で何に答えられるかが見えてきます。"
 author: ObjectStack Team
 date: 2026-11-23
 status: published
@@ -17,11 +17,11 @@ tags:
 
 AI エージェントが業務ソフトウェアを変更するのなら、そのソフトウェアのルールのマスターコピーを、自社が管理するリポジトリにファイルとして置き、稼働中のシステムはそのファイルからビルドしましょう。そうすれば、すべての変更が日付と署名と書面の理由つきの変更前後の差分として届き、「営業にそれを許したのは誰で、なぜか？」には記憶ではなく記録から答えられます。代償は二つあります。既存のプラットフォーム（Salesforce、Odoo とその仲間）には長年の本番運用、パッケージ化されたアプリ、パートナーがあり、リポジトリ起点のプラットフォームでは自分で作る部分が増えます。そして、すべての変更はリポジトリで提案され、受け入れられなければなりません。管理画面なら求められない段階です。
 
-*ObjectStack 18.5.0（今日新規インストールで入るバージョン）で計測：リリースタグ時点のオープンソース CRM サンプルの git 履歴と、そのサンプルに対して実行した公開版 18.5.0 のコマンドラインツール。コマンドはすべて[証拠](#証拠)にあります。*
+*ObjectStack 18.6.0（今日新規インストールで入るバージョン）で計測：リリースタグ時点のオープンソース CRM サンプルの git 履歴と、そのサンプルに対して実行した公開版 18.6.0 のコマンドラインツール。コマンドはすべて[証拠](#証拠)にあります。*
 
 ## 設定か定義か：どちらのコピーが優先されるのか
 
-どちらの種類のプラットフォームも、目に見える仕事は同じです。あなたが業務（顧客、商談、誰が何を編集できるか）を記述すると、プラットフォームがその記述をデータベースのテーブル、画面、プログラミングインターフェース（API）に変えます。このように動くプラットフォームはメタデータプラットフォームと呼ばれます。それが動く元になる記述がメタデータ、つまりデータについてのデータです。ObjectStack 自身の[比較ページ](/en/compare/)は、こうしたプラットフォームを[「最も近い親戚」](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/content/docs/concepts/compare.mdx#L58-L73)と呼んでいます。「Salesforce のメタデータが祖先であり、オープンソースのいとこには Frappe Framework と ERPNext、Odoo、NocoBase、Payload、Twenty がある」。違いは一文で示されています。
+どちらの種類のプラットフォームも、目に見える仕事は同じです。あなたが業務（顧客、商談、誰が何を編集できるか）を記述すると、プラットフォームがその記述をデータベースのテーブル、画面、プログラミングインターフェース（API）に変えます。このように動くプラットフォームはメタデータプラットフォームと呼ばれます。それが動く元になる記述がメタデータ、つまりデータについてのデータです。ObjectStack 自身の[比較ページ](/en/compare/)は、こうしたプラットフォームを[「最も近い親戚」](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/concepts/compare.mdx#L58-L73)と呼んでいます。「Salesforce のメタデータが祖先であり、オープンソースのいとこには Frappe Framework と ERPNext、Odoo、NocoBase、Payload、Twenty がある」。違いは一文で示されています。
 
 > 定義がどこにあり、誰のために書かれているか。これらのプラットフォームの多くでは、メタデータはプラットフォームのデータベースに保存され、その UI で編集される設定である。コードである場合、たとえば Payload Config や Odoo のモジュールのように、それはフレームワークのコードである。
 
@@ -65,15 +65,15 @@ If intended, re-run with --update-access-matrix and commit the snapshot — its 
 
 ## メタデータプラットフォームのほうが優れている点
 
-既存のプラットフォームを選ぶ理由は強く、ObjectStack のドキュメントは自らの言葉でそれを述べています。得意なこと：[「実績のあるランタイムの上で、出発点となるパッケージ化されたアプリ、モジュール、連携を使って、業務アプリケーションをすばやく構築すること」](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/content/docs/concepts/compare.mdx#L65-L66)。先行している点：
+既存のプラットフォームを選ぶ理由は強く、ObjectStack のドキュメントは自らの言葉でそれを述べています。得意なこと：[「実績のあるランタイムの上で、出発点となるパッケージ化されたアプリ、モジュール、連携を使って、業務アプリケーションをすばやく構築すること」](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/concepts/compare.mdx#L65-L66)。先行している点：
 
 > Salesforce、Odoo、ERPNext には、長年の本番運用、パッケージ化されたアプリケーション、アプリマーケットプレイス、導入パートナーがある。ObjectStack はより若い。自分で作る部分が多いと考えておくこと。
-> — [ObjectStack ドキュメント「他のほうが強いところ」](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/content/docs/concepts/compare.mdx#L115-L117)
+> — [ObjectStack ドキュメント「他のほうが強いところ」](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/concepts/compare.mdx#L115-L117)
 
 さらに三つの点が、それらに有利に働きます。
 
-- **エージェントもそれらに届く。** 同じページには[「そのうちいくつかは今では MCP サーバーを提供しており、エージェントもそれらに届く」](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/content/docs/concepts/compare.mdx#L62-L63)とあります。MCP は、AI エージェントがシステムのツールを呼び出すためのオープンな標準です。
-- **ロジックをデータとして保存するのは普通の形で、欠陥ではない。** [「これは ServiceNow（Business Rules）、Salesforce（メタデータとして保存される Formulas と Apex Triggers）、Retool（transformer の JS 文字列）、Airtable（Scripting blocks）が行ったのと同じトレードオフである。標準的なローコードの形だ」](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/content/docs/automation/hook-bodies.mdx#L61)。これは ObjectStack 自身のドキュメントで、小さな業務ロジックをデータとして保つという自らの選択について述べたものです。つまり、違いはプラットフォームがメタデータを使うかどうかではありません。ObjectStack もメタデータプラットフォームです。違いは、正本がどこでバージョン管理されるかです。
+- **エージェントもそれらに届く。** 同じページには[「そのうちいくつかは今では MCP サーバーを提供しており、エージェントもそれらに届く」](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/concepts/compare.mdx#L62-L63)とあります。MCP は、AI エージェントがシステムのツールを呼び出すためのオープンな標準です。
+- **ロジックをデータとして保存するのは普通の形で、欠陥ではない。** [「これは ServiceNow（Business Rules）、Salesforce（メタデータとして保存される Formulas と Apex Triggers）、Retool（transformer の JS 文字列）、Airtable（Scripting blocks）が行ったのと同じトレードオフである。標準的なローコードの形だ」](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/automation/hook-bodies.mdx#L61)。これは ObjectStack 自身のドキュメントで、小さな業務ロジックをデータとして保つという自らの選択について述べたものです。つまり、違いはプラットフォームがメタデータを使うかどうかではありません。ObjectStack もメタデータプラットフォームです。違いは、正本がどこでバージョン管理されるかです。
 - **管理画面にはリポジトリが要らない。** 設定型のプラットフォームでは、業務側の管理者がプルリクエストもビルドもデプロイもなしに、数分でフィールドを追加できます。多くのチームにとって、それこそが重要な点です。
 
 すでにこうしたプラットフォームのどれかを使っているなら、そこで築いてきたものが、とどまる本当の理由になります。[Power Platform と Dataverse](/ja/blog/power-platform-lock-in-dataverse-self-host/) や [Retool](/ja/blog/retool-vs-ai-native-app-platform/) についての記事では、個別の製品を比較しています。
@@ -82,7 +82,7 @@ If intended, re-run with --update-access-matrix and commit the snapshot — its 
 
 **設定型のプラットフォームから始める**のは、パッケージ化されたアプリ、マーケットプレイス、導入パートナーが今四半期のうちに必要なとき。システムを変えるのが、その画面で作業する管理者であるとき。そして監査担当者がプラットフォーム自身の変更記録を認めているときです。
 
-**定義をリポジトリに置く**のは、変更の大半を AI エージェントが書き、そのひとつひとつに人が責任を負わなければならないとき。権限の変更に理由と読める変更前後が必要なとき。そして業務の定義を、稼働中のシステムのデータベースの行ではなく、自社が保有するファイルにしたいときです。ObjectStack の README は最後の点をこう述べています：[「定義はふつうの TypeScript としてあなたのリポジトリにあり、あなたの VCS でバージョン管理され、diff としてレビューできる。ベンダーのシステム内に保持されるグラフではない」](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/README.md#L197-L199)。VCS はバージョン管理のこと、TypeScript はファイルを書くのに使われている言語です。
+**定義をリポジトリに置く**のは、変更の大半を AI エージェントが書き、そのひとつひとつに人が責任を負わなければならないとき。権限の変更に理由と読める変更前後が必要なとき。そして業務の定義を、稼働中のシステムのデータベースの行ではなく、自社が保有するファイルにしたいときです。ObjectStack の README は最後の点をこう述べています：[「定義はふつうの TypeScript としてあなたのリポジトリにあり、あなたの VCS でバージョン管理され、diff としてレビューできる。ベンダーのシステム内に保持されるグラフではない」](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/README.md#L197-L199)。VCS はバージョン管理のこと、TypeScript はファイルを書くのに使われている言語です。
 
 どちらを選ぶにしても、ベンダーに三つの質問をしてください。
 
@@ -94,7 +94,7 @@ If intended, re-run with --update-access-matrix and commit the snapshot — its 
 
 - **変更が正しいかどうかは判断しない。** 8 月の修正を取り除いたとき、プラットフォームの最初のチェックは警告つきで通りました。ビルドを止めたのはアクセス表だけで、それもこのアプリが表を持っていたからです。表は各アプリが自分で有効にする必要があり、表のないアプリならビルドは通っていました。営業が製品明細に触れるべきかどうかは、やはり人が決めなければなりません。
 - **レビューを生み出しはしない。** 上の 7 件のプルリクエストのうち 6 件には GitHub 上のレビュー記録がありません。私たち自身も数に入っています。これは ObjectStack 自身のリポジトリです。記録がないことは、誰も変更を読まなかったことの証明にはなりません。誰かが読んだことを誰も示せない、という意味です。リポジトリは、その抜けを数えられるようにします。それを埋めるには、マージ前に承認を必須にする設定が必要です。
-- **ObjectStack にも設定はある。** ビュー、ダッシュボード、レポート、翻訳、メールテンプレートは、稼働中の環境の管理画面で編集できます。その編集はその環境のデータベースに保存され、[リポジトリ側のバージョンより優先されます](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/content/docs/concepts/metadata-lifecycle.mdx#L43)。独自の変更ログもあります。権限のまとまりを含め、ほとんどの種類の定義は[プログラミングインターフェースを通じて実行時に作成する](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/packages/spec/src/kernel/metadata-plugin.zod.ts#L348)こともできます。これらは本記事の意味でまさに設定なので、どの変更をリポジトリ経由にしなければならないかは、あなたが決めるルールです。
+- **ObjectStack にも設定はある。** ビュー、ダッシュボード、レポート、翻訳、メールテンプレートは、稼働中の環境の管理画面で編集できます。その編集はその環境のデータベースに保存され、[リポジトリ側のバージョンより優先されます](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/concepts/metadata-lifecycle.mdx#L43)。独自の変更ログもあります。権限のまとまりを含め、ほとんどの種類の定義は[プログラミングインターフェースを通じて実行時に作成する](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/spec/src/kernel/metadata-plugin.zod.ts#L348)こともできます。これらは本記事の意味でまさに設定なので、どの変更をリポジトリ経由にしなければならないかは、あなたが決めるルールです。
 
 ## エージェントを定義に向ける
 
@@ -103,19 +103,19 @@ If intended, re-run with --update-access-matrix and commit the snapshot — its 
 {/* the-proof */}
 ## 証拠
 
-ここまでの内容はすべて、2026-11-17 に ObjectStack **18.5.0** に対して計測しました。
+ここまでの内容はすべて、2026-11-20 に ObjectStack **18.6.0** に対して計測しました。
 
 ```text
-$ npm view @objectstack/cli dist-tags
-{ next: '18.5.0', latest: '18.5.0' }
+$ npm view @objectstack/cli dist-tags.latest
+18.6.0
 ```
 
-git の件数は、タグ `@objectstack/cli@18.5.0`（コミット [`b914e72`](https://github.com/objectstack-ai/objectstack/commit/b914e7247f692a79804f9b7eba278add46d57625)）時点の objectstack リポジトリを、シャロークローンではなく完全なクローンで読んだものです。
+git の件数は、タグ `@objectstack/cli@18.6.0`（コミット [`958ee03`](https://github.com/objectstack-ai/objectstack/commit/958ee03594968c651db1bc40ecb05bfe72f94b2d)）時点の objectstack リポジトリを、シャロークローンではなく完全なクローンで読んだものです。
 
 ### 1. 権限ファイルの履歴：7 回の変更
 
 ```text
-$ T='@objectstack/cli@18.5.0'
+$ T='@objectstack/cli@18.6.0'
 $ git log $T --format='%h %ad  %s' --date=short -- examples/app-crm/src/security/sales-positions.ts
 9d313f3ac70 2026-11-06  refactor(examples): every example-authored metadata name carries its package namespace (#30927)
 9975c26ae38 2026-10-18  docs(rest,app-crm): the public form submit is authorized by its declaration, not by a guest_portal set (#24237)
@@ -212,7 +212,7 @@ this independently.
      crm_lead: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: false },
 ```
 
-そして `examples/app-crm/access-matrix.json` に追加された項目で、18.5.0 のタグ時点でも残っています。
+そして `examples/app-crm/access-matrix.json` に追加された項目で、18.6.0 のタグ時点でも残っています。
 
 ```diff
 +    {
@@ -228,20 +228,20 @@ this independently.
 +    },
 ```
 
-### 5. 18.5.0 で取り消す
+### 5. 18.6.0 で取り消す
 
-タグ時点の CRM サンプルを、モノレポではなく公開版の 18.5.0 パッケージに対してインストールし（`workspace:*` の依存を `18.5.0` に設定し、テストフォルダーは除外）、編集が diff として見えるよう一時的なリポジトリにコミットしました。
+タグ時点の CRM サンプルを、モノレポではなく公開版の 18.6.0 パッケージに対してインストールし（`workspace:*` の依存を `18.6.0` に設定し、テストフォルダーは除外）、編集が diff として見えるよう一時的なリポジトリにコミットしました。
 
 ```text
-$ git -C ~/objectstack archive '@objectstack/cli@18.5.0' examples/app-crm | tar -x --strip-components=2
+$ git -C ~/objectstack archive '@objectstack/cli@18.6.0' examples/app-crm | tar -x --strip-components=2
 $ npm install
 $ npx os --version
-@objectstack/cli/18.5.0 linux-x64 node-v22.22.0
+@objectstack/cli/18.6.0 linux-x64 node-v22.22.0
 $ npx os compile; echo $?
   ...
   → Checking access-matrix snapshot (ADR-0090 D6)...
   ...
-  ✓ Build complete (353ms)
+  ✓ Build complete (270ms)
 0
 ```
 
@@ -254,9 +254,9 @@ $ git diff --stat
  1 file changed, 1 deletion(-)
 
 $ npx os validate; echo $?
-  → Running author-time rules (68)...
+  → Running author-time rules (71)...
   ...
-  ✓ Validation passed (414ms)
+  ✓ Validation passed (374ms)
   ...
   ⚠ object "crm_opportunity_line_item": detail object "crm_opportunity_line_item" (master_detail "opportunity" → "crm_opportunity") has no object-level CRUD grant in any permission set, so non-admin users are denied it (403)
     fix: Grant it where its master "crm_opportunity" is granted: permissions[i].objects.crm_opportunity_line_item = { allowRead: true, allowCreate: true, allowEdit: true }
@@ -265,7 +265,7 @@ $ npx os validate; echo $?
 0
 
 $ npx os compile; echo $?
-  → Running author-time rules (68)...
+  → Running author-time rules (71)...
   ...
   → Checking access-matrix snapshot (ADR-0090 D6)...
 
@@ -275,14 +275,14 @@ $ npx os compile; echo $?
 1
 ```
 
-この表はアプリごとのオプトインです。18.5.0 のビルドのソースは、チェックを実行する箇所でそう述べています：[「Opt-in per app: when `access-matrix.json` sits next to the config」](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/packages/cli/src/commands/compile.ts#L1108-L1114)。
+この表はアプリごとのオプトインです。18.6.0 のビルドのソースは、チェックを実行する箇所でそう述べています：[「Opt-in per app: when `access-matrix.json` sits next to the config」](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/cli/src/commands/compile.ts#L1108-L1114)。
 
 ### 6. 削除を意図的に受け入れる
 
 ```text
 $ npx os compile --update-access-matrix; echo $?
   → Access matrix snapshot written to access-matrix.json (ADR-0090 D6) — review the diff.
-  ✓ Build complete (387ms)
+  ✓ Build complete (353ms)
 0
 $ git diff --stat
  access-matrix.json              | 11 -----------
@@ -297,10 +297,10 @@ ecfe192469fc5500deecb0924d20699a382d6b45
 
 再生成された表は、8 月の修正前の表とバイト単位で同じファイルです。その後、一時ツリーを `git checkout HEAD -- .` で元に戻し、`git diff HEAD` は空でした。
 
-### 7. 引用した箇所（18.5.0 タグ時点）
+### 7. 引用した箇所（18.6.0 タグ時点）
 
-- `content/docs/concepts/compare.mdx` の[58–73 行目](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/content/docs/concepts/compare.mdx#L58-L73)（最も近い親戚、得意なこと、違い）と[115–117 行目](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/content/docs/concepts/compare.mdx#L115-L117)（他のほうが強いところ）。
-- `content/docs/automation/hook-bodies.mdx` の[61 行目](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/content/docs/automation/hook-bodies.mdx#L61)（標準的なローコードの形）。
-- `README.md` の[197–199 行目](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/README.md#L197-L199)（定義はあなたのリポジトリにある）。
-- `content/docs/concepts/metadata-lifecycle.mdx` の[43 行目](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/content/docs/concepts/metadata-lifecycle.mdx#L43)（「Reads walk top-to-bottom: the first non-null layer wins」）と[327 行目](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/content/docs/concepts/metadata-lifecycle.mdx#L327)（管理画面での編集はオーバーレイ行として書き込まれ、同じトランザクションで履歴行も書かれる）。
-- `packages/spec/src/kernel/metadata-plugin.zod.ts` の[348 行目](https://github.com/objectstack-ai/objectstack/blob/b914e7247f692a79804f9b7eba278add46d57625/packages/spec/src/kernel/metadata-plugin.zod.ts#L348)（「Allow runtime creation via API」）と、その下の型レジストリ：管理画面のオーバーレイは `view`、`dashboard`、`report`、`translation`、`email_template` で有効、`permission`、`position`、`object`、`flow` で無効。
+- `content/docs/concepts/compare.mdx` の[58–73 行目](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/concepts/compare.mdx#L58-L73)（最も近い親戚、得意なこと、違い）と[115–117 行目](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/concepts/compare.mdx#L115-L117)（他のほうが強いところ）。
+- `content/docs/automation/hook-bodies.mdx` の[61 行目](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/automation/hook-bodies.mdx#L61)（標準的なローコードの形）。
+- `README.md` の[197–199 行目](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/README.md#L197-L199)（定義はあなたのリポジトリにある）。
+- `content/docs/concepts/metadata-lifecycle.mdx` の[43 行目](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/concepts/metadata-lifecycle.mdx#L43)（「Reads walk top-to-bottom: the first non-null layer wins」）と[342 行目](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/concepts/metadata-lifecycle.mdx#L342)（管理画面での編集はオーバーレイ行として書き込まれ、同じトランザクションで履歴行も書かれる）。
+- `packages/spec/src/kernel/metadata-plugin.zod.ts` の[348 行目](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/spec/src/kernel/metadata-plugin.zod.ts#L348)（「Allow runtime creation via API」）と、その下の型レジストリ：管理画面のオーバーレイは `view`、`dashboard`、`report`、`translation`、`email_template` で有効、`permission`、`position`、`object`、`flow` で無効。
