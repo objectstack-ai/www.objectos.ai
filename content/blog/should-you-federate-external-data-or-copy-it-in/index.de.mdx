@@ -1,6 +1,6 @@
 ---
 title: "Externe Daten live lesen oder hereinkopieren?"
-description: "Live lesen, wenn Daten aktuell sein oder nie doppelt liegen sollen; für Berichte und KI kopieren, nach „ein Schreiber pro Zeile“. Gemessen: ObjectStack 18.5.0."
+description: "Live lesen, wenn Daten aktuell sein oder nie doppelt liegen sollen; für Berichte und KI kopieren, nach „ein Schreiber pro Zeile“. Gemessen: ObjectStack 18.6.0."
 author: ObjectStack Team
 date: 2026-11-20
 status: published
@@ -17,11 +17,11 @@ tags:
 
 **Lesen Sie das Quellsystem live, wenn die Daten sekundengenau aktuell sein müssen oder nirgendwo sonst gespeichert werden dürfen. Kopieren Sie sie herein, wenn Menschen, Berichte und KI sie mit voller Geschwindigkeit verknüpfen, filtern und befragen sollen.** Beides hat seinen Preis. Live-Lesen wartet jedes Mal auf das Quellsystem und kann zwei Datenbanken nicht in einer Abfrage verbinden. Eine Kopie ist nur so frisch wie ihre letzte geplante Aktualisierung. Wenn Sie kopieren, gilt die Regel **ein Schreiber pro Zeile**: Nur die geplante Aktualisierung schreibt die Kopie. Niemand bearbeitet sie, auch kein Administrator. Eine Änderung wird in der Quelle vorgenommen, über eine eigens dafür gebaute Aktion, und die nächste Aktualisierung übernimmt sie. In meinem Test las eine Aktualisierung nur 3 der 7 Zeilen der Quelle, und eine Änderung an der Kopie wurde einem Mitglied ebenso verweigert wie einem Administrator.
 
-*Gemessen auf ObjectStack 18.5.0, der am 2026-11-16 veröffentlichten aktuellen Version. Alle Protokolle stehen im letzten Abschnitt, „Der Beweis“.*
+*Gemessen auf ObjectStack 18.6.0, der am 2026-11-20 veröffentlichten aktuellen Version. Alle Protokolle stehen im letzten Abschnitt, „Der Beweis“.*
 
 ## Live lesen oder hereinkopieren?
 
-**Föderation** lässt die Zeilen, wo sie sind, und leitet jede Abfrage an die Quelle weiter. **Sync-in** kopiert sie nach Zeitplan in eine gewöhnliche Tabelle, die der Plattform gehört. Eine **Connector-Aktion** ruft das andere System über eine Schaltfläche oder eine Automatisierung auf und speichert keine seiner Zeilen. ObjectStacks Entwurfsdokument zur Synchronisation, ADR-0153, beim Tag 18.5.0 noch im Status „Vorgeschlagen“, wählt so zwischen ihnen:
+**Föderation** lässt die Zeilen, wo sie sind, und leitet jede Abfrage an die Quelle weiter. **Sync-in** kopiert sie nach Zeitplan in eine gewöhnliche Tabelle, die der Plattform gehört. Eine **Connector-Aktion** ruft das andere System über eine Schaltfläche oder eine Automatisierung auf und speichert keine seiner Zeilen. ObjectStacks Entwurfsdokument zur Synchronisation, ADR-0153, beim Tag 18.6.0 noch im Status „Vorgeschlagen“, wählt so zwischen ihnen:
 
 | Ihre Lage | Wahl |
 |:--|:--|
@@ -44,20 +44,20 @@ Das Risiko jeder Kopie ist, dass sie zu einem zweiten führenden System wird: Je
 
 Regel 4 ist der Kern. Eine Zwei-Wege-Synchronisation hat zwei Schreiber pro Zeile und braucht deshalb eine Regel für die Zeile, die beide Seiten geändert haben: Der letzte Schreiber gewinnt, Zusammenführen auf Feldebene, eine Warteschlange von Konflikten, die ein Mensch auflösen muss. Jede davon verwirft entweder die Änderung einer Seite oder braucht einen Menschen als Schiedsrichter. Mit einem Schreiber gibt es keine solche Zeile und kein Zusammenführen, das schiefgehen kann.
 
-![Die Schleife „ein Schreiber pro Zeile“ auf ObjectStack 18.5.0: Ein geplanter Pull kopiert die Teiletabelle des ERP in die Plattform (Lauf 1 liest 6 Zeilen, Lauf 2 liest 3 von 7, Lauf 3 liest 3); Änderungen an der Kopie werden abgewiesen; eine Änderung geht nur über die deklarierte Aktion zurück, die die API des ERP aufruft, und der nächste Pull aktualisiert die Kopie.](./one-writer-loop-en.svg)
+![Die Schleife „ein Schreiber pro Zeile“ auf ObjectStack 18.6.0: Ein geplanter Pull kopiert die Teiletabelle des ERP in die Plattform (Lauf 1 liest 6 Zeilen, Lauf 2 liest 3 von 7, Lauf 3 liest 3); Änderungen an der Kopie werden abgewiesen; eine Änderung geht nur über die deklarierte Aktion zurück, die die API des ERP aufruft, und der nächste Pull aktualisiert die Kopie.](./one-writer-loop-en.svg)
 
 ## Was ich getestet habe und was es für Sie bedeutet
 
-Ich habe eine frische ObjectStack-App mit einem Stellvertreter für ein „altes ERP“ verbunden, einer kleinen Datenbank mit sechs Teilen, und einem Mitglied, Mia, Lese- und absichtlich auch Bearbeitungsrechte auf der Kopie gegeben, um zu sehen, ob eine Berechtigung die Regel umgehen kann. Der Pull lief in diesem Test alle 30 Sekunden; Ihr Zeitplan bestimmt die Verzögerung. Zeiten in UTC am 2026-11-16.
+Ich habe eine frische ObjectStack-App mit einem Stellvertreter für ein „altes ERP“ verbunden, einer kleinen Datenbank mit sechs Teilen, und einem Mitglied, Mia, Lese- und absichtlich auch Bearbeitungsrechte auf der Kopie gegeben, um zu sehen, ob eine Berechtigung die Regel umgehen kann. Der Pull lief in diesem Test alle 30 Sekunden; Ihr Zeitplan bestimmt die Verzögerung. Zeiten in UTC am 2026-11-20.
 
 | Was ich getan habe | Was das System antwortete | Was es für Sie bedeutet |
 |:--|:--|:--|
 | Die App gebaut, nachdem die Markierung „synced“ an der Kopie entfernt war | Der Build schlug fehl und nannte die fehlende Markierung | Wenn der Build durchläuft, ist der Schutz aktiv |
-| Den Pull einmal laufen lassen, um 02:31:21, dann Mia die Kopie auflisten lassen | 6 Zeilen gelesen, 6 angelegt, abgeschlossen, ein Laufprotokoll hinterlassen; Mia sah die 6 Zeilen | Jede Aktualisierung ist protokolliert, und Mitglieder lesen die Kopie wie jede andere Tabelle |
+| Den Pull einmal laufen lassen, um 02:38:30, dann Mia die Kopie auflisten lassen | 6 Zeilen gelesen, 6 angelegt, abgeschlossen, ein Laufprotokoll hinterlassen; Mia sah die 6 Zeilen | Jede Aktualisierung ist protokolliert, und Mitglieder lesen die Kopie wie jede andere Tabelle |
 | Mia, die Bearbeitungsrechte hat, änderte den Preis von P-2001; ein Administrator versuchte dasselbe | Für beide abgewiesen; die Meldung sagt, was stattdessen zu tun ist | Weder ein Mitglied mit Bearbeitungsrechten noch ein Administrator kann die Kopie über die App oder ihre API bearbeiten |
-| P-1003 direkt im ERP geändert und P-3002 hinzugefügt | Nächster Lauf, 02:31:51: 3 der 7 Zeilen gelesen, 1 angelegt, 2 aktualisiert | Eine Aktualisierung liest, was sich geändert hat, nicht die ganze Tabelle |
+| P-1003 direkt im ERP geändert und P-3002 hinzugefügt | Nächster Lauf, 02:39:00: 3 der 7 Zeilen gelesen, 1 angelegt, 2 aktualisiert | Eine Aktualisierung liest, was sich geändert hat, nicht die ganze Tabelle |
 | Mia führte auf P-2001 die Aktion „Change price in ERP“ aus und las dann die Zeile | Erlaubt; die API des ERP protokollierte eine Änderung. Die Kopie zeigte weiter 3.8 | Die Aktion hat die Quelle geändert, nicht die Kopie |
-| Auf den nächsten Lauf gewartet, 02:32:21 | 3 gelesen, 3 aktualisiert; P-2001 zeigt jetzt 4.1 | Die Kopie zeigt immer nur, was das ERP enthält |
+| Auf den nächsten Lauf gewartet, 02:39:30 | 3 gelesen, 3 aktualisiert; P-2001 zeigt jetzt 4.1 | Die Kopie zeigt immer nur, was das ERP enthält |
 
 Zwei Details. Eine der 2 „aktualisierten“ Zeilen des zweiten Laufs, P-3001, hatte sich nicht geändert: Ein Lauf liest die Zeilen an der Stelle, an der der letzte aufhörte, erneut. Lesen Sie die Zahl also als „geschriebene Zeilen“, nicht als „geänderte Zeilen“. Und geplante Jobs sind standardmäßig aus: Eine Installation muss sie einschalten, sonst läuft nie ein Pull.
 
@@ -65,13 +65,13 @@ Zwei Details. Eine der 2 „aktualisierten“ Zeilen des zweiten Laufs, P-3001, 
 
 - **Die Berechtigungen der Quelle.** Wer eine Zeile im ERP lesen darf, wird nicht mitkopiert: Berechtigungen auf der Kopie beginnen ohne jeden Zugriff, und ein Mitglied liest sie nur über eine Freigabe. Mia las die Kopie über ihr Berechtigungsset und wurde an der Quelltabelle abgewiesen, für die sie keine Freigabe hat: genau die Einrichtung, die Sie anstreben sollten. Eine kopierte Zeile hat keinen Eigentümer; machen Sie die Kopie also für alle Mitglieder lesbar, oder halten Sie sie privat und geben Sie Lesezugriff über eine Freigaberegel.
 - **Die Laufhistorie, für Mitglieder.** Mia wurde abgewiesen, als sie sie las: Wie jede Tabelle braucht sie eine Freigabe.
-- **Löschungen.** Eine in der Quelle gelöschte Zeile bleibt auf 18.5.0 in der Kopie (der Job-Leitfaden: „Die Lösch-Schlüssel ändern noch nichts“; das habe ich nicht ausgeführt). Solche Zeilen zu markieren ist in Entwicklung, siehe unten.
+- **Löschungen.** Eine in der Quelle gelöschte Zeile bleibt auf 18.6.0 in der Kopie (der Job-Leitfaden: „Die Lösch-Schlüssel ändern noch nichts“; das habe ich nicht ausgeführt). Solche Zeilen zu markieren ist in Entwicklung, siehe unten.
 - **Eine Organisation, in einer Installation mit mehreren Organisationen.** Die Plattform rät nicht. Im isolierten Mehr-Organisationen-Modus verweigerte dieselbe App den Start, bis die Quelle ihren Organisationsbereich angab, und plante den Pull dann nicht ein, bis der Job seine Organisation nannte: ein Job pro Organisation.
 - **Eine Pipeline.** Die Kopie ist eine Quelltabelle, ein Mapping, ein Ziel. Das Entwurfsdokument: „ObjectStack baut keine Pipelines oder Transformationen. Verknüpfen, Bereinigen und Aggregieren über Quellen hinweg ist Sache des Data Warehouse oder des ETL-Anbieters; ObjectStack synchronisiert das Ergebnis herein.“ Sie brauchen eine bereinigte, verknüpfte Sicht? Bauen Sie sie im Data Warehouse und ziehen Sie das Ergebnis herein.
 
 ## In Entwicklung
 
-Die folgenden Teile sind im Entwurfsdokument entworfen und nicht in 18.5.0 enthalten. Nichts in diesem Abschnitt wurde ausgeführt; Aussagen über 18.5.0 sind hier aus dessen Changelog und Leitfaden zitiert.
+Die folgenden Teile sind im Entwurfsdokument entworfen und nicht in 18.6.0 enthalten. Nichts in diesem Abschnitt wurde ausgeführt; Aussagen über 18.6.0 sind hier aus dessen Changelog und Leitfaden zitiert.
 
 - In der Quelle gelöschte Zeilen: Der Entwurf markiert sie als gelöscht und entfernt sie nie.
 - Eine Herkunftsangabe an jeder Zeile: woher sie kam und welcher Lauf sie schrieb.
@@ -82,8 +82,8 @@ Die folgenden Teile sind im Entwurfsdokument entworfen und nicht in 18.5.0 entha
 <details>
 <summary>Was Entwurfsdokument, Changelog und Leitfaden sagen</summary>
 
-- **Die Löschrichtlinie.** Eine Zeile, die aus der Quelle verschwindet, wird markiert, nie gelöscht: „`deletePolicy: 'mark' | 'ignore'`, Standard `mark`, setzt `_sync_deleted_at`“, und „Ein Pull löscht nie eine Zeile physisch.“ Ein inkrementeller Pull wird Löschungen über ein Soft-Delete-Feld der Quelle sehen, `deletedField`. Laut Changelog werden die Schlüssel auf 18.5.0 geparst und „warnen ihren Autor weiterhin, dass sie noch nichts ändern“.
-- **Herkunftsspalten an jeder Zeile.** Fünf Plattformspalten unter einem reservierten Präfix: „`_sync_source`“, „`_sync_external_id`“, „`_sync_pulled_at`“, „`_sync_run_id`“ und „`_sync_deleted_at`“. Der Pull von 18.5.0 sagt es in seinem Dateikopf: „Löschmarkierung (D3), die Herkunftsspalten (D4) und Drift (D6) sind spätere Änderungen“. Heute ist das Laufprotokoll die Herkunftsangabe; das Präfix ist bereits reserviert, also wird ein Feld namens `_sync_…` abgewiesen.
+- **Die Löschrichtlinie.** Eine Zeile, die aus der Quelle verschwindet, wird markiert, nie gelöscht: „`deletePolicy: 'mark' | 'ignore'`, Standard `mark`, setzt `_sync_deleted_at`“, und „Ein Pull löscht nie eine Zeile physisch.“ Ein inkrementeller Pull wird Löschungen über ein Soft-Delete-Feld der Quelle sehen, `deletedField`. Laut Changelog werden die Schlüssel auf 18.6.0 geparst und „warnen ihren Autor weiterhin, dass sie noch nichts ändern“.
+- **Herkunftsspalten an jeder Zeile.** Fünf Plattformspalten unter einem reservierten Präfix: „`_sync_source`“, „`_sync_external_id`“, „`_sync_pulled_at`“, „`_sync_run_id`“ und „`_sync_deleted_at`“. Der Pull von 18.6.0 sagt es in seinem Dateikopf: „Löschmarkierung (D3), die Herkunftsspalten (D4) und Drift (D6) sind spätere Änderungen“. Heute ist das Laufprotokoll die Herkunftsangabe; das Präfix ist bereits reserviert, also wird ein Feld namens `_sync_…` abgewiesen.
 - **Der Sync-Assistent in Studio.** „Der Sync-Assistent in Studio legt das `synced`-Objekt, das `mapping` und diesen `job` an.“ Er braucht einen Job, der zur Laufzeit angelegt werden kann, was das Dokument als einzige Ausnahme davon entwirft, dass Jobs nur im Code stehen: „Die Laufzeit-Tür akzeptiert einen `job`, dessen einzige Laufform `pull` ist“. Studio soll außerdem „die Laufhistorie am synced-Objekt und auf der Seite seiner Quelle“ zeigen.
 - **Data Warehouses als Quellen.** „Ergänzung `6731744658` macht ein Data Warehouse zu einer vollwertigen Pull-Quelle“; die Treiber für Snowflake und BigQuery sind „Plugin-Pakete außerhalb dieses Repositorys“, geprüft durch das Konformitätskit für Plugin-Treiber, und ein Plugin-Treiber mit Korrektheitsboden wird „in beidseitig begrenzten Fenstern“ gelesen, die „halbiert“ werden, solange ein Fenster über der Zeilenobergrenze zurückkommt.
 - **Sync-Leitfaden und Skills.** „Die Drei-Wege-Regel und die Partnerhaltung (D10), die Antwort zum Rückschreiben (D5) sowie `SYNC_ARCHITECTURE.md` und die Skills, die auf `mapping` / `job` verweisen“. Bis dahin sind der Abschnitt „Pulling a mapping“ im Job-Leitfaden und die Mapping-Referenz die Dokumentation.
@@ -107,7 +107,7 @@ Geben Sie Ihrem Coding-Agenten den Job-Leitfaden (`objectstack.ai/docs/automatio
 
 ## Der Beweis
 
-Alles hier lief auf `@objectstack/cli` 18.5.0, der Version, die `npm view @objectstack/cli dist-tags` am 2026-11-16 als `latest` meldete, in einem frischen `npm create objectstack@latest`-Gerüst.
+Alles hier lief auf `@objectstack/cli` 18.6.0, der Version, die `npm view @objectstack/cli dist-tags` am 2026-11-20 als `latest` meldete, in einem frischen `npm create objectstack@latest`-Gerüst.
 
 ### Die fünf Deklarationen
 
@@ -184,7 +184,7 @@ Der Changelog listet die weiteren Abweisungen, die beim Build und noch einmal vo
 
 ### Der Lauf
 
-Die Jobs eines Pakets werden nur dort eingeplant, wo die Variable `OS_AUTOMATION_SCHEDULED_WORK_ENABLED` auf `true` steht, ein Schalter, der laut Job-Leitfaden „**in jeder Mandanten-Ausprägung und jedem Kernel standardmäßig aus**“ ist. Ich startete `objectstack dev --fresh` mit eingeschaltetem Schalter und legte ein Mitglied (Mia) an, mit einem Berechtigungsset, das Lesen und absichtlich auch Bearbeiten auf `syncdemo_part` gewährt. Der erste Tick lief um 02:31:21; Mias Auflistung von `syncdemo_part` antwortete `200` mit 6 Zeilen.
+Die Jobs eines Pakets werden nur dort eingeplant, wo die Variable `OS_AUTOMATION_SCHEDULED_WORK_ENABLED` auf `true` steht, ein Schalter, der laut Job-Leitfaden „**in jeder Mandanten-Ausprägung und jedem Kernel standardmäßig aus**“ ist. Ich startete `objectstack dev --fresh` mit eingeschaltetem Schalter und legte ein Mitglied (Mia) an, mit einem Berechtigungsset, das Lesen und absichtlich auch Bearbeiten auf `syncdemo_part` gewährt. Der erste Tick lief um 02:38:30; Mias Auflistung von `syncdemo_part` antwortete `200` mit 6 Zeilen.
 
 **Das Laufprotokoll.** Jeder Pull hinterlässt eine `sys_sync_run`-Zeile in der Organisation des Jobs. Die erste, gekürzt auf die Felder, die zählen:
 
@@ -196,7 +196,7 @@ Die Jobs eines Pakets werden nur dort eingeplant, wo die Variable `OS_AUTOMATION
   "watermark_field": "updated_at",
   "watermark_from": "2026-01-01T00:00:00.000Z",
   "watermark_committed": "2026-11-09T16:05:00.000Z",
-  "holds_position": true, "job_run_id": "run_0b31fc19-…", "failure_reason": null }
+  "holds_position": true, "job_run_id": "run_741d4223-…", "failure_reason": null }
 ```
 
 `watermark_committed` ist der neueste `UPDATED_AT`, den der Lauf geschrieben hat, und `holds_position: true` markiert diese Zeile als die, an der der nächste Lauf beginnt. Die Verbindung zum Job-Journal ist `job_run_id`, die `sys_job_run`-Zeile des auslösenden Ticks. Der Service-Changelog legt die Aufbewahrung fest: Die Zeilen sind „Telemetrie, 30 Tage aufbewahrt, das Fenster des Job-Journals, außer der einen Zeile pro Mapping (Paket und Name) und Organisation, die die Leseposition hält“.
@@ -211,12 +211,12 @@ HTTP 403
 
 Der `PATCH` des Admins bekam denselben Body. Mias `POST` und `DELETE` antworteten `403` mit „direct insert“ und „direct delete“ im selben Satz. Zu sagen, was stattdessen zu tun ist, ist genau das, was Sie wollen, wenn ein Agent den Aufruf macht.
 
-**Der inkrementelle Lauf, 3 von 7.** Ich änderte das ERP direkt, wie seine eigenen Benutzer es täten: den Preis von P-1003 von 0.05 auf 0.06 und ein neues Teil, P-3002, beide mit Zeitstempel `2026-11-16T02:31:22.383Z`. Der nächste Tick, um 02:31:51:
+**Der inkrementelle Lauf, 3 von 7.** Ich änderte das ERP direkt, wie seine eigenen Benutzer es täten: den Preis von P-1003 von 0.05 auf 0.06 und ein neues Teil, P-3002, beide mit Zeitstempel `2026-11-20T02:38:32.393Z`. Der nächste Tick, um 02:39:00:
 
 ```json
 { "read_count": 3, "created_count": 1, "updated_count": 2,
   "watermark_from": "2026-11-09T16:05:00.000Z",
-  "watermark_committed": "2026-11-16T02:31:22.383Z", "status": "completed" }
+  "watermark_committed": "2026-11-20T02:38:32.393Z", "status": "completed" }
 ```
 
 Drei Zeilen gelesen von den sieben, die das ERP da hatte: P-1003, P-3002 und P-3001, das die Position teilt, die der letzte Lauf festgeschrieben hat. Der Job-Leitfaden beschreibt dieses erneute Lesen: Ein Lauf „liest nur seither geschriebene Zeilen plus jene, die diese letzte Position teilen, die der Upsert harmlos erneut schreibt“.
@@ -241,15 +241,15 @@ Mia rief sie über REST auf, denselben Einstiegspunkt, den die Schaltfläche auf
 ```bash
 curl -s -b mia.cookies -X POST http://localhost:49921/api/v1/actions/syncdemo_part/syncdemo_send_price \
   -H 'content-type: application/json' \
-  -d '{"recordId":"6b7fe890-…","params":{"new_price":4.1}}'
+  -d '{"recordId":"1b9a46b4-…","params":{"new_price":4.1}}'
 ```
 
 ```text
 HTTP 200  { "success": true, "data": { "success": true, "flowLabel": "Send price to ERP", … } }
-ERP API:  2026-11-16T02:31:52.833Z PATCH /parts/P-2001 {"unit_price":4.1} -> changes=1
+ERP API:  2026-11-20T02:39:02.862Z PATCH /parts/P-2001 {"unit_price":4.1} -> changes=1
 ```
 
-Unmittelbar danach gelesen, zeigte die Kopie noch `"unit_price": 3.8`, weil das Rückschreiben das ERP geändert hat und sonst nichts. Dreißig Sekunden später, um 02:32:21, las der nächste Lauf 3 Zeilen (P-1003 und P-3002 an der geteilten Position, dazu P-2001), aktualisierte 3, schrieb `2026-11-16T02:31:52.833Z` fest, und P-2001 zeigte `"unit_price": 4.1, "source_updated_at": "2026-11-16T02:31:52.833Z"`. Hätte das ERP den Wert abgelehnt oder gerundet, würde die Kopie das zeigen (aus der Schleife gefolgert; hier nicht getestet).
+Unmittelbar danach gelesen, zeigte die Kopie noch `"unit_price": 3.8`, weil das Rückschreiben das ERP geändert hat und sonst nichts. Dreißig Sekunden später, um 02:39:30, las der nächste Lauf 3 Zeilen (P-1003 und P-3002 an der geteilten Position, dazu P-2001), aktualisierte 3, schrieb `2026-11-20T02:39:02.862Z` fest, und P-2001 zeigte `"unit_price": 4.1, "source_updated_at": "2026-11-20T02:39:02.862Z"`. Hätte das ERP den Wert abgelehnt oder gerundet, würde die Kopie das zeigen (aus der Schleife gefolgert; hier nicht getestet).
 
 ### Die Grenzen, gemessen
 
@@ -262,11 +262,11 @@ Unmittelbar danach gelesen, zeigte die Kopie noch `"unit_price": 3.8`, weil das 
 Die Abschnitte oben geben diese Quellen sinngemäß wieder; hier sind die Zeilen selbst.
 
 - **Warum kopieren.** „Berichte, Analysen, KI-Fragen und Verknüpfungen über Quellen hinweg stoßen zuerst an diese Grenzen. Werden die Zeilen in ein gewöhnliches Objekt kopiert, entfallen sie: Dann gehören der Plattform die Indizes, die Abfrageoperatoren, die Berechtigungen und die Verfügbarkeit.“
-- **Verknüpfungen über Datenbanken.** Der Quellkommentar des Analytics-Compilers in 18.5.0: Ein Dataset mit einem föderierten Objekt „wird über den FK-Expand-Pfad von ObjectQL bedient (zwei Lesezugriffe, im Speicher verknüpft) – der Datenquellen konstruktionsbedingt überschreitet“.
-- **Die Zeilenobergrenze (hier nicht ausgeführt).** Der Leitfaden zu virtuellen Objekten in 18.5.0: „Ein Lesezugriff, der mehr Zeilen trifft als die Zeilenobergrenze der Datenquelle, wird mit `422 EXTERNAL_ROW_CAP_EXCEEDED` abgewiesen, statt aus einer Teilmenge beantwortet zu werden. Die Obergrenze gilt nur für Plugin-Treiber, OData eingeschlossen“. „Der Standard ist 1000 Zeilen“, das Plattformmaximum 10,000.
+- **Verknüpfungen über Datenbanken.** Der Quellkommentar des Analytics-Compilers in 18.6.0: Ein Dataset mit einem föderierten Objekt „wird über den FK-Expand-Pfad von ObjectQL bedient (zwei Lesezugriffe, im Speicher verknüpft) – der Datenquellen konstruktionsbedingt überschreitet“.
+- **Die Zeilenobergrenze (hier nicht ausgeführt).** Der Leitfaden zu virtuellen Objekten in 18.6.0: „Ein Lesezugriff, der mehr Zeilen trifft als die Zeilenobergrenze der Datenquelle, wird mit `422 EXTERNAL_ROW_CAP_EXCEEDED` abgewiesen, statt aus einer Teilmenge beantwortet zu werden. Die Obergrenze gilt nur für Plugin-Treiber, OData eingeschlossen“. „Der Standard ist 1000 Zeilen“, das Plattformmaximum 10,000.
 - **Regel 3, Rückschreiben.** ADR-0153 D5: „Eine Änderung an Quelldaten wird in der Quelle vorgenommen, über eine deklarierte Aktion … Das Rückschreiben bearbeitet die lokale Zeile nicht; **der nächste Pull gleicht sie ab**.“
 - **Regel 4, eine Richtung.** „Keine bidirektionale Synchronisation, kein Konfliktabgleich, keine Bearbeitungsschicht im Stil von Writeback-Datasets“.
 - **Berechtigungen.** „Objektberechtigungen werden lokal von null an konfiguriert … ein Mitglied liest synchronisierte Zeilen nur über eine Freigabe.“
 - **Watermark und Schlüssel.** Zu `watermark.field`: „Jeder Schreibvorgang an der Quelle setzt das Watermark der Zeile auf einen Wert, der mindestens so hoch ist wie jeder Wert, den die Quelle bereits enthält“. Zur auf `id` abgebildeten Spalte: eindeutig und nie NULL, „eine Anforderung an die Quelle … die der Pull nicht prüfen kann“.
-- **Löschungen.** Der Job-Leitfaden von 18.5.0: „Die Lösch-Schlüssel ändern noch nichts, und `os validate` sagt das.“
+- **Löschungen.** Der Job-Leitfaden von 18.6.0: „Die Lösch-Schlüssel ändern noch nichts, und `os validate` sagt das.“
 - **Lizenz.** ADR-0153 D9: Der Sync-Kernel „wird in diesem Repository unter Apache-2.0 ausgeliefert, wie die Föderation“.

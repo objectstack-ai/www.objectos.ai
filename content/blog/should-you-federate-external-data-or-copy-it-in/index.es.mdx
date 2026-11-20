@@ -1,6 +1,6 @@
 ---
 title: "¿Leer los datos externos en vivo o copiarlos dentro?"
-description: "Lea en vivo si los datos deben estar al día o no guardarse dos veces; cópielos para informes e IA, con un solo escritor por fila. Medido en ObjectStack 18.5.0."
+description: "Lea en vivo si los datos deben estar al día o no guardarse dos veces; cópielos para informes e IA, con un solo escritor por fila. Medido en ObjectStack 18.6.0."
 author: ObjectStack Team
 date: 2026-11-20
 status: published
@@ -17,11 +17,11 @@ tags:
 
 **Lea el sistema de origen en vivo cuando los datos deban estar al día al segundo o no puedan guardarse en ningún otro sitio. Cópielos dentro cuando personas, informes e IA necesiten cruzarlos, filtrarlos y hacerles preguntas a toda velocidad.** Cada opción tiene un precio. Leer en vivo espera al sistema de origen cada vez y no puede combinar dos bases de datos en una sola consulta. Una copia solo está tan fresca como su última actualización programada. Si copia, mantenga **un solo escritor por fila**: solo la actualización programada escribe la copia. Nadie la edita, ni siquiera un administrador. Un cambio se hace en el origen, mediante una acción creada para ello, y la siguiente actualización lo recoge. En mi prueba, una actualización leyó solo 3 de las 7 filas del origen, y una edición de la copia se rechazó tanto a un miembro como a un administrador.
 
-*Medido en ObjectStack 18.5.0, la última versión publicada el 2026-11-16. Todas las transcripciones están en la última sección, «La prueba».*
+*Medido en ObjectStack 18.6.0, la última versión publicada el 2026-11-20. Todas las transcripciones están en la última sección, «La prueba».*
 
 ## ¿Leer en vivo o copiar dentro?
 
-La **federación** deja las filas donde están y reenvía cada consulta al origen. La **sincronización entrante** (sync-in) las copia según un calendario en una tabla normal que pertenece a la plataforma. Una **acción de conector** llama al otro sistema desde un botón o una automatización y no guarda ninguna de sus filas. El documento de diseño de ObjectStack sobre la sincronización, ADR-0153, todavía en estado «Propuesto» en la etiqueta 18.5.0, elige entre ellas así:
+La **federación** deja las filas donde están y reenvía cada consulta al origen. La **sincronización entrante** (sync-in) las copia según un calendario en una tabla normal que pertenece a la plataforma. Una **acción de conector** llama al otro sistema desde un botón o una automatización y no guarda ninguna de sus filas. El documento de diseño de ObjectStack sobre la sincronización, ADR-0153, todavía en estado «Propuesto» en la etiqueta 18.6.0, elige entre ellas así:
 
 | Su situación | Elija |
 |:--|:--|
@@ -44,20 +44,20 @@ El riesgo de cualquier copia es que derive en un segundo sistema de registro: al
 
 La regla 4 es la clave. Una sincronización bidireccional tiene dos escritores por fila, así que necesita una política para la fila que ambos lados cambiaron: gana el último en escribir, fusión campo a campo, una cola de conflictos que una persona debe resolver. Cada una o bien descarta el cambio de un lado o bien necesita a una persona que arbitre. Con un solo escritor no existe esa fila, ni una fusión que pueda salir mal.
 
-![El ciclo de un solo escritor por fila en ObjectStack 18.5.0: un pull programado copia la tabla de piezas del ERP en la plataforma (la ejecución 1 lee 6 filas, la 2 lee 3 de 7, la 3 lee 3); las ediciones de la copia se rechazan; un cambio vuelve solo por la acción declarada, que llama a la API del ERP, y el siguiente pull actualiza la copia.](./one-writer-loop-en.svg)
+![El ciclo de un solo escritor por fila en ObjectStack 18.6.0: un pull programado copia la tabla de piezas del ERP en la plataforma (la ejecución 1 lee 6 filas, la 2 lee 3 de 7, la 3 lee 3); las ediciones de la copia se rechazan; un cambio vuelve solo por la acción declarada, que llama a la API del ERP, y el siguiente pull actualiza la copia.](./one-writer-loop-en.svg)
 
 ## Qué probé y qué significa para usted
 
-Conecté una aplicación ObjectStack nueva a un sustituto de un «ERP antiguo», una pequeña base de datos de seis piezas, y di a un miembro, Mia, permiso de lectura y, a propósito, de edición sobre la copia, para ver si un permiso podía saltarse la regla. El pull se ejecutaba cada 30 segundos en esta prueba; su calendario fija el retraso. Horas en UTC del 2026-11-16.
+Conecté una aplicación ObjectStack nueva a un sustituto de un «ERP antiguo», una pequeña base de datos de seis piezas, y di a un miembro, Mia, permiso de lectura y, a propósito, de edición sobre la copia, para ver si un permiso podía saltarse la regla. El pull se ejecutaba cada 30 segundos en esta prueba; su calendario fija el retraso. Horas en UTC del 2026-11-20.
 
 | Qué hice | Qué respondió el sistema | Qué significa para usted |
 |:--|:--|:--|
 | Construí la aplicación tras quitar de la copia la marca «synced» | La compilación falló y nombró la marca que faltaba | Si la compilación pasa, la protección está activa |
-| Dejé que el pull se ejecutara una vez, a las 02:31:21, y luego Mia listó la copia | Leyó 6 filas, creó 6, completado, y dejó un registro de ejecución; Mia vio las 6 filas | Cada actualización queda registrada, y los miembros leen la copia como cualquier otra tabla |
+| Dejé que el pull se ejecutara una vez, a las 02:38:30, y luego Mia listó la copia | Leyó 6 filas, creó 6, completado, y dejó un registro de ejecución; Mia vio las 6 filas | Cada actualización queda registrada, y los miembros leen la copia como cualquier otra tabla |
 | Mia, que tiene permiso de edición, cambió el precio de P-2001; un administrador intentó lo mismo | Rechazado para ambos; el mensaje dice qué hacer en su lugar | Ni un miembro con permiso de edición ni un administrador pueden editar la copia desde la aplicación o su API |
-| Edité P-1003 y añadí P-3002 directamente en el ERP | Siguiente ejecución, 02:31:51: leyó 3 de las 7 filas, creó 1, actualizó 2 | Una actualización lee lo que cambió, no toda la tabla |
+| Edité P-1003 y añadí P-3002 directamente en el ERP | Siguiente ejecución, 02:39:00: leyó 3 de las 7 filas, creó 1, actualizó 2 | Una actualización lee lo que cambió, no toda la tabla |
 | Mia ejecutó la acción «Change price in ERP» sobre P-2001 y luego leyó la fila | Permitido; la API del ERP registró una actualización. La copia seguía en 3.8 | La acción cambió el origen, no la copia |
-| Esperé a la siguiente ejecución, 02:32:21 | Leyó 3, actualizó 3; P-2001 ahora marca 4.1 | La copia solo muestra lo que contiene el ERP |
+| Esperé a la siguiente ejecución, 02:39:30 | Leyó 3, actualizó 3; P-2001 ahora marca 4.1 | La copia solo muestra lo que contiene el ERP |
 
 Dos detalles. Una de las 2 filas «actualizadas» de la segunda ejecución, P-3001, no había cambiado: una ejecución vuelve a leer las filas del punto donde se detuvo la anterior, así que lea esa cifra como «filas escritas», no «filas que cambiaron». Y los jobs programados están desactivados por defecto: una instalación debe activarlos, o nunca se ejecuta ningún pull.
 
@@ -65,13 +65,13 @@ Dos detalles. Una de las 2 filas «actualizadas» de la segunda ejecución, P-30
 
 - **Los permisos del origen.** Quién puede leer una fila en el ERP no se copia con ella: los permisos de la copia empiezan sin acceso, y un miembro la lee solo mediante una concesión. Mia leyó la copia gracias a su conjunto de permisos y se le rechazó en la tabla de origen, donde no tiene concesión: la configuración a la que aspirar. Una fila copiada no tiene propietario, así que haga la copia legible para todos los miembros, o manténgala privada y conceda lectura con una regla de uso compartido.
 - **El historial de ejecuciones, para los miembros.** A Mia se le rechazó al leerlo: como cualquier tabla, necesita una concesión.
-- **Los borrados.** Una fila borrada en el origen permanece en la copia en 18.5.0 (la guía de jobs: «Las claves de borrado todavía no cambian nada»; no lo ejecuté). Marcar esas filas está en desarrollo, más abajo.
+- **Los borrados.** Una fila borrada en el origen permanece en la copia en 18.6.0 (la guía de jobs: «Las claves de borrado todavía no cambian nada»; no lo ejecuté). Marcar esas filas está en desarrollo, más abajo.
 - **Una organización, en una instalación con varias organizaciones.** La plataforma no adivina. En modo aislado con varias organizaciones, la misma aplicación se negó a arrancar hasta que el origen declaró su ámbito de organización, y luego no programó el pull hasta que el job nombró su organización: un job por organización.
 - **Un pipeline.** La copia es una tabla de origen, un mapping, un destino. El documento de diseño: «ObjectStack no construye pipelines ni transformaciones. Cruzar, limpiar y agregar entre fuentes es tarea del almacén de datos o del proveedor de ETL; ObjectStack sincroniza el resultado». ¿Necesita una vista limpia y cruzada? Constrúyala en el almacén de datos y traiga el resultado.
 
 ## En desarrollo
 
-Las partes siguientes están diseñadas en el documento y no están en 18.5.0. Nada de esta sección se ejecutó; las afirmaciones sobre 18.5.0 aquí se citan de su changelog y su guía.
+Las partes siguientes están diseñadas en el documento y no están en 18.6.0. Nada de esta sección se ejecutó; las afirmaciones sobre 18.6.0 aquí se citan de su changelog y su guía.
 
 - Filas borradas en el origen: el diseño las marca como borradas y nunca las elimina.
 - Una marca de procedencia en cada fila: de dónde vino y qué ejecución la escribió.
@@ -82,8 +82,8 @@ Las partes siguientes están diseñadas en el documento y no están en 18.5.0. N
 <details>
 <summary>Lo que dicen el documento de diseño, el changelog y la guía</summary>
 
-- **La política de borrado.** Una fila que desaparece del origen se marcará, nunca se borrará: «`deletePolicy: 'mark' | 'ignore'`, por defecto `mark`, con sello `_sync_deleted_at`», y «Un pull nunca borra una fila físicamente». Un pull incremental verá los borrados mediante un campo de borrado lógico del origen, `deletedField`. Según el changelog, en 18.5.0 las claves se analizan y «siguen avisando a su autor de que todavía no cambian nada».
-- **Columnas de procedencia en cada fila.** Cinco columnas de plataforma bajo un prefijo reservado: «`_sync_source`», «`_sync_external_id`», «`_sync_pulled_at`», «`_sync_run_id`» y «`_sync_deleted_at`». El pull de 18.5.0 lo dice en su cabecera: «El marcado de borrados (D3), las columnas de procedencia (D4) y la deriva (D6) son cambios posteriores». Hoy el registro de ejecución es la procedencia; el prefijo ya está reservado, así que un campo llamado `_sync_…` se rechaza.
+- **La política de borrado.** Una fila que desaparece del origen se marcará, nunca se borrará: «`deletePolicy: 'mark' | 'ignore'`, por defecto `mark`, con sello `_sync_deleted_at`», y «Un pull nunca borra una fila físicamente». Un pull incremental verá los borrados mediante un campo de borrado lógico del origen, `deletedField`. Según el changelog, en 18.6.0 las claves se analizan y «siguen avisando a su autor de que todavía no cambian nada».
+- **Columnas de procedencia en cada fila.** Cinco columnas de plataforma bajo un prefijo reservado: «`_sync_source`», «`_sync_external_id`», «`_sync_pulled_at`», «`_sync_run_id`» y «`_sync_deleted_at`». El pull de 18.6.0 lo dice en su cabecera: «El marcado de borrados (D3), las columnas de procedencia (D4) y la deriva (D6) son cambios posteriores». Hoy el registro de ejecución es la procedencia; el prefijo ya está reservado, así que un campo llamado `_sync_…` se rechaza.
 - **El asistente de sincronización de Studio.** «El asistente de sincronización de Studio crea el objeto `synced`, el `mapping` y ese `job`». Necesita un job que pueda crearse en tiempo de ejecución, que el documento diseña como la única excepción a que los jobs solo existan en código: «la puerta de tiempo de ejecución acepta un `job` cuya única forma de ejecución es `pull`». Studio también mostrará «el historial de ejecuciones en el objeto sincronizado y en la página de su origen».
 - **Almacenes de datos como origen.** «La enmienda `6731744658` convierte un almacén de datos en un origen de pull de primera clase»; los drivers de Snowflake y BigQuery son «paquetes de plugin fuera de este repositorio», verificados por el kit de conformidad de drivers de plugin, y un driver de plugin con suelo de corrección se lee «en ventanas acotadas por ambos lados» que se «reducen a la mitad» mientras una ventana vuelva por encima del tope de filas.
 - **La guía de sincronización y las skills.** «La regla de tres vías y la postura de socios (D10), la respuesta sobre la escritura de vuelta (D5), y `SYNC_ARCHITECTURE.md` y las skills que apuntan a `mapping` / `job`». Hasta entonces, la sección «Pulling a mapping» de la guía de jobs y la referencia de mapping son la documentación.
@@ -107,7 +107,7 @@ Entregue a su agente de programación la guía de jobs (`objectstack.ai/docs/aut
 
 ## La prueba
 
-Todo lo de aquí se ejecutó en `@objectstack/cli` 18.5.0, la versión que `npm view @objectstack/cli dist-tags` indicaba como `latest` el 2026-11-16, en un andamiaje nuevo de `npm create objectstack@latest`.
+Todo lo de aquí se ejecutó en `@objectstack/cli` 18.6.0, la versión que `npm view @objectstack/cli dist-tags` indicaba como `latest` el 2026-11-20, en un andamiaje nuevo de `npm create objectstack@latest`.
 
 ### Las cinco declaraciones
 
@@ -184,7 +184,7 @@ El changelog enumera los demás rechazos que se ejecutan en la compilación y de
 
 ### La ejecución
 
-Los jobs de un paquete solo se programan donde la variable `OS_AUTOMATION_SCHEDULED_WORK_ENABLED` vale `true`, un interruptor que según la guía de jobs «está **desactivado por defecto en toda postura de tenencia y en todo kernel**». Arranqué `objectstack dev --fresh` con él activado y creé un miembro (Mia) con un conjunto de permisos que concede lectura y, a propósito, edición sobre `syncdemo_part`. El primer tick se ejecutó a las 02:31:21; el listado de `syncdemo_part` de Mia respondió `200` con 6 filas.
+Los jobs de un paquete solo se programan donde la variable `OS_AUTOMATION_SCHEDULED_WORK_ENABLED` vale `true`, un interruptor que según la guía de jobs «está **desactivado por defecto en toda postura de tenencia y en todo kernel**». Arranqué `objectstack dev --fresh` con él activado y creé un miembro (Mia) con un conjunto de permisos que concede lectura y, a propósito, edición sobre `syncdemo_part`. El primer tick se ejecutó a las 02:38:30; el listado de `syncdemo_part` de Mia respondió `200` con 6 filas.
 
 **El registro de ejecución.** Cada pull deja una fila `sys_sync_run` en la organización del job. La primera, recortada a los campos que importan:
 
@@ -196,7 +196,7 @@ Los jobs de un paquete solo se programan donde la variable `OS_AUTOMATION_SCHEDU
   "watermark_field": "updated_at",
   "watermark_from": "2026-01-01T00:00:00.000Z",
   "watermark_committed": "2026-11-09T16:05:00.000Z",
-  "holds_position": true, "job_run_id": "run_0b31fc19-…", "failure_reason": null }
+  "holds_position": true, "job_run_id": "run_741d4223-…", "failure_reason": null }
 ```
 
 `watermark_committed` es el `UPDATED_AT` más reciente que escribió la ejecución, y `holds_position: true` marca esta fila como aquella desde la que empieza la siguiente ejecución. El enlace al libro de jobs es `job_run_id`, la fila `sys_job_run` del tick que la impulsó. El changelog del servicio fija la retención: las filas son «telemetría conservada 30 días, la ventana del libro de jobs, salvo la fila por mapping (paquete y nombre) y organización que guarda la posición de lectura».
@@ -211,12 +211,12 @@ HTTP 403
 
 El `PATCH` del administrador obtuvo el mismo cuerpo. El `POST` y el `DELETE` de Mia respondieron `403` con «direct insert» y «direct delete» en la misma frase. Decir qué hacer en su lugar es justo lo que conviene cuando quien llama es un agente.
 
-**La ejecución incremental, 3 de 7.** Cambié el ERP directamente, como lo harían sus propios usuarios: el precio de P-1003 de 0.05 a 0.06 y una pieza nueva, P-3002, ambos con sello `2026-11-16T02:31:22.383Z`. El siguiente tick, a las 02:31:51:
+**La ejecución incremental, 3 de 7.** Cambié el ERP directamente, como lo harían sus propios usuarios: el precio de P-1003 de 0.05 a 0.06 y una pieza nueva, P-3002, ambos con sello `2026-11-20T02:38:32.393Z`. El siguiente tick, a las 02:39:00:
 
 ```json
 { "read_count": 3, "created_count": 1, "updated_count": 2,
   "watermark_from": "2026-11-09T16:05:00.000Z",
-  "watermark_committed": "2026-11-16T02:31:22.383Z", "status": "completed" }
+  "watermark_committed": "2026-11-20T02:38:32.393Z", "status": "completed" }
 ```
 
 Tres filas leídas de las siete que tenía entonces el ERP: P-1003, P-3002 y P-3001, que comparte la posición que confirmó la última ejecución. La guía de jobs describe esa relectura: una ejecución «lee solo las filas escritas desde entonces, más las que comparten esa última posición, que el upsert vuelve a escribir sin daño».
@@ -241,15 +241,15 @@ Mia la llamó por REST, el mismo punto de entrada que usa el botón de la págin
 ```bash
 curl -s -b mia.cookies -X POST http://localhost:49921/api/v1/actions/syncdemo_part/syncdemo_send_price \
   -H 'content-type: application/json' \
-  -d '{"recordId":"6b7fe890-…","params":{"new_price":4.1}}'
+  -d '{"recordId":"1b9a46b4-…","params":{"new_price":4.1}}'
 ```
 
 ```text
 HTTP 200  { "success": true, "data": { "success": true, "flowLabel": "Send price to ERP", … } }
-ERP API:  2026-11-16T02:31:52.833Z PATCH /parts/P-2001 {"unit_price":4.1} -> changes=1
+ERP API:  2026-11-20T02:39:02.862Z PATCH /parts/P-2001 {"unit_price":4.1} -> changes=1
 ```
 
-Leída justo después, la copia seguía diciendo `"unit_price": 3.8`, porque la escritura de vuelta cambió el ERP y nada más. Treinta segundos después, a las 02:32:21, la siguiente ejecución leyó 3 filas (P-1003 y P-3002 en la posición compartida, y P-2001), actualizó 3, confirmó `2026-11-16T02:31:52.833Z`, y P-2001 marcaba `"unit_price": 4.1, "source_updated_at": "2026-11-16T02:31:52.833Z"`. Si el ERP hubiera rechazado o redondeado el valor, la copia lo mostraría (deducido del ciclo; no se probó aquí).
+Leída justo después, la copia seguía diciendo `"unit_price": 3.8`, porque la escritura de vuelta cambió el ERP y nada más. Treinta segundos después, a las 02:39:30, la siguiente ejecución leyó 3 filas (P-1003 y P-3002 en la posición compartida, y P-2001), actualizó 3, confirmó `2026-11-20T02:39:02.862Z`, y P-2001 marcaba `"unit_price": 4.1, "source_updated_at": "2026-11-20T02:39:02.862Z"`. Si el ERP hubiera rechazado o redondeado el valor, la copia lo mostraría (deducido del ciclo; no se probó aquí).
 
 ### Los límites, medidos
 
@@ -262,11 +262,11 @@ Leída justo después, la copia seguía diciendo `"unit_price": 3.8`, porque la 
 Las secciones anteriores parafrasean estas fuentes; aquí están las líneas mismas.
 
 - **Por qué copiar.** «Los informes, el análisis, las preguntas a la IA y los cruces entre fuentes chocan primero con esos límites. Copiar las filas en un objeto normal los elimina: la plataforma pasa a ser dueña de los índices, los operadores de consulta, los permisos y la disponibilidad».
-- **Cruces entre bases de datos.** El comentario del código del compilador de analítica en 18.5.0: un dataset con un objeto federado «se sirve por la ruta FK-expand de ObjectQL (dos lecturas, cruzadas en memoria), que atraviesa fuentes de datos por construcción».
-- **El tope de filas (no ejecutado aquí).** La guía de objetos virtuales de 18.5.0: «Una lectura que coincide con más filas que el tope de filas de la fuente de datos se rechaza con `422 EXTERNAL_ROW_CAP_EXCEEDED` en lugar de responderse con un conjunto parcial. El tope solo se aplica a los drivers de plugin, OData incluido». «El valor por defecto es 1000 filas», y el máximo de la plataforma es 10,000.
+- **Cruces entre bases de datos.** El comentario del código del compilador de analítica en 18.6.0: un dataset con un objeto federado «se sirve por la ruta FK-expand de ObjectQL (dos lecturas, cruzadas en memoria), que atraviesa fuentes de datos por construcción».
+- **El tope de filas (no ejecutado aquí).** La guía de objetos virtuales de 18.6.0: «Una lectura que coincide con más filas que el tope de filas de la fuente de datos se rechaza con `422 EXTERNAL_ROW_CAP_EXCEEDED` en lugar de responderse con un conjunto parcial. El tope solo se aplica a los drivers de plugin, OData incluido». «El valor por defecto es 1000 filas», y el máximo de la plataforma es 10,000.
 - **Regla 3, escritura de vuelta.** ADR-0153 D5: «Un cambio en los datos de origen se hace en el origen, mediante una acción declarada … La escritura de vuelta no edita la fila local; **el siguiente pull la concilia**».
 - **Regla 4, una sola dirección.** «Ni sincronización bidireccional, ni fusión de conflictos, ni capa de ediciones al estilo de Writeback-Dataset».
 - **Permisos.** «Los permisos de objeto se configuran localmente desde cero … un miembro lee las filas sincronizadas solo mediante una concesión».
 - **La marca de agua y la clave.** Sobre `watermark.field`: «Cada escritura en el origen sella la marca de agua de la fila con un valor igual o superior a todo valor que el origen ya contiene». Sobre la columna asignada a `id`: única y nunca NULL, «un requisito sobre el origen … que el pull no puede comprobar».
-- **Borrados.** La guía de jobs de 18.5.0: «Las claves de borrado todavía no cambian nada, y `os validate` lo dice».
+- **Borrados.** La guía de jobs de 18.6.0: «Las claves de borrado todavía no cambian nada, y `os validate` lo dice».
 - **Licencia.** ADR-0153 D9: el núcleo de sincronización «se distribuye en este repositorio bajo Apache-2.0, como la federación».
