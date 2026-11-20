@@ -1,6 +1,7 @@
 ---
 import type { Locale } from '../lib/i18n';
 import { planHref, type PricingCopy } from '../lib/pricing';
+import { marketingPagePath } from '../content-pages/registry';
 
 interface Props {
   copy: PricingCopy;
@@ -21,6 +22,13 @@ const { copy, locale, refundsHref } = Astro.props;
 // CSS-only switch, and a stale state is worse than none. The hidden panel is
 // `display: none`, so assistive technology reads only the visible one, and each
 // panel opens with a heading naming its tab.
+// A feature name too long for one desktop line (about 90 columns, a CJK
+// character counting two) may wrap; every other row stays on one line, so
+// a long name does not squeeze the column and wrap the rest.
+const columns = (text: string): number =>
+  [...text].reduce((n, ch) => n + (/[\u2e80-\u9fff\uff00-\uffef]/.test(ch) ? 2 : 1), 0);
+const longFeature = (text: string): boolean => columns(text) > 90;
+
 const panels = [
   { key: 'cloud', tab: copy.tabs.cloud },
   { key: 'self', tab: copy.tabs.selfHosted },
@@ -62,9 +70,16 @@ const panels = [
                 {plan.billedNote && <p class="billed">{plan.billedNote}</p>}
                 {plan.altPrice && <p class="alt">{plan.altPrice}</p>}
               </div>
-              <a class:list={['cta', 'btn', plan.highlight ? 'btn-primary' : 'btn-secondary']} href={planHref(plan, locale)}>
-                {plan.cta}
-              </a>
+              <div class="cta-block">
+                <a class:list={['cta', 'btn', plan.highlight ? 'btn-primary' : 'btn-secondary']} href={planHref(plan, locale)}>
+                  {plan.cta}
+                </a>
+                {plan.secondaryLink && (
+                  <a class="secondary-link" href={plan.secondaryLink.href}>
+                    {plan.secondaryLink.label}
+                  </a>
+                )}
+              </div>
               <ul>
                 {plan.features.map((f) => (
                   <li>{f}</li>
@@ -74,6 +89,86 @@ const panels = [
           ))}
         </div>
         <p class="note">{tab.billingNote}</p>
+        {tab.comparison && (
+          <section class="compare" aria-labelledby={`pricing-${key}-compare`}>
+            <h3 class="compare-title" id={`pricing-${key}-compare`}>
+              {tab.comparison.title}
+            </h3>
+            <div class="compare-wrap" tabindex="0" role="group" aria-labelledby={`pricing-${key}-compare`}>
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">{tab.comparison.featureHeader}</th>
+                    <th scope="col">{tab.comparison.communityHeader}</th>
+                    <th scope="col">{tab.comparison.enterpriseHeader}</th>
+                  </tr>
+                </thead>
+                {tab.comparison.groups.map((group) => (
+                  <tbody>
+                    {group.heading && (
+                      <tr class="group-heading">
+                        <th scope="colgroup" colspan="3">
+                          {group.heading}
+                        </th>
+                      </tr>
+                    )}
+                    {group.rows.map((row) => (
+                      <tr data-row={row.id}>
+                        <th scope="row" class:list={{ 'feature-long': longFeature(row.feature) }}>
+                          {row.link ? <a href={marketingPagePath(locale, row.link)}>{row.feature}</a> : row.feature}
+                        </th>
+                        {[row.community, row.enterprise].map((cell) => (
+                          <td>
+                            {cell.mark === 'yes' && (
+                              <>
+                                <span class="mark mark-yes" aria-hidden="true">✓</span>
+                                <span class="visually-hidden">{tab.comparison!.yesLabel}</span>
+                              </>
+                            )}
+                            {cell.mark === 'no' && (
+                              <>
+                                <span class="mark mark-no" aria-hidden="true">—</span>
+                                <span class="visually-hidden">{tab.comparison!.noLabel}</span>
+                              </>
+                            )}
+                            {cell.mark === 'dev' && <span class="chip">{tab.comparison!.devLabel}</span>}
+                            {cell.text && <span class="cell-text">{cell.text}</span>}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                ))}
+              </table>
+            </div>
+            <h3 class="compare-title roadmap-title" id={`pricing-${key}-roadmap`}>
+              {tab.comparison.roadmap.title}
+            </h3>
+            <div class="compare-wrap roadmap-wrap" tabindex="0" role="group" aria-labelledby={`pricing-${key}-roadmap`}>
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">{tab.comparison.featureHeader}</th>
+                    <th scope="col">{tab.comparison.enterpriseHeader}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tab.comparison.roadmap.rows.map((row) => (
+                    <tr data-row={row.id}>
+                      <th scope="row">{row.feature}</th>
+                      <td>
+                        <span class="chip">{row.status === 'soon' ? tab.comparison!.soonLabel : tab.comparison!.devLabel}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p class="compare-footer">
+              {tab.comparison.footer} <a href={tab.comparison.footerHref}>{tab.comparison.footerLinkLabel}</a>
+            </p>
+          </section>
+        )}
       </section>
     ))
   }
@@ -264,9 +359,27 @@ const panels = [
     color: var(--muted);
     font-size: var(--fs-13);
   }
+  /* The CTA row: the button, and an optional text link under it (the
+     free Developer Edition on the Enterprise card). */
+  .cta-block {
+    display: grid;
+    align-content: start;
+    gap: 0.55rem;
+    margin: 1.1rem 0 0;
+  }
   .cta {
     display: flex;
-    margin: 1.1rem 0 0;
+  }
+  .secondary-link {
+    justify-self: center;
+    color: var(--brand);
+    font-size: var(--fs-14);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+  .secondary-link:hover {
+    color: var(--ink);
   }
   /* The recommended plan's button is the primary (ink) with the brand
      outline, ruled on #340; it was a solid indigo of its own. */
@@ -303,6 +416,145 @@ const panels = [
     text-align: center;
     color: var(--muted);
     font-size: var(--fs-14);
+  }
+  /* The Community | ObjectOS Enterprise comparison and the Enterprise
+     roadmap under it (Self-hosted tab). Rows are short by ruling (one line
+     each at desktop width), so the columns size to their content. Each wrap
+     is the only thing that may scroll sideways: at a phone width cells wrap
+     inside a 6.5rem floor per column, so three columns fit a 360px phone,
+     and if a table ever outgrows its wrap the wrap scrolls, never the page.
+     The wraps are focusable and named by their headings, so a keyboard user
+     can scroll them too. */
+  .compare {
+    max-width: 62rem;
+    margin: 2.75rem auto 0;
+  }
+  .compare-title {
+    margin: 0 0 1rem;
+    font-size: var(--fs-18);
+    text-align: center;
+  }
+  .roadmap-title {
+    margin-top: 2.25rem;
+    font-size: var(--fs-16);
+  }
+  .compare-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    border: 1px solid var(--line);
+    border-radius: var(--r-card);
+    background: var(--surface);
+  }
+  .roadmap-wrap {
+    max-width: var(--measure-prose);
+    margin: 0 auto;
+  }
+  .compare table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .compare th,
+  .compare td {
+    box-sizing: border-box;
+    min-width: 6.5rem;
+    padding: 0.65rem 0.9rem;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    vertical-align: top;
+    font-size: var(--fs-14);
+    line-height: var(--lh-ui);
+    overflow-wrap: break-word;
+  }
+  .compare thead th {
+    color: var(--muted);
+    font-size: var(--fs-13);
+    font-weight: 700;
+  }
+  .compare tbody th {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .compare td {
+    color: var(--ink-soft);
+  }
+  .compare tbody:last-child tr:last-child > * {
+    border-bottom: none;
+  }
+  .compare tbody th a {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+    text-underline-offset: 0.2em;
+  }
+  .compare tbody th a:hover {
+    color: var(--brand);
+  }
+  .mark {
+    display: inline-block;
+    min-width: 1.1em;
+    font-weight: 700;
+  }
+  .mark-yes {
+    color: var(--green);
+  }
+  .mark-no {
+    color: var(--muted);
+  }
+  .mark + .visually-hidden + .cell-text {
+    margin-left: 0.25rem;
+  }
+  /* A group's sub-heading row: "Core platform", "Enterprise adds". */
+  .group-heading th {
+    padding-top: 0.9rem;
+    padding-bottom: 0.45rem;
+    background: var(--surface-sunk);
+    color: var(--muted);
+    font-size: var(--fs-13);
+    font-weight: 700;
+  }
+  /* The grey status chip (Base.astro .chip) may wrap in a narrow column
+     rather than poke out of its cell. */
+  .compare .chip {
+    white-space: normal;
+  }
+  .compare-footer {
+    margin: 1rem auto 0;
+    text-align: center;
+    color: var(--muted);
+    font-size: var(--fs-13);
+  }
+  /* Desktop: every row on one line, as ruled; the section takes the page's
+     full measure to make room. Only a feature name marked long (see
+     longFeature above) may wrap, so the table never scrolls on desktop. */
+  @media (min-width: 1200px) {
+    .compare {
+      max-width: var(--maxw);
+    }
+    .compare th,
+    .compare td {
+      padding-right: 0.6rem;
+      padding-left: 0.6rem;
+    }
+    .compare th,
+    .compare td {
+      white-space: nowrap;
+    }
+    .compare th.feature-long {
+      white-space: normal;
+    }
+  }
+  @media (max-width: 640px) {
+    .compare th,
+    .compare td {
+      padding: 0.55rem 0.55rem;
+      font-size: var(--fs-13);
+    }
+    /* On a phone the feature names get the widest column of the main
+       table, so they wrap less than the short ✓ / — cells beside them. */
+    .compare-wrap:not(.roadmap-wrap) thead th:first-child {
+      width: 44%;
+    }
   }
   .mor {
     margin: 2.5rem auto 0;

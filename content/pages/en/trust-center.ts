@@ -71,11 +71,11 @@ const page = {
         eyebrow: 'Boundaries',
         title: 'Keep sensitive business data inside controlled infrastructure',
         copy:
-          'On ObjectOS Enterprise, a private deployment, the runtime, your business data, user identities, audit log, files, and secrets all live in your own infrastructure; unless you configure external providers, they stay inside that boundary. ObjectOS Cloud is operated by us.',
+          'On a self-hosted deployment (Community or Enterprise), the runtime, your business data, user identities, audit log, files, and secrets all live in your own infrastructure; unless you configure external providers, they stay inside that boundary. ObjectOS Cloud is operated by us.',
         items: [
           {
             title: 'Data residency',
-            body: 'On ObjectOS Enterprise, connect your own databases and storage: business records, identities, audit logs, and files live there, not in a vendor workspace.',
+            body: 'On a self-hosted deployment (Community or Enterprise), connect your own databases and storage: business records, identities, audit logs, and files live there, not in a vendor workspace.',
           },
           {
             title: 'License check',
@@ -136,7 +136,7 @@ const page = {
       {
         question: 'Can ObjectOS run without internet access?',
         answer:
-          'Yes. ObjectOS Enterprise can operate the ObjectStack runtime in self-hosted and isolated deployment patterns. The exact model depends on package mirrors, model routing, identity, and customer infrastructure.',
+          'Yes. ObjectOS Community needs no license and runs offline. ObjectOS Enterprise runs disconnected with an air-gap license, sold by contract, verified locally.',
       },
     ],
   } satisfies MarketingPage;
