@@ -115,7 +115,7 @@ const page = {
       {
         question: 'Do I need ObjectOS to serve clients?',
         answer:
-          `No. ObjectStack is Apache-2.0 — the protocol, kernel, CLI, production runtime, Console UI, and MCP server — with no feature gate between development and production, so a client can self-host it at no license cost. ObjectOS is ${p.descriptor}: clients buy it for the in-app AI Builder and Ask, AI governance on Enterprise, hosted Cloud or self-managed Enterprise delivery (one edition, with air-gapped operation and SCIM included), and official support.`,
+          `No. ObjectStack is Apache-2.0 — the protocol, kernel, CLI, production runtime, Console UI, and MCP server — with no feature gate between development and production, so a client can self-host it at no license cost. ObjectOS is ${p.descriptor}: clients buy it for the in-app AI Builder and Ask, AI governance on Enterprise, hosted Cloud or self-managed Enterprise delivery (one edition, with SCIM on by default, air-gapped license by contract), and official support.`,
       },
     ],
   } satisfies MarketingPage;

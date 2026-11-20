@@ -115,7 +115,7 @@ const page = {
       {
         question: '服务客户必须用 ObjectOS 吗?',
         answer:
-          `不必须。ObjectStack 采用 Apache-2.0——协议、内核、CLI、生产运行时、Console UI 与 MCP 服务器——开发与生产之间没有功能门槛，客户可以零 license 成本自托管。ObjectOS 是${p.descriptor}：客户买它是为了产品内 AI Builder 与 Ask、ObjectOS 企业版的 AI 治理、托管 Cloud 或 ObjectOS 企业版私有部署交付（只有一个版本，含离线隔离与 SCIM），以及官方支持。`,
+          `不必须。ObjectStack 采用 Apache-2.0——协议、内核、CLI、生产运行时、Console UI 与 MCP 服务器——开发与生产之间没有功能门槛，客户可以零 license 成本自托管。ObjectOS 是${p.descriptor}：客户买它是为了产品内 AI Builder 与 Ask、ObjectOS 企业版的 AI 治理、托管 Cloud 或 ObjectOS 企业版私有部署交付（只有一个版本，SCIM 默认开启、离线隔离许可按合同），以及官方支持。`,
       },
     ],
   } satisfies MarketingPage;
