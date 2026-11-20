@@ -85,7 +85,7 @@ const zhHans: SecurityCopy = {
   description: '了解 ObjectOS 如何让 AI Agent 安全接触业务数据，并在 ObjectOS 企业版私有部署中保护权限边界、审批和审计证据。',
   eyebrow: '安全与治理',
   hero: ['让 AI Agent 安全接触', '真实业务数据'],
-  lead: `ObjectOS 有三个版本：${positioning['zh-Hans'].descriptor}。它不把 AI 挡在业务系统外面，而是让 Agent 在明确的身份、权限、工具、审批和审计边界内工作。在 ObjectOS 企业版（私有部署）中，数据仍在你的基础设施里；在每个版本中，AI 的每一步都受 ObjectStack 运行时约束。`,
+  lead: `ObjectOS 有三个版本：${positioning['zh-Hans'].descriptor}。它不把 AI 挡在业务系统外面，而是让 Agent 在明确的身份、权限、工具、审批和审计边界内工作。在自托管部署中——Community 或 ObjectOS 企业版（私有部署）——数据仍在你的基础设施里；在每个版本中，AI 的每一步都受 ObjectStack 运行时约束。`,
   metrics: [
     { value: 'Agent', label: '继承用户身份' },
     { value: 'Tool', label: '受控工具访问' },
@@ -93,7 +93,7 @@ const zhHans: SecurityCopy = {
   ],
   residencyKicker: '数据放在哪里',
   residencyTitle: '数据驻留',
-  residencyLead: 'ObjectOS 企业版不要求你把业务数据搬到我们的云上。ObjectStack 运行时连接你的数据库、存储和身份系统，数据驻留边界由你的部署方式决定。',
+  residencyLead: '自托管部署（Community 或 ObjectOS 企业版）不要求你把业务数据搬到我们的云上。ObjectStack 运行时连接你的数据库、存储和身份系统，数据驻留边界由你的部署方式决定。',
   residencyColumns: ['数据类别', '存放位置', '是否离开网络'],
   residencyRows: [
     { data: '业务记录', location: '你的数据库', leaves: '否' },
@@ -135,7 +135,7 @@ const zhHans: SecurityCopy = {
   deployments: [
     { title: 'VPC / 私有网络', copy: '运行在你的云账号或私有网络中，只开放必要的入站 HTTP/HTTPS 和数据库连接。' },
     { title: '本地服务器', copy: '用 Docker、systemd 或自有平台运行，连接本地数据库、对象存储和身份系统。' },
-    { title: '隔离网络', copy: '使用离线容器镜像和本地 objectstack.json 制品，不配置云控制面，也不需要公共互联网。' },
+    { title: '隔离网络', copy: '企业版使用本地校验的离线隔离许可证，并关闭云控制面；Community 无需许可证即可离线运行。' },
     { title: '本地模型', copy: '可将 AI 服务指向 Ollama、vLLM 或内部模型端点，避免业务上下文发往外部模型提供方。' },
   ],
   faqKicker: '常见问题',
@@ -189,7 +189,7 @@ const en: SecurityCopy = {
   description: 'Learn how ObjectOS gives AI agents governed access to business data while protecting permissions, approvals, and audit evidence, including on ObjectOS Enterprise self-managed deployments.',
   eyebrow: 'Security and governance',
   hero: ['Give AI agents governed access', 'to real business data.'],
-  lead: `ObjectOS comes in three editions, ${positioning.en.descriptor}. It lets agents read, analyze, and move work forward inside explicit boundaries for identity, permissions, tools, approvals, and audit. On ObjectOS Enterprise, data stays on your infrastructure; on every edition, every AI action is constrained by the ObjectStack runtime.`,
+  lead: `ObjectOS comes in three editions, ${positioning.en.descriptor}. It lets agents read, analyze, and move work forward inside explicit boundaries for identity, permissions, tools, approvals, and audit. On a self-hosted deployment (Community or Enterprise), data stays on your infrastructure; on every edition, every AI action is constrained by the ObjectStack runtime.`,
   metrics: [
     { value: 'Agent', label: 'inherits user identity' },
     { value: 'Tool', label: 'governed access path' },
@@ -197,7 +197,7 @@ const en: SecurityCopy = {
   ],
   residencyKicker: 'Where data lives',
   residencyTitle: 'Data residency',
-  residencyLead: 'ObjectOS Enterprise does not require moving business data into our cloud: the ObjectStack runtime connects to your databases, storage, and identity systems, so residency follows your deployment boundary.',
+  residencyLead: 'A self-hosted deployment (Community or Enterprise) does not require moving business data into our cloud: the ObjectStack runtime connects to your databases, storage, and identity systems, so residency follows your deployment boundary.',
   residencyColumns: ['Data', 'Location', 'Leaves boundary?'],
   residencyRows: [
     { data: 'Business records', location: 'Your database', leaves: 'No' },
@@ -239,13 +239,13 @@ const en: SecurityCopy = {
   deployments: [
     { title: 'VPC / private network', copy: 'Run in your cloud account or private network with only required HTTP/HTTPS and database connectivity.' },
     { title: 'Local servers', copy: 'Run with Docker, systemd, or your own platform while connecting local databases, object storage, and identity.' },
-    { title: 'Air-gapped', copy: 'Use offline container images and a local objectstack.json artifact with no cloud control plane or public internet requirement.' },
+    { title: 'Air-gapped', copy: 'On Enterprise, an air-gap license verified locally, with the control plane set to off; Community runs offline with no license at all.' },
     { title: 'Local models', copy: 'Point AI services at Ollama, vLLM, or internal model endpoints to keep business context inside your boundary.' },
   ],
   faqKicker: 'FAQ',
   faqTitle: 'Security review FAQ',
   faqs: [
-    { question: 'Does ObjectOS phone home?', answer: 'Self-managed ObjectOS validates its license online; Enterprise air-gapped licenses validate offline. Beyond that, unless you explicitly configure integrations such as OIDC, email, AI providers, webhooks, or external storage, no business data leaves your deployment. The open-source ObjectStack runtime has no telemetry, no license check, and no update ping.' },
+    { question: 'Does ObjectOS phone home?', answer: 'ObjectOS Enterprise validates its license online; air-gapped Enterprise licenses validate offline. Beyond that, unless you explicitly configure integrations such as OIDC, email, AI providers, webhooks, or external storage, no business data leaves your deployment. The open-source ObjectStack runtime has no telemetry, no license check, and no update ping.' },
     { question: 'What goes to a model provider?', answer: 'Only the context required for the model task: conversation context, tool definitions, and necessary tool output. You can use an external model or configure a local model endpoint.' },
     { question: 'How do we limit agent writes?', answer: 'Use read-only data sources, object permissions, field permissions, action permissions, and flow approval steps for business decisions. Agents cannot bypass runtime permissions. The in-product AI changes one record at a time after the user confirms it, and cannot delete records or edit them in bulk; on ObjectOS Cloud, an AI Builder change to a live app that already holds records is saved as a draft for a person to publish.' },
     { question: 'Who owns TLS, database encryption, and secrets?', answer: 'Those are deployment responsibilities. The ObjectStack runtime provides authorization, audit, API key hashing, and settings encryption; your infrastructure owns TLS, at-rest database encryption, backups, and secret injection.' },

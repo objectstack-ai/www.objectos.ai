@@ -436,7 +436,7 @@ const EXTRA_FAQ: Partial<Record<string, Partial<Record<TemplateLocale, ClusterFa
       {
         question: '自托管是免费的吗？ObjectOS 又加了什么？',
         answer:
-          '免费自托管指的是开源的 ObjectStack 框架（Apache-2.0）：协议、内核、CLI、生产运行时、Console UI 与 MCP 服务器，开发与生产之间没有功能门槛——经 MCP 自带你的 AI。ObjectOS 企业版（私有部署）按许可付费，只有一个版本，提供产品内 AI Builder 与 Ask（均为预览版）、AI 治理、按组织架构控制记录可见范围、离线隔离、默认开启的 SCIM 2.0、自带模型，以及可选的 SLA 支持，按 AI 用户数授权，最低 25 人起。单点登录与多组织是开源能力，ObjectOS 企业版为其提供许可与支持。多副本高可用正在开发中，暂不提供。你的本体是普通的 ObjectStack 元数据。从 ObjectOS Cloud 或 ObjectOS 企业版导出本体、在开源的 ObjectStack 运行时上运行，目前尚在计划中。起步：npm create objectstack@latest，把编码 Agent 指向生成的项目及其 AGENTS.md，然后 npx os dev --ui。',
+          '免费自托管指的是 ObjectOS Community，它基于开源的 ObjectStack 框架（Apache-2.0）：协议、内核、CLI、生产运行时、Console UI 与 MCP 服务器，开发与生产之间没有功能门槛——经 MCP 自带你的 AI。需要许可的自托管版本是 ObjectOS 企业版（私有部署）：只有一个版本，提供产品内 AI Builder 与 Ask（均为预览版）、AI 治理、按组织架构控制记录可见范围、按合同提供的离线隔离许可证、默认开启的 SCIM 2.0、自带模型，以及可选的 SLA 支持，按 AI 用户数授权，最低 25 人起。单点登录是开源能力，ObjectOS 企业版为其提供支持；ObjectOS 企业版为一个部署承载多个组织提供许可与支持。多副本高可用正在开发中，暂不提供。你的本体是普通的 ObjectStack 元数据。从 ObjectOS Cloud 或 ObjectOS 企业版导出本体、在开源的 ObjectStack 运行时上运行，目前尚在计划中。起步：npm create objectstack@latest，把编码 Agent 指向生成的项目及其 AGENTS.md，然后 npx os dev --ui。',
       },
     ],
   },

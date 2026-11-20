@@ -141,7 +141,7 @@ export const Order = ObjectSchema.create({
       {
         question: 'Can it run in our own infrastructure?',
         answer:
-          'Yes, three ways. The open-source ObjectStack runtime self-hosts free, with bring-your-own AI over MCP. Self-managed ObjectOS is ObjectOS Enterprise: one edition, a licensed private deployment that puts the in-app AI on your own infrastructure, bring your own model or key. It runs in a VPC, on local servers, or in an air-gapped network, with local models, internal identity, your own secret management, and enterprise support. A deployment runs on one node today, with backup and restore; high availability across several replicas is in development and not yet offered.',
+          'Yes. ObjectOS Community self-hosts free with your own AI over MCP; ObjectOS Enterprise is the licensed edition that adds the in-app AI, AI governance and enterprise controls, on your own model or key, with enterprise support. Either runs in a VPC, on local servers, or in an air-gapped network (Enterprise with an air-gap license), with local models and your own secret management. A deployment runs on one node today, with backup and restore; high availability across several replicas is in development and not yet offered.',
       },
     ],
   } satisfies MarketingPage;
