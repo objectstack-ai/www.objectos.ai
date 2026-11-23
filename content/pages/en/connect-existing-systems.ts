@@ -118,6 +118,12 @@ export const OrdersPullJob = defineJob({
             title: 'Limits by design',
             body: 'No joins across datasources. Through a plugin driver, OData included, a read matching more than the row cap — 1,000 by default, 10,000 at most — is refused rather than answered from a part, and a read scoped by a parent record’s access is refused. An outage answers 503, never an empty list.',
           },
+          {
+            title: 'Read the existing database live, read-only',
+            body: 'The walk-through of connecting the database you already run as a read-only source: reads go live to it, and writes stay refused until two switches open.',
+            meta: 'Read more',
+            href: '/en/blog/ai-business-layer-over-an-existing-database/',
+          },
         ],
       },
       {
@@ -143,6 +149,12 @@ export const OrdersPullJob = defineJob({
             title: 'Permissions start from zero',
             body: 'The source system’s permissions do not travel with its rows. A pulled row has no person owner, so you author the object’s sharing model and grants locally; os validate recommends public_read, or private with a sharing rule that grants read.',
           },
+          {
+            title: 'Read live or copy in: which to pick',
+            body: 'When the data must be current to the second, read it live; when people, reports and AI need to join it, copy it in with one writer per row.',
+            meta: 'Read more',
+            href: '/en/blog/should-you-federate-external-data-or-copy-it-in/',
+          },
         ],
       },
       {
@@ -163,6 +175,12 @@ export const OrdersPullJob = defineJob({
           {
             title: 'No two-way sync',
             body: 'No automatic write-back, no conflict merge and no edits overlay on the copy. A refused edit tells the user exactly this: change the source through a declared action instead.',
+          },
+          {
+            title: 'One writer per row, one action back',
+            body: 'The measured loop: a scheduled pull is the only writer of the copy, and a change goes to the source through one declared action.',
+            meta: 'Read more',
+            href: '/en/blog/should-you-federate-external-data-or-copy-it-in/',
           },
         ],
       },
