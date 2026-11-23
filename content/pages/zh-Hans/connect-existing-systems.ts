@@ -112,6 +112,12 @@ export const OrdersPullJob = defineJob({
             title: '设计上的边界',
             body: '不支持跨数据源关联。经插件驱动（包括 OData）读取时，命中行数超过行数上限——默认 1,000，最多 10,000——的读取会被拒绝，而不是只返回一部分；按父记录权限限定范围的读取也会被拒绝。源系统宕机时返回 503，绝不返回空列表。',
           },
+          {
+            title: '实时只读地读取已有数据库',
+            body: '把你已经在运行的数据库接成只读来源的完整过程：读取实时转发到源头，两个开关都打开之前写入一律被拒绝。',
+            meta: '延伸阅读',
+            href: '/en/blog/ai-business-layer-over-an-existing-database/',
+          },
         ],
       },
       {
@@ -137,6 +143,12 @@ export const OrdersPullJob = defineJob({
             title: '权限从零配置',
             body: '源系统的权限不会随数据一起过来。拉取来的行没有个人所有者，所以对象的共享模型和授权要在本地编写；os validate 建议用 public_read，或者用 private 加一条授予读取权限的共享规则。',
           },
+          {
+            title: '实时读取还是复制进来：怎么选',
+            body: '数据必须精确到秒时实时读取；需要让人、报表和 AI 关联分析时复制进来，并保证每行只有一个写入方。',
+            meta: '延伸阅读',
+            href: '/en/blog/should-you-federate-external-data-or-copy-it-in/',
+          },
         ],
       },
       {
@@ -157,6 +169,12 @@ export const OrdersPullJob = defineJob({
           {
             title: '没有双向同步',
             body: '不自动写回、不做冲突合并、不在副本上叠加编辑层。被拒绝的编辑会明确告诉用户：请通过声明的动作改动源头。',
+          },
+          {
+            title: '每行一个写入方，一个动作写回',
+            body: '实测的闭环：定时拉取是副本唯一的写入方，改动通过一个声明的动作送到源头。',
+            meta: '延伸阅读',
+            href: '/en/blog/should-you-federate-external-data-or-copy-it-in/',
           },
         ],
       },
