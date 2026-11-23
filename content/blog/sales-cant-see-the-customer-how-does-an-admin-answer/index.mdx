@@ -1,5 +1,5 @@
 ---
-title: "Sales Can't See the Customer: How Does an Admin Answer Within a Minute?"
+title: "Sales Can't See the Customer: How Does an Admin Answer?"
 description: "Ask the runtime, not the settings screens: an explain report runs the same checks enforcement runs and names the check that refused and the role that granted. Measured on ObjectStack 18.6.0's CRM example."
 author: ObjectStack Team
 date: 2026-11-30
@@ -15,17 +15,17 @@ tags:
   - Permission explain
 ---
 
-When sales says they can't see a customer, don't rebuild the answer from screens of settings. Ask the system that refused them. An access explain report runs the same checks the platform enforces, for that one person and that one action, and names the check that said no and the role that said yes. The admin reads one line, makes one change, and asks again before replying. That protects you from fixing access by guesswork, which usually means granting too much. The cost: it explains permissions only, so a missing record or a filtered screen still needs a person to look.
+When sales says they can't see a customer, don't rebuild the answer from screens of settings. Ask the system that refused them. An access explain report runs the same checks the platform enforces, for that one person and that one action, and names the check that said no and the role that said yes. The admin reads one line, makes one change, and asks again before replying. That protects you from fixing access by guesswork, where the quickest guess is to grant more than the job needs. The cost: it explains permissions only, so a missing record or a filtered screen still needs a person to look.
 
 *Measured on ObjectStack 18.6.0, the version a new install gets today, on the open-source CRM example from the release tag, run against the published packages. Every request and response is in [The proof](#the-proof).*
 
 ## The ticket, answered
 
-The scene is ordinary. An admin creates an account for a new sales representative. The rep signs in, opens Customers, and is refused: "You do not have permission to perform this action. Contact your administrator if you need access." A ticket follows: *sales says they can't see the customer.*
+The scene is ordinary. An admin creates an account for a new sales representative. The rep signs in, asks for the customer list, and is refused (we made every request through the platform's programming interface, not a screen): "You do not have permission to perform this action. Contact your administrator if you need access." A ticket follows: *sales says they can't see the customer.*
 
 There are two ways to answer it. One is to open the user's settings, then each role, then each bundle of permissions, then the customer object's sharing rules, and work out in your head what the platform would decide. The other is to ask the platform what it decided, and why.
 
-ObjectStack calls the second one the **explain engine**. You name a person, an object and an action, and it returns one entry per check in the order enforcement runs them, each with a verdict, a sentence, and the names of whatever produced that verdict. Two platform terms appear in its answers. A **permission set** is a named bundle of permissions, such as "CRM Sales User: may read, create and edit customers and deals, may not delete". A **position** is a job role that hands bundles out: in the CRM example, the Sales Representative position hands out CRM Sales User.
+ObjectStack calls the second one the **explain engine**. You name a person, an object and an action, and it returns one entry per check in the order enforcement runs them, each with a verdict, a sentence, and the names of whatever produced that verdict. Two platform terms appear in its answers. A **permission set** is a named bundle of permissions, such as "CRM Sales User: may read, create and edit customers and deals, may not delete". A **position** is a job role that hands bundles out: in the CRM example, the Sales Representative position hands out CRM Sales User. The example calls customers *accounts* and deals *opportunities*; those are the names in the proof.
 
 We put the ticket, and the questions that usually follow it, to the explain engine on the CRM example, then checked every answer against what enforcement actually did to the same user.
 
@@ -33,12 +33,12 @@ We put the ticket, and the questions that usually follow it, to the explain engi
 |:--|:--|:--|
 | Why can't the new rep open Customers? | **Refused at object permissions.** "No resolved permission set grants read" on customers. The rep held only the two bundles every member gets automatically. Enforcement refused the same read. | The account exists but has no sales role. It is not a sharing rule, a data problem or a bug. |
 | After the admin assigns the Sales Representative position, can the rep read customers? | **Allowed.** Object permissions **granted by CRM Sales User, held through the Sales Representative position.** Row filter: none. The rep's customer list then returned all 3 customers. | One change, confirmed by the same question before anyone tells sales it is fixed. |
-| Can the rep delete a deal? | **Refused at object permissions:** no bundle grants delete. Row-level security also narrows deletes; asked about one deal, the report shows the condition: only deals the rep created. Enforcement refused the delete. | Adding delete to the sales bundle would not be enough on its own. A member may delete only what they created. |
-| Can the rep read deals, and which ones? | **Allowed**, granted by CRM Sales User through Sales Representative. Row filter: none, so every deal. Enforcement listed all 12. | The row filter is the one lists and reports apply. "None" means the whole table. |
+| Can the rep delete a deal? | **Refused at object permissions:** no bundle grants delete. Row-level security also narrows deletes; asked about one deal, the report shows the condition: only deals the rep created. Enforcement refused the delete. | By the report, adding delete to the sales bundle would not be enough on its own: a member may delete only what they created. We did not grant delete to test it. |
+| Can the rep read deals, and which ones? | **Allowed**, granted by CRM Sales User through Sales Representative. Row filter: none, so every deal. Enforcement listed all 12. | The row filter is the one lists and reports apply. On an allowed read, "none" means the whole table. |
 | Can the rep export deals? | **Refused at object permissions:** no bundle grants export, although the rep can read every deal. Enforcement refused the export. | Export is its own grant. Asking "can they read?" answers yes and tells you nothing. |
 | Who may ask these questions? | The rep about themselves: answered. A help-desk colleague with no admin role, about the rep: **refused**. The same colleague after being made an organization admin: answered. | The access report is itself access-controlled. It says who holds what, so not everyone may read it. |
 
-One request answers each row; the transcripts are in [The proof](#the-proof). We did not time an admin reading them, so "within a minute" is the question this post answers, not a number we measured.
+One request answers each row; the transcripts are in [The proof](#the-proof). We did not time an admin reading them, so we make no claim about minutes.
 
 ![The explain report for one read of Customers, before and after the fix: nine checks in enforcement order. Before, object permissions refused, because the rep held only the two bundles every member gets. After the admin assigned the Sales Representative position, object permissions granted the read through CRM Sales User, held through that position. Every other check was neutral or did not apply. Asked about one record, the report adds a tenth check first, the organization wall](./nine-checks-en.svg)
 
@@ -56,33 +56,29 @@ Reading one takes three looks:
 
 For a read, the report also carries the **row filter**: the condition the platform adds to every list, search and report that person runs. In the CRM example every customer and deal is shared across the organization, so the filter was empty. In an app where reps see only their own deals, it would show that condition, and that condition is the answer to "why can they see these deals and not that one?"
 
-## Nine checks or ten?
-
-ObjectStack's documentation gives two counts. The guide calls authorization ["a nine-layer pipeline"](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L7) and lists nine. The generated schema reference lists [ten, with an organization wall first](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/references/security/explain.mdx#L19-L21).
-
-We counted what the report returns on 18.6.0. Asked about an object, as in every row of the table, it returned **nine** entries, in the guide's order. Asked about one specific record, it returned **ten**: the organization wall comes first. The source states the rule in a comment: an object-level answer has ["no tenant_isolation layer"](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/explain-engine.ts#L2926-L2927). So both pages are right about different questions, and the guide does not say that the tenth check appears only when you ask about one record. In our single-organization install the wall answered "does not apply", as you would expect when there is only one organization to keep apart.
+Ask about an object and the report returns nine checks. Ask about one record and it returns ten: an organization wall comes first, which in our single-organization install answered "does not apply". ObjectStack's two documentation pages give [nine](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L20-L23) and [ten](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/references/security/explain.mdx#L19-L21) for that reason.
 
 ## Who may ask
 
-An access report says which bundles a person holds and how they got them. That is sensitive, so the question is itself governed. The guide states the rule: [yourself, always; another user only with the right to manage users or a delegated admin scope that covers them; anything else is refused.](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L97-L109)
+An access report says which bundles a person holds and how they got them. That is sensitive, so the question is itself governed. On 18.6.0 the runtime's rule is: yourself, always; another user only if you hold the right to manage users, administer an organization that user belongs to, or hold a delegated admin scope that covers them ([source](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/security-plugin-explain-access.ts#L134-L138)). Everyone else is refused.
 
-We measured three askers. The rep asking about themselves was answered. A help-desk colleague, an ordinary member, asking about the rep was refused, and the refusal named the three ways to qualify. After the admin made that colleague an administrator of the organization, the platform gave them the organization administrator bundle, and the same question was answered.
-
-The runtime names one more way to qualify than the guide does: [being an administrator of an organization the user belongs to](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/security-plugin-explain-access.ts#L134-L138). That is the path our help-desk colleague took. If you are deciding who can answer access tickets, read the runtime's rule; the guide's list is one short.
+We measured three askers. The rep asking about themselves was answered. A help-desk colleague, an ordinary member, asking about the rep was refused, and the refusal named the three ways to qualify. After the admin made that colleague an administrator of the organization, the platform gave them the organization administrator bundle, and the same question was answered. So an organization administrator can answer these tickets without holding the platform-wide right to manage users. We did not measure the delegated-scope route, which is the narrower way to let a help desk answer these tickets.
 
 ## The case for looking at configuration instead
 
 The explain report is not the only good tool, and for some tickets it is not the best one.
 
+- **Reading the configuration works everywhere and shows the neighbours.** With three roles and one bundle, as in this CRM example, opening the role is as fast as asking, it needs no feature the platform may lack, and it shows everything the role grants, not only the one decision.
 - **Logging in as the user shows the screen.** ObjectStack lets an administrator [impersonate a user to verify their access](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/authentication.mdx#L1230-L1233), and many platforms offer something like it. If the complaint is "the button is missing" or "the menu is empty", seeing the screen is faster than reading checks. The report answers why a decision came out as it did; impersonation answers what the person sees.
 - **A sweep beats a zoom for policy questions.** "Who can delete deals?" is a question about every role at once. ObjectStack's guide draws that line itself: explain ["is the same evaluation logic pointed at one decision at runtime; the matrix is the build-time sweep across all of them"](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/access-matrix.mdx#L81-L83). We covered the matrix in [How do you catch an AI's silent permission change before it ships?](/en/blog/catch-ai-silent-permission-change-access-matrix-gate/)
-- **The settings are where you fix it.** The report tells you what to change; the change itself is still made to roles and bundles, and on a platform where an AI writes those definitions, the change arrives as a diff someone [reviews](/en/blog/how-to-review-ai-generated-app-changes/).
+- **The settings are where you find the fix and make it.** A refusal tells you what is missing: no bundle the rep holds grants read on customers. It does not tell you which role supplies that. You look that up in the roles and bundles, and the change is made there. On a platform where an AI writes those definitions, the change arrives as a diff someone [reviews](/en/blog/how-to-review-ai-generated-app-changes/).
 
 ## What the report does not solve
 
 - **It explains permissions, not data.** A customer that was never created, was merged away, or is hidden by a view's own filter looks the same to the person complaining. The report will say "allowed" and the customer will still be missing. A person has to look.
 - **It does not say whether the access is right.** It told us the rep cannot export deals. Whether sales *should* export deals is a policy decision, and so is whether the fix is a position or a narrower bundle.
-- **Some answers need a second question.** For a delete, the object-level report said row-level security "narrows" and pointed at a row filter it did not include. Only asked about one deal did it show the condition (created by the rep), and even then it named the rule with a generic label rather than by the policy's own name in the platform's default bundle. We read the name from the [platform source](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/objects/default-permission-sets.ts#L928-L934).
+- **It does not show what else the fix grants.** We asked about reading customers. The position we assigned also lets the rep create and edit customers, contacts, deals, deal product lines, leads and activities. The report confirmed the one decision we asked about. To see everything a role brings, read the role, or use the build-time matrix.
+- **Some answers need a second question.** For a delete, the object-level report said row-level security narrows the rows but did not show the condition. Asked about one deal, it did: only deals the rep created. It labelled the rule generically, not by the name the policy carries in the platform's default bundle; the proof shows both.
 - **Read the verdict before the row filter.** On a refused read, the report still carried an empty row filter, which on its own would mean "every row". The [schema reference](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/references/security/explain.mdx#L110) says the decision is the verdict plus the row-level check, not the filter alone.
 - **It needs the security plugin.** The guide says plainly: ["A deployment without `@objectstack/plugin-security` answers 501"](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L116), meaning it cannot answer at all.
 
@@ -90,7 +86,7 @@ ObjectStack's guide also says Studio's Access area builds its ["why can this use
 
 ## In development
 
-The report's format already reserves room for more than it fills today. The schema reference describes a standing for each person (platform administrator, organization administrator, member, external member) and a marker for which checks belong to the organization wall, as vocabulary ["the β engine + UI will fill"](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/references/security/explain.mdx#L30-L34). On 18.6.0 the wall marker appeared on record-level answers; the standing did not appear in any report we requested.
+The report's format already reserves room for more than it fills today. The schema reference describes a standing for each person (platform administrator, organization administrator, member, external member) and a marker for which checks belong to the organization wall, as vocabulary ["the β engine + UI will fill"](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/references/security/explain.mdx#L30-L34). On 18.6.0 both already appear when you ask about one record: every check carried the wall marker, and the rep's standing came back as member. Neither appears on an object-level answer. The reference does not say what else that later engine and screen will add, and we measured nothing beyond these two fields.
 
 ## Point your agent at the report
 
@@ -104,6 +100,8 @@ Everything above was measured on 2026-11-23 against ObjectStack **18.6.0**.
 ```text
 $ npm view @objectstack/cli dist-tags
 { next: '0.0.0-next-20261123013358', latest: '18.6.0' }
+$ npm view @objectstack/cli dist-tags.latest
+18.6.0
 ```
 
 ### Setup
@@ -124,7 +122,15 @@ $ npx os dev --fresh -p 3276
   Seeds:   com.example.crm 28 rows
 ```
 
-`--fresh` starts on an empty, throwaway database. The admin signs in and creates two accounts with `POST /api/v1/auth/admin/create-user`: `rep@example.com` and `helpdesk@example.com`, neither with a position. Self sign-up is closed on this install (`SELF_REGISTRATION_CLOSED`, "audience posture invite_only"). Each account signs in with `POST /api/v1/auth/sign-in/email`, and the cookie jars `admin.jar`, `rep.jar` and `helpdesk.jar` carry the sessions. User ids below are from this run.
+`--fresh` starts on an empty, throwaway database. The admin signs in and creates two accounts with `POST /api/v1/auth/admin/create-user`: `rep@example.com` and `helpdesk@example.com`, neither with a position. Self sign-up is closed on this install, which is why the admin creates them (a separate run on the same install, kept beside the script with the version check above):
+
+```text
+$ curl -s -X POST http://localhost:3276/api/v1/auth/sign-up/email -H 'Content-Type: application/json' -d '{"email":"newhire@example.com","password":"…","name":"newhire"}'
+{"code":"SELF_REGISTRATION_CLOSED","message":"Self-registration is closed (audience posture invite_only). Ask an administrator for an invitation."}
+HTTP 403
+```
+
+Each account signs in with `POST /api/v1/auth/sign-in/email`, and the cookie jars `admin.jar`, `rep.jar` and `helpdesk.jar` carry the sessions. User ids below are from this run.
 
 The example's sales roles, at the tag ([`sales-positions.ts`](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/examples/app-crm/src/security/sales-positions.ts#L12-L17), [lines 44–61](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/examples/app-crm/src/security/sales-positions.ts#L44-L61)):
 
@@ -208,7 +214,7 @@ allowed: True | layers: 9 | readFilter: null
                contributors: [{"kind": "permission_set", "name": "crm_sales_user", "via": "position:crm_sales_rep"}]
   (the other eight entries as in step 2; principal now lists crm_sales_rep and crm_sales_user)
 
-$ curl -b rep.jar 'http://localhost:3276/api/v1/data/crm_account?fields=name'
+$ curl -b rep.jar 'http://localhost:3276/api/v1/data/crm_account?fields=name&limit=50'
 HTTP 200 | total: 3 | names: ['Acme Corp', 'Globex Ltd', 'Initech']
 ```
 
@@ -217,16 +223,16 @@ The assignment row records who granted it and why. Lines that start with `allowe
 ### 4. Deals: delete, read, export, and what enforcement did
 
 ```text
-$ curl -b admin.jar '…/security/explain?object=crm_opportunity&operation=delete&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX'
+$ curl -b admin.jar 'http://localhost:3276/api/v1/security/explain?object=crm_opportunity&operation=delete&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX'
 allowed: False | layers: 9 | readFilter: (absent)
   object_crud  denies   No resolved permission set grants delete on 'crm_opportunity'.
   rls          narrows  Row-level security narrows the row set (see readFilter for the composed predicate).
 
-$ curl -b admin.jar '…/security/explain?object=crm_opportunity&operation=read&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX'
+$ curl -b admin.jar 'http://localhost:3276/api/v1/security/explain?object=crm_opportunity&operation=read&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX'
 allowed: True | layers: 9 | readFilter: null
   object_crud  grants   read on 'crm_opportunity' is granted by [crm_sales_user].  via position:crm_sales_rep
 
-$ curl -b admin.jar '…/security/explain?object=crm_opportunity&operation=export&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX'
+$ curl -b admin.jar 'http://localhost:3276/api/v1/security/explain?object=crm_opportunity&operation=export&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX'
 allowed: False | layers: 9 | readFilter: null
   object_crud  denies   No resolved permission set grants export on 'crm_opportunity'.
 
@@ -234,7 +240,7 @@ $ curl -b rep.jar -X DELETE http://localhost:3276/api/v1/data/crm_opportunity/2q
 {"error":"You do not have permission to perform this action. Contact your administrator if you need access.","code":"PERMISSION_DENIED","object":"crm_opportunity"}
 HTTP 403
 
-$ curl -b rep.jar 'http://localhost:3276/api/v1/data/crm_opportunity?fields=name'
+$ curl -b rep.jar 'http://localhost:3276/api/v1/data/crm_opportunity?fields=name&limit=50'
 {"object":"crm_opportunity","records":[ … 12 deals … ],"total":12,"hasMore":false}
 HTTP 200
 
@@ -248,16 +254,18 @@ The entries not shown are the same as in step 2. A delete report carries no `rea
 ### 5. One record: ten entries
 
 ```text
-$ curl -b admin.jar '…/security/explain?object=crm_opportunity&operation=read&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX&recordId=2qolV83IXvGaXxdA'
+$ curl -b admin.jar 'http://localhost:3276/api/v1/security/explain?object=crm_opportunity&operation=read&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX&recordId=2qolV83IXvGaXxdA'
 allowed: True | layers: 10 | readFilter: null
   tenant_isolation  not_applicable  Layer 0 tenant isolation — the always-first org wall, AND-composed before any business RLS (ADR-0095 D1).
-  principal … rls   (the nine entries of step 4's read)
+  principal … rls   (the nine entries of step 4's read, each now with kernelTier; principal adds "posture": "MEMBER")
 record: {"recordId": "2qolV83IXvGaXxdA", "visible": true, "decidedBy": "object_crud"}
 
-$ curl -b admin.jar '…/security/explain?object=crm_opportunity&operation=delete&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX&recordId=2qolV83IXvGaXxdA'
+$ curl -b admin.jar 'http://localhost:3276/api/v1/security/explain?object=crm_opportunity&operation=delete&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX&recordId=2qolV83IXvGaXxdA'
 allowed: False | layers: 10 | readFilter: (absent)
 record: {"recordId": "2qolV83IXvGaXxdA", "visible": false, "decidedBy": "object_crud"}
 ```
+
+An object-level answer has no tenant layer: the engine source says so in a comment, ["no tenant_isolation layer, no kernelTier, no posture"](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/explain-engine.ts#L2926-L2927).
 
 The record-level delete's row-level entry, as returned:
 
@@ -290,11 +298,11 @@ The condition comes from the member bundle every signed-in member holds, where t
 ### 6. Who may ask
 
 ```text
-$ curl -b rep.jar '…/security/explain?object=crm_opportunity&operation=delete'      # yourself: no userId
+$ curl -b rep.jar 'http://localhost:3276/api/v1/security/explain?object=crm_opportunity&operation=delete'      # yourself: no userId
 HTTP 200
 allowed: False | layers: 9 | readFilter: (absent)
 
-$ curl -b helpdesk.jar '…/security/explain?object=crm_opportunity&operation=delete&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX'
+$ curl -b helpdesk.jar 'http://localhost:3276/api/v1/security/explain?object=crm_opportunity&operation=delete&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX'
 {"success":false,"error":{"code":"PERMISSION_DENIED","message":"[Security] Access denied: explaining another user's access requires the 'manage_users' capability, organization administration of an organization that user is a member of, or a delegated adminScope covering that user (ADR-0090 D6/D12)."}}
 HTTP 403
 
@@ -303,21 +311,23 @@ $ curl -b admin.jar -X POST http://localhost:3276/api/v1/auth/organization/updat
 {…,"role":"admin","id":"mem_mwsnwe0oznkd4j6u","outcome":"permission_set_granted","grantedPermissionSet":{"name":"organization_admin_no_bypass","label":"Organization Administrator (no record bypass)"}}
 HTTP 200
 
-$ curl -b admin.jar 'http://localhost:3276/api/v1/data/sys_user_permission_set'    # the help desk's row
+$ curl -b admin.jar 'http://localhost:3276/api/v1/data/sys_user_permission_set?limit=50'    # the help desk's row, picked from the list by user_id
 {'permission_set': 'organization_admin_no_bypass', 'organization_id': 'org_mwsnwbk2cl1ypwnm', 'reason': "auto-org-admin-grant: granted from membership grade 'admin' (sys_member mem_mwsnwe0oznkd4j6u) → organization_admin_no_bypass"}
 
-$ curl -b helpdesk.jar '…/security/explain?object=crm_opportunity&operation=delete&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX'
+$ curl -b helpdesk.jar 'http://localhost:3276/api/v1/security/explain?object=crm_opportunity&operation=delete&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX'
 HTTP 200
 allowed: False | layers: 9 | readFilter: (absent)
 ```
 
-The organization-administrator bundle carries `manage_org_users`, not `manage_users`. The runtime admits it through the organization-administrator arm of its caller check ([`security-plugin-explain-access.ts` lines 152–165](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/security-plugin-explain-access.ts#L152-L165); the refusal text, [lines 197–200](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/security-plugin-explain-access.ts#L197-L200)).
+The organization-administrator bundle carries `manage_org_users`, not `manage_users`: [`default-permission-sets.ts` line 461](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/objects/default-permission-sets.ts#L461) lists the system permissions of `organization_admin`, and the no-bypass variant carries them over verbatim ([lines 1652–1656](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/objects/default-permission-sets.ts#L1652-L1656)). The runtime admits it through the organization-administrator arm of its caller check ([`security-plugin-explain-access.ts` lines 152–165](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/security-plugin-explain-access.ts#L152-L165); the refusal text, [lines 197–200](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/security-plugin-explain-access.ts#L197-L200)).
 
 ### 7. The lines quoted, at the 18.6.0 tag
 
-- `content/docs/permissions/explain.mdx`: [lines 7–13](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L7-L13) (nine layers, explained by construction), [lines 20–23](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L20-L23) (the nine in order), [lines 77–86](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L77-L86) (export), [lines 97–109](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L97-L109) (who may ask), [line 116](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L116) (501 without the security plugin), [lines 120–121](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L120-L121) (the Studio panel).
-- `content/docs/references/security/explain.mdx`: [lines 12–17](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/references/security/explain.mdx#L12-L17) (enforcement, minus the throw), [lines 19–21](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/references/security/explain.mdx#L19-L21) (ten layers), [lines 30–34](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/references/security/explain.mdx#L30-L34) (reserved vocabulary).
+Paths that start with `content/docs/` are shortened to what follows it.
+
+- `permissions/explain.mdx`: [lines 7–13](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L7-L13) (nine layers, explained by construction), [lines 20–23](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L20-L23) (the nine in order), [lines 77–86](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L77-L86) (export), [lines 97–109](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L97-L109) (who may ask), [line 116](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L116) (501 without the security plugin), [lines 120–121](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L120-L121) (the Studio panel).
+- `references/security/explain.mdx`: [lines 12–17](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/references/security/explain.mdx#L12-L17) (enforcement, minus the throw), [lines 19–21](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/references/security/explain.mdx#L19-L21) (ten layers), [lines 30–34](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/references/security/explain.mdx#L30-L34) (reserved vocabulary).
 - `packages/plugins/plugin-security/src/explain-engine.ts`: [lines 2926–2927](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/explain-engine.ts#L2926-L2927) (no tenant layer on an object-level answer).
 - `packages/plugins/plugin-security/src/security-plugin-explain-access.ts`: [lines 134–138](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/security-plugin-explain-access.ts#L134-L138) (who may describe another user).
-- `content/docs/permissions/access-matrix.mdx`: [lines 81–83](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/access-matrix.mdx#L81-L83) (zoom lens and sweep).
-- `content/docs/permissions/authentication.mdx`: [lines 1230–1233](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/authentication.mdx#L1230-L1233) (impersonating a user to verify access).
+- `permissions/access-matrix.mdx`: [lines 81–83](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/access-matrix.mdx#L81-L83) (zoom lens and sweep).
+- `permissions/authentication.mdx`: [lines 1230–1233](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/authentication.mdx#L1230-L1233) (impersonating a user to verify access).
