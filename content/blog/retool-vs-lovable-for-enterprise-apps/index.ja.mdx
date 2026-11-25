@@ -1,0 +1,242 @@
+---
+title: "企業向けアプリに Retool と Lovable、どちらを選ぶべきか？"
+description: "AI が作ったアプリを誰が変更でき、誰が承認し、どの権限で動き、監査ログに何が残り、どう移行できるか：Retool と Lovable は各社のドキュメントで、ObjectStack 18.6.0 は実測で並べて比べます。"
+author: ObjectStack Team
+date: 2026-11-25
+status: published
+topic: app-building
+audience: it
+solutions: []
+industries: []
+cover: ./cover.svg
+tags:
+  - Retool
+  - Lovable
+  - AI アプリビルダー
+  - 監査証跡
+---
+
+誰がアプリを変更するかで選びましょう。エンジニアが既存のデータベースの上でツールを作るなら Retool です。AI はすでに付与したアクセス権の範囲にとどまり、監査ログは Business プランから使えます。ただし Free と Team では All Users グループがすべてのアプリを編集でき、変更ごとにプルリクエストでレビューするには最上位プランが必要です。業務チームがアプリ全体を生成するなら Lovable です。アプリを作ってホストし、Git 同期でどのプランでもプルリクエストによるレビューができ、最上位プランでは公開アプリを管理者かオーナーの承認まで止めておけます。ただし、誰がどのデータを見られるかのルールは AI が書き、そのルールはアプリの特権サーバーアカウントには適用されません。どちらを選んでも、AI が作ったものには誰かが責任を負います。
+
+*以下の Retool と Lovable に関する記述はすべて、各ベンダーの公開ドキュメントまたは料金ページから引用しており、2026 年 11 月 17 日に読んだものです。ObjectStack の結果は、今日新規インストールで入るバージョンである ObjectStack 18.6.0 で計測しました。出典と記録は[証拠](#証拠)にあります。*
+
+## この比較の背後にある問い
+
+この比較を検索した人は、AI がアプリを作ることはもう受け入れているでしょう。残る問いは、その後どうなるかです。IT 責任者には三つの依頼が、たいていこの順で届きます。業務責任者が変更を求め、監査担当者が直前の変更を誰が承認したかを尋ね、誰かが特定の日に特定のレコードに対してアプリが何をしたかを尋ねます。ですから役に立つ比較は、どのツールが速く作れるかではありません。それぞれのツールのどこで、誰がこの三つの依頼に答えるかです。
+
+Retool のドキュメントが説明するのは、「the primary development experience of apps is by prompting an AI agent with natural language」（アプリ開発の中心は自然言語で AI エージェントに指示すること）というアプリビルダーで、会社がすでに Retool に接続しているデータベースやサービスを使います。この記事が扱うのは、Retool が Apps と呼ぶこの AI アプリビルダーで、ドラッグ&ドロップのクラシックアプリではありません。Lovable のドキュメントが説明するのは、アプリ全体（画面、サーバー、データベース）を生成し、標準でホストまでするツールです。それぞれについては [Retool の記事](/ja/blog/retool-vs-ai-native-app-platform/)と [Lovable の記事](/ja/blog/is-lovable-safe-for-production/)で取り上げ、ほかのプラットフォームは[比較ページ](/en/compare/)にまとめています。
+
+## 七つの問い、二つのベンダー
+
+各セルは、そのベンダー自身のドキュメントまたは料金ページの記述です。太字のタグは、ベンダーが機能を限定しているプランを示します。三つの用語が出てきます。**プルリクエスト**は、コードリポジトリ（たとえば GitHub）に置かれる変更の提案で、誰かが承認してから効力を持ちます。**Git 同期**は、Lovable がアプリのコードをあなたのコードリポジトリへ双方向にコピーする機能です。**MCP** は、AI アシスタントがほかのソフトウェアにつながるためのプロトコルです。
+
+| 尋ねられる問い | Retool | Lovable |
+|:--|:--|:--|
+| **誰がアプリを変更できるか？** | 公開もできるビルダーと、「internal users」（アプリを使う社員）。後者はアプリを作れますが公開はできません。**Free・Team**：固定グループで、All Users がすべてのアプリを編集可能。 | 編集者以上。ワークスペースのメンバーは「can see, edit, and publish the workspace's projects」（ワークスペースのプロジェクトを閲覧・編集・公開できる）。**Business・Enterprise**：プロジェクトを招待者のみに制限可能。 |
+| **ユーザーに見える前に、変更をどうレビューするか？** | 変更は独自のプレビューを持つ別の作業コピーにとどまります。データを書き込む処理の前に AI が確認を求めます。 | 下書きは、受け入れの前に「a one-line summary of what the draft changes」（下書きの変更内容の一行要約）と変更内容を表示します。**全プラン**：Git 同期でプルリクエストのレビューを加えられます。 |
+| **誰が承認するか？** | ビルダーが公開します。内部ユーザーのアプリはビルダーが公開する必要があります。**Enterprise**：ソース管理下のアプリでは、プルリクエストのマージで公開され、レビュー担当にアプリのプレビューが示されます。 | 標準では「editors and above can publish」（編集者以上が公開できる）。**Enterprise**：ポリシーで、公開アプリ、コネクターを使うアプリ、外部協力者による公開に、管理者かオーナーの承認を必須にできます。 |
+| **稼働中のアプリはどの権限を強制するか？** | クエリを実行するにはデータソースへのアクセス権が必要です。**Business・Enterprise**：グループ単位で制御。強制を有効にした PostgreSQL リソースでは、ポリシーがすべてのクエリに適用され、「including … agents」（エージェントからのものも含む）。 | AI が書くデータベースルール。読むことはでき、変更はチャットで依頼します。アプリの特権サーバーアカウントには適用されません。公開のたびに走るスキャンが「checks database access rules」（データベースのアクセスルールを確認する）。 |
+| **監査ログには何が残るか？** | **Business・Enterprise**：実行されたすべてのクエリと Retool 内のユーザー操作。MCP クライアントにはタグが付きます。Retool のクラウドでは 1 年保持。**Enterprise**：Datadog や Splunk へのストリーミング。 | **Enterprise**：メンバー、プロジェクト、プロンプト、公開などのワークスペース活動。13 週間保持し、セキュリティ監視システムへ定期エクスポート可能。 |
+| **データと定義はどこにあるか？** | アプリは接続済みのデータベースとサービスを使い、アプリ本体は Retool にあります。Enterprise カード：「Retool Cloud, self-hosted, or air-gapped」（air-gapped：インターネットに接続しない環境）。 | コードは標準で「Lovable's managed infrastructure」（Lovable の管理インフラ）にあり、Git 同期（全プラン）でリポジトリに写しを置けます。データベースは Lovable のもの、または Supabase など自分で接続したもの。 |
+| **どこまでで止まり、どう移行するか？** | AI ビルダーのアプリを書き出して Retool の外で動かすことは、まだサポートされていないと記載されています（クラシックアプリは異なる場合あり）。**Enterprise**：ソース管理下のアプリはソースコードがリポジトリにあります。 | ドキュメントでは「you are never locked in」（ロックインされることはない）。コードとデータはエクスポート可能。下書きの受け入れは「can change your live app's backend immediately」（本番アプリのバックエンドを即座に変えうる）。バックエンドのログ（監査ログとは別）は「do not prove who made a particular database change」（特定のデータベース変更を誰が行ったかを証明しない）。 |
+
+表からわかること：
+
+- **承認が行われる段階が違います。** Retool では公開、Enterprise ではプルリクエストのマージです。Lovable では下書きの受け入れと、その後の公開で、Enterprise ではポリシーが指定する種類の公開に管理者かオーナーの承認が加わります。違うのは、承認者に何が見えるかです。
+- **二つの監査ログは別の問いに答えます。** Retool のログは Retool 内のユーザー操作、「such as query runs and password resets」（クエリの実行やパスワードのリセットなど）を記録します。Lovable のログはワークスペースの活動を記録し、挙げられているイベントには「Prompt sent」（プロンプト送信）、「Project published externally」（プロジェクトの外部公開）、「Database query executed」（データベースクエリの実行）があります。まず監査担当者がする質問を書き出し、それにどちらのログが答えるかを確かめてください。
+- **こうした管理機能には上位プランが必要です。** Retool の料金ページでは、高度な権限制御と監査ログは Business から、Git によるソース管理は Enterprise のみです。Lovable のドキュメントでは、監査ログと公開の承認は Enterprise のみです。
+
+## Retool のほうが向いているとき
+
+アプリがすでに運用しているシステムの上の社内ツールで、作るのがエンジニアや技術スタッフなら Retool を選びましょう。IT 責任者にとって最も強い点は、AI の届く範囲がビルダー本人を超えないことです。セキュリティページには「the LLM cannot read or write any resource data the user is not already authorized to access」（ユーザーがもともとアクセスを許可されていないリソースのデータを LLM は読み書きできない）とあり、AI はデータの書き込み、挿入、更新、削除を実行する前にビルダーに確認します。監査ログは、アプリのユーザーが実行したクエリを、実際のクエリとパラメーターまで記録し、Retool の MCP サーバー経由でつながった AI アシスタントの操作にタグを付けます。監査担当者が社内ツールでユーザーが何をしたかを尋ねたら、このログがそのまま答えます。知っておくべき制限は、AI アプリビルダーで作ったアプリを Retool の外で動かすことがまだサポートされていないと記載されている点です。グループ単位の権限と監査ログが必要なら Business、すべての変更を自社リポジトリのプルリクエストに通す必要があるなら Enterprise を予算に入れてください。
+
+## Lovable のほうが向いているとき
+
+業務チームが自分たちでアイデアから動くアプリまで進める必要があり、アプリを Lovable が運用するサーバーとデータベースに置いてよいなら Lovable を選びましょう。画面、サーバー、データベースをまとめて作ってホストし、変更をまず下書きで試してから受け入れられます。Git 同期はすべてのプランで使えるので、開発者は Lovable の変更を、普段使っているプルリクエストのレビューに通せます。アプリの公開は別の手順として残ります。Lovable はシングルサインオンを Business プランから提供しており、Retool は Enterprise のみとしています。アプリを公開する前、コネクターを使う前、外部協力者が公開する前に管理者かオーナーの承認を求めたいなら Enterprise を予算に入れてください。監査ログと定期セキュリティスキャンも Enterprise です。移行について、ドキュメントは明快な約束をしています：「you are never locked in. You can export your code, migrate your data, self-host parts or all of your stack, or move to another provider at any time.」（ロックインされることはありません。コードのエクスポート、データの移行、スタックの一部または全部のセルフホスト、別のプロバイダーへの移行がいつでもできます。）同じページには、実際に離れる場合に引き受けることも挙げられており、その中に「Implementing authentication and enforcing data isolation policies」（認証の実装とデータ分離ポリシーの適用）があります。
+
+## ObjectStack で計測したこと
+
+私たちが開発している ObjectStack は、三つ目のやり方をとります。アプリの定義は普通のファイルの集まりで、稼働中のアプリがその内容を強制します。ObjectStack 18.6.0 に同梱のオープンソース CRM サンプルでこれらを確かめました。デモ用のアプリで、顧客のシステムではありません。営業担当者ロールは商談の読み取り、作成、編集ができますが、削除はできません。
+
+| 行ったこと | システムの応答 | あなたにとっての意味 |
+|:--|:--|:--|
+| 営業担当者アカウント用に作ったアクセスキーで、AI エージェントが MCP 経由で商談の削除を試みた。 | 2 回拒否：最初は、呼び出しに確認が付いていなかったため。確認を付けると、営業担当者は商談を削除できないため。 | MCP 経由の削除には明示的な確認が必要で、確認があってもエージェントが持つのは使っているアカウントの権限だけです。 |
+| 営業担当者がアプリの API で同じ削除を試みた。 | 拒否。 | このルールは人にもエージェントにも同じように適用されます。 |
+| エージェントが商談を「prospecting」（初期接触）から「qualification」（見込み評価）に進めた。営業担当者に許された操作。 | 監査行が 1 行：エージェントのアカウント、その商談、ステージの変更前と変更後。拒否された削除は行を残さなかった。 | エージェントが何をいつ変えたかを示せます。拒否はサーバーログにしか残りません。 |
+| 営業担当者が監査ログの閲覧を求めた。 | 拒否。 | 営業担当者には誰が何をしたかは見えません。ログを読むには、それを許可するロールが必要です。 |
+| AI エージェントがアプリのファイルを変更し、営業ロールが商談を削除できるようにした。 | プラットフォームによるファイルの最初のチェックは通過。ビルドは変更内容を一行で示して止まり、受け入れコマンドが実行されるまで止まったままだった（今回の実行では同じエージェントが実行。後述の制限を参照）。 | この変更が気づかれずに効力を持つことはありませんが、受け入れで生じる一行の変更は、やはり人がレビューする必要があります。 |
+
+最後のチェックの仕組みは、[業務アプリはデータベースに置くべきか、リポジトリに置くべきか？](/ja/blog/where-should-a-business-app-definition-live/)と [AI が黙って変えた権限を出荷前に捕まえるには？](/ja/blog/catch-ai-silent-permission-change-access-matrix-gate/)で詳しく説明しています。レコードを開いたことがどう監査されるか、その記録の限界は、[誰が顧客レコードを開いたか、AI エージェントも含めて証明できますか？](/ja/blog/prove-who-opened-a-customer-record-view-auditing/)にあります。
+
+## ObjectStack がしないこと
+
+- **変更が正しいかどうかは判断しません。** プラットフォームの最初のチェックは、削除権限を何も言わずに通しました。ビルドが止まったのは、このサンプルアプリがアクセステーブルを持っているからにすぎません。新しいアプリは、有効にするまでこのテーブルを持たず、新規プロジェクトに付いてくる自動チェックが実行するのはビルドではなく最初のチェックです。
+- **エージェントが自分の変更を受け入れるのを止めません。** 受け入れは一つのコマンドで、ファイルにアクセスできる人やプログラムなら誰でも実行できます。その一行の変更が、人の承認を伴うプルリクエストの手続きを通って、初めてレビューになります。
+- **拒否された試みは監査ログに残しません。** 拒否された 2 回の削除は、監査ログとは別の場所であるサーバーログにしか現れません。
+- **エージェントと人を区別しません。** 監査行に記されるのはエージェントのアクセスキーが属するアカウントで、行のどこにも「AI」とは書かれません。エージェントごとに専用のアカウントを用意しないと、エージェントがしたことがログ上は人の行為として残ります。
+- **すべての変更をファイルに残すわけではありません。** 稼働中の環境は、管理画面や API で行った編集も保持でき、その編集はファイルより優先されます。どの変更をファイル経由にするかは、あなたが決めるルールです。
+- **どちらのベンダーより若い製品です。** ObjectStack 自身の比較ページはこう書いています：「ObjectStack is younger; expect to build more of it yourself.」（ObjectStack はより若いので、自分で作る部分が多くなると考えてください。）
+
+## 選び方
+
+Retool と Lovable は、それぞれ上で述べた場合に合っています。アプリに責任を負う人が、誰が何をできるかをコードではなく短い表として読み、そのすべての変更を効力を持つ前に見る必要があるなら、三つ目の選択肢を検討してください。ObjectStack が想定しているのはまさにその場合で、制限は上に挙げたとおりです。自分の業務で試すには、[エージェントを ObjectStack に向けてください](/en/blog/how-to-point-your-agent-at-objectstack/)。
+
+どれを選ぶにしても、ベンダーに次の三つを尋ね、答えを記録しておきましょう。
+
+1. 誰が何を見られるか・できるかを AI が変えたとき、ユーザーに届く前に承認者には具体的に何が見えるのか？
+2. 承認する人を、変更した人とは別の人にできるか？
+3. 「このユーザー、またはこのエージェントがあのレコードに何をしたか」にはどのログが答え、それはどれだけの期間保持されるのか？
+
+{/* the-proof */}
+## 証拠
+
+以下のベンダーのページは 2026-11-17 に読み、ObjectStack のコマンドは 2026-11-20 に実行しました。
+
+```text
+$ npm view @objectstack/cli dist-tags.latest
+18.6.0
+```
+
+### ベンダーの出典
+
+上の引用はすべて、ここに挙げたページから取ったもので、2026 年 11 月 17 日に読みました（Retool の「Free and Team」権限ページは 04:34 UTC、それ以外は 04:16〜04:18 UTC）。プランに関する記述は、ベンダーの料金ページか、ドキュメントページのプラン表示によります。Retool の列は AI アプリビルダー（「Apps」）について述べたもので、クラシックアプリではありません。引用は検証できる証拠として英語の原文のまま残しています。
+
+**Retool**
+
+- [<span lang="en">Introduction to apps</span>](https://docs.retool.com/build/apps/concepts/intro): <span lang="en">"The primary development experience of apps is by prompting an AI agent with natural language in threads."</span> <span lang="en">"Retool only explores and connects resources for which the user has Edit permission."</span> <span lang="en">"Enterprise users can also utilize Source Control to version apps and track changes using a git-based workflow."</span> <span lang="en">"Apps use resources to connect to your business data."</span>
+- [<span lang="en">App builder</span>](https://docs.retool.com/build/apps/concepts/app-builder): <span lang="en">"It is available to both internal users and builders, but only builders can publish apps."</span>
+- [<span lang="en">Permission levels</span>](https://docs.retool.com/permissions/reference/permission-levels)：アプリに対する Edit は <span lang="en">"Build and modify the app. Release, rename, export, delete the app."</span> を意味し、Use は <span lang="en">"Interact with the app as an end user. Cannot open the editor."</span>
+- [<span lang="en">Permissions on Free and Team plans</span>](https://docs.retool.com/permissions/guides/free-and-team/): <span lang="en">"On Free and Team plans, Retool provides a fixed set of default groups that control what users can do with apps, workflows, agents, and resources. You cannot create custom groups or configure role-based access control on these plans."</span> これらのプランの表では、All Users グループが Apps、Workflows、Agents に Edit、Resources に Own を持ち、さらに <span lang="en">"The following built-in permission groups cannot be modified or removed, and the access levels cannot be changed."</span> <span lang="en">"Business and Enterprise plan users have more granular control over groups, and can create their own custom groups."</span>
+- [<span lang="en">Publish an app</span>](https://docs.retool.com/build/apps/guides/publishing): <span lang="en">"You must be a builder to publish an app. Internal users can create apps, but they cannot publish them."</span> Limitations タブは <span lang="en">"Limitations describe functionality that isn't yet supported in apps but may exist in classic apps."</span> で始まり、その中に <span lang="en">"Exported apps for use outside of Retool."</span>
+- [<span lang="en">Threads and branches</span>](https://docs.retool.com/build/apps/concepts/threads-branches): <span lang="en">"A branch is a set of changes to your app, associated with an app preview, and with its own change history. A branch is the unit of work that you publish."</span>
+- [<span lang="en">App security</span>](https://docs.retool.com/build/apps/concepts/security): <span lang="en">"The LLM cannot read or write any resource data the user is not already authorized to access."</span> <span lang="en">"The agent always requests permission from the builder to run functions that change data in your resources, such as those that write, create, insert, update, or delete data."</span>
+- [<span lang="en">Edit and publish protected apps</span>](https://docs.retool.com/build/apps/guides/source-control/edit-publish): <span lang="en">"Opening a pull request and integrating changes into the main branch of the repository creates a new published version of your app."</span> 公開チェックリストは次を確認します：<span lang="en">"The shared preview is ready. This allows your PR reviewers to see your changes in an app preview."</span> [<span lang="en">Protect apps</span>](https://docs.retool.com/build/apps/guides/source-control/protect-app): <span lang="en">"Each protected app is stored as its own directory in your repository at the /apps-v2 path."</span>
+- [<span lang="en">Data</span>](https://docs.retool.com/build/apps/concepts/data): <span lang="en">"Users need Use access to a resource in an environment to run functions against it."</span>
+- [<span lang="en">Access policies</span>](https://docs.retool.com/data-sources/concepts/access-policies)：ポリシーが適用されるのは <span lang="en">"every query Retool runs against the resource, including queries from apps, the query library, raw SQL, and agents."</span> <span lang="en">"Access policies apply only to PostgreSQL resources."</span>
+- [<span lang="en">Audit logs</span>](https://docs.retool.com/org-users/guides/audit-logs): <span lang="en">"Retool automatically logs user actions, such as query runs and password resets."</span> 詳細には <span lang="en">"the exact query, the parameters passed"</span> が含まれます。MCP からのイベントには次のタグが付きます：<span lang="en">"An AI client connected to Retool's MCP server."</span> クラウドでは：<span lang="en">"Audit logs are retained for one year."</span>
+- [<span lang="en">Pricing</span>](https://retool.com/pricing)、プラン比較表：
+  - <span lang="en">"Rich permission controls"</span> (<span lang="en">"Grant data-level and role-based permissions for granular control over app and data access."</span>) は Free と Team で「—」、Business と Enterprise で「Included」。
+  - <span lang="en">"Audit logs"</span> (<span lang="en">"Track every query run against your databases and APIs, as well as user actions taken in Retool."</span>) は Free と Team で「—」、Business と Enterprise で「Included」。
+  - <span lang="en">"Source control"</span> (<span lang="en">"Use branch-based editing processes that are compatible with Git."</span>) と「Custom SSO」は Enterprise にのみ含まれます。プランカードは <span lang="en">"Git source control"</span> and <span lang="en">"SSO, SCIM, 2FA"</span> を Business で「Not included」としています。
+  - Enterprise カードには <span lang="en">"Retool Cloud, self-hosted, or air-gapped"</span> and <span lang="en">"Audit logs + streaming"</span>.
+
+**Lovable**
+
+- [<span lang="en">Lovable for Enterprise</span>](https://docs.lovable.dev/introduction/lovable-for-enterprise): <span lang="en">"By default, project code lives in Lovable's managed infrastructure."</span> ロール：<span lang="en">"All paid plans. Owner, admin, editor, viewer, and external-collaborator."</span> <span lang="en">"Quick scan runs on every publish and checks database access rules, dependencies, and MCP server exposure."</span> ワークスペースの SSO の表示は <span lang="en">"Business and Enterprise"</span>。データエクスポート：<span lang="en">"Enterprise only. Scheduled exports of audit logs to Splunk, Azure Log Analytics, Amazon S3, Google Cloud Storage, or Azure Blob Storage."</span> 定期 Deep スキャン、公開の承認、監査ログの表示は <span lang="en">"Enterprise only"</span>.
+- [<span lang="en">Collaboration</span>](https://docs.lovable.dev/features/collaboration): <span lang="en">"By default, editors and above can publish projects on all plans."</span> プロジェクト権限の表で「Edit project」は Viewer が「No」、Editor・Admin・Owner が「Yes」。ワークスペースのメンバーは <span lang="en">"can see, edit, and publish the workspace's projects (unless a project's access is restricted)"</span>. <span lang="en">"A draft's edits reach the project only when someone accepts it."</span>
+- [<span lang="en">Drafts</span>](https://docs.lovable.dev/features/drafts): <span lang="en">"Lovable shows you a one-line summary of what the draft changes, followed by the draft's edits."</span> <span lang="en">"Accepting can change your live app's backend immediately, before you publish."</span>
+- [<span lang="en">Workspace policies</span>](https://docs.lovable.dev/features/workspace-policies)：ポリシーが制限するのは、「with unresolved sensitive data findings」の公開、「by external collaborators」の公開、「that makes an app public」公開、「apps that use connectors」の公開、そして「Lovable backend services」の有効化です。 <span lang="en">"When no policy applies, Lovable publishes the app or enables the backend without a review."</span> <span lang="en">"You cannot write your own conditions, choose different approvers, or send requests to specific people."</span>
+- [<span lang="en">Git sync</span>](https://docs.lovable.dev/integrations/git-sync-overview)：github.com、GitLab.com、Bitbucket Cloud との双方向同期で、いずれも次の表示：<span lang="en">"(all plans)"</span>. <span lang="en">"If your team requires a pull or merge request for every change to `main`, switch Lovable to a feature branch of its own and merge its work through the same review process."</span> <span lang="en">"Lovable edits and syncs one branch at a time."</span>
+- [<span lang="en">Control who can access your app's data</span>](https://docs.lovable.dev/features/database-access): <span lang="en">"Lovable sets up these rules automatically when it builds features that store user data."</span> <span lang="en">"The policies view is read-only. To change a policy, ask Lovable in the project chat."</span> <span lang="en">"Your policies do not apply to `service_role`, so server code that uses `service_role` must check permissions itself."</span>
+- [<span lang="en">Built-in backend</span>](https://docs.lovable.dev/features/cloud): <span lang="en">"Lovable hosts your app and includes a built-in backend with database, authentication, storage, edge functions, and AI."</span> 組み込みバックエンドは次と対比して呼ばれています：<span lang="en">"as opposed to an external backend you connect yourself, such as Supabase"</span>.
+- [<span lang="en">Audit logs</span>](https://docs.lovable.dev/features/audit-logs): <span lang="en">"Available on: Enterprise plans"</span>. イベント例には「Prompt sent」と「Database query executed」があります。 <span lang="en">"Logs are retained for 13 weeks, or approximately 90 days."</span>
+- [<span lang="en">Logs</span>](https://docs.lovable.dev/features/logs)、バックエンドの診断ログ。FAQ の質問：<span lang="en">"Can I use these logs as audit evidence?"</span> 回答：<span lang="en">"Not on their own. Logs help you diagnose problems, but they do not prove who made a particular database change."</span>
+- [<span lang="en">Deployment, hosting, and ownership options</span>](https://docs.lovable.dev/tips-tricks/deployment-hosting-ownership): <span lang="en">"Lovable is intentionally built so that **you are never locked in**. You can export your code, migrate your data, self-host parts or all of your stack, or move to another provider at any time."</span> Lovable をやめる場合、引き受ける事柄の一つが <span lang="en">"Implementing authentication and enforcing data isolation policies"</span>.
+
+**ObjectStack のドキュメント**、18.6.0 リリースタグ時点 (コミット [`958ee03`](https://github.com/objectstack-ai/objectstack/commit/958ee03594968c651db1bc40ecb05bfe72f94b2d)): [<span lang="en">"ObjectStack is younger; expect to build more of it yourself."</span>](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/concepts/compare.mdx#L115-L117)、および [<span lang="en">"Reads walk top-to-bottom: the first non-null layer wins. Writes always route to the topmost writable layer (the overlay)."</span>](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/concepts/metadata-lifecycle.mdx#L43)。オーバーレイ（overlay）は稼働中の環境で行われた編集を保持し、ファイルより上の層にあります
+
+### アプリ
+
+ObjectStack リポジトリのタグ `@objectstack/cli@18.6.0` 時点の `examples/app-crm` で、依存関係は公開版 18.6.0 パッケージに固定しています。セキュリティファイルは `crm_sales_rep` ポジションに `crm_sales_user` 権限セットを与えており、このセットは `crm_opportunity`（商談）の読み取り・作成・編集はできますが、削除はできません。このアプリはアクセスマトリクスのチェックを有効にしています。`objectstack.config.ts` の隣に `access-matrix.json` があります。
+
+```text
+$ npx os --version
+@objectstack/cli/18.6.0 linux-x64 node-v22.22.0
+```
+
+### 1. AI の変更、ビルドの拒否、レビューされた diff
+
+変更は `src/security/sales-positions.ts` の 50 行目です：
+
+```diff
+-    crm_opportunity: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: false },
++    crm_opportunity: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: true },
+```
+
+`npx os validate` は無関係なフィールド警告 4 件とともに `✓ Validation passed` を出力し、終了コード 0 でした。`npx os compile` は同じ 71 個のオーサリング時ルールを実行し、続いて：
+
+```text
+  → Checking access-matrix snapshot (ADR-0090 D6)...
+  ✗ Access matrix drift (1 change) — capability changes must be reviewed
+  • 'crm_sales_user' gains delete on 'crm_opportunity'
+  If intended, re-run with --update-access-matrix and commit the snapshot — its diff IS the review artifact.
+compile exit 1
+```
+
+受け入れ、つまり `npx os compile --update-access-matrix` は終了コード 0 で、`Access matrix snapshot written to access-matrix.json (ADR-0090 D6) — review the diff.` と出力しました。スナップショットの diff：
+
+```diff
+@@ -51,7 +51,7 @@
+       "create": true,
+       "read": true,
+       "edit": true,
+-      "delete": false,
++      "delete": true,
+       "viewAllRecords": false,
+       "modifyAllRecords": false,
+       "sharingModel": "public_read_write"
+```
+
+その後この変更は元に戻したので、以下のアプリは元の権限セットで動いています。
+
+### 2. 拒否された削除
+
+アプリは `npx os dev --compile --no-watch` で起動しました。起動時に `Tenancy: single` と `Seeds: com.example.crm 28 rows` が出力されました。管理 API で `rep@crm.example` と `agent-svc@crm.example` の 2 アカウントを作成し、それぞれに `crm_sales_rep` ポジションを与えました。どちらもポジション `org_member`、`crm_sales_rep`、`everyone` でサインインしました。`agent-svc` は API キーを発行しました。AI エージェントが接続に使うアイデンティティです。
+
+営業担当者、REST API 経由：
+
+```text
+$ curl -X DELETE -b rep.cookies http://localhost:49890/api/v1/data/crm_opportunity/DQ_aJg8_eTxq6Upb
+{"error":"You do not have permission to perform this action. Contact your administrator if you need access.","code":"PERMISSION_DENIED","object":"crm_opportunity"}
+HTTP 403
+```
+
+エージェント、自分のキーで MCP 経由：`tools/call` `delete_record` `{ objectName: "crm_opportunity", recordId: "DQ_aJg8_eTxq6Upb" }` の最初の応答：
+
+```json
+{ "error": { "code": "ACTION_CONFIRMATION_REQUIRED",
+  "message": "delete_record on 'crm_opportunity' record 'DQ_aJg8_eTxq6Upb' carries no confirmation — nothing was deleted. Deleting is destructive even where the recycle bin keeps the record. When the human's request named exactly this one record, that request is the approval: retry this call with 'confirm': true on the request. When the name matched more than one record, or the request is a bulk delete, ask the human first, then retry.",
+  "status": 428 } }
+```
+
+`"confirm": true` を付けて再試行した応答：
+
+```json
+{ "error": { "code": "PERMISSION_DENIED",
+  "message": "You do not have permission to perform this action. Contact your administrator if you need access.",
+  "status": 403 } }
+```
+
+2 回の拒否に対応するサーバーログ：
+
+```text
+WARN [Security] Access denied: operation 'delete' on object 'crm_opportunity' is not permitted for positions [org_member, crm_sales_rep, everyone] {"userId":"cD26sPqk1jy4CDl8e1J9QbiqjGBuoJ1U", …}
+WARN [Security] Access denied: operation 'delete' on object 'crm_opportunity' is not permitted for positions [org_member, crm_sales_rep, everyone] {"userId":"DgXiKK9ylkNiTWymVL2FEpBScCRNDZpe", …}
+```
+
+### 3. エージェントの編集とその監査行
+
+MCP 経由の `update_record` `{ objectName: "crm_opportunity", recordId: "DQ_aJg8_eTxq6Upb", data: { stage: "qualification" } }` は、`"stage": "qualification"` と `"updated_by": "DgXiKK9ylkNiTWymVL2FEpBScCRNDZpe"`（エージェントのアカウント）を持つレコードを返しました。続いて管理者が `crm_opportunity` について監査ログを照会すると、`"total": 1` で次の行が返りました：
+
+```json
+{
+  "created_at": "2026-11-20T02:35:32.022Z",
+  "action": "update",
+  "user_id": "DgXiKK9ylkNiTWymVL2FEpBScCRNDZpe",
+  "actor": "DgXiKK9ylkNiTWymVL2FEpBScCRNDZpe",
+  "object_name": "crm_opportunity",
+  "record_id": "DQ_aJg8_eTxq6Upb",
+  "old_value": "{\"stage\":\"prospecting\"}",
+  "new_value": "{\"stage\":\"qualification\"}",
+  "ip_address": null,
+  "user_agent": null,
+  "tenant_id": "org_mwod7busb94gl9il",
+  "metadata": null
+}
+```
+
+拒否された 2 回の削除には、どちらにも行がありません。同じ照会を営業担当者のセッションで送ると `HTTP 403` が返りました。
+
+### 4. 新規プロジェクトにはアクセステーブルがない
+
+`npm create objectstack@latest` が現在実行する `create-objectstack@18.6.0` パッケージのテンプレートには `access-matrix.json` がなく、テンプレートの CI ワークフローが実行するのはビルドではなく `pnpm validate` です。新規プロジェクトで最初に `os compile --update-access-matrix` を実行することが、このチェックを有効にする操作です。
