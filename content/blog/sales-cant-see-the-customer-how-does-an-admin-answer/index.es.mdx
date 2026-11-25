@@ -1,0 +1,333 @@
+---
+title: "Ventas no ve al cliente: ¿cómo responde un administrador?"
+description: "Pregunta al runtime, no a las pantallas de ajustes: un informe explain ejecuta las mismas comprobaciones que la aplicación de permisos y nombra la que rechazó y el rol que concedió. Medido en el ejemplo CRM de ObjectStack 18.6.0."
+author: ObjectStack Team
+date: 2026-11-30
+status: published
+topic: governance
+audience: it
+solutions: []
+industries: []
+cover: ./cover.svg
+tags:
+  - Permisos de agentes
+  - RBAC
+  - Explicación de permisos
+---
+
+Cuando ventas dice que no ve a un cliente, no reconstruyas la respuesta a partir de pantallas de ajustes. Pregunta al sistema que los rechazó. Un informe explain de acceso ejecuta, para esa persona y esa acción, las mismas comprobaciones que la plataforma ejecuta al aplicar los permisos, y nombra la comprobación que dijo no y el rol que dijo sí. El administrador lee una línea, hace un cambio y vuelve a preguntar antes de responder. Eso te protege de arreglar accesos a ojo, donde lo más rápido es conceder más de lo que el puesto necesita. El coste: solo explica permisos, así que un registro que no existe o una pantalla filtrada siguen necesitando que alguien mire.
+
+*Medido en ObjectStack 18.6.0, la versión que obtiene hoy una instalación nueva, con el ejemplo CRM de código abierto de la etiqueta de la versión, ejecutado contra los paquetes publicados. Cada petición y cada respuesta están en [La prueba](#la-prueba).*
+
+## El ticket, respondido
+
+La escena es corriente. Un administrador crea una cuenta para un nuevo representante de ventas. El representante inicia sesión, pide la lista de clientes y recibe un rechazo (hicimos todas las peticiones a través de la interfaz de programación de la plataforma, no desde una pantalla): "You do not have permission to perform this action. Contact your administrator if you need access." Llega un ticket: *ventas dice que no ve al cliente.*
+
+Hay dos maneras de responderlo. Una es abrir los ajustes del usuario, luego cada rol, luego cada paquete de permisos, luego las reglas de compartición del objeto cliente, y calcular de cabeza qué decidiría la plataforma. La otra es preguntar a la plataforma qué decidió y por qué.
+
+ObjectStack llama a la segunda el **motor explain**. Indicas una persona, un objeto y una acción, y devuelve una entrada por comprobación, en el orden en que se aplican, cada una con un veredicto, una frase y los nombres de lo que produjo ese veredicto. En sus respuestas aparecen dos términos de la plataforma. Un **permission set** es un paquete de permisos con nombre, como "CRM Sales User: puede leer, crear y editar clientes y oportunidades, no puede eliminar". Una **position** es un puesto que reparte paquetes: en el ejemplo CRM, la position Sales Representative reparte CRM Sales User. El ejemplo llama a los clientes *accounts* y a las oportunidades *opportunities*; son los nombres que aparecen en la prueba.
+
+Planteamos el ticket, y las preguntas que suelen seguirle, al motor explain sobre el ejemplo CRM, y comprobamos cada respuesta con lo que la aplicación de permisos hizo de verdad al mismo usuario.
+
+| Qué preguntó el administrador | Qué respondió el informe | Qué significa para ti |
+|:--|:--|:--|
+| ¿Por qué el nuevo representante no puede abrir Clientes? | **Rechazado en los permisos de objeto.** "No resolved permission set grants read" sobre clientes. El representante solo tenía los 2 paquetes que todo miembro recibe automáticamente. La aplicación de permisos rechazó la misma lectura. | La cuenta existe pero no tiene rol de ventas. No es una regla de compartición, ni un problema de datos, ni un fallo. |
+| Tras asignar la position Sales Representative, ¿puede leer clientes? | **Permitido.** Permisos de objeto **concedidos por CRM Sales User, a través de la position Sales Representative.** Filtro de filas: ninguno. Su lista devolvió los 3 clientes. | Un cambio, confirmado con la misma pregunta antes de decir a ventas que está arreglado. |
+| ¿Puede el representante eliminar una oportunidad? | **Rechazado en los permisos de objeto:** ningún paquete concede eliminar. La seguridad a nivel de fila también restringe las eliminaciones; preguntado por una oportunidad concreta, el informe muestra la condición: solo las que creó el representante. La aplicación de permisos rechazó la eliminación. | Según el informe, añadir eliminar al paquete de ventas no bastaría por sí solo: un miembro solo puede eliminar lo que creó. No concedimos eliminar para probarlo. |
+| ¿Puede leer oportunidades, y cuáles? | **Permitido**, concedido por CRM Sales User a través de Sales Representative. Filtro de filas: ninguno, así que todas. La aplicación de permisos listó las 12. | El filtro de filas es el que aplican las listas y los informes. En una lectura permitida, "ninguno" significa toda la tabla. |
+| ¿Puede exportar oportunidades? | **Rechazado en los permisos de objeto:** ningún paquete concede exportar, aunque puede leer todas las oportunidades. La aplicación de permisos rechazó la exportación. | Exportar es un permiso aparte. Preguntar "¿puede leer?" da un sí y no dice nada. |
+| ¿Quién puede hacer estas preguntas? | El representante sobre sí mismo: respondido. Una compañera del servicio de soporte sin rol de administración, sobre el representante: **rechazado**. La misma compañera después de hacerla administradora de la organización: respondido. | El informe de acceso está a su vez controlado. Dice quién tiene qué, así que no cualquiera puede leerlo. |
+
+Cada fila se responde con una sola petición; las transcripciones están en [La prueba](#la-prueba). No cronometramos a un administrador leyéndolas, así que no afirmamos nada sobre minutos.
+
+![El informe explain de una lectura de Clientes, antes y después del arreglo: nueve comprobaciones en el orden en que se aplican. Antes, los permisos de objeto rechazaron, porque el representante solo tenía los dos paquetes que recibe todo miembro. Después de que el administrador asignara la position Sales Representative, los permisos de objeto concedieron la lectura a través de CRM Sales User. Las demás comprobaciones fueron neutras o no se aplicaron. Al preguntar por un registro concreto, el informe añade al principio una décima comprobación, el muro de la organización](./nine-checks-en.svg)
+
+## Explicado por construcción
+
+Lo útil de este informe no es que sea detallado. Es que no puede contradecir a la aplicación de permisos. La guía de ObjectStack dice que el motor explain ["recorre **las mismas rutas de código que ejecuta el middleware de aplicación** … así que el informe está *explicado por construcción*, nunca es una reimplementación paralela que pueda desviarse."](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L7-L13) La referencia del esquema lo dice más corto: el informe ["ES la aplicación de permisos, sin el lanzamiento del error."](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/references/security/explain.mdx#L12-L17)
+
+Esa es la diferencia con una hoja de permisos o un diagrama de roles, que describen lo que alguien *quiso* configurar. Una descripción puede quedarse desfasada. Este informe no es una segunda descripción: por diseño es la misma ruta de código que rechazó al representante, ejecutada sin el rechazo. No auditamos ese diseño línea a línea. Lo que comprobamos es más acotado: en nuestra ejecución, cada uno de los cinco veredictos de la tabla que la aplicación de permisos podía confirmar coincidió con lo que esta hizo después al mismo usuario, petición por petición.
+
+Leer uno requiere tres miradas:
+
+1. **El veredicto.** Permitido o no, para esta persona, este objeto y esta acción.
+2. **La comprobación que dijo no.** Una entrada aparece marcada como la que rechaza. En cada rechazo que medimos fueron los permisos de objeto: la comprobación de si algún paquete de la persona permite esta acción sobre este tipo de registro.
+3. **Quién dijo sí.** Una entrada que concede nombra el paquete y cómo lo tiene la persona. "CRM Sales User, a través de la position Sales Representative" le dice al administrador qué mirar y de dónde viene. Un rechazo en los permisos de objeto no nombra a nadie, porque nadie concedió. La primera entrada lista todos los paquetes que la persona sí tiene, así que el hueco se ve.
+
+En una lectura, el informe trae además el **filtro de filas**: la condición que la plataforma añade a cada lista, búsqueda e informe de esa persona. En el ejemplo CRM, cada cliente y cada oportunidad se comparten en toda la organización, así que el filtro estaba vacío. En una aplicación donde los representantes solo ven sus propias oportunidades, mostraría esa condición, y esa condición es la respuesta a "¿por qué ve estas oportunidades y no aquella?"
+
+Pregunta por un objeto y el informe devuelve nueve comprobaciones. Pregunta por un registro concreto y devuelve diez: primero va un muro de la organización, que en nuestra instalación de una sola organización respondió "no se aplica". Por eso las dos páginas de documentación de ObjectStack dan [nueve](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L20-L23) y [diez](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/references/security/explain.mdx#L19-L21).
+
+## Quién puede preguntar
+
+Un informe de acceso dice qué paquetes tiene una persona y cómo los obtuvo. Es sensible, así que la propia pregunta está controlada. En 18.6.0 la regla del runtime es: sobre uno mismo, siempre; sobre otro usuario, solo si tienes el derecho de gestionar usuarios, administras una organización a la que pertenece ese usuario o tienes un ámbito de administración delegado que lo cubre ([fuente](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/security-plugin-explain-access.ts#L134-L138)). A todos los demás se les rechaza.
+
+Medimos tres solicitantes. El representante sobre sí mismo: respondido. Una compañera de soporte, miembro corriente, sobre el representante: rechazada, y el rechazo nombraba las tres maneras de cumplir los requisitos. Después de que el administrador la hiciera administradora de la organización, la plataforma le dio el paquete de administración de la organización, y la misma pregunta obtuvo respuesta. Así que un administrador de la organización puede responder estos tickets sin tener el derecho de gestionar usuarios en toda la plataforma. No medimos la vía del ámbito delegado, que es la forma más acotada de dejar que un equipo de soporte responda estos tickets.
+
+## Lo que juega a favor de leer la configuración
+
+El informe explain no es la única buena herramienta, y para algunos tickets no es la mejor.
+
+- **Leer la configuración funciona en todas partes y muestra lo que hay alrededor.** Con tres roles y un paquete, como en este ejemplo CRM, abrir el rol es tan rápido como preguntar, no necesita ninguna función que a la plataforma pueda faltarle y muestra todo lo que el rol concede, no solo una decisión.
+- **Entrar como el usuario muestra la pantalla.** ObjectStack permite a un administrador [suplantar a un usuario para verificar su acceso](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/authentication.mdx#L1230-L1233), y muchas plataformas ofrecen algo parecido. Si la queja es "falta el botón" o "el menú está vacío", ver la pantalla es más rápido que leer comprobaciones. El informe responde por qué una decisión salió así; la suplantación responde qué ve la persona.
+- **Para preguntas de política, una vista de conjunto gana a la lupa.** "¿Quién puede eliminar oportunidades?" es una pregunta sobre todos los roles a la vez. La propia guía de ObjectStack traza esa línea: explain ["es la misma lógica de evaluación apuntada a una decisión en tiempo de ejecución; la matriz es el barrido de todas en tiempo de compilación"](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/access-matrix.mdx#L81-L83). Tratamos la matriz en [¿Cómo detectar un cambio silencioso de permisos hecho por una IA antes de publicarlo?](/es/blog/catch-ai-silent-permission-change-access-matrix-gate/)
+- **En los ajustes es donde encuentras el arreglo y lo haces.** Un rechazo te dice qué falta: ningún paquete del representante concede leer clientes. No te dice qué rol lo aporta. Eso lo buscas en los roles y paquetes, y el cambio se hace allí. En una plataforma donde una IA escribe esas definiciones, el cambio llega como un diff que alguien [revisa](/en/blog/how-to-review-ai-generated-app-changes/).
+
+## Lo que el informe no resuelve
+
+- **Explica permisos, no datos.** Un cliente que nunca se creó, que se fusionó o que oculta el filtro propio de una vista se ve igual para quien se queja. El informe dirá "permitido" y el cliente seguirá sin aparecer. Alguien tiene que mirar.
+- **No dice si el acceso es correcto.** Nos dijo que el representante no puede exportar oportunidades. Si ventas *debería* poder hacerlo es una decisión de política, igual que si el arreglo es una position o un paquete más estrecho.
+- **No muestra qué más concede el arreglo.** Preguntamos por leer clientes. La position que asignamos también permite al representante crear y editar clientes, contactos, oportunidades, líneas de producto de oportunidades, leads y actividades. El informe confirmó solo la decisión por la que preguntamos. Para ver todo lo que trae un rol, lee el rol o usa la matriz de tiempo de compilación.
+- **Algunas respuestas necesitan una segunda pregunta.** Para una eliminación, el informe a nivel de objeto dijo que la seguridad a nivel de fila restringe las filas, pero no mostró la condición. Preguntado por una oportunidad concreta, sí: solo las que creó el representante. Etiquetó la regla de forma genérica, no con el nombre que la política tiene en el paquete predeterminado de la plataforma; la prueba muestra ambos.
+- **Lee el veredicto antes que el filtro de filas.** En una lectura rechazada, el informe seguía trayendo un filtro de filas vacío, que por sí solo significaría "todas las filas". La [referencia del esquema](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/references/security/explain.mdx#L110) dice que la decisión es el veredicto más la comprobación de seguridad a nivel de fila, no el filtro solo.
+- **Necesita el plugin de seguridad.** La guía lo dice claramente: ["Un despliegue sin `@objectstack/plugin-security` responde 501"](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L116), es decir, no puede responder en absoluto.
+
+La guía de ObjectStack también dice que el área Access de Studio construye su [panel "¿por qué puede acceder este usuario?"](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L120-L121) sobre este informe. Medimos el informe a través de su interfaz de programación, no esa pantalla.
+
+## En desarrollo
+
+El formato del informe ya reserva más espacio del que llena hoy. La referencia del esquema describe un nivel para cada persona (administrador de plataforma, administrador de organización, miembro, miembro externo) y una marca de qué comprobaciones pertenecen al muro de la organización, como vocabulario ["que el motor β y la interfaz rellenarán"](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/references/security/explain.mdx#L30-L34). En 18.6.0 ambos aparecen ya cuando preguntas por un registro concreto: cada comprobación llevaba la marca del muro, y el nivel del representante volvió como miembro. Ninguno aparece en una respuesta a nivel de objeto. La referencia no dice qué más añadirán ese motor y esa interfaz posteriores, y no medimos nada más allá de estos dos campos.
+
+## Apunta tu agente al informe
+
+Si un agente de IA escribe los roles y paquetes de tu aplicación, el informe explain es la forma en que una persona comprueba el resultado decisión a decisión, y en que el agente puede comprobar su propio trabajo antes de entregarte un diff. [Apunta tu agente a ObjectStack](/en/blog/how-to-point-your-agent-at-objectstack/) y pídele que explique el acceso que acaba de conceder. Para saber dónde se ejecutan estas comprobaciones en la ruta de un agente, consulta [Where AI agent permissions are enforced](/en/blog/objectos-agent-permission-boundaries/) y [cómo leen los agentes de CRM los datos de clientes sin saltarse los permisos](/es/blog/crm-ai-understands-customers/). Para el vocabulario, consulta el [modelo de permisos](/en/glossary/permission-model/) y la [seguridad a nivel de fila](/es/glossary/row-level-security/).
+
+{/* the-proof */}
+## La prueba
+
+Todo lo anterior se midió el 2026-11-23 contra ObjectStack **18.6.0**.
+
+```text
+$ npm view @objectstack/cli dist-tags
+{ next: '0.0.0-next-20261123013358', latest: '18.6.0' }
+$ npm view @objectstack/cli dist-tags.latest
+18.6.0
+```
+
+### Preparación
+
+El ejemplo CRM de la etiqueta `@objectstack/cli@18.6.0` (commit [`958ee03`](https://github.com/objectstack-ai/objectstack/commit/958ee03594968c651db1bc40ecb05bfe72f94b2d)), instalado contra los paquetes publicados de 18.6.0 en lugar del monorepo: sus dependencias `workspace:*` fijadas en `18.6.0`, sin su carpeta de pruebas ni las dependencias de desarrollo solo para pruebas.
+
+```text
+$ git -C ~/objectstack archive '@objectstack/cli@18.6.0' examples/app-crm | tar -x --strip-components=2
+$ npm install
+$ npx os --version
+@objectstack/cli/18.6.0 linux-x64 node-v22.22.0
+$ npx os dev --fresh -p 3276
+  ...
+  Security: 3 Positions  2 Permissions
+  ...
+  🔑  Dev admin: admin@objectos.ai / admin123
+  Tenancy: single
+  Seeds:   com.example.crm 28 rows
+```
+
+`--fresh` arranca sobre una base de datos vacía y desechable. El administrador inicia sesión y crea dos cuentas con `POST /api/v1/auth/admin/create-user`: `rep@example.com` y `helpdesk@example.com`, ninguna con position. El registro propio está cerrado en esta instalación, por eso las crea el administrador (una ejecución aparte sobre la misma instalación, guardada junto al script con la comprobación de versión de arriba):
+
+```text
+$ curl -s -X POST http://localhost:3276/api/v1/auth/sign-up/email -H 'Content-Type: application/json' -d '{"email":"newhire@example.com","password":"…","name":"newhire"}'
+{"code":"SELF_REGISTRATION_CLOSED","message":"Self-registration is closed (audience posture invite_only). Ask an administrator for an invitation."}
+HTTP 403
+```
+
+Cada cuenta inicia sesión con `POST /api/v1/auth/sign-in/email`, y los archivos de cookies `admin.jar`, `rep.jar` y `helpdesk.jar` llevan las sesiones. Los ids de usuario de abajo son de esta ejecución.
+
+Los roles de ventas del ejemplo, en la etiqueta ([`sales-positions.ts`](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/examples/app-crm/src/security/sales-positions.ts#L12-L17), [líneas 44–61](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/examples/app-crm/src/security/sales-positions.ts#L44-L61)):
+
+```typescript
+export const SalesRepPosition = definePosition({
+  name: 'crm_sales_rep',
+  label: 'Sales Representative',
+  description: 'Front-line sales representative.',
+  permissionSets: ['crm_sales_user'],
+});
+// ...
+    crm_account: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: false },
+    crm_opportunity: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: false },
+```
+
+Ambos objetos se comparten en toda la organización: `sharingModel: 'public_read_write'` ([account, línea 11](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/examples/app-crm/src/objects/account.object.ts#L11); [opportunity, línea 12](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/examples/app-crm/src/objects/opportunity.object.ts#L12)).
+
+### 1. El ticket
+
+```text
+$ curl -b rep.jar http://localhost:3276/api/v1/data/crm_account
+{"error":"You do not have permission to perform this action. Contact your administrator if you need access.","code":"PERMISSION_DENIED","object":"crm_account"}
+HTTP 403
+```
+
+### 2. El administrador pregunta por qué: el informe completo
+
+```text
+$ curl -b admin.jar 'http://localhost:3276/api/v1/security/explain?object=crm_account&operation=read&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX'
+```
+
+```json
+{
+  "allowed": false,
+  "object": "crm_account",
+  "operation": "read",
+  "principal": {
+    "userId": "v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX",
+    "positions": ["org_member", "everyone"],
+    "permissionSets": ["member_default", "storage_attachment_member"],
+    "principalKind": "human"
+  },
+  "layers": [
+    {
+      "layer": "principal",
+      "verdict": "neutral",
+      "detail": "Principal rep (rep@example.com; id v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX) holds position(s) [org_member, everyone] resolving to permission set(s) [member_default, storage_attachment_member] (union-merged, most-permissive).",
+      "contributors": [
+        { "kind": "position", "name": "org_member" },
+        { "kind": "position", "name": "everyone" },
+        { "kind": "permission_set", "name": "member_default", "via": "additive baseline (ADR-0090 D5)" },
+        { "kind": "permission_set", "name": "storage_attachment_member", "via": "additive baseline (ADR-0090 D5)" }
+      ]
+    },
+    { "layer": "required_permissions", "verdict": "not_applicable", "detail": "'crm_account' declares no requiredPermissions for read.", "contributors": [] },
+    { "layer": "object_crud", "verdict": "denies", "detail": "No resolved permission set grants read on 'crm_account'.", "contributors": [] },
+    { "layer": "fls", "verdict": "not_applicable", "detail": "No field-level masking applies.", "contributors": [] },
+    { "layer": "owd_baseline", "verdict": "neutral", "detail": "Record baseline (OWD) is public_read_write: rows are org-shared at this baseline.", "contributors": [] },
+    { "layer": "depth", "verdict": "not_applicable", "detail": "Depth axis does not apply (baseline already org-wide).", "contributors": [] },
+    { "layer": "sharing", "verdict": "not_applicable", "detail": "Baseline already grants the rows sharing would add.", "contributors": [] },
+    { "layer": "vama_bypass", "verdict": "not_applicable", "detail": "No View/Modify All Data bypass.", "contributors": [] },
+    { "layer": "rls", "verdict": "not_applicable", "detail": "No RLS policy applies.", "contributors": [] }
+  ],
+  "readFilter": null
+}
+```
+
+Nueve entradas. El JSON es la respuesta tal como llegó, con cada entrada plegada en menos líneas.
+
+### 3. El arreglo, y la misma pregunta otra vez
+
+```text
+$ curl -b admin.jar -X POST http://localhost:3276/api/v1/data/sys_user_position \
+    -H 'Content-Type: application/json' \
+    -d '{"user_id":"v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX","position":"crm_sales_rep","reason":"Ticket: rep cannot open customers"}'
+{'display_title': 'rep → crm_sales_rep', 'granted_by': 'hsitZYEkgelqpLEjjjzndGTJU2M9jnnI', 'reason': 'Ticket: rep cannot open customers'}
+
+$ curl -b admin.jar 'http://localhost:3276/api/v1/security/explain?object=crm_account&operation=read&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX'
+allowed: True | layers: 9 | readFilter: null
+  object_crud  grants  read on 'crm_account' is granted by [crm_sales_user].
+               contributors: [{"kind": "permission_set", "name": "crm_sales_user", "via": "position:crm_sales_rep"}]
+  (the other eight entries as in step 2; principal now lists crm_sales_rep and crm_sales_user)
+
+$ curl -b rep.jar 'http://localhost:3276/api/v1/data/crm_account?fields=name&limit=50'
+HTTP 200 | total: 3 | names: ['Acme Corp', 'Globex Ltd', 'Initech']
+```
+
+La fila de asignación registra quién la concedió y por qué. Las líneas que empiezan por `allowed:` son el resumen de una línea que hace nuestro script del informe; el JSON en bruto de cada petición se guarda junto al script.
+
+### 4. Oportunidades: eliminar, leer, exportar, y qué hizo la aplicación de permisos
+
+```text
+$ curl -b admin.jar 'http://localhost:3276/api/v1/security/explain?object=crm_opportunity&operation=delete&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX'
+allowed: False | layers: 9 | readFilter: (absent)
+  object_crud  denies   No resolved permission set grants delete on 'crm_opportunity'.
+  rls          narrows  Row-level security narrows the row set (see readFilter for the composed predicate).
+
+$ curl -b admin.jar 'http://localhost:3276/api/v1/security/explain?object=crm_opportunity&operation=read&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX'
+allowed: True | layers: 9 | readFilter: null
+  object_crud  grants   read on 'crm_opportunity' is granted by [crm_sales_user].  via position:crm_sales_rep
+
+$ curl -b admin.jar 'http://localhost:3276/api/v1/security/explain?object=crm_opportunity&operation=export&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX'
+allowed: False | layers: 9 | readFilter: null
+  object_crud  denies   No resolved permission set grants export on 'crm_opportunity'.
+
+$ curl -b rep.jar -X DELETE http://localhost:3276/api/v1/data/crm_opportunity/2qolV83IXvGaXxdA
+{"error":"You do not have permission to perform this action. Contact your administrator if you need access.","code":"PERMISSION_DENIED","object":"crm_opportunity"}
+HTTP 403
+
+$ curl -b rep.jar 'http://localhost:3276/api/v1/data/crm_opportunity?fields=name&limit=50'
+{"object":"crm_opportunity","records":[ … 12 deals … ],"total":12,"hasMore":false}
+HTTP 200
+
+$ curl -b rep.jar http://localhost:3276/api/v1/data/crm_opportunity/export
+{"code":"EXPORT_NOT_PERMITTED","error":"Export is not permitted on object 'crm_opportunity' for this user","object":"crm_opportunity"}
+HTTP 403
+```
+
+Las entradas no mostradas son iguales que en el paso 2. Un informe de eliminación no trae ningún campo `readFilter`, que es lo que significa `(absent)`. La guía explica por qué exportar necesita su propia pregunta: ["`export` es la única operación cuya respuesta no se puede deducir de `read`"](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L77-L86), y la página de permission sets dice que [ningún paquete integrado incluye el permiso de exportación](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/permission-sets.mdx#L94-L101).
+
+### 5. Un registro: diez entradas
+
+```text
+$ curl -b admin.jar 'http://localhost:3276/api/v1/security/explain?object=crm_opportunity&operation=read&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX&recordId=2qolV83IXvGaXxdA'
+allowed: True | layers: 10 | readFilter: null
+  tenant_isolation  not_applicable  Layer 0 tenant isolation — the always-first org wall, AND-composed before any business RLS (ADR-0095 D1).
+  principal … rls   (the nine entries of step 4's read, each now with kernelTier; principal adds "posture": "MEMBER")
+record: {"recordId": "2qolV83IXvGaXxdA", "visible": true, "decidedBy": "object_crud"}
+
+$ curl -b admin.jar 'http://localhost:3276/api/v1/security/explain?object=crm_opportunity&operation=delete&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX&recordId=2qolV83IXvGaXxdA'
+allowed: False | layers: 10 | readFilter: (absent)
+record: {"recordId": "2qolV83IXvGaXxdA", "visible": false, "decidedBy": "object_crud"}
+```
+
+Una respuesta a nivel de objeto no tiene capa de inquilino: el código del motor lo dice en un comentario, ["no tenant_isolation layer, no kernelTier, no posture"](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/explain-engine.ts#L2926-L2927).
+
+La entrada de seguridad a nivel de fila de la eliminación a nivel de registro, tal como llegó:
+
+```json
+{
+  "layer": "rls",
+  "verdict": "narrows",
+  "detail": "Row-level security narrows the row set (see readFilter for the composed predicate).",
+  "contributors": [],
+  "record": {
+    "outcome": "excluded",
+    "rowFilter": { "created_by": "v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX" },
+    "matchesRecord": false,
+    "rules": [
+      {
+        "kind": "rls_policy",
+        "name": "business_rls",
+        "predicate": { "created_by": "v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX" },
+        "effect": "excludes"
+      }
+    ],
+    "detail": "The record does not satisfy the business row-level predicate."
+  },
+  "kernelTier": "layer_1_business"
+}
+```
+
+La condición viene del paquete de miembro que tiene todo miembro con sesión iniciada, donde la política se llama `owner_only_deletes` (`created_by == current_user.id`, ligada a `org_member`; [`default-permission-sets.ts` líneas 928–934](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/objects/default-permission-sets.ts#L928-L934)). La oportunidad sembrada se creó al arrancar, no la creó el representante, así que queda excluida.
+
+### 6. Quién puede preguntar
+
+```text
+$ curl -b rep.jar 'http://localhost:3276/api/v1/security/explain?object=crm_opportunity&operation=delete'      # yourself: no userId
+HTTP 200
+allowed: False | layers: 9 | readFilter: (absent)
+
+$ curl -b helpdesk.jar 'http://localhost:3276/api/v1/security/explain?object=crm_opportunity&operation=delete&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX'
+{"success":false,"error":{"code":"PERMISSION_DENIED","message":"[Security] Access denied: explaining another user's access requires the 'manage_users' capability, organization administration of an organization that user is a member of, or a delegated adminScope covering that user (ADR-0090 D6/D12)."}}
+HTTP 403
+
+$ curl -b admin.jar -X POST http://localhost:3276/api/v1/auth/organization/update-member-role \
+    -H 'Content-Type: application/json' -d '{"memberId":"mem_mwsnwe0oznkd4j6u","role":"admin"}'
+{…,"role":"admin","id":"mem_mwsnwe0oznkd4j6u","outcome":"permission_set_granted","grantedPermissionSet":{"name":"organization_admin_no_bypass","label":"Organization Administrator (no record bypass)"}}
+HTTP 200
+
+$ curl -b admin.jar 'http://localhost:3276/api/v1/data/sys_user_permission_set?limit=50'    # the help desk's row, picked from the list by user_id
+{'permission_set': 'organization_admin_no_bypass', 'organization_id': 'org_mwsnwbk2cl1ypwnm', 'reason': "auto-org-admin-grant: granted from membership grade 'admin' (sys_member mem_mwsnwe0oznkd4j6u) → organization_admin_no_bypass"}
+
+$ curl -b helpdesk.jar 'http://localhost:3276/api/v1/security/explain?object=crm_opportunity&operation=delete&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX'
+HTTP 200
+allowed: False | layers: 9 | readFilter: (absent)
+```
+
+El paquete de administración de la organización incluye `manage_org_users`, no `manage_users`: [`default-permission-sets.ts` línea 461](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/objects/default-permission-sets.ts#L461) lista los permisos de sistema de `organization_admin`, y la variante sin bypass los hereda tal cual ([líneas 1652–1656](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/objects/default-permission-sets.ts#L1652-L1656)). El runtime lo admite por la rama de administración de organización de su comprobación del solicitante ([`security-plugin-explain-access.ts` líneas 152–165](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/security-plugin-explain-access.ts#L152-L165); el texto del rechazo, [líneas 197–200](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/security-plugin-explain-access.ts#L197-L200)).
+
+### 7. Las líneas citadas, en la etiqueta 18.6.0
+
+Las rutas que empiezan por `content/docs/` se muestran sin ese prefijo.
+
+- `permissions/explain.mdx`: [líneas 7–13](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L7-L13) (nueve capas, explicado por construcción), [líneas 20–23](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L20-L23) (las nueve en orden), [líneas 77–86](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L77-L86) (exportar), [líneas 97–109](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L97-L109) (quién puede preguntar), [línea 116](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L116) (501 sin el plugin de seguridad), [líneas 120–121](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L120-L121) (el panel de Studio).
+- `references/security/explain.mdx`: [líneas 12–17](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/references/security/explain.mdx#L12-L17) (la aplicación de permisos, sin el lanzamiento del error), [líneas 19–21](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/references/security/explain.mdx#L19-L21) (diez capas), [líneas 30–34](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/references/security/explain.mdx#L30-L34) (vocabulario reservado).
+- `packages/plugins/plugin-security/src/explain-engine.ts`: [líneas 2926–2927](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/explain-engine.ts#L2926-L2927) (sin capa de inquilino en una respuesta a nivel de objeto).
+- `packages/plugins/plugin-security/src/security-plugin-explain-access.ts`: [líneas 134–138](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/security-plugin-explain-access.ts#L134-L138) (quién puede describir a otro usuario).
+- `permissions/access-matrix.mdx`: [líneas 81–83](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/access-matrix.mdx#L81-L83) (lupa y barrido).
+- `permissions/authentication.mdx`: [líneas 1230–1233](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/authentication.mdx#L1230-L1233) (suplantar a un usuario para verificar su acceso).

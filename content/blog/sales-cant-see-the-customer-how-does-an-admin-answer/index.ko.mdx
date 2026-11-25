@@ -1,0 +1,333 @@
+---
+title: "영업팀이 고객을 볼 수 없다고 할 때, 관리자는 어떻게 답할까?"
+description: "설정 화면이 아니라 런타임에 물어보세요. 권한 explain 보고서는 적용할 때와 같은 검사를 실행하고, 거부한 검사와 허용한 역할을 알려 줍니다. ObjectStack 18.6.0의 CRM 예제로 측정했습니다."
+author: ObjectStack Team
+date: 2026-11-30
+status: published
+topic: governance
+audience: it
+solutions: []
+industries: []
+cover: ./cover.svg
+tags:
+  - 에이전트 권한
+  - RBAC
+  - 권한 설명
+---
+
+영업팀이 어떤 고객이 안 보인다고 하면, 설정 화면을 하나하나 뒤져 답을 짜 맞추지 마세요. 거부한 시스템에 직접 물어보세요. 접근 explain 보고서는 그 한 사람과 그 한 작업에 대해, 플랫폼이 접근을 적용할 때 실행하는 것과 같은 검사를 실행하고, "아니요"라고 한 검사와 "예"라고 한 역할을 알려 줍니다. 관리자는 한 줄을 읽고, 한 가지를 바꾸고, 답장하기 전에 한 번 더 물어 확인합니다. 이렇게 하면 짐작으로 접근 권한을 고치는 일을 피할 수 있습니다. 짐작으로 가장 빨리 고치는 방법은 업무에 필요한 것보다 많이 주는 것이기 때문입니다. 대가는 이렇습니다. 보고서는 권한만 설명하므로, 존재하지 않는 레코드나 화면에서 걸러진 레코드는 여전히 사람이 확인해야 합니다.
+
+*ObjectStack 18.6.0(오늘 새로 설치하면 받는 버전)에서 측정했습니다. 릴리스 태그의 오픈소스 CRM 예제를 공개된 패키지로 실행했습니다. 모든 요청과 응답은 [증거](#증거)에 있습니다.*
+
+## 티켓에 답하기
+
+흔한 장면입니다. 관리자가 새 영업 담당자의 계정을 만듭니다. 영업 담당자가 로그인해 고객 목록을 요청하자 거부됩니다(모든 요청은 화면이 아니라 플랫폼의 프로그래밍 인터페이스로 보냈습니다): "You do not have permission to perform this action. Contact your administrator if you need access." 이어서 티켓이 들어옵니다. *영업팀이 고객을 볼 수 없다.*
+
+답하는 방법은 두 가지입니다. 하나는 사용자의 설정을 열고, 각 역할, 각 권한 묶음, 고객 객체의 공유 규칙을 차례로 보면서 플랫폼이 어떻게 판정할지 머릿속으로 계산하는 것입니다. 다른 하나는 플랫폼에 무엇을 왜 그렇게 판정했는지 묻는 것입니다.
+
+ObjectStack은 두 번째 방법을 **explain 엔진**이라고 부릅니다. 사람, 객체, 작업을 지정하면 적용 순서대로 검사마다 항목 하나를 돌려주고, 각 항목에는 판정, 한 문장 설명, 그 판정을 만든 것의 이름이 붙습니다. 답에는 플랫폼 용어 두 개가 나옵니다. **permission set**은 이름이 붙은 권한 묶음으로, 예를 들어 "CRM Sales User: 고객과 영업 기회를 읽고 만들고 편집할 수 있으며 삭제는 불가"입니다. **position**은 묶음을 나눠 주는 직무 역할로, CRM 예제에서는 Sales Representative position이 CRM Sales User를 나눠 줍니다. 이 예제는 고객을 *accounts*, 영업 기회를 *opportunities*라고 부르며, 증거에도 이 이름이 쓰입니다.
+
+우리는 이 티켓과, 보통 뒤따르는 질문들을 CRM 예제의 explain 엔진에 던지고, 각 답을 같은 사용자에게 적용 계층이 실제로 한 일과 대조했습니다.
+
+| 관리자가 물은 것 | 보고서의 답 | 당신에게 의미하는 것 |
+|:--|:--|:--|
+| 새 영업 담당자는 왜 고객을 열 수 없나? | **객체 권한에서 거부.** 고객에 대해 "No resolved permission set grants read". 영업 담당자는 모든 멤버가 자동으로 받는 묶음 2개만 가지고 있었다. 적용 계층도 같은 읽기를 거부했다. | 계정은 있지만 영업 역할이 없다. 공유 규칙 문제도, 데이터 문제도, 버그도 아니다. |
+| 관리자가 Sales Representative position을 할당한 뒤에는 고객을 읽을 수 있나? | **허용.** 객체 권한은 **CRM Sales User가 부여했고, Sales Representative position을 통해 보유.** 행 필터: 없음. 이후 고객 목록은 3개 모두를 돌려줬다. | 변경은 하나. 영업팀에 고쳐졌다고 알리기 전에 같은 질문으로 확인한다. |
+| 영업 담당자가 영업 기회를 삭제할 수 있나? | **객체 권한에서 거부:** 삭제를 부여하는 묶음이 없다. 행 수준 보안도 삭제를 좁힌다. 특정 영업 기회에 대해 물으면 보고서가 조건을 보여 준다: 본인이 만든 것만. 적용 계층은 삭제를 거부했다. | 보고서에 따르면 영업 묶음에 삭제를 추가하는 것만으로는 충분하지 않다. 멤버는 자신이 만든 것만 삭제할 수 있다. 삭제를 부여해 시험하지는 않았다. |
+| 영업 담당자가 영업 기회를 읽을 수 있나, 어떤 것을? | **허용.** CRM Sales User가 Sales Representative를 통해 부여. 행 필터: 없음, 즉 전부. 적용 계층은 12개 모두를 나열했다. | 행 필터는 목록과 보고서가 실제로 적용하는 조건이다. 허용된 읽기에서 "없음"은 테이블 전체를 뜻한다. |
+| 영업 담당자가 영업 기회를 내보낼 수 있나? | **객체 권한에서 거부:** 모든 영업 기회를 읽을 수 있는데도 내보내기를 부여하는 묶음이 없다. 적용 계층은 내보내기를 거부했다. | 내보내기는 별도의 권한이다. "읽을 수 있나?"라고 물으면 "예"가 나오고 아무것도 알 수 없다. |
+| 누가 이런 질문을 할 수 있나? | 영업 담당자가 자신에 대해: 답함. 관리자 역할이 없는 헬프데스크 동료가 영업 담당자에 대해: **거부**. 같은 동료를 조직 관리자로 만든 뒤: 답함. | 접근 보고서 자체도 접근 통제를 받는다. 누가 무엇을 가졌는지 보여 주므로 아무나 읽을 수 없다. |
+
+각 행은 요청 한 번으로 답이 나옵니다. 기록은 [증거](#증거)에 있습니다. 관리자가 읽는 시간은 재지 않았으므로 몇 분이 걸린다고 주장하지 않습니다.
+
+![고객 읽기 한 번에 대한 explain 보고서, 수정 전후: 적용 순서대로 놓인 아홉 가지 검사. 수정 전에는 객체 권한이 거부했다. 영업 담당자가 모든 멤버가 받는 두 묶음만 가지고 있었기 때문이다. 관리자가 Sales Representative position을 할당한 뒤, 객체 권한은 CRM Sales User를 통해 읽기를 허용했다. 나머지 검사는 모두 중립이거나 적용되지 않았다. 특정 레코드에 대해 물으면 보고서는 맨 앞에 열 번째 검사인 조직의 벽을 추가한다](./nine-checks-en.svg)
+
+## 구조로 보장되는 설명
+
+이 보고서가 유용한 이유는 자세해서가 아닙니다. 적용 계층과 어긋날 수 없기 때문입니다. ObjectStack 가이드는 explain 엔진이 ["**적용 미들웨어가 실행하는 것과 같은 코드 경로**를 따라간다 … 그래서 보고서는 *구조로 보장되는 설명*(explained by construction)이며, 점점 어긋날 수 있는 병렬 재구현이 아니다"](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L7-L13)라고 말합니다. 스키마 참조 문서는 더 짧게 말합니다. 보고서는 ["적용 그 자체이며, 예외를 던지지 않을 뿐"](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/references/security/explain.mdx#L12-L17)이라고요.
+
+이것이 권한 표나 역할 도식과의 차이입니다. 그런 것들은 누군가 설정*하려던* 것을 기술합니다. 기술은 낡을 수 있습니다. 이 보고서는 두 번째 기술이 아닙니다. 설계상, 영업 담당자를 거부한 바로 그 코드 경로를 거부 없이 실행한 것입니다. 우리가 이 설계를 한 줄씩 감사한 것은 아닙니다. 우리가 확인한 범위는 더 좁습니다. 이번 실행에서, 표에서 적용 계층이 뒷받침할 수 있었던 다섯 개의 판정은 모두 그 뒤 적용 계층이 같은 사용자에게 한 일과 요청마다 일치했습니다.
+
+보고서는 세 곳만 보면 읽을 수 있습니다.
+
+1. **판정.** 이 사람, 이 객체, 이 작업에 대해 허용인지 아닌지.
+2. **"아니요"라고 한 검사.** 항목 하나가 거부로 표시됩니다. 우리가 측정한 모든 거부에서 그것은 객체 권한이었습니다. 그 사람의 묶음 중 하나라도 이 종류의 레코드에 대한 이 작업을 허용하는지 보는 검사입니다.
+3. **누가 "예"라고 했나.** 부여한 항목은 어떤 묶음인지, 그 사람이 그것을 어떻게 보유하는지 알려 줍니다. "CRM Sales User, Sales Representative position을 통해"는 관리자에게 무엇을 보면 되는지와 그것이 어디서 왔는지를 알려 줍니다. 객체 권한에서의 거부는 아무 이름도 대지 않습니다. 아무도 부여하지 않았기 때문입니다. 첫 항목에는 그 사람이 실제로 가진 묶음이 모두 나열되므로, 빠진 것이 보입니다.
+
+읽기의 경우 보고서에는 **행 필터**도 들어 있습니다. 플랫폼이 그 사람의 모든 목록, 검색, 보고서에 덧붙이는 조건입니다. CRM 예제에서는 모든 고객과 영업 기회가 조직 전체에 공유되므로 필터가 비어 있었습니다. 영업 담당자가 자기 영업 기회만 보는 앱이라면 그 조건이 표시되고, 그 조건이 바로 "왜 이 영업 기회는 보이고 저것은 안 보이나?"에 대한 답입니다.
+
+객체에 대해 물으면 보고서는 아홉 가지 검사를 돌려줍니다. 특정 레코드에 대해 물으면 열 가지를 돌려줍니다. 맨 앞에 조직의 벽이 오며, 조직이 하나뿐인 이번 설치에서는 "적용되지 않음"이라고 답했습니다. ObjectStack의 두 문서가 [아홉](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L20-L23)과 [열](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/references/security/explain.mdx#L19-L21)을 말하는 이유가 이것입니다.
+
+## 누가 물을 수 있나
+
+접근 보고서는 어떤 사람이 어떤 묶음을 가졌고 어떻게 얻었는지 보여 줍니다. 민감한 정보이므로 질문 자체가 통제됩니다. 18.6.0의 런타임 규칙은 이렇습니다. 자신에 대해서는 언제나. 다른 사용자에 대해서는 사용자를 관리할 권리가 있거나, 그 사용자가 속한 조직을 관리하거나, 그 사용자를 포함하는 위임 관리 범위를 가진 경우에만([소스](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/security-plugin-explain-access.ts#L134-L138)). 그 밖의 모두는 거부됩니다.
+
+우리는 세 경우의 질문자를 측정했습니다. 영업 담당자가 자신에 대해: 답함. 일반 멤버인 헬프데스크 동료가 영업 담당자에 대해: 거부됨. 거부 메시지에는 자격을 얻는 세 가지 방법이 적혀 있었습니다. 관리자가 그 동료를 조직 관리자로 만들자 플랫폼이 조직 관리자 묶음을 부여했고, 같은 질문에 답이 돌아왔습니다. 즉 조직 관리자는 플랫폼 전체의 사용자 관리 권리 없이도 이런 티켓에 답할 수 있습니다. 위임 범위 경로는 측정하지 않았습니다. 이는 헬프데스크가 이런 티켓에 답하게 하는 더 좁은 방법입니다.
+
+## 대신 설정을 읽는 쪽의 장점
+
+explain 보고서만 좋은 도구인 것은 아니며, 어떤 티켓에는 최선도 아닙니다.
+
+- **설정 읽기는 어디서나 통하고 주변도 보여 준다.** 이 CRM 예제처럼 역할이 셋, 묶음이 하나라면 역할을 여는 것은 묻는 것만큼 빠르고, 플랫폼에 없을 수도 있는 기능에 의존하지 않으며, 판정 하나가 아니라 그 역할이 부여하는 모든 것을 보여 줍니다.
+- **사용자로 로그인하면 화면이 보인다.** ObjectStack은 관리자가 [사용자를 가장해 그 접근을 확인](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/authentication.mdx#L1230-L1233)할 수 있게 하며, 많은 플랫폼이 비슷한 기능을 제공합니다. 불만이 "버튼이 없다"거나 "메뉴가 비어 있다"라면 검사를 읽는 것보다 화면을 보는 편이 빠릅니다. 보고서는 판정이 왜 그렇게 나왔는지에 답하고, 가장은 그 사람이 무엇을 보는지에 답합니다.
+- **정책 질문에는 돋보기보다 전체 훑기.** "누가 영업 기회를 삭제할 수 있나?"는 모든 역할에 걸친 질문입니다. ObjectStack 가이드 스스로 이 선을 긋습니다. explain은 ["같은 평가 로직을 런타임에 하나의 판정에 맞춘 것이고, 매트릭스는 빌드 시점에 전부를 훑는 것"](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/access-matrix.mdx#L81-L83)입니다. 매트릭스는 [AI의 조용한 권한 변경을 출시 전에 어떻게 잡을까?](/ko/blog/catch-ai-silent-permission-change-access-matrix-gate/)에서 다뤘습니다.
+- **고칠 방법을 찾고 고치는 곳은 설정이다.** 거부는 무엇이 빠졌는지 알려 줍니다. 영업 담당자의 묶음 중 어느 것도 고객 읽기를 부여하지 않는다는 것입니다. 어떤 역할이 그것을 채워 주는지는 알려 주지 않습니다. 그것은 역할과 묶음에서 찾아야 하고, 변경도 거기서 합니다. AI가 그런 정의를 쓰는 플랫폼에서는 변경이 diff로 도착하고, 누군가 [검토](/en/blog/how-to-review-ai-generated-app-changes/)합니다.
+
+## 보고서가 해결하지 못하는 것
+
+- **권한을 설명할 뿐, 데이터를 설명하지 않는다.** 만들어진 적 없는 고객, 병합되어 사라진 고객, 뷰 자체의 필터에 가려진 고객은 불만을 제기한 사람에게 똑같이 보입니다. 보고서는 "허용"이라고 하고 고객은 여전히 보이지 않습니다. 사람이 확인해야 합니다.
+- **그 접근이 옳은지는 말하지 않는다.** 보고서는 영업 담당자가 영업 기회를 내보낼 수 없다고 알려 줬습니다. 영업팀이 그렇게 *해야* 하는지는 정책 결정이며, 수정을 position으로 할지 더 좁은 묶음으로 할지도 마찬가지입니다.
+- **수정이 그 밖에 무엇을 부여하는지 보여 주지 않는다.** 우리가 물은 것은 고객 읽기였습니다. 할당한 position은 영업 담당자에게 고객, 연락처, 영업 기회, 영업 기회 제품 항목, 리드, 활동을 만들고 편집하는 것도 허용합니다. 보고서는 우리가 물은 판정 하나만 확인했습니다. 역할이 가져오는 모든 것을 보려면 역할을 읽거나 빌드 시점의 매트릭스를 사용하세요.
+- **두 번 물어야 하는 답도 있다.** 삭제에 대해 객체 수준 보고서는 행 수준 보안이 행을 좁힌다고 했지만 조건은 보여 주지 않았습니다. 특정 영업 기회에 대해 묻자 보여 줬습니다. 본인이 만든 것만입니다. 규칙에는 일반적인 레이블이 붙어 있었고, 플랫폼 기본 묶음에서 그 정책이 가진 이름은 아니었습니다. 증거에 둘 다 실었습니다.
+- **행 필터보다 판정을 먼저 읽어라.** 거부된 읽기에서도 보고서에는 빈 행 필터가 들어 있었고, 그것만 보면 "모든 행"을 뜻합니다. [스키마 참조 문서](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/references/security/explain.mdx#L110)는 판정이 허용 여부와 행 수준 검사를 합친 것이지 필터 하나가 아니라고 말합니다.
+- **보안 플러그인이 필요하다.** 가이드는 분명히 말합니다. ["`@objectstack/plugin-security`가 없는 배포는 501로 응답한다"](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L116). 즉 전혀 답할 수 없습니다.
+
+ObjectStack 가이드는 Studio의 Access 영역이 이 보고서 위에 ["이 사용자는 왜 접근할 수 있나?" 패널](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L120-L121)을 만든다고도 말합니다. 우리가 측정한 것은 보고서의 프로그래밍 인터페이스이지 그 화면이 아닙니다.
+
+## 개발 중
+
+보고서 형식은 지금 채우는 것보다 많은 자리를 이미 예약해 두었습니다. 스키마 참조 문서는 사람마다의 지위(플랫폼 관리자, 조직 관리자, 멤버, 외부 멤버)와 어떤 검사가 조직의 벽에 속하는지 표시하는 표지를 ["β 엔진과 UI가 채울"](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/references/security/explain.mdx#L30-L34) 어휘로 기술합니다. 18.6.0에서는 특정 레코드에 대해 물으면 둘 다 이미 나타납니다. 모든 검사에 벽 표지가 붙었고, 영업 담당자의 지위는 멤버로 돌아왔습니다. 객체 수준 답에는 둘 다 나타나지 않습니다. 참조 문서는 그 이후의 엔진과 화면이 무엇을 더할지 말하지 않으며, 우리도 이 두 필드 밖의 것은 측정하지 않았습니다.
+
+## 에이전트를 보고서로 향하게 하세요
+
+AI 에이전트가 앱의 역할과 묶음을 작성한다면, explain 보고서는 사람이 결과를 판정 하나씩 확인하는 방법이자, 에이전트가 diff를 넘기기 전에 자기 작업을 확인하는 방법입니다. [에이전트를 ObjectStack으로 향하게 하고](/en/blog/how-to-point-your-agent-at-objectstack/), 방금 부여한 접근을 설명하게 하세요. 이런 검사가 에이전트 경로의 어디에서 실행되는지는 [Where AI agent permissions are enforced](/en/blog/objectos-agent-permission-boundaries/)와 [CRM 에이전트가 권한을 우회하지 않고 고객 데이터를 읽는 방법](/ko/blog/crm-ai-understands-customers/)을 보세요. 용어는 [권한 모델](/en/glossary/permission-model/)과 [행 수준 보안](/ko/glossary/row-level-security/)을 보세요.
+
+{/* the-proof */}
+## 증거
+
+위의 모든 내용은 2026-11-23에 ObjectStack **18.6.0**에서 측정했습니다.
+
+```text
+$ npm view @objectstack/cli dist-tags
+{ next: '0.0.0-next-20261123013358', latest: '18.6.0' }
+$ npm view @objectstack/cli dist-tags.latest
+18.6.0
+```
+
+### 준비
+
+태그 `@objectstack/cli@18.6.0`(커밋 [`958ee03`](https://github.com/objectstack-ai/objectstack/commit/958ee03594968c651db1bc40ecb05bfe72f94b2d))의 CRM 예제를 모노레포가 아니라 공개된 18.6.0 패키지로 설치했습니다. `workspace:*` 의존성은 `18.6.0`으로 바꾸고, 테스트 폴더와 테스트 전용 개발 의존성은 뺐습니다.
+
+```text
+$ git -C ~/objectstack archive '@objectstack/cli@18.6.0' examples/app-crm | tar -x --strip-components=2
+$ npm install
+$ npx os --version
+@objectstack/cli/18.6.0 linux-x64 node-v22.22.0
+$ npx os dev --fresh -p 3276
+  ...
+  Security: 3 Positions  2 Permissions
+  ...
+  🔑  Dev admin: admin@objectos.ai / admin123
+  Tenancy: single
+  Seeds:   com.example.crm 28 rows
+```
+
+`--fresh`는 비어 있는 일회용 데이터베이스로 시작합니다. 관리자가 로그인해 `POST /api/v1/auth/admin/create-user`로 계정 두 개를 만듭니다: `rep@example.com`과 `helpdesk@example.com`, 둘 다 position이 없습니다. 이 설치에서는 셀프 가입이 닫혀 있어 관리자가 만듭니다(같은 설치에서 따로 실행한 것으로, 원시 출력은 위의 버전 확인과 함께 스크립트 옆에 보관했습니다):
+
+```text
+$ curl -s -X POST http://localhost:3276/api/v1/auth/sign-up/email -H 'Content-Type: application/json' -d '{"email":"newhire@example.com","password":"…","name":"newhire"}'
+{"code":"SELF_REGISTRATION_CLOSED","message":"Self-registration is closed (audience posture invite_only). Ask an administrator for an invitation."}
+HTTP 403
+```
+
+각 계정은 `POST /api/v1/auth/sign-in/email`로 로그인하고, 쿠키 파일 `admin.jar`, `rep.jar`, `helpdesk.jar`가 세션을 담습니다. 아래 사용자 ID는 이번 실행의 것입니다.
+
+예제의 영업 역할, 태그 시점([`sales-positions.ts`](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/examples/app-crm/src/security/sales-positions.ts#L12-L17), [44–61행](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/examples/app-crm/src/security/sales-positions.ts#L44-L61)):
+
+```typescript
+export const SalesRepPosition = definePosition({
+  name: 'crm_sales_rep',
+  label: 'Sales Representative',
+  description: 'Front-line sales representative.',
+  permissionSets: ['crm_sales_user'],
+});
+// ...
+    crm_account: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: false },
+    crm_opportunity: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: false },
+```
+
+두 객체 모두 조직 전체에 공유됩니다: `sharingModel: 'public_read_write'`([account, 11행](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/examples/app-crm/src/objects/account.object.ts#L11); [opportunity, 12행](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/examples/app-crm/src/objects/opportunity.object.ts#L12)).
+
+### 1. 티켓
+
+```text
+$ curl -b rep.jar http://localhost:3276/api/v1/data/crm_account
+{"error":"You do not have permission to perform this action. Contact your administrator if you need access.","code":"PERMISSION_DENIED","object":"crm_account"}
+HTTP 403
+```
+
+### 2. 관리자가 이유를 묻다: 보고서 전체
+
+```text
+$ curl -b admin.jar 'http://localhost:3276/api/v1/security/explain?object=crm_account&operation=read&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX'
+```
+
+```json
+{
+  "allowed": false,
+  "object": "crm_account",
+  "operation": "read",
+  "principal": {
+    "userId": "v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX",
+    "positions": ["org_member", "everyone"],
+    "permissionSets": ["member_default", "storage_attachment_member"],
+    "principalKind": "human"
+  },
+  "layers": [
+    {
+      "layer": "principal",
+      "verdict": "neutral",
+      "detail": "Principal rep (rep@example.com; id v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX) holds position(s) [org_member, everyone] resolving to permission set(s) [member_default, storage_attachment_member] (union-merged, most-permissive).",
+      "contributors": [
+        { "kind": "position", "name": "org_member" },
+        { "kind": "position", "name": "everyone" },
+        { "kind": "permission_set", "name": "member_default", "via": "additive baseline (ADR-0090 D5)" },
+        { "kind": "permission_set", "name": "storage_attachment_member", "via": "additive baseline (ADR-0090 D5)" }
+      ]
+    },
+    { "layer": "required_permissions", "verdict": "not_applicable", "detail": "'crm_account' declares no requiredPermissions for read.", "contributors": [] },
+    { "layer": "object_crud", "verdict": "denies", "detail": "No resolved permission set grants read on 'crm_account'.", "contributors": [] },
+    { "layer": "fls", "verdict": "not_applicable", "detail": "No field-level masking applies.", "contributors": [] },
+    { "layer": "owd_baseline", "verdict": "neutral", "detail": "Record baseline (OWD) is public_read_write: rows are org-shared at this baseline.", "contributors": [] },
+    { "layer": "depth", "verdict": "not_applicable", "detail": "Depth axis does not apply (baseline already org-wide).", "contributors": [] },
+    { "layer": "sharing", "verdict": "not_applicable", "detail": "Baseline already grants the rows sharing would add.", "contributors": [] },
+    { "layer": "vama_bypass", "verdict": "not_applicable", "detail": "No View/Modify All Data bypass.", "contributors": [] },
+    { "layer": "rls", "verdict": "not_applicable", "detail": "No RLS policy applies.", "contributors": [] }
+  ],
+  "readFilter": null
+}
+```
+
+아홉 항목. JSON은 돌아온 응답 그대로이며, 각 항목을 더 적은 줄로 접었을 뿐입니다.
+
+### 3. 수정, 그리고 같은 질문 다시
+
+```text
+$ curl -b admin.jar -X POST http://localhost:3276/api/v1/data/sys_user_position \
+    -H 'Content-Type: application/json' \
+    -d '{"user_id":"v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX","position":"crm_sales_rep","reason":"Ticket: rep cannot open customers"}'
+{'display_title': 'rep → crm_sales_rep', 'granted_by': 'hsitZYEkgelqpLEjjjzndGTJU2M9jnnI', 'reason': 'Ticket: rep cannot open customers'}
+
+$ curl -b admin.jar 'http://localhost:3276/api/v1/security/explain?object=crm_account&operation=read&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX'
+allowed: True | layers: 9 | readFilter: null
+  object_crud  grants  read on 'crm_account' is granted by [crm_sales_user].
+               contributors: [{"kind": "permission_set", "name": "crm_sales_user", "via": "position:crm_sales_rep"}]
+  (the other eight entries as in step 2; principal now lists crm_sales_rep and crm_sales_user)
+
+$ curl -b rep.jar 'http://localhost:3276/api/v1/data/crm_account?fields=name&limit=50'
+HTTP 200 | total: 3 | names: ['Acme Corp', 'Globex Ltd', 'Initech']
+```
+
+할당 행에는 누가 왜 부여했는지 기록됩니다. `allowed:`로 시작하는 줄은 스크립트가 보고서를 한 줄로 요약한 것이고, 각 요청의 원시 JSON은 스크립트 옆에 보관했습니다.
+
+### 4. 영업 기회: 삭제, 읽기, 내보내기, 그리고 적용 계층이 한 일
+
+```text
+$ curl -b admin.jar 'http://localhost:3276/api/v1/security/explain?object=crm_opportunity&operation=delete&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX'
+allowed: False | layers: 9 | readFilter: (absent)
+  object_crud  denies   No resolved permission set grants delete on 'crm_opportunity'.
+  rls          narrows  Row-level security narrows the row set (see readFilter for the composed predicate).
+
+$ curl -b admin.jar 'http://localhost:3276/api/v1/security/explain?object=crm_opportunity&operation=read&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX'
+allowed: True | layers: 9 | readFilter: null
+  object_crud  grants   read on 'crm_opportunity' is granted by [crm_sales_user].  via position:crm_sales_rep
+
+$ curl -b admin.jar 'http://localhost:3276/api/v1/security/explain?object=crm_opportunity&operation=export&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX'
+allowed: False | layers: 9 | readFilter: null
+  object_crud  denies   No resolved permission set grants export on 'crm_opportunity'.
+
+$ curl -b rep.jar -X DELETE http://localhost:3276/api/v1/data/crm_opportunity/2qolV83IXvGaXxdA
+{"error":"You do not have permission to perform this action. Contact your administrator if you need access.","code":"PERMISSION_DENIED","object":"crm_opportunity"}
+HTTP 403
+
+$ curl -b rep.jar 'http://localhost:3276/api/v1/data/crm_opportunity?fields=name&limit=50'
+{"object":"crm_opportunity","records":[ … 12 deals … ],"total":12,"hasMore":false}
+HTTP 200
+
+$ curl -b rep.jar http://localhost:3276/api/v1/data/crm_opportunity/export
+{"code":"EXPORT_NOT_PERMITTED","error":"Export is not permitted on object 'crm_opportunity' for this user","object":"crm_opportunity"}
+HTTP 403
+```
+
+표시하지 않은 항목은 2단계와 같습니다. 삭제 보고서에는 `readFilter` 필드가 아예 없으며, `(absent)`가 그 뜻입니다. 가이드는 내보내기에 별도의 질문이 필요한 이유를 설명합니다: ["`export`는 `read`로부터 답을 추론할 수 없는 유일한 작업"](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L77-L86). permission set 문서는 [기본 제공 묶음 중 어느 것도 내보내기 권한을 갖지 않는다](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/permission-sets.mdx#L94-L101)고 말합니다.
+
+### 5. 레코드 하나: 열 항목
+
+```text
+$ curl -b admin.jar 'http://localhost:3276/api/v1/security/explain?object=crm_opportunity&operation=read&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX&recordId=2qolV83IXvGaXxdA'
+allowed: True | layers: 10 | readFilter: null
+  tenant_isolation  not_applicable  Layer 0 tenant isolation — the always-first org wall, AND-composed before any business RLS (ADR-0095 D1).
+  principal … rls   (the nine entries of step 4's read, each now with kernelTier; principal adds "posture": "MEMBER")
+record: {"recordId": "2qolV83IXvGaXxdA", "visible": true, "decidedBy": "object_crud"}
+
+$ curl -b admin.jar 'http://localhost:3276/api/v1/security/explain?object=crm_opportunity&operation=delete&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX&recordId=2qolV83IXvGaXxdA'
+allowed: False | layers: 10 | readFilter: (absent)
+record: {"recordId": "2qolV83IXvGaXxdA", "visible": false, "decidedBy": "object_crud"}
+```
+
+객체 수준 답에는 테넌트 계층이 없습니다. 엔진 소스가 주석에서 그렇게 말합니다: ["no tenant_isolation layer, no kernelTier, no posture"](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/explain-engine.ts#L2926-L2927).
+
+레코드 수준 삭제의 행 수준 보안 항목, 돌아온 그대로:
+
+```json
+{
+  "layer": "rls",
+  "verdict": "narrows",
+  "detail": "Row-level security narrows the row set (see readFilter for the composed predicate).",
+  "contributors": [],
+  "record": {
+    "outcome": "excluded",
+    "rowFilter": { "created_by": "v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX" },
+    "matchesRecord": false,
+    "rules": [
+      {
+        "kind": "rls_policy",
+        "name": "business_rls",
+        "predicate": { "created_by": "v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX" },
+        "effect": "excludes"
+      }
+    ],
+    "detail": "The record does not satisfy the business row-level predicate."
+  },
+  "kernelTier": "layer_1_business"
+}
+```
+
+이 조건은 로그인한 모든 멤버가 가진 멤버 묶음에서 옵니다. 거기서 정책 이름은 `owner_only_deletes`입니다(`created_by == current_user.id`, `org_member`에 연결; [`default-permission-sets.ts` 928–934행](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/objects/default-permission-sets.ts#L928-L934)). 시드된 영업 기회는 시작할 때 만들어졌고 영업 담당자가 만든 것이 아니므로 제외됩니다.
+
+### 6. 누가 물을 수 있나
+
+```text
+$ curl -b rep.jar 'http://localhost:3276/api/v1/security/explain?object=crm_opportunity&operation=delete'      # yourself: no userId
+HTTP 200
+allowed: False | layers: 9 | readFilter: (absent)
+
+$ curl -b helpdesk.jar 'http://localhost:3276/api/v1/security/explain?object=crm_opportunity&operation=delete&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX'
+{"success":false,"error":{"code":"PERMISSION_DENIED","message":"[Security] Access denied: explaining another user's access requires the 'manage_users' capability, organization administration of an organization that user is a member of, or a delegated adminScope covering that user (ADR-0090 D6/D12)."}}
+HTTP 403
+
+$ curl -b admin.jar -X POST http://localhost:3276/api/v1/auth/organization/update-member-role \
+    -H 'Content-Type: application/json' -d '{"memberId":"mem_mwsnwe0oznkd4j6u","role":"admin"}'
+{…,"role":"admin","id":"mem_mwsnwe0oznkd4j6u","outcome":"permission_set_granted","grantedPermissionSet":{"name":"organization_admin_no_bypass","label":"Organization Administrator (no record bypass)"}}
+HTTP 200
+
+$ curl -b admin.jar 'http://localhost:3276/api/v1/data/sys_user_permission_set?limit=50'    # the help desk's row, picked from the list by user_id
+{'permission_set': 'organization_admin_no_bypass', 'organization_id': 'org_mwsnwbk2cl1ypwnm', 'reason': "auto-org-admin-grant: granted from membership grade 'admin' (sys_member mem_mwsnwe0oznkd4j6u) → organization_admin_no_bypass"}
+
+$ curl -b helpdesk.jar 'http://localhost:3276/api/v1/security/explain?object=crm_opportunity&operation=delete&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX'
+HTTP 200
+allowed: False | layers: 9 | readFilter: (absent)
+```
+
+조직 관리자 묶음에 있는 것은 `manage_org_users`이고 `manage_users`가 아닙니다. [`default-permission-sets.ts` 461행](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/objects/default-permission-sets.ts#L461)에 `organization_admin`의 시스템 권한이 나열되고, 우회 없는 변형은 이를 그대로 물려받습니다([1652–1656행](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/objects/default-permission-sets.ts#L1652-L1656)). 런타임은 호출자 검사의 조직 관리자 분기로 이를 통과시킵니다([`security-plugin-explain-access.ts` 152–165행](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/security-plugin-explain-access.ts#L152-L165); 거부 메시지는 [197–200행](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/security-plugin-explain-access.ts#L197-L200)).
+
+### 7. 인용한 줄, 18.6.0 태그 시점
+
+`content/docs/`로 시작하는 경로는 그 접두어를 생략했습니다.
+
+- `permissions/explain.mdx`: [7–13행](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L7-L13)(아홉 계층, 구조로 보장되는 설명), [20–23행](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L20-L23)(아홉 계층의 순서), [77–86행](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L77-L86)(내보내기), [97–109행](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L97-L109)(누가 물을 수 있나), [116행](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L116)(보안 플러그인 없이는 501), [120–121행](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L120-L121)(Studio 패널).
+- `references/security/explain.mdx`: [12–17행](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/references/security/explain.mdx#L12-L17)(적용 그 자체, 예외를 던지지 않을 뿐), [19–21행](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/references/security/explain.mdx#L19-L21)(열 계층), [30–34행](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/references/security/explain.mdx#L30-L34)(예약된 어휘).
+- `packages/plugins/plugin-security/src/explain-engine.ts`: [2926–2927행](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/explain-engine.ts#L2926-L2927)(객체 수준 답에는 테넌트 계층이 없음).
+- `packages/plugins/plugin-security/src/security-plugin-explain-access.ts`: [134–138행](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/security-plugin-explain-access.ts#L134-L138)(누가 다른 사용자를 설명받을 수 있나).
+- `permissions/access-matrix.mdx`: [81–83행](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/access-matrix.mdx#L81-L83)(돋보기와 전체 훑기).
+- `permissions/authentication.mdx`: [1230–1233행](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/authentication.mdx#L1230-L1233)(사용자를 가장해 접근을 확인).

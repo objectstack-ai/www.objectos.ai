@@ -1,0 +1,333 @@
+---
+title: "Vertrieb sieht den Kunden nicht: Wie antwortet ein Admin?"
+description: "Fragen Sie die Laufzeit statt der Einstellungen: Ein Explain-Bericht führt dieselben Prüfungen aus wie die Durchsetzung und nennt die ablehnende Prüfung und die gewährende Rolle. Gemessen am CRM-Beispiel von ObjectStack 18.6.0."
+author: ObjectStack Team
+date: 2026-11-30
+status: published
+topic: governance
+audience: it
+solutions: []
+industries: []
+cover: ./cover.svg
+tags:
+  - Agent-Berechtigungen
+  - RBAC
+  - Berechtigungs-Explain
+---
+
+Wenn der Vertrieb sagt, er sehe einen Kunden nicht, setzen Sie die Antwort nicht aus Einstellungsseiten zusammen. Fragen Sie das System, das abgelehnt hat. Ein Explain-Bericht zum Zugriff führt für genau diese Person und genau diese Aktion dieselben Prüfungen aus, die die Plattform bei der Durchsetzung ausführt, und nennt die Prüfung, die Nein sagte, und die Rolle, die Ja sagte. Der Admin liest eine Zeile, ändert eine Sache und fragt vor der Antwort noch einmal nach. Das schützt davor, Zugriffe nach Gefühl zu reparieren, wobei der schnellste Versuch meist mehr gewährt, als die Aufgabe braucht. Der Preis: Der Bericht erklärt nur Berechtigungen. Einen fehlenden Datensatz oder eine gefilterte Ansicht muss weiterhin ein Mensch prüfen.
+
+*Gemessen auf ObjectStack 18.6.0, der Version, die eine Neuinstallation heute erhält, am Open-Source-CRM-Beispiel aus dem Release-Tag, ausgeführt gegen die veröffentlichten Pakete. Jede Anfrage und jede Antwort steht in [Der Beweis](#der-beweis).*
+
+## Das Ticket, beantwortet
+
+Die Szene ist alltäglich. Ein Admin legt ein Konto für einen neuen Vertriebsmitarbeiter an. Der Mitarbeiter meldet sich an, fordert die Kundenliste an und wird abgelehnt (wir haben jede Anfrage über die Programmierschnittstelle der Plattform gestellt, nicht über eine Oberfläche): „You do not have permission to perform this action. Contact your administrator if you need access.“ Es folgt ein Ticket: *Der Vertrieb sieht den Kunden nicht.*
+
+Es gibt zwei Wege, es zu beantworten. Der eine: die Einstellungen des Benutzers öffnen, dann jede Rolle, dann jedes Berechtigungsbündel, dann die Freigaberegeln des Kundenobjekts, und im Kopf durchrechnen, wie die Plattform entscheiden würde. Der andere: die Plattform fragen, wie sie entschieden hat und warum.
+
+ObjectStack nennt den zweiten Weg die **Explain-Engine**. Sie nennen eine Person, ein Objekt und eine Aktion, und sie liefert pro Prüfung einen Eintrag, in der Reihenfolge der Durchsetzung, jeweils mit Urteil, einem Satz Erklärung und den Namen dessen, was das Urteil hervorgebracht hat. In ihren Antworten tauchen zwei Plattformbegriffe auf. Ein **Permission Set** ist ein benanntes Bündel von Berechtigungen, etwa „CRM Sales User: darf Kunden und Verkaufschancen lesen, anlegen und bearbeiten, nicht löschen“. Eine **Position** ist eine Stellenrolle, die Bündel verteilt: Im CRM-Beispiel verteilt die Position Sales Representative das Bündel CRM Sales User. Das Beispiel nennt Kunden *accounts* und Verkaufschancen *opportunities*; so heißen sie im Beweis.
+
+Wir haben das Ticket und die Fragen, die üblicherweise folgen, der Explain-Engine im CRM-Beispiel gestellt und jede Antwort damit verglichen, was die Durchsetzung mit demselben Benutzer tatsächlich tat.
+
+| Was der Admin fragte | Was der Bericht antwortete | Was das für Sie bedeutet |
+|:--|:--|:--|
+| Warum kann der neue Mitarbeiter keine Kunden öffnen? | **Abgelehnt bei den Objektberechtigungen.** „No resolved permission set grants read“ für Kunden. Der Mitarbeiter hatte nur die zwei Bündel, die jedes Mitglied automatisch erhält. Die Durchsetzung lehnte denselben Lesezugriff ab. | Das Konto existiert, hat aber keine Vertriebsrolle. Keine Freigaberegel, kein Datenproblem, kein Fehler. |
+| Kann der Mitarbeiter Kunden lesen, nachdem der Admin die Position Sales Representative zugewiesen hat? | **Erlaubt.** Objektberechtigungen **gewährt durch CRM Sales User, gehalten über die Position Sales Representative.** Zeilenfilter: keiner. Die Kundenliste lieferte danach alle 3 Kunden. | Eine Änderung, bestätigt mit derselben Frage, bevor jemand dem Vertrieb meldet, dass es behoben ist. |
+| Kann der Mitarbeiter eine Verkaufschance löschen? | **Abgelehnt bei den Objektberechtigungen:** Kein Bündel gewährt Löschen. Auch die Zeilensicherheit schränkt Löschungen ein; für eine einzelne Verkaufschance zeigt der Bericht die Bedingung: nur selbst angelegte. Die Durchsetzung lehnte das Löschen ab. | Laut Bericht würde es allein nicht reichen, dem Vertriebsbündel Löschen hinzuzufügen: Ein Mitglied darf nur löschen, was es selbst angelegt hat. Wir haben Löschen nicht gewährt, um das zu testen. |
+| Kann der Mitarbeiter Verkaufschancen lesen, und welche? | **Erlaubt**, gewährt durch CRM Sales User über Sales Representative. Zeilenfilter: keiner, also alle. Die Durchsetzung listete alle 12. | Der Zeilenfilter ist der, den Listen und Berichte anwenden. Bei einem erlaubten Lesezugriff bedeutet „keiner“ die ganze Tabelle. |
+| Kann der Mitarbeiter Verkaufschancen exportieren? | **Abgelehnt bei den Objektberechtigungen:** Kein Bündel gewährt Export, obwohl der Mitarbeiter jede Verkaufschance lesen kann. Die Durchsetzung lehnte den Export ab. | Export ist eine eigene Berechtigung. Die Frage „Darf er lesen?“ ergibt Ja und sagt nichts. |
+| Wer darf diese Fragen stellen? | Der Mitarbeiter über sich selbst: beantwortet. Eine Kollegin vom Helpdesk ohne Admin-Rolle über den Mitarbeiter: **abgelehnt**. Dieselbe Kollegin, nachdem sie Organisations-Admin wurde: beantwortet. | Der Zugriffsbericht ist selbst zugriffsgeschützt. Er zeigt, wer was hält, also darf ihn nicht jeder lesen. |
+
+Jede Zeile beantwortet eine einzige Anfrage; die Mitschriften stehen in [Der Beweis](#der-beweis). Wir haben nicht gestoppt, wie lange ein Admin zum Lesen braucht, und behaupten daher nichts über Minuten.
+
+![Der Explain-Bericht für einen Lesezugriff auf Kunden, vor und nach der Korrektur: neun Prüfungen in der Reihenfolge der Durchsetzung. Vorher lehnten die Objektberechtigungen ab, weil der Mitarbeiter nur die zwei Bündel hatte, die jedes Mitglied erhält. Nachdem der Admin die Position Sales Representative zugewiesen hatte, gewährten die Objektberechtigungen den Lesezugriff über CRM Sales User. Jede andere Prüfung war neutral oder nicht anwendbar. Fragt man nach einem einzelnen Datensatz, fügt der Bericht vorne eine zehnte Prüfung hinzu, die Organisationsgrenze](./nine-checks-en.svg)
+
+## Erklärt durch Konstruktion
+
+Das Nützliche an diesem Bericht ist nicht, dass er ausführlich ist. Es ist, dass er der Durchsetzung nicht widersprechen kann. Der Leitfaden von ObjectStack sagt, die Explain-Engine [„durchläuft **dieselben Codepfade, die die Durchsetzungs-Middleware ausführt** … daher ist der Bericht *durch Konstruktion erklärt*, niemals eine parallele Neuimplementierung, die abdriften kann.“](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L7-L13) Die Schema-Referenz sagt es kürzer: Der Bericht [„IST die Durchsetzung, nur ohne das Werfen.“](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/references/security/explain.mdx#L12-L17)
+
+Das ist der Unterschied zu einer Berechtigungstabelle oder einem Rollendiagramm, die beschreiben, was jemand konfigurieren *wollte*. Eine Beschreibung kann veralten. Dieser Bericht ist keine zweite Beschreibung: Nach seinem Entwurf ist er derselbe Codepfad, der den Mitarbeiter abgelehnt hat, nur ohne die Ablehnung. Wir haben diesen Entwurf nicht Zeile für Zeile geprüft. Was wir geprüft haben, ist enger: In unserem Lauf stimmte jedes der fünf Urteile in der Tabelle, das die Durchsetzung bestätigen konnte, mit dem überein, was die Durchsetzung danach mit demselben Benutzer tat, Anfrage für Anfrage.
+
+Einen Bericht zu lesen braucht drei Blicke:
+
+1. **Das Urteil.** Erlaubt oder nicht, für diese Person, dieses Objekt, diese Aktion.
+2. **Die Prüfung, die Nein sagte.** Ein Eintrag ist als ablehnend markiert. Bei jeder Ablehnung, die wir gemessen haben, waren es die Objektberechtigungen: die Prüfung, ob irgendein Bündel der Person diese Aktion auf dieser Art von Datensatz erlaubt.
+3. **Wer Ja sagte.** Ein gewährender Eintrag nennt das Bündel und wie die Person es hält. „CRM Sales User, über die Position Sales Representative“ sagt dem Admin, wo er hinschauen muss und woher es kommt. Eine Ablehnung bei den Objektberechtigungen nennt niemanden, weil niemand gewährt hat. Der erste Eintrag listet jedes Bündel, das die Person tatsächlich hält, sodass die Lücke sichtbar ist.
+
+Bei einem Lesezugriff enthält der Bericht außerdem den **Zeilenfilter**: die Bedingung, die die Plattform jeder Liste, jeder Suche und jedem Bericht dieser Person hinzufügt. Im CRM-Beispiel ist jeder Kunde und jede Verkaufschance in der ganzen Organisation freigegeben, also war der Filter leer. In einer App, in der Mitarbeiter nur ihre eigenen Verkaufschancen sehen, würde er diese Bedingung zeigen, und diese Bedingung ist die Antwort auf „Warum sieht er diese Verkaufschancen und jene nicht?“
+
+Fragt man nach einem Objekt, liefert der Bericht neun Prüfungen. Fragt man nach einem einzelnen Datensatz, liefert er zehn: Vorne steht eine Organisationsgrenze, die in unserer Installation mit einer einzigen Organisation „nicht anwendbar“ antwortete. Die zwei Dokumentationsseiten von ObjectStack nennen deshalb [neun](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L20-L23) und [zehn](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/references/security/explain.mdx#L19-L21).
+
+## Wer fragen darf
+
+Ein Zugriffsbericht zeigt, welche Bündel eine Person hält und wie sie dazu kam. Das ist sensibel, also ist die Frage selbst geregelt. Auf 18.6.0 lautet die Regel der Laufzeit: über sich selbst immer; über einen anderen Benutzer nur, wenn man das Recht zur Benutzerverwaltung hat, eine Organisation administriert, der dieser Benutzer angehört, oder einen delegierten Admin-Bereich hält, der ihn abdeckt ([Quelle](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/security-plugin-explain-access.ts#L134-L138)). Alle anderen werden abgelehnt.
+
+Wir haben drei Fragende gemessen. Der Mitarbeiter über sich selbst: beantwortet. Eine Helpdesk-Kollegin, ein gewöhnliches Mitglied, über den Mitarbeiter: abgelehnt, und die Ablehnung nannte die drei Wege, sich zu qualifizieren. Nachdem der Admin die Kollegin zur Administratorin der Organisation gemacht hatte, gab ihr die Plattform das Bündel für Organisations-Admins, und dieselbe Frage wurde beantwortet. Ein Organisations-Admin kann diese Tickets also beantworten, ohne das plattformweite Recht zur Benutzerverwaltung zu halten. Den Weg über einen delegierten Bereich haben wir nicht gemessen; er ist die engere Möglichkeit, einen Helpdesk diese Tickets beantworten zu lassen.
+
+## Was dafür spricht, stattdessen die Konfiguration zu lesen
+
+Der Explain-Bericht ist nicht das einzige gute Werkzeug, und für manche Tickets nicht das beste.
+
+- **Die Konfiguration zu lesen funktioniert überall und zeigt die Nachbarn.** Bei drei Rollen und einem Bündel, wie in diesem CRM-Beispiel, ist das Öffnen der Rolle so schnell wie das Fragen, braucht keine Funktion, die der Plattform fehlen könnte, und zeigt alles, was die Rolle gewährt, nicht nur die eine Entscheidung.
+- **Sich als Benutzer anzumelden zeigt die Oberfläche.** ObjectStack erlaubt einem Administrator, [einen Benutzer zu imitieren, um dessen Zugriff zu prüfen](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/authentication.mdx#L1230-L1233), und viele Plattformen bieten etwas Ähnliches. Lautet die Beschwerde „Der Button fehlt“ oder „Das Menü ist leer“, ist die Oberfläche zu sehen schneller, als Prüfungen zu lesen. Der Bericht beantwortet, warum eine Entscheidung so ausfiel; die Imitation, was die Person sieht.
+- **Für Richtlinienfragen schlägt der Rundumblick die Lupe.** „Wer darf Verkaufschancen löschen?“ ist eine Frage über alle Rollen zugleich. Der Leitfaden von ObjectStack zieht diese Linie selbst: Explain [„ist dieselbe Auswertungslogik, zur Laufzeit auf eine Entscheidung gerichtet; die Matrix ist der Rundumblick über alle zur Build-Zeit“](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/access-matrix.mdx#L81-L83). Die Matrix haben wir in [Wie erkennt man eine stille Rechteänderung durch eine KI, bevor sie ausgeliefert wird?](/de/blog/catch-ai-silent-permission-change-access-matrix-gate/) behandelt.
+- **In den Einstellungen findet und macht man die Korrektur.** Eine Ablehnung sagt, was fehlt: Kein Bündel des Mitarbeiters gewährt Lesen auf Kunden. Sie sagt nicht, welche Rolle das liefert. Das schlägt man in den Rollen und Bündeln nach, und dort wird die Änderung gemacht. Auf einer Plattform, auf der eine KI diese Definitionen schreibt, kommt die Änderung als Diff, den jemand [prüft](/en/blog/how-to-review-ai-generated-app-changes/).
+
+## Was der Bericht nicht löst
+
+- **Er erklärt Berechtigungen, keine Daten.** Ein Kunde, der nie angelegt wurde, zusammengeführt wurde oder vom eigenen Filter einer Ansicht verborgen wird, sieht für die beschwerdeführende Person gleich aus. Der Bericht sagt „erlaubt“, und der Kunde fehlt trotzdem. Ein Mensch muss nachsehen.
+- **Er sagt nicht, ob der Zugriff richtig ist.** Er sagte uns, dass der Mitarbeiter keine Verkaufschancen exportieren kann. Ob der Vertrieb das *sollte*, ist eine Richtlinienentscheidung, ebenso, ob die Korrektur eine Position oder ein engeres Bündel ist.
+- **Er zeigt nicht, was die Korrektur sonst noch gewährt.** Wir fragten nach dem Lesen von Kunden. Die zugewiesene Position erlaubt dem Mitarbeiter außerdem, Kunden, Kontakte, Verkaufschancen, Positionen von Verkaufschancen, Leads und Aktivitäten anzulegen und zu bearbeiten. Der Bericht bestätigte nur die eine Entscheidung, nach der wir fragten. Um alles zu sehen, was eine Rolle mitbringt, lesen Sie die Rolle oder nutzen Sie die Matrix zur Build-Zeit.
+- **Manche Antworten brauchen eine zweite Frage.** Beim Löschen sagte der Bericht auf Objektebene, die Zeilensicherheit schränke die Zeilen ein, zeigte aber die Bedingung nicht. Nach einer einzelnen Verkaufschance gefragt, zeigte er sie: nur selbst angelegte. Er benannte die Regel generisch, nicht mit dem Namen, den die Richtlinie im Standardbündel der Plattform trägt; der Beweis zeigt beides.
+- **Erst das Urteil lesen, dann den Zeilenfilter.** Bei einem abgelehnten Lesezugriff enthielt der Bericht trotzdem einen leeren Zeilenfilter, der für sich genommen „alle Zeilen“ bedeuten würde. Die [Schema-Referenz](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/references/security/explain.mdx#L110) sagt, die Entscheidung ist das Urteil plus die Prüfung der Zeilensicherheit, nicht der Filter allein.
+- **Er braucht das Sicherheits-Plugin.** Der Leitfaden sagt es offen: [„Eine Bereitstellung ohne `@objectstack/plugin-security` antwortet mit 501“](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L116), kann also gar nicht antworten.
+
+Der Leitfaden von ObjectStack sagt außerdem, dass der Access-Bereich von Studio sein [Panel „Warum hat dieser Benutzer Zugriff?“](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L120-L121) auf diesem Bericht aufbaut. Wir haben den Bericht über seine Programmierschnittstelle gemessen, nicht diese Oberfläche.
+
+## In Entwicklung
+
+Das Format des Berichts reserviert schon mehr Platz, als es heute füllt. Die Schema-Referenz beschreibt einen Status für jede Person (Plattform-Admin, Organisations-Admin, Mitglied, externes Mitglied) und eine Markierung, welche Prüfungen zur Organisationsgrenze gehören, als Vokabular, [„das die β-Engine und die Oberfläche füllen werden“](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/references/security/explain.mdx#L30-L34). Auf 18.6.0 erscheinen beide bereits, wenn man nach einem einzelnen Datensatz fragt: Jede Prüfung trug die Markierung der Grenze, und der Status des Mitarbeiters kam als Mitglied zurück. In einer Antwort auf Objektebene erscheint keines von beiden. Die Referenz sagt nicht, was diese spätere Engine und Oberfläche sonst noch hinzufügen werden, und wir haben nichts über diese zwei Felder hinaus gemessen.
+
+## Richten Sie Ihren Agent auf den Bericht
+
+Wenn ein KI-Agent die Rollen und Bündel Ihrer App schreibt, ist der Explain-Bericht der Weg, wie ein Mensch das Ergebnis Entscheidung für Entscheidung prüft, und wie der Agent seine eigene Arbeit prüfen kann, bevor er Ihnen einen Diff übergibt. [Richten Sie Ihren Agent auf ObjectStack](/en/blog/how-to-point-your-agent-at-objectstack/) und lassen Sie ihn den Zugriff erklären, den er gerade gewährt hat. Wo diese Prüfungen im Pfad eines Agents laufen, steht in [Where AI agent permissions are enforced](/en/blog/objectos-agent-permission-boundaries/) und in [wie CRM-Agents Kundendaten lesen, ohne Berechtigungen zu umgehen](/de/blog/crm-ai-understands-customers/). Zum Vokabular siehe das [Berechtigungsmodell](/en/glossary/permission-model/) und [Row-Level Security](/de/glossary/row-level-security/).
+
+{/* the-proof */}
+## Der Beweis
+
+Alles oben Gesagte wurde am 2026-11-23 gegen ObjectStack **18.6.0** gemessen.
+
+```text
+$ npm view @objectstack/cli dist-tags
+{ next: '0.0.0-next-20261123013358', latest: '18.6.0' }
+$ npm view @objectstack/cli dist-tags.latest
+18.6.0
+```
+
+### Aufbau
+
+Das CRM-Beispiel aus dem Tag `@objectstack/cli@18.6.0` (Commit [`958ee03`](https://github.com/objectstack-ai/objectstack/commit/958ee03594968c651db1bc40ecb05bfe72f94b2d)), installiert gegen die veröffentlichten 18.6.0-Pakete statt gegen das Monorepo: seine `workspace:*`-Abhängigkeiten auf `18.6.0` gesetzt, sein Testordner und reine Test-Entwicklungsabhängigkeiten weggelassen.
+
+```text
+$ git -C ~/objectstack archive '@objectstack/cli@18.6.0' examples/app-crm | tar -x --strip-components=2
+$ npm install
+$ npx os --version
+@objectstack/cli/18.6.0 linux-x64 node-v22.22.0
+$ npx os dev --fresh -p 3276
+  ...
+  Security: 3 Positions  2 Permissions
+  ...
+  🔑  Dev admin: admin@objectos.ai / admin123
+  Tenancy: single
+  Seeds:   com.example.crm 28 rows
+```
+
+`--fresh` startet auf einer leeren Wegwerf-Datenbank. Der Admin meldet sich an und legt mit `POST /api/v1/auth/admin/create-user` zwei Konten an: `rep@example.com` und `helpdesk@example.com`, beide ohne Position. Die Selbstregistrierung ist auf dieser Installation geschlossen, deshalb legt der Admin sie an (ein separater Lauf auf derselben Installation, neben dem Skript zusammen mit der Versionsprüfung oben aufbewahrt):
+
+```text
+$ curl -s -X POST http://localhost:3276/api/v1/auth/sign-up/email -H 'Content-Type: application/json' -d '{"email":"newhire@example.com","password":"…","name":"newhire"}'
+{"code":"SELF_REGISTRATION_CLOSED","message":"Self-registration is closed (audience posture invite_only). Ask an administrator for an invitation."}
+HTTP 403
+```
+
+Jedes Konto meldet sich mit `POST /api/v1/auth/sign-in/email` an, und die Cookie-Dateien `admin.jar`, `rep.jar` und `helpdesk.jar` tragen die Sitzungen. Die Benutzer-IDs unten stammen aus diesem Lauf.
+
+Die Vertriebsrollen des Beispiels im Tag ([`sales-positions.ts`](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/examples/app-crm/src/security/sales-positions.ts#L12-L17), [Zeilen 44–61](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/examples/app-crm/src/security/sales-positions.ts#L44-L61)):
+
+```typescript
+export const SalesRepPosition = definePosition({
+  name: 'crm_sales_rep',
+  label: 'Sales Representative',
+  description: 'Front-line sales representative.',
+  permissionSets: ['crm_sales_user'],
+});
+// ...
+    crm_account: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: false },
+    crm_opportunity: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: false },
+```
+
+Beide Objekte sind in der ganzen Organisation freigegeben: `sharingModel: 'public_read_write'` ([account, Zeile 11](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/examples/app-crm/src/objects/account.object.ts#L11); [opportunity, Zeile 12](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/examples/app-crm/src/objects/opportunity.object.ts#L12)).
+
+### 1. Das Ticket
+
+```text
+$ curl -b rep.jar http://localhost:3276/api/v1/data/crm_account
+{"error":"You do not have permission to perform this action. Contact your administrator if you need access.","code":"PERMISSION_DENIED","object":"crm_account"}
+HTTP 403
+```
+
+### 2. Der Admin fragt nach dem Grund: der ganze Bericht
+
+```text
+$ curl -b admin.jar 'http://localhost:3276/api/v1/security/explain?object=crm_account&operation=read&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX'
+```
+
+```json
+{
+  "allowed": false,
+  "object": "crm_account",
+  "operation": "read",
+  "principal": {
+    "userId": "v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX",
+    "positions": ["org_member", "everyone"],
+    "permissionSets": ["member_default", "storage_attachment_member"],
+    "principalKind": "human"
+  },
+  "layers": [
+    {
+      "layer": "principal",
+      "verdict": "neutral",
+      "detail": "Principal rep (rep@example.com; id v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX) holds position(s) [org_member, everyone] resolving to permission set(s) [member_default, storage_attachment_member] (union-merged, most-permissive).",
+      "contributors": [
+        { "kind": "position", "name": "org_member" },
+        { "kind": "position", "name": "everyone" },
+        { "kind": "permission_set", "name": "member_default", "via": "additive baseline (ADR-0090 D5)" },
+        { "kind": "permission_set", "name": "storage_attachment_member", "via": "additive baseline (ADR-0090 D5)" }
+      ]
+    },
+    { "layer": "required_permissions", "verdict": "not_applicable", "detail": "'crm_account' declares no requiredPermissions for read.", "contributors": [] },
+    { "layer": "object_crud", "verdict": "denies", "detail": "No resolved permission set grants read on 'crm_account'.", "contributors": [] },
+    { "layer": "fls", "verdict": "not_applicable", "detail": "No field-level masking applies.", "contributors": [] },
+    { "layer": "owd_baseline", "verdict": "neutral", "detail": "Record baseline (OWD) is public_read_write: rows are org-shared at this baseline.", "contributors": [] },
+    { "layer": "depth", "verdict": "not_applicable", "detail": "Depth axis does not apply (baseline already org-wide).", "contributors": [] },
+    { "layer": "sharing", "verdict": "not_applicable", "detail": "Baseline already grants the rows sharing would add.", "contributors": [] },
+    { "layer": "vama_bypass", "verdict": "not_applicable", "detail": "No View/Modify All Data bypass.", "contributors": [] },
+    { "layer": "rls", "verdict": "not_applicable", "detail": "No RLS policy applies.", "contributors": [] }
+  ],
+  "readFilter": null
+}
+```
+
+Neun Einträge. Das JSON ist die Antwort wie geliefert, jeder Eintrag auf weniger Zeilen zusammengefaltet.
+
+### 3. Die Korrektur und dieselbe Frage noch einmal
+
+```text
+$ curl -b admin.jar -X POST http://localhost:3276/api/v1/data/sys_user_position \
+    -H 'Content-Type: application/json' \
+    -d '{"user_id":"v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX","position":"crm_sales_rep","reason":"Ticket: rep cannot open customers"}'
+{'display_title': 'rep → crm_sales_rep', 'granted_by': 'hsitZYEkgelqpLEjjjzndGTJU2M9jnnI', 'reason': 'Ticket: rep cannot open customers'}
+
+$ curl -b admin.jar 'http://localhost:3276/api/v1/security/explain?object=crm_account&operation=read&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX'
+allowed: True | layers: 9 | readFilter: null
+  object_crud  grants  read on 'crm_account' is granted by [crm_sales_user].
+               contributors: [{"kind": "permission_set", "name": "crm_sales_user", "via": "position:crm_sales_rep"}]
+  (the other eight entries as in step 2; principal now lists crm_sales_rep and crm_sales_user)
+
+$ curl -b rep.jar 'http://localhost:3276/api/v1/data/crm_account?fields=name&limit=50'
+HTTP 200 | total: 3 | names: ['Acme Corp', 'Globex Ltd', 'Initech']
+```
+
+Die Zuweisung hält fest, wer sie erteilt hat und warum. Zeilen, die mit `allowed:` beginnen, sind die einzeilige Zusammenfassung des Berichts durch unser Skript; das rohe JSON jeder Anfrage liegt neben dem Skript.
+
+### 4. Verkaufschancen: Löschen, Lesen, Export und was die Durchsetzung tat
+
+```text
+$ curl -b admin.jar 'http://localhost:3276/api/v1/security/explain?object=crm_opportunity&operation=delete&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX'
+allowed: False | layers: 9 | readFilter: (absent)
+  object_crud  denies   No resolved permission set grants delete on 'crm_opportunity'.
+  rls          narrows  Row-level security narrows the row set (see readFilter for the composed predicate).
+
+$ curl -b admin.jar 'http://localhost:3276/api/v1/security/explain?object=crm_opportunity&operation=read&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX'
+allowed: True | layers: 9 | readFilter: null
+  object_crud  grants   read on 'crm_opportunity' is granted by [crm_sales_user].  via position:crm_sales_rep
+
+$ curl -b admin.jar 'http://localhost:3276/api/v1/security/explain?object=crm_opportunity&operation=export&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX'
+allowed: False | layers: 9 | readFilter: null
+  object_crud  denies   No resolved permission set grants export on 'crm_opportunity'.
+
+$ curl -b rep.jar -X DELETE http://localhost:3276/api/v1/data/crm_opportunity/2qolV83IXvGaXxdA
+{"error":"You do not have permission to perform this action. Contact your administrator if you need access.","code":"PERMISSION_DENIED","object":"crm_opportunity"}
+HTTP 403
+
+$ curl -b rep.jar 'http://localhost:3276/api/v1/data/crm_opportunity?fields=name&limit=50'
+{"object":"crm_opportunity","records":[ … 12 deals … ],"total":12,"hasMore":false}
+HTTP 200
+
+$ curl -b rep.jar http://localhost:3276/api/v1/data/crm_opportunity/export
+{"code":"EXPORT_NOT_PERMITTED","error":"Export is not permitted on object 'crm_opportunity' for this user","object":"crm_opportunity"}
+HTTP 403
+```
+
+Nicht gezeigte Einträge sind wie in Schritt 2. Ein Löschbericht enthält überhaupt kein Feld `readFilter`; das bedeutet `(absent)`. Der Leitfaden erklärt, warum Export eine eigene Frage braucht: [„`export` ist die eine Operation, deren Antwort man nicht aus `read` ableiten kann“](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L77-L86), und die Seite zu Permission Sets sagt, dass [kein eingebautes Bündel die Exportberechtigung trägt](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/permission-sets.mdx#L94-L101).
+
+### 5. Ein Datensatz: zehn Einträge
+
+```text
+$ curl -b admin.jar 'http://localhost:3276/api/v1/security/explain?object=crm_opportunity&operation=read&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX&recordId=2qolV83IXvGaXxdA'
+allowed: True | layers: 10 | readFilter: null
+  tenant_isolation  not_applicable  Layer 0 tenant isolation — the always-first org wall, AND-composed before any business RLS (ADR-0095 D1).
+  principal … rls   (the nine entries of step 4's read, each now with kernelTier; principal adds "posture": "MEMBER")
+record: {"recordId": "2qolV83IXvGaXxdA", "visible": true, "decidedBy": "object_crud"}
+
+$ curl -b admin.jar 'http://localhost:3276/api/v1/security/explain?object=crm_opportunity&operation=delete&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX&recordId=2qolV83IXvGaXxdA'
+allowed: False | layers: 10 | readFilter: (absent)
+record: {"recordId": "2qolV83IXvGaXxdA", "visible": false, "decidedBy": "object_crud"}
+```
+
+Eine Antwort auf Objektebene hat keine Mandantenebene; der Quellcode der Engine sagt das in einem Kommentar: [„no tenant_isolation layer, no kernelTier, no posture“](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/explain-engine.ts#L2926-L2927).
+
+Der Eintrag der Zeilensicherheit beim Löschen auf Datensatzebene, wie geliefert:
+
+```json
+{
+  "layer": "rls",
+  "verdict": "narrows",
+  "detail": "Row-level security narrows the row set (see readFilter for the composed predicate).",
+  "contributors": [],
+  "record": {
+    "outcome": "excluded",
+    "rowFilter": { "created_by": "v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX" },
+    "matchesRecord": false,
+    "rules": [
+      {
+        "kind": "rls_policy",
+        "name": "business_rls",
+        "predicate": { "created_by": "v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX" },
+        "effect": "excludes"
+      }
+    ],
+    "detail": "The record does not satisfy the business row-level predicate."
+  },
+  "kernelTier": "layer_1_business"
+}
+```
+
+Die Bedingung stammt aus dem Mitgliedsbündel, das jedes angemeldete Mitglied hält; dort heißt die Richtlinie `owner_only_deletes` (`created_by == current_user.id`, gebunden an `org_member`; [`default-permission-sets.ts` Zeilen 928–934](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/objects/default-permission-sets.ts#L928-L934)). Die vorbefüllte Verkaufschance wurde beim Start angelegt, nicht vom Mitarbeiter, daher ist sie ausgeschlossen.
+
+### 6. Wer fragen darf
+
+```text
+$ curl -b rep.jar 'http://localhost:3276/api/v1/security/explain?object=crm_opportunity&operation=delete'      # yourself: no userId
+HTTP 200
+allowed: False | layers: 9 | readFilter: (absent)
+
+$ curl -b helpdesk.jar 'http://localhost:3276/api/v1/security/explain?object=crm_opportunity&operation=delete&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX'
+{"success":false,"error":{"code":"PERMISSION_DENIED","message":"[Security] Access denied: explaining another user's access requires the 'manage_users' capability, organization administration of an organization that user is a member of, or a delegated adminScope covering that user (ADR-0090 D6/D12)."}}
+HTTP 403
+
+$ curl -b admin.jar -X POST http://localhost:3276/api/v1/auth/organization/update-member-role \
+    -H 'Content-Type: application/json' -d '{"memberId":"mem_mwsnwe0oznkd4j6u","role":"admin"}'
+{…,"role":"admin","id":"mem_mwsnwe0oznkd4j6u","outcome":"permission_set_granted","grantedPermissionSet":{"name":"organization_admin_no_bypass","label":"Organization Administrator (no record bypass)"}}
+HTTP 200
+
+$ curl -b admin.jar 'http://localhost:3276/api/v1/data/sys_user_permission_set?limit=50'    # the help desk's row, picked from the list by user_id
+{'permission_set': 'organization_admin_no_bypass', 'organization_id': 'org_mwsnwbk2cl1ypwnm', 'reason': "auto-org-admin-grant: granted from membership grade 'admin' (sys_member mem_mwsnwe0oznkd4j6u) → organization_admin_no_bypass"}
+
+$ curl -b helpdesk.jar 'http://localhost:3276/api/v1/security/explain?object=crm_opportunity&operation=delete&userId=v45jiPqcuzi9PL9I8olqaJ2pbhUAr3zX'
+HTTP 200
+allowed: False | layers: 9 | readFilter: (absent)
+```
+
+Das Bündel für Organisations-Admins trägt `manage_org_users`, nicht `manage_users`: [`default-permission-sets.ts` Zeile 461](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/objects/default-permission-sets.ts#L461) listet die Systemberechtigungen von `organization_admin`, und die Variante ohne Bypass übernimmt sie unverändert ([Zeilen 1652–1656](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/objects/default-permission-sets.ts#L1652-L1656)). Die Laufzeit lässt es über den Organisations-Admin-Zweig ihrer Aufruferprüfung zu ([`security-plugin-explain-access.ts` Zeilen 152–165](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/security-plugin-explain-access.ts#L152-L165); der Ablehnungstext, [Zeilen 197–200](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/security-plugin-explain-access.ts#L197-L200)).
+
+### 7. Die zitierten Zeilen, im Tag 18.6.0
+
+Pfade, die mit `content/docs/` beginnen, sind ohne dieses Präfix angegeben.
+
+- `permissions/explain.mdx`: [Zeilen 7–13](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L7-L13) (neun Ebenen, durch Konstruktion erklärt), [Zeilen 20–23](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L20-L23) (die neun in Reihenfolge), [Zeilen 77–86](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L77-L86) (Export), [Zeilen 97–109](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L97-L109) (wer fragen darf), [Zeile 116](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L116) (501 ohne das Sicherheits-Plugin), [Zeilen 120–121](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/explain.mdx#L120-L121) (das Studio-Panel).
+- `references/security/explain.mdx`: [Zeilen 12–17](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/references/security/explain.mdx#L12-L17) (Durchsetzung ohne das Werfen), [Zeilen 19–21](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/references/security/explain.mdx#L19-L21) (zehn Ebenen), [Zeilen 30–34](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/references/security/explain.mdx#L30-L34) (reserviertes Vokabular).
+- `packages/plugins/plugin-security/src/explain-engine.ts`: [Zeilen 2926–2927](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/explain-engine.ts#L2926-L2927) (keine Mandantenebene in einer Antwort auf Objektebene).
+- `packages/plugins/plugin-security/src/security-plugin-explain-access.ts`: [Zeilen 134–138](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-security/src/security-plugin-explain-access.ts#L134-L138) (wer einen anderen Benutzer beschreiben darf).
+- `permissions/access-matrix.mdx`: [Zeilen 81–83](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/access-matrix.mdx#L81-L83) (Lupe und Rundumblick).
+- `permissions/authentication.mdx`: [Zeilen 1230–1233](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/permissions/authentication.mdx#L1230-L1233) (einen Benutzer imitieren, um den Zugriff zu prüfen).
