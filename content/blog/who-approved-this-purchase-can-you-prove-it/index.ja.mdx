@@ -1,0 +1,403 @@
+---
+title: "この購買は誰が承認したのか、それを証明できるか？"
+description: "AI が作った購買承認フローを ObjectStack 18.6.0 で検証。承認済みの 2,400 の申請が 24,000 に書き換えられても承認済みのままで、ルールを 1 つ足すまで止まりませんでした。不在時の代理、10,000 超の経理承認、監査証跡も。"
+author: ObjectStack Team
+date: 2026-12-02
+status: published
+topic: automation
+audience: business
+solutions: []
+industries: []
+cover: ./cover.svg
+tags:
+  - 承認
+  - 代理承認
+  - 監査証跡
+  - 購買
+---
+
+**短い答え。** AI が作った購買承認フローを信頼する前に、コピーで 3 つのことを試してください。各申請を誰が承認し、システムがほかの誰かなら拒否したかどうか。承認者が不在のとき、あるいは金額が上限を超えたときに何が起きるか。あとから経路を再現できるかどうか。承認機能を組み込んだプラットフォームは、1 つ目を強制し、3 つ目を記録します。2 つ目は社内ルールであり、承認後に何を変えてよいかも含めて、決めるのはあなたです。私たちのテストでは、承認済みの 2,400 の申請が 24,000 に書き換えられても承認済みのままでした。承認済みの金額を確定させるルールを 1 つ足すまでは。
+
+*ObjectStack 18.6.0（2026 年 11 月 27 日の実行時点の最新リリース）で、公式スターターから作った新規プロジェクトを使って計測しました。すべてのコマンドと生の出力は[証拠](#証拠)にあります。*
+
+## 信頼する前の 3 つの質問
+
+購買承認は、業務の責任者なら誰でも知っているフローです。誰かが何かを買いたいと申請し、上司が承認か却下を決め、一定額を超えると経理の同意も必要になる。AI コーディングエージェントは、このフローを 1 文から書けます。知るべきなのは書けるかどうかではなく、肝心な日にその結果が何をするかです。
+
+3 つの質問で足ります。
+
+1. **誰が承認し、その人に権限はあったか。** 「誰の名前が載っているか」ではなく、ほかの誰かならシステムが拒否したかどうか。
+2. **承認者が不在のとき、あるいは金額がしきい値を超えたとき何が起きるか。** 休暇中の人を 2 週間待つ申請は、誰も間違っていなくても承認の失敗です。
+3. **1 か月後に経路全体を証明できるか。** 誰が申請し、各ステップを誰が判断し、誰が誰の代わりを務め、正確に何が承認されたのか。
+
+この記事はフローの運用についての話です。フローそのものを稼働させるべきか、誰がそれを承認するかは別の判断で、[AI が作ったシステムを誰が承認するか](/ja/blog/who-signs-off-on-an-ai-built-system/)で扱っています。
+
+## 作ったフローを平易な言葉で
+
+頼んだのは、多くの小さな会社が最初に採るルールです。*購買申請はすべて申請者の上司へ。10,000 を超えるものは経理にも回す。* 新しい ObjectStack プロジェクトでは、これが 1 つのレコード種別（何を、仕入先、金額、理由を持つ購買申請）、1 つの**承認フロー**（システムが各ステップで止まり、指名された人の承認か却下を待つ一連の手順）、そして 2 つの**ロール**（申請を出せる一般社員と、経理承認者）になりました。
+
+2 つの選択はプラットフォームではなく私たちが決めました。両方のステップで、申請を出した本人は承認できないように指定しました。プラットフォームは有効にしない限りこれをオフにしています（[その説明](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/spec/src/automation/approval.zod.ts#L1118-L1123)には "Off by default" とあります）。ただし今回の実行でこの設定が働く場面はありませんでした。Alice が自分の申請の承認者になることはなかったからです。また、最初のステップは「申請者の上司」に回しました。プラットフォームは、管理者が各人に設定する上司の紐付けからこの人を読み取ります。
+
+そのうえで 4 人（申請する Alice、その上司の Mark、経理の Fiona、代理を務められる同僚の Dana）を置いて動かしました。
+
+## 何が起きたか
+
+| やったこと | システムの応答 | あなたにとっての意味 |
+|:--|:--|:--|
+| Alice がモニター 2,400 を申請。 | 申請は Mark だけに届いた。Mark が承認し、申請は「承認済み」になった。経理には一度も回らなかった。 | しきい値が効いている。少額の申請は 1 ステップで済む。 |
+| Alice が自分の申請を承認しようとした。 | 拒否：彼女はこの申請の承認者ではない。 | 申請者は、ほかの人に回った申請を承認できない。難しいのは申請者がそのまま承認者でもある場合、たとえば上司自身の購買だ。そのための設定は有効にしたが、テストはしていない。 |
+| 割り当てられていない Dana が承認しようとした。 | 申請が存在しないかのような応答。 | 申請の外にいる人はそれを処理できず、応答は申請の存在すら認めない。 |
+| Mark が判断している間に、Alice が金額を変えようとした。 | 拒否：承認の進行中は申請がロックされる。 | 承認者は提出された数字に対して判断する。 |
+| Mark の承認後、Alice が 2,400 の申請を 24,000 に変更。 | **保存された。** 申請は「承認済み」のままで、新しい承認は始まらなかった。変更は監査ログに、彼女の名前と前後の金額付きで残った。 | フローが承認したのは申請であって、その後のあらゆる版ではない。それ以外を指定していなかった。Alice が編集できたのは、申請者が自分の申請を編集できる権限を私たちが与えていたからだ。 |
+| ルールを 1 つ追加：承認済み申請の金額は変更できない。Alice が別の承認済み申請で再度試した。 | 拒否され、私たちのメッセージが表示された。ほかの項目の編集は引き続き保存された。 | 1 つのルールで金額の穴は塞がる。仕入先やほかの項目は、別途決めるまで開いたままだ。 |
+| Alice がソフトウェアライセンス 18,000 を申請。Mark が承認し、続けて経理のステップも承認しようとした。 | Mark の承認で Fiona 向けの 2 つ目のステップが開いた。経理ステップへの Mark の試み：存在しないかのような応答。Fiona が理由を付けて却下し、申請は「却下」になった。 | 10,000 を超えると上司の承認だけでは足りず、上司が経理の役割を代わることもできない。 |
+| Mark が 12 月 2 日までの不在を登録し、Dana を代理に指名。Alice が会議チケット 3,000 を申請。 | 申請はまっすぐ Dana に届き、記録には引き継ぎと Mark の理由「Annual leave」が残った。Mark は処理できず、Dana が承認した。 | 上司が不在の間も上司の承認は進み、引き継ぎ自体も記録に残る。 |
+| 管理者が Mark の代わりに不在を登録しようとした。 | 拒否：自分の代理を指名できるのは Mark 本人だけ。 | 誰であれ、管理者であっても、他人を不在扱いにしてその承認を横取りすることはできない。 |
+| Fiona も不在を登録し、Dana を指名。Alice がノートパソコン 12,500 を申請し、Mark が承認。 | 経理ステップは Fiona 1 人に届き、待ち状態になった。 | 代理が引き受けるのは個人宛ての承認であって、ロール宛ての承認ではない。 |
+| 管理者が理由を添えて、12 月 2 日までの期限で Dana に経理ロールを付与。Alice が椅子 15,000 を申請。 | 経理ステップは Fiona と Dana の両方に届き、Dana が承認した。すでに待っていたノートパソコンの申請は Fiona のもとに残った。 | ロールの代行は機能するが、手配した後に開いた申請にしか効かない。 |
+| サーバーを再起動して記録を読み戻した。 | すべてのステップが戻ってきた：誰が提出し、誰が判断したか、引き継ぎ、コメント、時刻、Fiona が見た金額、各申請が通ったステップ。 | 経路はメモリ上ではなく、保存されている。 |
+
+2 つの行はもう一度見る価値があります。
+
+### 承認後の書き換え
+
+こう呼ぶのは、承認はある一瞬に起き、レコードはその後も生き続けるからです。私たちのフローは AI コーディングエージェントがあの 1 文から書いたもので、起動するのは 1 回、申請が作成されたときだけです。あとで申請を編集しても再び起動はしません。あの文には承認済みの申請で何を変えてよいかが書かれていなかったので、プラットフォームは宣言どおりに動き、それ以上は何もしませんでした。監査ログが変更を捉えたので後から証明はできますが、止めるものは何もありませんでした。承認済みの金額を確定とするか、仕入先の変更で申請を再開させるか、5% 未満の変更なら許すか。これらはあなたの判断です。書き出してから、ルールをエージェントに渡してください。私たちは 1 つ渡しました。承認済みの金額は確定、です。次の試みは拒否されました。
+
+### 経理の承認者が不在のとき
+
+代理承認、つまりプラットフォームの不在時引き継ぎは「人」に付いて回ります。私たちの経理ステップはロールを指していたので、Fiona の不在では何も移りませんでした。プラットフォームのドキュメントは[そう明記しており](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/automation/approvals.mdx#L1187-L1194)、別の道も示しています。期間を区切って別の人をそのロールに就けることです。そうしたところ、次の申請は 2 人に届きました。私たちが試していない道がさらに 2 つあります。承認者は待ち状態の申請 1 件を別の人に回せますし、管理者は止まった申請を裁定または再割り当てできます（[ドキュメントはこちら](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/automation/approvals.mdx#L975-L990)）。
+
+設定の手順で 1 つ驚いたことがあります。最初の実行では、Mark は不在の登録すらできませんでした。社員に不在レコードの権限を与えるまで、プラットフォームが彼を拒否したのです。ドキュメントはこの機能をセルフサービスと呼んでいます。権限を与えればそのとおりですが、その権限自体が、誰が自分の承認を他人に委ねてよいかという、もう 1 つの判断です。
+
+## 1 か月後に経路を証明する
+
+プラットフォームが何を、どこに残したか：
+
+- **各判断**がそれぞれ 1 件の記録として：ステップ、アクション（提出、承認、却下、引き継ぎ）、実行者の名前、コメント、時刻。引き継ぎの記録には双方と、示された理由が載ります。
+- **何が承認されたか**：各申請は提出時点の購買内容のコピーを持っているので、Fiona の却下は、今日レコードに何と書かれていようと 18,000 に結び付いています。
+- **各申請がたどった経路**：再起動後に読んだフローの実行履歴では、2,400 と 3,000 は経理をスキップし、18,000 と 12,500 は経理に到達しています。プラットフォームのドキュメントは[この履歴を永続的なものと説明しており](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/automation/flows.mdx#L1811-L1820)、私たちが見たのもそのとおりでした。15,000 の申請はこの読み取りの後に出したもので、その判断記録には 2 つのステップが残っています。
+- **購買そのものへのあらゆる変更**が、承認後の書き換えも含めて監査ログに。
+- **誰が承認できたか**：申請に結論が出ると、申請自体には承認者が載らなくなります。その一覧は監査ログの行として残ります。「ほかの誰かにも承認できたか」と監査人に聞かれたら、答えはそこにあります。
+
+読み間違えやすい点が 1 つあります。Mark が 18,000 の申請を承認したとき、状態は一瞬「承認済み」になり、その後経理ステップが「承認待ち」に戻しました。つまり、のちに Fiona が却下した申請の状態履歴には「承認済み」という語が含まれます。状態履歴ではなく、判断の記録を読んでください。
+
+再起動は 1 か月ではありません。私たちが証明したのは、記録が保存され再起動後も残ることです。どれだけ保管され、誰が削除できるかは、保持設定とデータベースのバックアップ次第で、今回の計測範囲外です。
+
+## スプレッドシートとメール、あるいは購買スイートを擁護する
+
+月に数件しか購買申請がないチームなら、共有スプレッドシートと上司へのメールは真っ当な答えです。設定は不要で、誰もが使い方を知っており、メールのスレッドはそれなりの記録になります。できないのは拒否することです。誰でもセルに「承認」と書けますし、メールはその場にいる誰にでも転送でき、承認後に変えた数字は、誰かが版を残していない限り跡が残りません。社内でそうした点を確かめようと考える人がいないなら、スプレッドシートの方が安上がりです。
+
+専用の購買スイートはその反対の端にあります。仕入先カタログ、予算、発注書、請求書との照合に加え、購買チームが長年磨いてきた承認限度額と代理のルールを備えています。購買が事業の大きな部分を占めるなら、その深さには払う価値があり、汎用プラットフォーム上の承認フローでは代わりになりません。
+
+AI が作るフローが合うのはその中間です。自社のシステムに属し、自社のレコードに結び付いた承認で、別製品を設定するのではなく、エージェントに頼んで小さな変更をレビューすることで変えていきたいもの。
+
+## ObjectStack があなたの代わりに決めないこと
+
+- **代理のルール。** プラットフォームは、各自が自分の代理しか指名できないことを強制します。誰が代理になれるか、どれだけの期間か、いくらまでかは決めません。私たちは Dana が Mark の代わりに承認できる範囲に上限を設けず、プラットフォームも求めませんでした。試したのは 3,000 の申請 1 件です。プラットフォーム自身の注記では、[代理のガバナンスと職務分掌](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-approvals/src/sys-approval-delegation.object.ts#L28-L32)と[承認マトリクスによるガバナンス](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/automation/approvals.mdx#L215)はエンタープライズの領域とされており、今回のテスト範囲外です。エンタープライズ版が何を提供するかは確認していません。
+- **決裁限度額。** 10,000 というしきい値は、私たちがフローに書いた分岐です。Mark は 5,000 まで、その部長は 50,000 まで承認できるなら、その表を書くのはあなたです。
+- **「承認済み」が何を凍結するか。** 「承認後の書き換え」を参照してください。
+- **自社のカレンダーに沿った期限。** ステップは一定時間後にエスカレーションできますが、それは[実時間の時間数](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/automation/approvals.mdx#L1125-L1143)です。夜間も週末も数えられ、営業時間のカレンダーは付属しません。エスカレーションは実行していません。
+- **通知。** プラットフォームは、導入したメッセージングサービスを通じて承認者に知らせます。配信はテストしていません。
+- **購買そのもの。** 作り込まない限り、発注も、仕入先の管理も、予算のチェックもしません。
+
+## エージェントに 3 つの質問を渡す
+
+承認フローをエージェントが作ったり変えたりするなら、質問を常設の指示として渡しておきましょう。そうすれば、穴探しをあなたに任せるのではなく、変更のたびに答えが添えられて戻ってきます。
+
+```text
+承認フローを追加・変更するたびに、平易な言葉で次に答えること：
+1. 各ステップを誰が承認し、誰が拒否されるか（申請者本人を含む）。
+2. 承認者が不在のとき何が起きるか：個人宛てのステップと、ロール宛ての
+   ステップのそれぞれについて。各金額しきい値を超えたら何が起きるか。
+3. 承認後にまだ変更できる項目はどれか。変更すると承認が再開されるか。
+そのうえで、各判断がどこに記録されるかを列挙し、テスト用コピーで
+承認 1 件と却下 1 件を試すこと。
+```
+
+[コーディングエージェントを ObjectStack に向けるガイド](/en/blog/how-to-point-your-agent-at-objectstack/)ではこうした指示がエージェントに届く仕組みを、[長時間かかる承認が耐えるべきこと](/en/blog/automation-pause-resume-approvals/)では、フローが何日も判断を待っても位置を見失わない理由を説明しています。ObjectStack では承認フローはプラットフォームが強制する短い記述なので、上の答えはコードから組み立て直すのではなく、1 つのファイルから読み取れます。
+
+{/* the-proof */}
+## 証拠
+
+**バージョン。** 2026-11-27 に計測。
+
+```text
+$ npm view @objectstack/cli dist-tags
+{ latest: '18.6.0', next: '19.0.0-next.0' }
+```
+
+**プロジェクト。** 公式スターターから作った新規プロジェクトで、18.6.0 のパッケージが入ります。
+
+```bash
+npm create objectstack@latest -- purchasing --skip-skills
+```
+
+スターターのサンプルオブジェクト note を削除し、下のファイルを追加して、プロジェクトが要求する機能に `'approvals'` を加えました。`objectstack validate` は 3 件の注記付きで通りました。2 件は承認に関するもので、あるステップの承認ロールや上司の紐付けを誰も持っていなければ、申請は組織の管理者のもとで開くというもの。3 件目は、購買申請が非公開で、各人には自分のものしか見えないというものです。出力は抜粋です。
+
+```text
+  ✓ Validation passed (166ms)
+  Data: 1 Objects  5 Fields
+  Logic: 1 Flows
+  Security: 2 Positions  1 Permissions
+  ℹ flow "purchasing_request_approval" · node "manager_review": every approver on this node is { type: 'manager' }, so where sys_user.manager_id is unset the request opens on the organization's administrators, and (lockRecord) the record stays locked
+  ℹ flow "purchasing_request_approval" · node "finance_review": every approver on this node routes to a group (position/team/department/queue), so if none is staffed the request opens on the organization's administrators, and (lockRecord) the record stays locked
+  ℹ permission set "purchasing_user": "purchasing_request" is private (OWD) and this set grants allowRead without a readScope — holders see ONLY records they own (plus explicit shares).
+```
+
+フロー、`src/flows/purchase-approval.flow.ts`：
+
+```ts
+import { defineFlow } from '@objectstack/spec';
+
+// Every purchase request goes to the requester's manager.
+// Above 10,000 it also goes to Finance.
+export const PurchaseApprovalFlow = defineFlow({
+  name: 'purchasing_request_approval',
+  label: 'Purchase Request Approval',
+  description: 'Manager approves every request; Finance also approves requests above 10,000.',
+  type: 'autolaunched',
+  status: 'active',
+  nodes: [
+    {
+      id: 'start',
+      type: 'start',
+      label: 'On New Request',
+      config: {
+        objectName: 'purchasing_request',
+        triggerType: 'record-after-create',
+        condition: 'amount != null && amount > 0',
+      },
+    },
+    {
+      id: 'manager_review',
+      type: 'approval',
+      label: 'Manager Review',
+      config: {
+        approvers: [{ type: 'manager' }],
+        excludeSubmitter: true,
+        approvalStatusField: 'approval_status',
+      },
+    },
+    { id: 'over_threshold', type: 'decision', label: 'Above 10,000?' },
+    {
+      id: 'finance_review',
+      type: 'approval',
+      label: 'Finance Review',
+      config: {
+        approvers: [{ type: 'position', value: 'purchasing_finance' }],
+        excludeSubmitter: true,
+        approvalStatusField: 'approval_status',
+      },
+    },
+    { id: 'approved', type: 'end', label: 'Approved' },
+    { id: 'rejected', type: 'end', label: 'Rejected' },
+  ],
+  edges: [
+    { id: 'e1', source: 'start', target: 'manager_review' },
+    { id: 'e2', source: 'manager_review', target: 'over_threshold', label: 'approve' },
+    { id: 'e3', source: 'manager_review', target: 'rejected', label: 'reject' },
+    { id: 'e4', source: 'over_threshold', target: 'finance_review', label: 'true', condition: 'amount > 10000' },
+    { id: 'e5', source: 'over_threshold', target: 'approved', label: 'false', condition: 'amount <= 10000' },
+    { id: 'e6', source: 'finance_review', target: 'approved', label: 'approve' },
+    { id: 'e7', source: 'finance_review', target: 'rejected', label: 'reject' },
+  ],
+});
+```
+
+ロールとその権限セット、`src/security/purchasing.ts`（抜粋。プラットフォームはロールを position と呼びます）。`sys_approval_delegation` の行が、最初の実行で欠けていた行です。
+
+```ts
+export const PurchasingUser = definePermissionSet({
+  name: 'purchasing_user',
+  label: 'Purchasing User',
+  objects: {
+    purchasing_request: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: false },
+    // Lets each person declare their own out-of-office delegate.
+    sys_approval_delegation: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: true },
+  },
+});
+
+export const StaffPosition = definePosition({
+  name: 'purchasing_staff', label: 'Staff',
+  description: 'Anyone who may raise a purchase request.',
+  permissionSets: ['purchasing_user'],
+});
+
+export const FinancePosition = definePosition({
+  name: 'purchasing_finance', label: 'Finance Approver',
+  description: 'Approves purchase requests above 10,000.',
+  permissionSets: ['purchasing_user'],
+});
+```
+
+購買申請オブジェクトは `title`、`vendor`、`amount`（通貨）、`justification` と、読み取り専用の選択項目 `approval_status`（pending、approved、rejected、recalled）を宣言し、`sharingModel: 'private'` とし、項目履歴を有効にしています。
+
+**最初の実行：権限なしでの代理登録。** `sys_approval_delegation` の行が存在する前に、Mark が自分の不在を登録しようとしたとき：
+
+```text
+POST /api/v1/data/sys_approval_delegation  (as Mark, delegator = Mark, delegate = Dana)  → 403
+  {"error":"You do not have permission to perform this action. Contact your administrator if you need access.",
+   "code":"PERMISSION_DENIED","object":"sys_approval_delegation"}
+```
+
+このタグ時点の承認ガイドには ["Out-of-office delegation is self-service — create your own row via the data API"](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/automation/approvals.mdx#L1191-L1192) とあり、オブジェクト自身のコメントには ["RLS/permission sets are the authz"](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-approvals/src/sys-approval-delegation.object.ts#L42-L45) とあります。
+
+**計測した実行。** 専用のデータベースファイルで `objectstack dev` を動かしました（同じデータのまま再起動できるように）。管理者は管理用の create-user エンドポイントで 4 人のユーザーを作り、全員に Staff の職位、Fiona に経理の職位を与え、`POST /api/v1/auth/admin/set-user-manager` で Mark を Alice の上司に設定しました。新規ユーザーは変更必須のパスワードで作成されるため、各人が最初のリクエストの前に変更しました。以下のリクエストは、呼び出し、ステータスコード、応答の要点だけに絞っています。
+
+Alice、2,400：
+
+```text
+POST /api/v1/data/purchasing_request {"title":"Two monitors for the design team","amount":2400, …}  → 201
+GET  /api/v1/approvals/requests?status=pending
+  areq_11496989-… "Two monitors for the design team" manager_review  approvers: {"6uQKuyaW…":"Mark (Manager)"}
+POST /api/v1/approvals/requests/areq_11496989-…/approve  (as Alice)  → 403
+  {"code":"FORBIDDEN","error":"actor 'vr7oFDpG…' is not a pending approver"}
+POST /api/v1/approvals/requests/areq_11496989-…/approve  (as Dana)   → 404
+  {"code":"REQUEST_NOT_FOUND","error":"areq_11496989-…"}
+PATCH /api/v1/data/purchasing_request/IB302DKjEWHWM97O {"amount":24000}  (as Alice)  → 409
+  {"error":"Purchase Request 'Two monitors for the design team' is locked while an approval is in progress, …","code":"RECORD_LOCKED", …}
+POST /api/v1/approvals/requests/areq_11496989-…/approve {"comment":"OK, within team budget"}  (as Mark)  → 200
+GET  /api/v1/data/purchasing_request/IB302DKjEWHWM97O  → "amount":2400,"approval_status":"approved"
+```
+
+Alice、18,000：
+
+```text
+POST /api/v1/data/purchasing_request {"title":"Annual design software licences","amount":18000, …}  → 201
+POST /api/v1/approvals/requests/areq_d3a92f48-…/approve {"comment":"Needed, but over my limit"}  (as Mark)  → 200
+GET  /api/v1/approvals/requests?status=pending  (as Fiona)
+  areq_847ba767-… "Annual design software licences" finance_review  approvers: {"bCeaBA2N…":"Fiona (Finance)"}
+POST /api/v1/approvals/requests/areq_847ba767-…/approve  (as Mark)  → 404 REQUEST_NOT_FOUND
+POST /api/v1/approvals/requests/areq_847ba767-…/reject {"comment":"Over this quarter software budget; resubmit in January"}  (as Fiona)  → 200
+GET  /api/v1/data/purchasing_request/OSjarg1CMvWMjYW8  → "amount":18000,"approval_status":"rejected"
+```
+
+Mark が不在、Alice が 3,000：
+
+```text
+POST /api/v1/data/sys_approval_delegation {"delegator_id":"6uQKuyaW…","delegate_id":"VgaW2gqB…", …}  (as the administrator)  → 403
+  {"error":"you may only manage out-of-office delegations where you are the delegator ('qiB0qhYE…')","code":"FORBIDDEN", …}
+POST /api/v1/data/sys_approval_delegation {"delegator_id":"6uQKuyaW…","delegate_id":"6uQKuyaW…"}  (as Mark)  → 400
+  {"error":"Delegate must be someone other than the Delegator. …","code":"VALIDATION_FAILED", …}
+POST /api/v1/data/sys_approval_delegation {"delegator_id":"6uQKuyaW…","delegate_id":"VgaW2gqB…",
+  "valid_from":"2026-11-27T02:34:07Z","valid_until":"2026-12-02T00:00:00Z","reason":"Annual leave"}  (as Mark)  → 201
+POST /api/v1/data/purchasing_request {"title":"Conference tickets","amount":3000, …}  → 201
+GET  /api/v1/approvals/requests?status=pending
+  areq_b068a078-… "Conference tickets" manager_review  approvers: {"VgaW2gqB…":"Dana (Deputy)"}
+POST /api/v1/approvals/requests/areq_b068a078-…/approve {"comment":"from the beach"}  (as Mark)  → 404 REQUEST_NOT_FOUND
+POST /api/v1/approvals/requests/areq_b068a078-…/approve {"comment":"Approved for Mark while he is on leave"}  (as Dana)  → 200
+GET  /api/v1/data/purchasing_request/io4oYZdkB7TUgo3j  → "amount":3000,"approval_status":"approved"
+```
+
+Fiona が不在、Alice が 12,500（Mark は先に自分の代理登録を削除）：
+
+```text
+POST /api/v1/data/sys_approval_delegation {"delegator_id":"bCeaBA2N…","delegate_id":"VgaW2gqB…", …,"reason":"Annual leave"}  (as Fiona)  → 201
+POST /api/v1/data/purchasing_request {"title":"Laptop refresh, three machines","amount":12500, …}  → 201
+POST /api/v1/approvals/requests/areq_13b1a27a-…/approve {"comment":"Fine by me"}  (as Mark)  → 200
+GET  /api/v1/approvals/requests?status=pending
+  areq_74a0da00-… "Laptop refresh, three machines" finance_review  approvers: {"bCeaBA2N…":"Fiona (Finance)"}
+```
+
+Dana に 12 月 2 日まで経理の職位を付与、Alice が 15,000：
+
+```text
+POST /api/v1/data/sys_user_position {"user_id":"VgaW2gqB…","position":"purchasing_finance",
+  "valid_from":"2026-11-27T02:36:29Z","valid_until":"2026-12-02T00:00:00Z","reason":"Covering for Fiona during leave"}  (as the administrator)  → 201
+POST /api/v1/data/purchasing_request {"title":"Office chairs, eight","amount":15000, …}  → 201
+POST /api/v1/approvals/requests/areq_73f1be07-…/approve {"comment":"Yes"}  (as Mark)  → 200
+GET  /api/v1/approvals/requests?status=pending  (as Dana)
+  areq_4cd80ca2-… "Office chairs, eight" finance_review  approvers: {"VgaW2gqB…":"Dana (Deputy)","bCeaBA2N…":"Fiona (Finance)"}
+POST /api/v1/approvals/requests/areq_4cd80ca2-…/approve {"comment":"Approved, covering Finance"}  (as Dana)  → 200
+GET  /api/v1/data/purchasing_request/AaOL5mgh-aGOofqC  → "amount":15000,"approval_status":"approved"
+```
+
+Dana の承認待ち一覧には椅子だけがありました。ノートパソコンの申請は彼女の職位レコードができる前に開いたため、Fiona 1 人のもとに残りました。
+
+**同じデータベースで再起動した後。** 管理者が購買ごとに読んだ判断記録：
+
+```text
+GET /api/v1/data/sys_approval_action?filter={"record_id":…}&sort=created_at
+
+2,400   02:35:01 manager_review submit    -                | 
+        02:35:03 manager_review approve   Mark (Manager)   | OK, within team budget
+18,000  02:35:04 manager_review submit    -                | 
+        02:35:05 manager_review approve   Mark (Manager)   | Needed, but over my limit
+        02:35:05 finance_review submit    -                | 
+        02:35:06 finance_review reject    Fiona (Finance)  | Over this quarter software budget; resubmit in January
+3,000   02:35:07 manager_review submit    -                | 
+        02:35:07 manager_review ooo_substitute -           | 6uQKuyaW… → VgaW2gqB… — Annual leave
+        02:35:09 manager_review approve   Dana (Deputy)    | Approved for Mark while he is on leave
+12,500  02:35:10 manager_review submit    -                | 
+        02:35:11 manager_review approve   Mark (Manager)   | Fine by me
+        02:35:11 finance_review submit    -                | 
+```
+
+各 `submit` 行の `actor_id` は Alice の id です。引き継ぎの行には実行者がなく、双方を id で示し理由を添えています。再起動後のフロー実行履歴：
+
+```text
+GET /api/v1/automation/purchasing_request_approval/runs
+
+paused     12,500  start:success > manager_review:success > over_threshold:success > finance_review:success
+completed   3,000  start:success > manager_review:success > over_threshold:success > finance_review:skipped
+completed  18,000  start:success > manager_review:success > over_threshold:success > finance_review:success
+completed   2,400  start:success > manager_review:success > over_threshold:success > finance_review:skipped
+```
+
+（椅子の申請はこの読み取りの後に出しました。）Fiona が却下した申請を id で読み戻すと、提出時の金額をまだ保持していました。
+
+```text
+GET /api/v1/approvals/requests/areq_847ba767-…  → 200
+  {"status":"rejected","step_label":"Finance Review","submitter_name":"Alice (Requester)",
+   "submitted_at":"2026-11-27T02:35:05.483Z","completed_at":"2026-11-27T02:35:06.664Z", "payload":{"amount":18000, …}}
+```
+
+結論の出た申請では `pending_approvers` が空になり、`sys_approval_approver` の行は削除されます。承認者の一覧は監査ログに作成行として残ります。例：申請 `areq_11496989-…` と承認者 `6uQKuyaW…` を示す行。このビルドでは、監査ログはプロジェクトの別のテレメトリ用データベースファイルに保存されます。
+
+**状態の落とし穴。** 18,000 の申請の監査ログから：Mark の承認、その 36 ミリ秒後に開いた経理ステップ、そして Fiona の却下。
+
+```text
+02:35:05.458 update purchasing_request OSjarg1C…  by Mark   {"approval_status":"approved"}
+02:35:05.494 update purchasing_request OSjarg1C…  by Alice  {"approval_status":"pending"}
+02:35:06.683 update purchasing_request OSjarg1C…  by Fiona  {"approval_status":"rejected"}
+```
+
+**承認後の書き換え。** 承認済みの 2,400 の申請に対して、Alice として：
+
+```text
+PATCH /api/v1/data/purchasing_request/IB302DKjEWHWM97O {"amount":24000}  → 200
+GET   /api/v1/data/purchasing_request/IB302DKjEWHWM97O  → "amount":24000,"approval_status":"approved"
+GET   /api/v1/approvals/requests?status=pending  → the 12,500 laptop request only
+GET   /api/v1/data/sys_audit_log?filter={"record_id":"IB302DKjEWHWM97O"}&sort=created_at
+  02:35:01.773 create vr7oFDpG…
+  02:35:01.808 update vr7oFDpG…  OLD {"approval_status":null}       NEW {"approval_status":"pending"}
+  02:35:03.147 update 6uQKuyaW…  OLD {"approval_status":"pending"}  NEW {"approval_status":"approved"}
+  02:36:00.644 update vr7oFDpG…  OLD {"amount":2400}                NEW {"amount":24000}
+```
+
+その後、購買申請オブジェクトに追加したルール：
+
+```ts
+validations: [
+  {
+    type: 'script' as const,
+    name: 'approved_amount_is_final',
+    label: 'Approved amount is final',
+    condition: P`record.approval_status == "approved" && record.amount != previous.amount`,
+    message: 'This request is approved. Its amount cannot change; raise a new request instead.',
+    severity: 'error' as const,
+  },
+],
+```
+
+承認済みの 3,000 の申請に対して、ルールを入れて再起動した後：
+
+```text
+PATCH /api/v1/data/purchasing_request/io4oYZdkB7TUgo3j {"amount":30000}  → 400
+  {"error":"This request is approved. Its amount cannot change; raise a new request instead.","code":"VALIDATION_FAILED", …}
+PATCH /api/v1/data/purchasing_request/io4oYZdkB7TUgo3j {"justification":"Two people, industry conference (booked)"}  → 200
+```
+
+ルール追加後に作った 80 の新規申請も、上司のステップは引き続き Mark のもとで開きました。
+
+**計測していないこと。** 申請者がそのステップの承認者でもある場合。申請の外にいる人が申請や購買を読めるかどうか。上司のステップでの却下。申請の待機中に代理の期間が終わる場合。代理が承認できる金額の上限。申請者による取り下げ。期限後のエスカレーション。通知の配信。申請 1 件ごとの再割り当て。管理者による裁定。エンタープライズの代理機能と承認マトリクス機能。そして各記録の保持期間。

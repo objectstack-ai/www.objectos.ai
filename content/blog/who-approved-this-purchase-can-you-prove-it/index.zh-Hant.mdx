@@ -1,0 +1,404 @@
+---
+# @generated zh-Hant from zh-Hans (s2twp) — edit the zh-Hans file; delete this line to hand-maintain.
+title: "這筆採購是誰批的？事後能證明嗎？"
+description: "在 ObjectStack 18.6.0 上實測一條 AI 生成的採購審批流：一筆已批准的 2,400 申請被改成 24,000，狀態仍是已批准，直到我們加了一條規則。另含審批人不在時誰來批、超過 10,000 走財務、審計留痕。"
+author: ObjectStack Team
+date: 2026-12-02
+status: published
+topic: automation
+audience: business
+solutions: []
+industries: []
+cover: ./cover.svg
+tags:
+  - 審批
+  - 代理審批
+  - 審計留痕
+  - 採購
+---
+
+**先給結論。** 在信任一條由 AI 生成的採購審批流之前，先在測試副本上試三件事：每筆申請是誰批的，系統會不會拒絕其他人；審批人不在、或者金額超過你的門檻時會發生什麼；事後能不能把整條路徑復原出來。內建審批能力的平台能強制執行第一件，記錄下第三件。第二件是管理政策，仍然由你來定，包括批准之後還允許改什麼。在我們的測試裡，一筆已批准的 2,400 申請被改成 24,000，狀態仍是“已批准”，直到我們加了一條規則，讓批准後的金額不能再改。
+
+*實測環境：ObjectStack 18.6.0，即我們 2026 年 11 月 27 日實測時的最新版本，使用官方腳手架新建的專案。每條命令和原始輸出都在文末的[證據](#證據)裡。*
+
+## 信任它之前要問的三個問題
+
+採購審批是每個運營負責人都熟悉的流程：有人申請買東西，他的經理批或不批，超過一定金額還要財務同意。AI 編碼助手一句話就能寫出這條流程。你需要知道的不是它能不能寫，而是真到用的那天，它會怎麼做。
+
+三個問題就夠了：
+
+1. **誰批的，他有沒有資格批？** 不是“上面籤的是誰的名字”，而是系統會不會拒絕其他人。
+2. **審批人不在、或者金額超過門檻時會怎樣？** 一筆申請為了等休假的人卡了兩週，就是一次失敗的審批，哪怕誰都沒做錯。
+3. **一個月後，你能證明整條路徑嗎？** 誰申請的，每一步誰決定的，誰替誰代批，批准的到底是什麼。
+
+這篇文章講的是流程怎麼執行。流程本身該不該上線、由誰簽字，是另一件事，見[AI 做出來的系統該由誰簽字](/zh-Hans/blog/who-signs-off-on-an-ai-built-system/)。
+
+## 我們搭的流程，用大白話說
+
+我們要的是大多數小公司起步時的規則：*每筆採購申請先給申請人的經理；超過 10,000 還要給財務。* 在一個新的 ObjectStack 專案裡，這落成了一種記錄型別（採購申請，含買什麼、供應商、金額和理由）、一條**審批流**（系統在若干步驟停下，等指定的人批准或駁回）和兩個**角色**：可以提申請的員工，以及財務審批人。
+
+有兩個選擇是我們做的，不是平台替我們做的。我們讓兩個步驟都禁止申請人自己審批；平台預設不開這個選項（[它自己的說明](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/spec/src/automation/approval.zod.ts#L1118-L1123)寫的是 "Off by default"）。我們這次執行並沒有真正用上這個設定，因為 Alice 從來不是她自己申請的審批人。另外，我們把第一步路由給“申請人的經理”，平台從管理員給每個人設定的上級關係裡讀出這個人。
+
+然後我們放進四個人（提申請的 Alice；她的經理 Mark；財務的 Fiona；可以代批的同事 Dana），跑了起來。
+
+## 實際發生了什麼
+
+| 我們做了什麼 | 系統怎麼回應 | 對你意味著什麼 |
+|:--|:--|:--|
+| Alice 申請買 2,400 的顯示器。 | 申請只發給了 Mark。他批准了，申請顯示“已批准”。財務完全沒被問到。 | 門檻生效：小額申請只走一步。 |
+| Alice 想批准自己的申請。 | 被拒絕：她不是這筆申請的審批人。 | 申請人批不了發給別人的申請。更難的情況是申請人恰好也是審批人，比如經理自己的採購。我們打開了針對這種情況的設定，但沒有測試。 |
+| 沒被指派的 Dana 想批准它。 | 系統的回答就像這筆申請不存在。 | 申請之外的人無法處理它，系統的回答也不會證實它存在。 |
+| Mark 還在審批時，Alice 想改金額。 | 被拒絕：審批進行中，申請被鎖定。 | 審批人批的就是提交時的那個數字。 |
+| Mark 批准之後，Alice 把 2,400 的申請改成了 24,000。 | **儲存成功。** 申請仍顯示“已批准”，也沒有開啟新的審批。改動進了審計日誌，帶著她的名字和前後兩個金額。 | 流程批准的是一筆申請，而不是它之後的每個版本。我們沒有另外說明。Alice 能改，是因為我們給了申請人編輯自己申請的權限。 |
+| 我們加了一條規則：已批准申請的金額不能改。Alice 在另一筆已批准的申請上再試。 | 被拒絕，提示的是我們寫的那句話。其他改動仍能儲存。 | 一條規則堵住了金額這個口子。供應商和其他欄位，在你另作規定之前仍然可以改。 |
+| Alice 申請 18,000 的軟體許可。Mark 批准了，接著又想把財務那一步也批了。 | Mark 的批准為 Fiona 開啟了第二步。Mark 去批財務那一步：系統的回答就像它不存在。Fiona 附上理由駁回，申請顯示“已駁回”。 | 超過 10,000，經理點頭不夠，經理也代替不了財務。 |
+| Mark 登記了休假到 12 月 2 日，指定 Dana 為代理人。Alice 申請 3,000 的會議門票。 | 申請直接發給了 Dana，記錄裡註明了這次轉交和 Mark 填的理由 “Annual leave”。Mark 無法處理；Dana 批准了。 | 經理不在時，經理這一步照常推進，轉交本身也有記錄。 |
+| 管理員想替 Mark 登記休假。 | 被拒絕：只有 Mark 本人能指定自己的代理人。 | 誰都不能通過“宣佈某人不在”來轉走他的審批，管理員也不行。 |
+| Fiona 也登記了休假，指定 Dana。Alice 申請 12,500 的筆記型電腦；Mark 批准了。 | 財務那一步只發給了 Fiona，一直在等。 | 代理人只接手發給“某個人”的審批，不接手發給“某個角色”的審批。 |
+| 管理員把財務角色給了 Dana，到 12 月 2 日為止，並寫明理由。Alice 申請 15,000 的椅子。 | 財務那一步同時發給了 Fiona 和 Dana；Dana 批准了。已經在等的那筆筆記型電腦申請仍然只在 Fiona 那裡。 | 角色頂崗可行，但只對安排之後新開啟的申請有效。 |
+| 我們重啟伺服器，把記錄讀回來。 | 每一步都在：誰提交的、誰決定的、轉交、批註、時間、Fiona 看到的金額，以及每筆申請走過了哪些步驟。 | 路徑是存下來的，不是放在記憶體裡的。 |
+
+有兩行值得再看一眼。
+
+### 批准後的修改
+
+我們這樣叫它，是因為批准發生在某一刻，而記錄還會繼續變化。我們的流程是 AI 編碼助手根據那一句話寫出來的，它只啟動一次：在申請建立的時候。之後再改申請，不會重新啟動它。那句話裡沒有說批准後的申請還能改什麼，所以平台嚴格按我們宣告的做，不多做一分。審計日誌記下了這次改動，所以事後你能證明，但沒有任何東西攔住它。批准後的金額是否就此定死，換供應商要不要重新審批，改動不超過 5% 能不能放行，這些都是你的決定。先把它們寫下來，再把規則交給你的助手。我們給了它一條：批准後的金額不能改。下一次嘗試就被拒絕了。
+
+### 財務審批人不在
+
+代理審批是平台的休假轉交功能，它跟著“人”走。我們的財務那一步指向的是一個角色，所以 Fiona 不在，什麼都沒有轉走。平台文件[寫明瞭這一點](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/automation/approvals.mdx#L1187-L1194)，也給出了另一條路：讓另一個人在限定日期內擔任這個角色。我們這樣做了，下一筆申請就同時到了兩個人那裡。還有兩條路我們沒有測試：審批人可以把某一筆在等的申請轉給別人，管理員也可以裁決或改派卡住的申請（[文件在此](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/automation/approvals.mdx#L975-L990)）。
+
+有一個配置步驟讓我們意外。第一次執行環境，Mark 根本登記不了休假：平台拒絕了他，直到我們給員工開了“代理記錄”的權限。文件把這個功能稱為自助式的。開了權限之後確實是自助的，而開不開這個權限，本身又是一個決定：誰可以把自己的審批交給別人。
+
+## 一個月後，怎麼證明整條路徑
+
+平台保留了什麼，放在哪裡：
+
+- **每一個決定**，各是一條記錄：哪一步、什麼動作（提交、批准、駁回、轉交）、誰做的（帶名字）、批註和時間。轉交記錄寫著雙方和所給的理由。
+- **批准的是什麼**：每筆申請都儲存了一份提交時的採購內容，所以 Fiona 的駁回對應的是 18,000，而不是這條記錄今天顯示的數字。
+- **每筆申請走了哪條路**：重啟後讀出的流程執行歷史顯示，2,400 和 3,000 跳過了財務，18,000 和 12,500 走到了財務。平台文件[說這份歷史是持久儲存的](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/automation/flows.mdx#L1811-L1820)，我們看到的也是這樣。15,000 那筆是在這次讀取之後提的，它的決定記錄顯示兩步都走了。
+- **採購記錄本身的每一次改動**，都在審計日誌裡，包括批准後的修改。
+- **誰本來有資格批**：申請一旦有了結論，申請本身就不再列出它的審批人。這份名單以行的形式保留在審計日誌裡。審計人員問“當時還有誰能批這筆？”，答案要去那裡找。
+
+有一個容易讀錯的地方：Mark 批准 18,000 那筆時，它的狀態先顯示了一瞬間“已批准”，然後財務那一步又把它改回“待審批”。所以，一筆後來被 Fiona 駁回的申請，它的狀態歷史裡出現過“已批准”。要讀決定記錄，不要讀狀態歷史。
+
+重啟不等於一個月。我們證明的是這些記錄確實存下來了、重啟後還在；它們保留多久、誰能刪除，取決於你的保留設定和資料庫備份，不在我們這次的測量範圍內。
+
+## 為電子表格加郵件、或者專業採購系統說句公道話
+
+對一個每月只有幾筆採購申請的團隊來說，共享電子表格加一封發給經理的郵件，是認真的答案。它不需要任何配置，人人都會用，一串郵件也算是像樣的記錄。它做不到的是拒絕：誰都能在單元格中寫“已批准”，郵件可以轉給隨便哪個在場的人，批准後改過的數字不會留下痕跡，除非有人專門儲存版本。如果在你的公司裡沒人會想到去查這些，電子表格更便宜。
+
+專業的採購套件在另一端。它帶來供應商目錄、預算、採購訂單和發票匹配，還有采購團隊多年打磨出來的審批額度和代理規則。如果採購在你公司業務裡佔很大比重，這份深度值得花錢，通用平台上的一條審批流替代不了它。
+
+AI 生成的審批流適合中間地帶：審批屬於你自己的系統，掛在你自己的記錄上，你想通過讓助手改、再審閱一處小改動來調整它，而不是去配置另一個獨立產品。
+
+## ObjectStack 不替你決定的事
+
+- **你的代理政策。** 平台強制規定每個人只能指定自己的代理人。它不決定誰可以當代理人、代理多久、代理到多大金額。我們沒有給 Dana 代 Mark 審批的額度設上限，平台也沒有要求設；我們只測了一筆 3,000 的申請。平台自己的說明寫的是，[代理治理與職責分離](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-approvals/src/sys-approval-delegation.object.ts#L28-L32)和[審批矩陣治理](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/automation/approvals.mdx#L215)屬於企業級範疇，不在我們測試的範圍內。我們沒有去查 ObjectOS 企業版提供了什麼。
+- **你的籤批額度。** 10,000 這個門檻是我們寫進流程裡的一個分支。如果 Mark 能批到 5,000，他的總監能批到 50,000，這張表要由你來寫。
+- **“已批准”凍結了什麼。** 見上文“批准後的修改”。
+- **符合你日曆的期限。** 一個步驟可以在若干小時後升級處理，但那是[牆上時鐘的小時數](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/automation/approvals.mdx#L1125-L1143)：夜裡和週末都算，平台沒有自帶工作時間日曆。我們沒有跑升級處理。
+- **通知。** 平台會通過你安裝的訊息服務通知審批人。我們沒有測試送達。
+- **採購本身。** 除非你自己搭，它不會下訂單、管理供應商或檢查預算。
+
+## 把這三個問題交給你的助手
+
+如果會由助手來搭建或修改你的審批流，就把這些問題作為常駐指令交給它，這樣每次改動都會帶著答案回來，而不是留給你自己去找漏洞：
+
+```text
+你每新增或修改一條審批流，都用大白話回答：
+1. 每一步由誰審批？誰會被拒絕（包括申請人本人）？
+2. 審批人不在時會怎樣：按人路由的步驟怎樣，按角色路由的步驟怎樣？
+   超過每個金額門檻時會怎樣？
+3. 批准之後，哪些欄位還能改？改了會不會重新開啟審批？
+然後列出每個決定記錄在哪裡，並在測試副本上各跑一筆
+批准和駁回的申請。
+```
+
+[讓你的編碼助手對準 ObjectStack 的指南](/en/blog/how-to-point-your-agent-at-objectstack/)講了這類指令怎樣到達助手，[長時間執行的審批需要扛住什麼](/zh-Hant/blog/automation-pause-resume-approvals/)講了一條流程為什麼能等好幾天才有結論而不丟失進度。在 ObjectStack 裡，一條審批流是一段由平台強制執行的簡短書面描述，所以上面那些答案可以從一個檔案裡讀出來，而不必從程式碼裡拼湊。
+
+{/* the-proof */}
+## 證據
+
+**版本。** 2026-11-27 實測。
+
+```text
+$ npm view @objectstack/cli dist-tags
+{ latest: '18.6.0', next: '19.0.0-next.0' }
+```
+
+**專案。** 用官方腳手架新建的專案，安裝的是 18.6.0 的包：
+
+```bash
+npm create objectstack@latest -- purchasing --skip-skills
+```
+
+我們刪掉了腳手架自帶的示例 note 物件，加入下面這些檔案，並在專案要求的能力里加上 `'approvals'`。`objectstack validate` 通過，給出三條提示。兩條和審批有關：如果沒人擔任某一步的審批角色、或者沒設上級關係，申請會轉到組織的管理員那裡。第三條說採購申請是私有的，每個人只能看到自己的。輸出有刪節：
+
+```text
+  ✓ Validation passed (166ms)
+  Data: 1 Objects  5 Fields
+  Logic: 1 Flows
+  Security: 2 Positions  1 Permissions
+  ℹ flow "purchasing_request_approval" · node "manager_review": every approver on this node is { type: 'manager' }, so where sys_user.manager_id is unset the request opens on the organization's administrators, and (lockRecord) the record stays locked
+  ℹ flow "purchasing_request_approval" · node "finance_review": every approver on this node routes to a group (position/team/department/queue), so if none is staffed the request opens on the organization's administrators, and (lockRecord) the record stays locked
+  ℹ permission set "purchasing_user": "purchasing_request" is private (OWD) and this set grants allowRead without a readScope — holders see ONLY records they own (plus explicit shares).
+```
+
+流程檔案 `src/flows/purchase-approval.flow.ts`：
+
+```ts
+import { defineFlow } from '@objectstack/spec';
+
+// Every purchase request goes to the requester's manager.
+// Above 10,000 it also goes to Finance.
+export const PurchaseApprovalFlow = defineFlow({
+  name: 'purchasing_request_approval',
+  label: 'Purchase Request Approval',
+  description: 'Manager approves every request; Finance also approves requests above 10,000.',
+  type: 'autolaunched',
+  status: 'active',
+  nodes: [
+    {
+      id: 'start',
+      type: 'start',
+      label: 'On New Request',
+      config: {
+        objectName: 'purchasing_request',
+        triggerType: 'record-after-create',
+        condition: 'amount != null && amount > 0',
+      },
+    },
+    {
+      id: 'manager_review',
+      type: 'approval',
+      label: 'Manager Review',
+      config: {
+        approvers: [{ type: 'manager' }],
+        excludeSubmitter: true,
+        approvalStatusField: 'approval_status',
+      },
+    },
+    { id: 'over_threshold', type: 'decision', label: 'Above 10,000?' },
+    {
+      id: 'finance_review',
+      type: 'approval',
+      label: 'Finance Review',
+      config: {
+        approvers: [{ type: 'position', value: 'purchasing_finance' }],
+        excludeSubmitter: true,
+        approvalStatusField: 'approval_status',
+      },
+    },
+    { id: 'approved', type: 'end', label: 'Approved' },
+    { id: 'rejected', type: 'end', label: 'Rejected' },
+  ],
+  edges: [
+    { id: 'e1', source: 'start', target: 'manager_review' },
+    { id: 'e2', source: 'manager_review', target: 'over_threshold', label: 'approve' },
+    { id: 'e3', source: 'manager_review', target: 'rejected', label: 'reject' },
+    { id: 'e4', source: 'over_threshold', target: 'finance_review', label: 'true', condition: 'amount > 10000' },
+    { id: 'e5', source: 'over_threshold', target: 'approved', label: 'false', condition: 'amount <= 10000' },
+    { id: 'e6', source: 'finance_review', target: 'approved', label: 'approve' },
+    { id: 'e7', source: 'finance_review', target: 'rejected', label: 'reject' },
+  ],
+});
+```
+
+角色和它們的權限集，`src/security/purchasing.ts`（有刪節；平台把角色稱為 position）。`sys_approval_delegation` 那一行，就是第一次執行環境缺的那行：
+
+```ts
+export const PurchasingUser = definePermissionSet({
+  name: 'purchasing_user',
+  label: 'Purchasing User',
+  objects: {
+    purchasing_request: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: false },
+    // Lets each person declare their own out-of-office delegate.
+    sys_approval_delegation: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: true },
+  },
+});
+
+export const StaffPosition = definePosition({
+  name: 'purchasing_staff', label: 'Staff',
+  description: 'Anyone who may raise a purchase request.',
+  permissionSets: ['purchasing_user'],
+});
+
+export const FinancePosition = definePosition({
+  name: 'purchasing_finance', label: 'Finance Approver',
+  description: 'Approves purchase requests above 10,000.',
+  permissionSets: ['purchasing_user'],
+});
+```
+
+採購申請物件聲明瞭 `title`、`vendor`、`amount`（貨幣）、`justification`，以及一個只讀的 `approval_status` 選項欄位（pending、approved、rejected、recalled），設定了 `sharingModel: 'private'` 並開啟欄位歷史。
+
+**第一次執行：沒有授權時的代理登記。** 在加上 `sys_approval_delegation` 那一行之前，Mark 嘗試登記自己的休假：
+
+```text
+POST /api/v1/data/sys_approval_delegation  (as Mark, delegator = Mark, delegate = Dana)  → 403
+  {"error":"You do not have permission to perform this action. Contact your administrator if you need access.",
+   "code":"PERMISSION_DENIED","object":"sys_approval_delegation"}
+```
+
+該版本標籤下的審批指南寫著 ["Out-of-office delegation is self-service — create your own row via the data API"](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/automation/approvals.mdx#L1191-L1192)，而這個物件自己的註釋寫著 ["RLS/permission sets are the authz"](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-approvals/src/sys-approval-delegation.object.ts#L42-L45)。
+
+**正式測量的那次執行。** `objectstack dev` 使用獨立的資料庫檔案（以便重啟後接著用同一份資料）。管理員用管理端的 create-user 介面建了四個使用者，給每人分配員工職位、給 Fiona 分配財務職位，並用 `POST /api/v1/auth/admin/set-user-manager` 把 Mark 設為 Alice 的上級。新使用者建立時帶著一個必須修改的密碼，所以每個人在第一次請求前都改了密碼。下面的請求只保留呼叫、狀態碼和回答裡關鍵的部分。
+
+Alice，2,400：
+
+```text
+POST /api/v1/data/purchasing_request {"title":"Two monitors for the design team","amount":2400, …}  → 201
+GET  /api/v1/approvals/requests?status=pending
+  areq_11496989-… "Two monitors for the design team" manager_review  approvers: {"6uQKuyaW…":"Mark (Manager)"}
+POST /api/v1/approvals/requests/areq_11496989-…/approve  (as Alice)  → 403
+  {"code":"FORBIDDEN","error":"actor 'vr7oFDpG…' is not a pending approver"}
+POST /api/v1/approvals/requests/areq_11496989-…/approve  (as Dana)   → 404
+  {"code":"REQUEST_NOT_FOUND","error":"areq_11496989-…"}
+PATCH /api/v1/data/purchasing_request/IB302DKjEWHWM97O {"amount":24000}  (as Alice)  → 409
+  {"error":"Purchase Request 'Two monitors for the design team' is locked while an approval is in progress, …","code":"RECORD_LOCKED", …}
+POST /api/v1/approvals/requests/areq_11496989-…/approve {"comment":"OK, within team budget"}  (as Mark)  → 200
+GET  /api/v1/data/purchasing_request/IB302DKjEWHWM97O  → "amount":2400,"approval_status":"approved"
+```
+
+Alice，18,000：
+
+```text
+POST /api/v1/data/purchasing_request {"title":"Annual design software licences","amount":18000, …}  → 201
+POST /api/v1/approvals/requests/areq_d3a92f48-…/approve {"comment":"Needed, but over my limit"}  (as Mark)  → 200
+GET  /api/v1/approvals/requests?status=pending  (as Fiona)
+  areq_847ba767-… "Annual design software licences" finance_review  approvers: {"bCeaBA2N…":"Fiona (Finance)"}
+POST /api/v1/approvals/requests/areq_847ba767-…/approve  (as Mark)  → 404 REQUEST_NOT_FOUND
+POST /api/v1/approvals/requests/areq_847ba767-…/reject {"comment":"Over this quarter software budget; resubmit in January"}  (as Fiona)  → 200
+GET  /api/v1/data/purchasing_request/OSjarg1CMvWMjYW8  → "amount":18000,"approval_status":"rejected"
+```
+
+Mark 不在，Alice 申請 3,000：
+
+```text
+POST /api/v1/data/sys_approval_delegation {"delegator_id":"6uQKuyaW…","delegate_id":"VgaW2gqB…", …}  (as the administrator)  → 403
+  {"error":"you may only manage out-of-office delegations where you are the delegator ('qiB0qhYE…')","code":"FORBIDDEN", …}
+POST /api/v1/data/sys_approval_delegation {"delegator_id":"6uQKuyaW…","delegate_id":"6uQKuyaW…"}  (as Mark)  → 400
+  {"error":"Delegate must be someone other than the Delegator. …","code":"VALIDATION_FAILED", …}
+POST /api/v1/data/sys_approval_delegation {"delegator_id":"6uQKuyaW…","delegate_id":"VgaW2gqB…",
+  "valid_from":"2026-11-27T02:34:07Z","valid_until":"2026-12-02T00:00:00Z","reason":"Annual leave"}  (as Mark)  → 201
+POST /api/v1/data/purchasing_request {"title":"Conference tickets","amount":3000, …}  → 201
+GET  /api/v1/approvals/requests?status=pending
+  areq_b068a078-… "Conference tickets" manager_review  approvers: {"VgaW2gqB…":"Dana (Deputy)"}
+POST /api/v1/approvals/requests/areq_b068a078-…/approve {"comment":"from the beach"}  (as Mark)  → 404 REQUEST_NOT_FOUND
+POST /api/v1/approvals/requests/areq_b068a078-…/approve {"comment":"Approved for Mark while he is on leave"}  (as Dana)  → 200
+GET  /api/v1/data/purchasing_request/io4oYZdkB7TUgo3j  → "amount":3000,"approval_status":"approved"
+```
+
+Fiona 不在，Alice 申請 12,500（Mark 先刪掉了自己的代理登記）：
+
+```text
+POST /api/v1/data/sys_approval_delegation {"delegator_id":"bCeaBA2N…","delegate_id":"VgaW2gqB…", …,"reason":"Annual leave"}  (as Fiona)  → 201
+POST /api/v1/data/purchasing_request {"title":"Laptop refresh, three machines","amount":12500, …}  → 201
+POST /api/v1/approvals/requests/areq_13b1a27a-…/approve {"comment":"Fine by me"}  (as Mark)  → 200
+GET  /api/v1/approvals/requests?status=pending
+  areq_74a0da00-… "Laptop refresh, three machines" finance_review  approvers: {"bCeaBA2N…":"Fiona (Finance)"}
+```
+
+Dana 擔任財務職位到 12 月 2 日，Alice 申請 15,000：
+
+```text
+POST /api/v1/data/sys_user_position {"user_id":"VgaW2gqB…","position":"purchasing_finance",
+  "valid_from":"2026-11-27T02:36:29Z","valid_until":"2026-12-02T00:00:00Z","reason":"Covering for Fiona during leave"}  (as the administrator)  → 201
+POST /api/v1/data/purchasing_request {"title":"Office chairs, eight","amount":15000, …}  → 201
+POST /api/v1/approvals/requests/areq_73f1be07-…/approve {"comment":"Yes"}  (as Mark)  → 200
+GET  /api/v1/approvals/requests?status=pending  (as Dana)
+  areq_4cd80ca2-… "Office chairs, eight" finance_review  approvers: {"VgaW2gqB…":"Dana (Deputy)","bCeaBA2N…":"Fiona (Finance)"}
+POST /api/v1/approvals/requests/areq_4cd80ca2-…/approve {"comment":"Approved, covering Finance"}  (as Dana)  → 200
+GET  /api/v1/data/purchasing_request/AaOL5mgh-aGOofqC  → "amount":15000,"approval_status":"approved"
+```
+
+Dana 的待審列表裡只有椅子那一筆：筆記型電腦那筆是在她的職位記錄存在之前開啟的，仍然只在 Fiona 那裡。
+
+**重啟到同一個資料庫之後。** 管理員按每筆採購讀取的決定記錄：
+
+```text
+GET /api/v1/data/sys_approval_action?filter={"record_id":…}&sort=created_at
+
+2,400   02:35:01 manager_review submit    -                | 
+        02:35:03 manager_review approve   Mark (Manager)   | OK, within team budget
+18,000  02:35:04 manager_review submit    -                | 
+        02:35:05 manager_review approve   Mark (Manager)   | Needed, but over my limit
+        02:35:05 finance_review submit    -                | 
+        02:35:06 finance_review reject    Fiona (Finance)  | Over this quarter software budget; resubmit in January
+3,000   02:35:07 manager_review submit    -                | 
+        02:35:07 manager_review ooo_substitute -           | 6uQKuyaW… → VgaW2gqB… — Annual leave
+        02:35:09 manager_review approve   Dana (Deputy)    | Approved for Mark while he is on leave
+12,500  02:35:10 manager_review submit    -                | 
+        02:35:11 manager_review approve   Mark (Manager)   | Fine by me
+        02:35:11 finance_review submit    -                | 
+```
+
+每條 `submit` 記錄的 `actor_id` 都是 Alice 的 id；轉交記錄沒有操作人，用 id 寫出雙方並附上理由。重啟後的流程執行歷史：
+
+```text
+GET /api/v1/automation/purchasing_request_approval/runs
+
+paused     12,500  start:success > manager_review:success > over_threshold:success > finance_review:success
+completed   3,000  start:success > manager_review:success > over_threshold:success > finance_review:skipped
+completed  18,000  start:success > manager_review:success > over_threshold:success > finance_review:success
+completed   2,400  start:success > manager_review:success > over_threshold:success > finance_review:skipped
+```
+
+（椅子那筆申請是在這次讀取之後提的。）Fiona 駁回的申請，按 id 讀回時仍帶著提交時的金額：
+
+```text
+GET /api/v1/approvals/requests/areq_847ba767-…  → 200
+  {"status":"rejected","step_label":"Finance Review","submitter_name":"Alice (Requester)",
+   "submitted_at":"2026-11-27T02:35:05.483Z","completed_at":"2026-11-27T02:35:06.664Z", "payload":{"amount":18000, …}}
+```
+
+已有結論的申請，其 `pending_approvers` 為空，`sys_approval_approver` 記錄被刪除；審批人名單以建立記錄的形式留在審計日誌裡，例如寫明申請 `areq_11496989-…` 和審批人 `6uQKuyaW…` 的那一行。在這個版本中，審計日誌儲存在專案單獨的遙測資料庫檔案中。
+
+**狀態陷阱。** 18,000 那筆申請的審計日誌：Mark 批准，36 毫秒後財務那一步開啟，然後是 Fiona 的駁回：
+
+```text
+02:35:05.458 update purchasing_request OSjarg1C…  by Mark   {"approval_status":"approved"}
+02:35:05.494 update purchasing_request OSjarg1C…  by Alice  {"approval_status":"pending"}
+02:35:06.683 update purchasing_request OSjarg1C…  by Fiona  {"approval_status":"rejected"}
+```
+
+**批准後的修改。** 在已批准的 2,400 申請上，以 Alice 身份操作：
+
+```text
+PATCH /api/v1/data/purchasing_request/IB302DKjEWHWM97O {"amount":24000}  → 200
+GET   /api/v1/data/purchasing_request/IB302DKjEWHWM97O  → "amount":24000,"approval_status":"approved"
+GET   /api/v1/approvals/requests?status=pending  → the 12,500 laptop request only
+GET   /api/v1/data/sys_audit_log?filter={"record_id":"IB302DKjEWHWM97O"}&sort=created_at
+  02:35:01.773 create vr7oFDpG…
+  02:35:01.808 update vr7oFDpG…  OLD {"approval_status":null}       NEW {"approval_status":"pending"}
+  02:35:03.147 update 6uQKuyaW…  OLD {"approval_status":"pending"}  NEW {"approval_status":"approved"}
+  02:36:00.644 update vr7oFDpG…  OLD {"amount":2400}                NEW {"amount":24000}
+```
+
+隨後我們在採購申請物件上加的規則：
+
+```ts
+validations: [
+  {
+    type: 'script' as const,
+    name: 'approved_amount_is_final',
+    label: 'Approved amount is final',
+    condition: P`record.approval_status == "approved" && record.amount != previous.amount`,
+    message: 'This request is approved. Its amount cannot change; raise a new request instead.',
+    severity: 'error' as const,
+  },
+],
+```
+
+在已批准的 3,000 申請上，加了規則並重啟之後：
+
+```text
+PATCH /api/v1/data/purchasing_request/io4oYZdkB7TUgo3j {"amount":30000}  → 400
+  {"error":"This request is approved. Its amount cannot change; raise a new request instead.","code":"VALIDATION_FAILED", …}
+PATCH /api/v1/data/purchasing_request/io4oYZdkB7TUgo3j {"justification":"Two people, industry conference (booked)"}  → 200
+```
+
+加規則之後新建的一筆 80 的申請，仍然把經理那一步開在 Mark 那裡。
+
+**沒有測量的部分。** 申請人同時也是該步驟審批人的情況；申請之外的人能否讀取這筆申請或採購記錄；在經理那一步被駁回；代理期在申請等待期間結束；對代理人審批額度的限制；申請人撤回；超時後的升級處理；通知送達；單筆申請改派；管理員裁決；企業級的代理和審批矩陣功能；以及任何記錄的保留時長。
