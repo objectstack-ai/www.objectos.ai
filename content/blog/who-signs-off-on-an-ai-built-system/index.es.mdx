@@ -1,0 +1,474 @@
+---
+title: "¿Quién aprueba un sistema construido por IA y qué firma exactamente?"
+description: "Firma el responsable de negocio, y firma una hoja, no el código: quién ve qué registros, quién aprueba qué, qué está abierto al exterior y qué queda registrado. Generada desde un CRM en ObjectStack 18.6.0."
+author: ObjectStack Team
+date: 2026-11-27
+status: published
+topic: governance
+audience: business
+solutions:
+  - crm
+industries: []
+cover: ./cover.svg
+tags:
+  - Aprobación de salida
+  - Gobierno de la IA
+  - Aprobaciones
+  - Registro de auditoría
+---
+
+**La respuesta corta.** El responsable del departamento que trabaja con el sistema es quien lo aprueba, y firma una página, no el código. Esa página, la **hoja de aprobación**, deja constancia de cuatro cosas: quién puede ver y cambiar qué registros, quién puede aprobar qué, qué está abierto al exterior y qué queda registrado. Pídala antes de la puesta en marcha y después de cada cambio hecho por la IA, y lea solo las líneas que cambiaron. Si nadie firma, la IA ha tomado esas decisiones por usted. La hoja no demuestra que el sistema funcione, que los datos estén limpios ni que la lógica sea correcta: eso lo sigue probando una persona.
+
+*Medido en ObjectStack 18.6.0, la última versión a 20 de noviembre de 2026, con el ejemplo de CRM que se distribuye con ella. Todos los comandos y salidas sin editar están en [La prueba](#la-prueba).*
+
+## Aprobar no es revisar código
+
+Cuando un agente de programación con IA construye un sistema interno, hay dos preguntas distintas que necesitan dos personas distintas.
+
+Un desarrollador, o un revisor que sigue [la lista de revisión para cambios de aplicaciones generados por IA](/en/blog/how-to-review-ai-generated-app-changes/), responde: *¿está bien construido?*
+
+El responsable de negocio responde: *¿es esto lo que permitimos?* Quién de mi equipo puede abrir el registro de un cliente, quién puede conceder un 35 % de descuento en una oportunidad, qué puede hacer un desconocido en la web y qué podremos enseñar a un auditor el año que viene. Si nadie responde estas preguntas, un agente de IA las responderá todas por usted, porque un sistema en marcha no puede dejarlas en blanco.
+
+Así que el responsable firma una declaración de esas decisiones, en su propio idioma, generada a partir del propio sistema. Esa declaración es la hoja.
+
+## La hoja, antes de cualquier cambio
+
+Esta es la hoja del ejemplo de CRM tal como se distribuye. Las partes 1 y 2 se leyeron de la propia definición de la aplicación, igual que los campos del formulario de contacto y la línea del historial de campos. El resto se confirmó probando el sistema en marcha. Cuando una parte tiene su propio artículo a fondo, la parte enlaza a él.
+
+### 1. Quién puede ver y cambiar qué registros y campos
+
+Una aplicación que lo ha activado guarda una **instantánea de la matriz de acceso**: una tabla guardada de lo que cada rol puede hacer con cada tipo de registro. Cada compilación vuelve a generar la tabla y se detiene si difiere de la copia guardada, hasta que una persona acepta el cambio ([cómo la instantánea detecta un cambio silencioso de permisos](/es/blog/catch-ai-silent-permission-change-access-matrix-gate/)). Traducida a lenguaje llano, con los roles (la plataforma los llama puestos) como filas, la instantánea del CRM dice lo siguiente (la última fila es el administrador integrado de la plataforma, que la instantánea no incluye):
+
+| Rol | Puede ver | Puede crear y editar | Puede borrar | Registros de quién | Límites por campo |
+|:--|:--|:--|:--|:--|:--|
+| Representante de ventas | cuentas, contactos, leads, oportunidades, líneas de oportunidad, actividades | los mismos seis | nada | de todos | ninguno |
+| Responsable de ventas | lo mismo que un representante | lo mismo | nada | de todos | ninguno |
+| Aprobador de Finanzas | lo mismo que un representante | lo mismo | nada | de todos | ninguno |
+| Visitante de la web (sin iniciar sesión) | nada | un lead nuevo, solo a través del formulario de contacto | nada | ninguno | cinco campos (parte 3) |
+| Administrador | todos los registros, más la configuración | todos los registros | todos los registros (según la describe la plataforma; borramos uno) | de todos | ninguno |
+
+**Lo que debería ver quien firma:** los tres roles del personal son idénticos. Un responsable de ventas no puede hacer nada que no pueda hacer un representante, un representante puede editar todas las oportunidades de la empresa y no solo las suyas, y ningún campo de ningún registro está oculto para quien pueda abrirlo. Puede que todo eso esté bien para un equipo pequeño. Sigue siendo una decisión, y esta tabla es donde usted la toma o descubre que alguien la tomó sin usted.
+
+### 2. Quién puede aprobar qué
+
+Un **paso de aprobación** es un punto en el que el sistema detiene un cambio y espera a que un rol concreto diga sí o no.
+
+| Qué necesita aprobación | Quién aprueba | Notas |
+|:--|:--|:--|
+| Nada | — | Un rol se llama Aprobador de Finanzas y se describe como «autorizado a aprobar descuentos superiores al 30 %», pero no existe ningún paso de aprobación. |
+
+**Lo que debería ver quien firma:** un rol cuya descripción promete un control que el sistema no tiene. Lo probamos: el descuento de una oportunidad pasó del 0 % al 35 % y se guardó, y no se preguntó a nadie. Una regla aparte sí detiene los descuentos superiores al 40 %, con el mensaje «Discount cannot exceed 40% without an approved exception» (sin una excepción aprobada, el descuento no puede superar el 40 %), y tampoco hay forma de obtener esa excepción.
+
+### 3. Qué está abierto al exterior
+
+| Puerta | Quién puede usarla | Qué permite |
+|:--|:--|:--|
+| Formulario de contacto de la web | cualquiera, sin iniciar sesión | crea un lead nuevo, con 5 de los 13 campos del lead: nombre, empresa, correo, teléfono, cargo ([cómo un formulario público se queda en cinco campos](/es/blog/how-to-let-anonymous-visitors-submit-a-form/)) |
+| Interfaz de datos (API), la dirección que usa otro software para leer y escribir registros | solo usuarios con sesión iniciada | exactamente lo que permite el rol de ese usuario; sin sesión, la rechaza |
+| Conexión de agentes de IA (MCP), la forma estándar en que un asistente de IA se conecta a un sistema | quien tenga una clave emitida por el sistema | actúa como la persona a la que pertenece la clave, con el acceso de esa persona, según la documentación de la plataforma (citada en la prueba); sin clave, la rechaza |
+| Agentes de IA integrados, otras direcciones o mensajes salientes a otros sistemas | — | ninguno declarado |
+
+**Lo que debería ver quien firma:** la conexión de agentes de IA está activada por defecto. Eso convierte «a quién se le ha emitido una clave» en una pregunta para sus revisiones de accesos.
+
+### 4. Qué queda registrado
+
+| Qué | ¿Se registra? |
+|:--|:--|
+| Cada registro nuevo, modificado o borrado, con quién, cuándo y los valores antes y después | Sí |
+| Inicios de sesión | Sí |
+| **Historial de campos**, la lista de cambios anteriores que se ve en la página del propio registro | En cuentas, contactos, leads y oportunidades; no en actividades ni en líneas de oportunidad |
+| **Consultas de registros**, quién abrió qué registro | No; no está activado para ningún tipo de registro ([qué registra la auditoría de consultas](/es/blog/prove-who-opened-a-customer-record-view-auditing/)) |
+
+**Lo que debería ver quien firma:** los cambios se registran y abrir un registro no. Si entre sus obligaciones está «quién consultó el expediente de este cliente», es una línea que hay que cambiar antes de la puesta en marcha, no después de la primera petición de un auditor.
+
+## Un cambio hecho por la IA, y la segunda hoja
+
+Ahora, la petición que una directora comercial podría escribirle al agente: *«Los descuentos superiores al 30 % necesitan la aprobación de Finanzas».*
+
+El cambio es un archivo nuevo de 38 líneas y tres líneas cambiadas en otros sitios. El borrador es deliberadamente mínimo: un paso de aprobación en las oportunidades, dirigido al rol Aprobador de Finanzas, con el valor por defecto de la plataforma para todo lo que la petición no mencionaba. No le añadimos nada para que el resultado fuera más interesante. Pasó las 71 comprobaciones automáticas de la plataforma. Una de ellas mostró una nota: si nadie tiene el rol, la solicitud va a los administradores. Era una nota, no un rechazo.
+
+La instantánea de la matriz de acceso no cambió. El acceso de nadie cambió, así que la comprobación de permisos no dijo nada. Las tres decisiones de abajo están en el paso de aprobación, que esa comprobación no cubre. Las partes 1 y 3 de la hoja son las mismas que antes. La parte 2 cambió y la parte 4 ganó líneas:
+
+| Línea de la hoja | Antes | Después | Lo que pregunta quien firma |
+|:--|:--|:--|:--|
+| Qué necesita aprobación | nada | subir por encima del 30 % el descuento de una oportunidad **existente** | «¿Y una oportunidad nueva que se crea ya con un 35 %?» |
+| Quién aprueba | — | cualquiera que tenga el rol Aprobador de Finanzas | «¿Quién lo tiene hoy?» |
+| Si nadie tiene el rol | — | deciden los administradores del sistema | «¿Deberían nuestros administradores de sistemas aprobar descuentos?» |
+| ¿Puede aprobarla quien la pidió? | — | sí, si tiene el rol Aprobador de Finanzas | «¿Puede Finanzas aprobar sus propios descuentos?» |
+| ¿Se puede editar la oportunidad mientras espera? | — | no, queda bloqueada | «¿Es aceptable una oportunidad bloqueada mientras Finanzas decide?» |
+| Registrado | cambios e inicios de sesión | además, cada solicitud de aprobación, quién decidió y cuándo | Nada que preguntar |
+
+Probamos cada una en el sistema en marcha:
+
+| Qué hicimos | Qué respondió el sistema | Qué significa para el negocio |
+|:--|:--|:--|
+| Crear una oportunidad nueva con un 35 % de descuento | Guardada. Ninguna solicitud. | Solo las ediciones inician una aprobación. Una oportunidad nueva creada con un 35 % no. |
+| El administrador subió una oportunidad existente al 35 % | Se abrió una solicitud de aprobación, asignada al administrador, porque en nuestra instalación de prueba recién creada nadie tenía el rol Aprobador de Finanzas; la oportunidad quedó bloqueada | Desde el primer día, los administradores del sistema aprueban descuentos mientras no se asigne el rol a nadie. |
+| Fiona, a la que se dio el rol Aprobador de Finanzas, subió otra oportunidad al 38 % | Se abrió una solicitud con Fiona como única aprobadora (era la única con el rol); la aprobó y la oportunidad mostró «aprobada» | La persona que pidió el descuento lo aprobó ella misma. |
+| Intentar editar la oportunidad bloqueada | Rechazado: «locked while an approval is in progress» (bloqueada mientras hay una aprobación en curso) | Nadie puede cambiar la oportunidad mientras la aprobadora decide. |
+| Leer el registro de auditoría | Una fila por el cambio de descuento, otra por la solicitud y otra por la decisión de Fiona, cada una con quién y cuándo | Cada una de estas decisiones deja constancia y se puede revisar después. |
+| Probar un 45 % después del cambio | Sigue rechazado en el tope del 40 % | La «excepción aprobada» de ese mensaje sigue sin existir. |
+
+El borrador hizo lo que pedía la frase. También decidió tres cosas que nadie había pedido: que las oportunidades nuevas quedan exentas, que quien pide un descuento puede aprobárselo a sí mismo y que deciden los administradores del sistema siempre que nadie tenga el rol de Finanzas. Ninguna de las tres es un error de programación, y las tres aparecen en la hoja en lenguaje llano.
+
+## Lo que la hoja no demuestra
+
+La hoja es una declaración de lo que el sistema *permite*. Hay tres cosas que no puede decirle, y alguien tiene que probarlas antes de la puesta en marcha.
+
+- **Que de verdad funciona.** Un borrador anterior de este mismo cambio dio la misma hoja, porque la hoja no mira qué partes de la plataforma están activadas, y pasó las mismas comprobaciones. En el sistema en marcha, un descuento del 35 % se guardó y no se preguntó a nadie: la parte que ejecuta las aprobaciones estaba apagada. Las únicas señales fueron un aviso y un error en el registro del servidor. Solo probarlo lo puso de manifiesto. Firme la hoja y después pruebe una vez cada línea cambiada en una copia de prueba.
+- **Que los datos son correctos.** La hoja dice quién puede editar una oportunidad. No dice nada sobre si las oportunidades importadas del sistema antiguo tienen los responsables correctos, sin duplicados y sin importes vacíos. La calidad de los datos se comprueba mirando los datos.
+- **Que la lógica de negocio es correcta.** La hoja muestra «por encima del 30 %». Si el 30 % es la cifra de su empresa, si el umbral debe aplicarse al total o a cada línea de producto, y si es aceptable un límite fijo del 40 % con una excepción prometida pero inexistente, son preguntas para las personas que dirigen el proceso. Pruébelas con casos reales.
+
+La hoja recoge cuatro partes, no todas las reglas. El tope del 40 % no está en ella; lo encontramos probando.
+
+La hoja nombra roles, no personas. Revise quién tiene cada rol con la misma frecuencia que sus revisiones de accesos.
+
+## La objeción razonable: «Esto debería firmarlo TI, no yo»
+
+Los argumentos para dejar la aprobación a TI son sólidos. TI entiende la plataforma, ya gestiona la aprobación de cambios de otros sistemas, y un jefe de departamento tiene otro trabajo.
+
+Lo que TI puede certificar es que el sistema coincide con lo que se pidió. No puede certificar que lo que se pidió sea lo que el negocio acepta. «Finanzas aprueba los descuentos superiores al 30 %» se implementó fielmente, y las tres decisiones que traía consigo salieron del borrador y de los valores por defecto de la plataforma, no de nadie de TI. Alguien responsable de la política de descuentos tiene que decir si un 38 % autoaprobado es aceptable. El reparto que funciona: que TI firme la compilación y que el responsable de negocio firme la hoja.
+
+Una hoja de una página se leerá deprisa. Por eso es corta: después de la primera puesta en marcha, el responsable solo lee las líneas que cambiaron.
+
+## Cómo obtener la hoja de su propio sistema
+
+Pídasela a su agente. ObjectStack 18.6.0 no tiene ningún comando que imprima esta hoja. Escribimos un script de 51 líneas para este artículo, y las filas sobre la interfaz de datos, la conexión de agentes y el registro de auditoría salieron de probar el sistema en marcha, no del script. Las cuatro partes corresponden a cosas que un agente puede leer de la propia definición de una aplicación ObjectStack: la instantánea de la matriz de acceso, los pasos de aprobación, los formularios públicos y las conexiones, y la configuración de auditoría. Un proyecto nuevo no tiene instantánea hasta que alguien crea la primera. Ponga la petición en las instrucciones que el agente lee cada vez, para que la hoja acompañe a cada cambio:
+
+```text
+With every change you make to this app, produce the sign-off sheet:
+1. Who can see and change which records and fields (from the access-matrix snapshot).
+2. Who can approve what: for each approval step, when it starts, who approves,
+   what happens if nobody holds that role, and whether the requester can approve.
+3. What is open to the outside: public forms and their fields, API and agent access,
+   custom endpoints, outgoing calls to other systems.
+4. What is recorded: change log, field history, record-view auditing.
+Then list the lines that differ from the previous sheet, in plain words.
+```
+
+La [guía para orientar a su agente de programación hacia ObjectStack](/en/blog/how-to-point-your-agent-at-objectstack/) explica cómo llegan esas instrucciones al agente. En ObjectStack, una aplicación es una descripción escrita que la plataforma hace cumplir, así que los roles, las aprobaciones, las puertas públicas y la configuración de auditoría se declaran en un solo lugar en vez de estar repartidos por el código.
+
+Para probarlo usted mismo, el repositorio de ObjectStack distribuye ObjectOS Community: la imagen ghcr.io/objectstack-ai/objectstack, `os start` y la Console, gratuito y autoalojado. ObjectOS Cloud es la edición alojada, y ObjectOS Enterprise la autogestionada con licencia.
+
+{/* the-proof */}
+## La prueba
+
+**Versión.** Medido el 2026-11-20.
+
+```text
+$ npm view @objectstack/cli dist-tags.latest
+18.6.0
+
+$ npx os --version
+@objectstack/cli/18.6.0 linux-x64 node-v22.22.0
+```
+
+**La aplicación.** `examples/app-crm` del repositorio de ObjectStack en la etiqueta `@objectstack/cli@18.6.0`, con sus dependencias `workspace:*` apuntadas a los paquetes 18.6.0 publicados e instalada con pnpm. Viene con la puerta de la matriz de acceso activada, con un `access-matrix.json` junto a `objectstack.config.ts`.
+
+```bash
+git archive '@objectstack/cli@18.6.0' examples/app-crm | tar -x
+cd examples/app-crm
+sed -i 's/"workspace:\*"/"18.6.0"/' package.json
+pnpm install --ignore-workspace
+npx os compile
+```
+
+```text
+  → Running author-time rules (71)...
+  → Checking access-matrix snapshot (ADR-0090 D6)...
+  ✓ Build complete (337ms)
+  ⚠ 4 author-time warning(s) — see above
+
+  Data: 6 Objects  49 Fields  2 Datasources
+  Logic: 1 Flows
+  Security: 3 Positions  2 Permissions
+```
+
+Ni las plantillas de `packages/create-objectstack` ni ninguna otra cosa en la etiqueta contienen un `access-matrix.json` aparte de los dos ejemplos (`git ls-tree -r --name-only '@objectstack/cli@18.6.0' | grep 'access-matrix\.json$'` imprime `examples/app-crm/access-matrix.json` y `examples/app-showcase/access-matrix.json`); por eso un proyecto nuevo empieza sin instantánea.
+
+Los cuatro avisos son `field-no-consumers` en cuatro campos de `crm_opportunity`, uno de ellos `approval_status`: un campo pensado para mostrar el resultado de una aprobación que nada en la aplicación lee ni muestra. `os info` lista `crm_lead (13 fields, user) — Lead`, los 13 de la parte 3.
+
+**El generador de la hoja.** La hoja sale de dos archivos que `os compile` lee o escribe: el `access-matrix.json` versionado y el `dist/objectstack.json` compilado. Los valores por defecto de los nodos de aprobación se completan analizando cada nodo con el propio `ApprovalNodeConfigSchema` de la especificación, de modo que la hoja muestra el valor que aplica el runtime, no solo lo que escribió el autor.
+
+`sheet.mjs`, 51 líneas:
+
+```js
+// Prints the four-part sign-off sheet for an ObjectStack app, from its compiled
+// artifact and its committed access-matrix snapshot. Run from the app directory
+// after `os compile`:  node sheet.mjs
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+const require = createRequire(`${process.cwd()}/package.json`);
+const { ApprovalNodeConfigSchema } = require('@objectstack/spec/automation');
+
+const app = JSON.parse(readFileSync('dist/objectstack.json', 'utf8'));
+const matrix = JSON.parse(readFileSync('access-matrix.json', 'utf8')).entries;
+const bits = (e) => ['create', 'read', 'edit', 'delete'].filter((b) => e[b]).join(' · ') || 'nothing';
+
+console.log('1. Who can see and change which records and fields');
+for (const pos of app.positions) {
+  const sets = pos.permissionSets ?? [];
+  console.log(`  ${pos.label} → ${sets.join(', ')}`);
+}
+for (const e of matrix) {
+  const set = app.permissions.find((p) => p.name === e.permissionSet);
+  const fieldRules = Object.keys(set?.fields ?? {}).length;
+  console.log(`  ${e.permissionSet} | ${e.object} | ${bits(e)} | view all: ${e.viewAllRecords} | modify all: ${e.modifyAllRecords} | records: ${e.sharingModel} | field rules: ${fieldRules}`);
+}
+
+console.log('2. Who can approve what');
+const approvalNodes = app.flows.flatMap((f) =>
+  f.nodes.filter((n) => n.type === 'approval').map((n) => ({ f, n, cfg: ApprovalNodeConfigSchema.parse(n.config) })));
+if (!approvalNodes.length) console.log('  no approval step in this app');
+for (const { f, n, cfg } of approvalNodes) {
+  const start = f.nodes.find((x) => x.type === 'start')?.config ?? {};
+  console.log(`  ${f.label} / ${n.label} | object: ${start.objectName} | when: ${start.triggerType} if ${start.condition}`);
+  console.log(`    approvers: ${cfg.approvers.map((a) => `${a.type}:${a.value ?? ''}`).join(', ')} | decides: ${cfg.behavior}`);
+  console.log(`    nobody staffed → ${cfg.onEmptyApprovers} | requester removed from approvers: ${cfg.excludeSubmitter === true} | record locked while pending: ${cfg.lockRecord}`);
+}
+const routed = new Set(approvalNodes.flatMap(({ cfg }) => cfg.approvers.filter((a) => a.type === 'position').map((a) => a.value)));
+for (const pos of app.positions) {
+  if (/approv/i.test(`${pos.label} ${pos.description ?? ''}`) && !routed.has(pos.name))
+    console.log(`  position "${pos.label}" says: "${pos.description}" — no approval step routes to it`);
+}
+
+console.log('3. What is exposed to the outside');
+for (const v of app.views) for (const [name, fv] of Object.entries(v.formViews ?? {})) {
+  if (fv.sharing?.allowAnonymous) {
+    const fields = fv.sections.flatMap((s) => s.fields.map((x) => x.field));
+    console.log(`  public form ${fv.sharing.publicLink} | creates: ${fv.data.object} | ${fields.length} fields: ${fields.join(', ')}`);
+  }
+}
+for (const k of ['agents', 'apis', 'webhooks', 'connectors', 'portals']) console.log(`  ${k} declared: ${(app[k] ?? []).length}`);
+
+console.log('4. What is recorded');
+for (const o of app.objects) console.log(`  ${o.name} | field history on record page: ${o.enable?.trackHistory === true}`);
+console.log(`  plugins configured in the app (record-view audit lives here): ${(app.plugins ?? []).length}`);
+```
+
+**Hoja 1, antes del cambio** (`node sheet.mjs`):
+
+```text
+1. Who can see and change which records and fields
+  Sales Representative → crm_sales_user
+  Sales Manager → crm_sales_user
+  Finance Approver → crm_sales_user
+  crm_sales_user | crm_account | create · read · edit | view all: false | modify all: false | records: public_read_write | field rules: 0
+  crm_sales_user | crm_activity | create · read · edit | view all: false | modify all: false | records: public_read_write | field rules: 0
+  crm_sales_user | crm_contact | create · read · edit | view all: false | modify all: false | records: public_read_write | field rules: 0
+  crm_sales_user | crm_lead | create · read · edit | view all: false | modify all: false | records: public_read_write | field rules: 0
+  crm_sales_user | crm_opportunity | create · read · edit | view all: false | modify all: false | records: public_read_write | field rules: 0
+  crm_sales_user | crm_opportunity_line_item | create · read · edit | view all: false | modify all: false | records: controlled_by_parent | field rules: 0
+  guest_portal | crm_lead | create | view all: false | modify all: false | records: public_read_write | field rules: 0
+2. Who can approve what
+  no approval step in this app
+  position "Finance Approver" says: "Finance team member authorised to approve discounts above 30%." — no approval step routes to it
+3. What is exposed to the outside
+  public form /forms/contact-us | creates: crm_lead | 5 fields: name, company, email, phone, title
+  agents declared: 0
+  apis declared: 0
+  webhooks declared: 0
+  connectors declared: 0
+  portals declared: 0
+4. What is recorded
+  crm_account | field history on record page: true
+  crm_activity | field history on record page: false
+  crm_contact | field history on record page: true
+  crm_lead | field history on record page: true
+  crm_opportunity | field history on record page: true
+  crm_opportunity_line_item | field history on record page: false
+  plugins configured in the app (record-view audit lives here): 0
+```
+
+`public_read_write` es el «de todos» de la parte 1: cada usuario con acceso al objeto lee y edita cada registro. `controlled_by_parent` significa que una línea de oportunidad sigue a su oportunidad. La fila `guest_portal` es la del visitante de la web; el [artículo sobre formularios públicos](/es/blog/how-to-let-anonymous-visitors-submit-a-form/) explica por qué el formulario funciona sin ella. La fila del administrador no está en la matriz; sale del banner de arranque del servidor de desarrollo, que describe la cuenta precargada como «platform admin — Setup, Studio and every record». La auditoría de consultas solo se configura como opción de un plugin en la aplicación, así que cero plugins configurados significa que ningún objeto está activado.
+
+**Partes 2 a 4, comprobadas en la aplicación en marcha.** `npx os dev --fresh` sobre una base de datos vacía. Las transcripciones de abajo se condensan a la petición, su código de estado y la parte de la respuesta que importa. Sin iniciar sesión:
+
+```text
+$ curl -s -w ' %{http_code}' localhost:49961/api/v1/data/crm_opportunity
+{"error":"UNAUTHENTICATED","code":"UNAUTHENTICATED","message":"Authentication is required to access this endpoint."} 401
+
+$ curl -s -w ' %{http_code}' localhost:49961/api/v1/forms/contact-us
+{"slug":"contact-us","object":"crm_lead","form":{ … "fields":[{"field":"name","required":true, …},{"field":"company", …},
+ {"field":"email","required":true, …},{"field":"phone", …},{"field":"title", …}]}], … } 200
+
+$ curl -s -w ' %{http_code}' -X POST localhost:49961/api/v1/mcp -H 'content-type: application/json' \
+    -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+{"success":false,"error":{"code":"UNAUTHENTICATED","message":"Unauthorized: a valid OAuth access token or API key is required","httpStatus":401}} 401
+```
+
+Una escritura anónima en la dirección de datos de los leads, en lugar de a través del formulario, se rechazó de la misma manera (ejecutada en la aplicación cambiada, más abajo):
+
+```text
+$ curl -s -w ' %{http_code}' -X POST localhost:49961/api/v1/data/crm_lead -H 'content-type: application/json' \
+    -d '{"name":"Anon","email":"anon@example.com","status":"qualified"}'
+{"error":"UNAUTHENTICATED","code":"UNAUTHENTICATED","message":"Authentication is required to access this endpoint."} 401
+```
+
+El banner de arranque muestra la conexión de agentes activada por defecto: `MCP: http://localhost:49961/api/v1/mcp`, con `Disable OS_MCP_SERVER_ENABLED=false`. Lo que puede hacer una clave una vez aceptada no se probó aquí. La guía de MCP en la etiqueta (`content/docs/ai/connect-mcp.mdx`, líneas 243–244 y 255–257) dice «<span lang="en">The HTTP surface authenticates **each caller** (OAuth as a person, or their own API key)</span>», y aconseja, para un agente con acceso limitado: «<span lang="en">mint it on a user with exactly the access it should have.</span>»
+
+Con la sesión del administrador precargado, la prueba de descuento y la fila de auditoría que dejó:
+
+```text
+PATCH /api/v1/data/crm_opportunity/DpO1l0AsxUn_rof_  {"discount_percent":35}   → 200
+PATCH /api/v1/data/crm_opportunity/DpO1l0AsxUn_rof_  {"discount_percent":45}   → 400
+  {"error":"Discount cannot exceed 40% without an approved exception.","code":"VALIDATION_FAILED", … }
+GET /api/v1/approvals/requests                                               → 200 {"data":[]}
+
+GET /api/v1/data/sys_audit_log?sort=-created_at&limit=1
+  {"action":"update","object_name":"crm_opportunity","record_id":"DpO1l0AsxUn_rof_",
+   "user_id":"pm6ggEGaFZ7i4Anjcj3LAerlvYPqQ5CO",
+   "old_value":"{\"discount_percent\":0}","new_value":"{\"discount_percent\":35}",
+   "created_at":"2026-11-20T02:33:10.899Z"}
+```
+
+Leer después esa oportunidad por id no añadió ninguna fila `read`: el registro contenía `config_change` 2, `create` 3, `update` 4, `login` 2 y nada más. El rechazo del 40 % es una regla de validación en `crm_opportunity`, en `src/objects/opportunity.object.ts`, sin ninguna vía de excepción en toda la aplicación:
+
+```ts
+condition: P`record.discount_percent != null && record.discount_percent > 40`,
+message: 'Discount cannot exceed 40% without an approved exception.',
+```
+
+El borrado de la parte 4 y la fila del administrador de la parte 1, en un arranque limpio posterior como administrador:
+
+```text
+DELETE /api/v1/data/crm_activity/KVFUTkE__ZvKyWJe  → 200
+  {"object":"crm_activity","id":"KVFUTkE__ZvKyWJe","success":true,"recycleBinEntryId":"dxSNtuUA5WAjWELx"}
+GET /api/v1/data/sys_audit_log?sort=-created_at&limit=1
+  {"action":"delete","object_name":"crm_activity","record_id":"KVFUTkE__ZvKyWJe",
+   "user_id":"lRCmrwnTsuGCDjTUvNQvFYrJtjp3qELn",
+   "old_value":"{\"id\":\"KVFUTkE__ZvKyWJe\", … }","new_value":null,"created_at":"2026-11-20T02:38:51.187Z"}
+```
+
+**El cambio.** Un archivo nuevo, más dos líneas editadas en `src/flows/index.ts` que lo registran y una en `objectstack.config.ts`:
+
+```ts
+import { defineFlow } from '@objectstack/spec';
+
+// Request: "Discounts above 30% need Finance approval."
+export const DiscountApprovalFlow = defineFlow({
+  name: 'crm_discount_approval',
+  label: 'Discount Approval',
+  description: 'Finance approves any discount above 30%.',
+  type: 'autolaunched',
+  status: 'active',
+  nodes: [
+    {
+      id: 'start',
+      type: 'start',
+      label: 'On Discount Above 30%',
+      config: {
+        objectName: 'crm_opportunity',
+        triggerType: 'record-after-update',
+        condition: 'discount_percent != null && discount_percent > 30 && discount_percent != previous.discount_percent',
+      },
+    },
+    {
+      id: 'finance_review',
+      type: 'approval',
+      label: 'Finance Review',
+      config: {
+        approvers: [{ type: 'position', value: 'crm_finance_approver' }],
+        approvalStatusField: 'approval_status',
+      },
+    },
+    { id: 'approved', type: 'end', label: 'Approved' },
+    { id: 'rejected', type: 'end', label: 'Rejected' },
+  ],
+  edges: [
+    { id: 'e1', source: 'start', target: 'finance_review' },
+    { id: 'e2', source: 'finance_review', target: 'approved', label: 'approve' },
+    { id: 'e3', source: 'finance_review', target: 'rejected', label: 'reject' },
+  ],
+});
+```
+
+```diff
+-  requires: ['ui', 'automation'],
++  requires: ['ui', 'automation', 'triggers', 'approvals'],
+```
+
+El disparador sigue el ejemplo de aprobación de la propia plataforma en `examples/app-showcase`, que también empieza en `record-after-update`. La línea `requires` necesitó dos borradores. Sin `'triggers'`, `os validate` rechazó la aplicación:
+
+```text
+✗ flow 'crm_discount_approval' declares a 'record_change' trigger but `requires` does not include 'triggers' — no 'record_change' trigger would be registered, so the flow would never auto-launch.
+```
+
+Con `'triggers'` pero sin `'approvals'`, `os validate` pasó, y la hoja también. En la aplicación en marcha, la edición al 35 % se guardó con `approval_status` todavía en `null`, `/api/v1/approvals/requests` siguió vacío y el registro del servidor mostró:
+
+```text
+WARN [Automation] 1 flow(s) reference node types no installed plugin provides (approval) — install/enable the plugin that contributes them (e.g. 'approval' ⇐ @objectstack/plugin-approvals).
+ERROR Trigger-fired run of flow 'crm_discount_approval' failed (trigger 'record_change') — no caller holds this result and nothing retries the run; … {"error":"No executor registered for node type 'approval'"}
+```
+
+Ese es el caso de «que de verdad funciona» del texto. Con las dos entradas, `os validate` pasa y añade una nota sobre quién decide cuando el rol está vacío:
+
+```text
+  ✓ Validation passed (324ms)
+  ℹ flow "crm_discount_approval" · node "finance_review": every approver on this node routes to a group (position/team/department/queue), so if none is staffed the request opens on the organization's administrators, and (lockRecord) the record stays locked
+```
+
+`os compile` pasa la comprobación de la matriz de acceso sin desviaciones (`Logic: 2 Flows`, `Security: 3 Positions  2 Permissions`), y `git diff --quiet -- access-matrix.json` sale con 0: las partes 1 y 3 no cambian.
+
+**Hoja 2, las líneas que difieren** (`diff sheet-before.txt sheet-after.txt`):
+
+```diff
+13,14c13,15
+<   no approval step in this app
+<   position "Finance Approver" says: "Finance team member authorised to approve discounts above 30%." — no approval step routes to it
+---
+>   Discount Approval / Finance Review | object: crm_opportunity | when: record-after-update if discount_percent != null && discount_percent > 30 && discount_percent != previous.discount_percent
+>     approvers: position:crm_finance_approver | decides: first_response
+>     nobody staffed → admin_rescue | requester removed from approvers: false | record locked while pending: true
+```
+
+`admin_rescue`, `excludeSubmitter` sin definir y `lockRecord: true` son los valores por defecto del esquema que aceptó el borrador. La especificación describe `excludeSubmitter` como «Stops people approving their own requests … Off by default: the approvers stay as found», y `onEmptyApprovers` como «'admin_rescue' (default) opens the request on the administrators». `record-after-update` es la razón de que las oportunidades nuevas queden exentas.
+
+**La aprobación, en la aplicación en marcha** (un `os dev --fresh` limpio con el cambio). El administrador sube una oportunidad al 35 %:
+
+```text
+PATCH /api/v1/data/crm_opportunity/8z_u0hlhk22xoIRF {"discount_percent":35}  → 200
+GET  /api/v1/data/crm_opportunity/8z_u0hlhk22xoIRF?select=…  → "discount_percent":35,"approval_status":"pending"
+GET  /api/v1/approvals/requests
+  {"id":"areq_5a119a83-6383-4881-9532-6ea9c7739fb3","process_name":"flow:crm_discount_approval",
+   "status":"pending","current_step":"finance_review","submitter_name":"Dev Admin",
+   "pending_approver_names":{"FtQIrsa28IujOkoBodAevfdvWYlE6NYy":"Dev Admin"},"lock_record":true,
+   "viewer":{"can_act":true,"is_submitter":true,"can_override":true,
+   "can_override_approve":false}, … }
+PATCH /api/v1/data/crm_opportunity/8z_u0hlhk22xoIRF {"amount":90000}  → 409
+  {"error":"Opportunity 'Initech — Expansion' is locked while an approval is in progress, and cannot be edited until that approval is complete","code":"RECORD_LOCKED", … }
+```
+
+`sys_user_position` tenía 0 filas: nadie tenía ningún rol, así que la solicitud fue al administrador. Después, el administrador creó una usuaria, Fiona, y le dio el rol Aprobador de Finanzas (una fila de `sys_user_position`, `position: "crm_finance_approver"`). Con la sesión de Fiona, sobre una oportunidad cuyo propietario es el administrador (el contenido de la solicitud lleva `"owner_id":"FtQIrsa2…"`, mostrado como `"Dev Admin"`):
+
+```text
+PATCH /api/v1/data/crm_opportunity/b1dn22iO0mK2F584 {"discount_percent":38}  → 200
+GET  /api/v1/approvals/requests
+  areq_dc6b1040-772a-40c8-a2f9-272ccf870ea1 Globex — New CRM Rollout pending submitter=Fiona (Finance)
+  approvers={"FMK38dDJipKNVcBFa3wzw1XdyxTYCgTm":"Fiona (Finance)"} {"can_act":true,"is_submitter":true,"can_override":false,"can_override_approve":false}
+POST /api/v1/approvals/requests/areq_dc6b1040-…/approve {"comment":"approved"}  → 200  status: approved
+GET  /api/v1/data/crm_opportunity/b1dn22iO0mK2F584?select=…  → "discount_percent":38,"approval_status":"approved"
+
+POST /api/v1/data/crm_opportunity {"name":"New deal at 35%", …, "discount_percent":35}  → 201
+GET  /api/v1/approvals/requests  → only the two requests above; "New deal at 35%" has "approval_status":null
+
+PATCH /api/v1/data/crm_opportunity/JE8U7eHSROAs_Ib6 {"discount_percent":45}  → 400
+  {"error":"Discount cannot exceed 40% without an approved exception.","code":"VALIDATION_FAILED", … }
+```
+
+El registro de auditoría de la solicitud de Fiona, de más reciente a más antigua (`GET /api/v1/data/sys_audit_log?sort=-created_at`, recortado):
+
+```text
+02:36:35.447Z update crm_opportunity       b1dn22iO0mK2F584 user_id FMK38dDJ…  {"approval_status":"approved"}
+02:36:35.423Z delete sys_approval_approver aapr_2f97cc6e-…  user_id null
+02:36:35.412Z update sys_approval_request  areq_dc6b1040-…  user_id null  {"status":"approved","pending_approvers":null, … }
+02:36:35.406Z create sys_approval_action   aact_63c48728-…  user_id null  {"action":"approve","actor_id":"FMK38dDJ…",
+              "acted_as_label":"Fiona (Finance)","comment":"approved", … }
+02:36:21.096Z update crm_opportunity       b1dn22iO0mK2F584 user_id FMK38dDJ…  {"approval_status":"pending"}
+02:36:21.085Z create sys_approval_action   aact_94af7525-…  user_id null  {"action":"submit","actor_id":"FMK38dDJ…", … }
+02:36:21.081Z create sys_approval_approver aapr_2f97cc6e-…  user_id null
+02:36:21.078Z create sys_approval_request  areq_dc6b1040-…  user_id null
+02:36:21.060Z update crm_opportunity       b1dn22iO0mK2F584 user_id FMK38dDJ…  {"discount_percent":38}
+```
+
+Las filas de la oportunidad llevan el `user_id` de Fiona. Las filas de la aprobación las escribe la propia plataforma, con `user_id` nulo; quién decidió queda registrado dentro de la fila de la decisión (`actor_id`, `acted_as_label`). Al volver a probar las puertas exteriores en esta ejecución, la interfaz de datos y la conexión de agentes siguieron respondiendo `401` sin credenciales, y el formulario de contacto `200`.
