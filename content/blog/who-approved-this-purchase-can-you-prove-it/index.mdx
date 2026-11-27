@@ -1,0 +1,404 @@
+---
+title: "Who Approved This Purchase, and Can You Prove It?"
+description: "An AI-built purchase approval, tested on ObjectStack 18.6.0. An approved 2,400 request was edited to 24,000 and stayed approved until we added one rule. Also: cover for absent approvers, Finance above 10,000, the audit trail."
+author: ObjectStack Team
+date: 2026-12-02
+status: published
+topic: automation
+audience: business
+solutions: []
+industries: []
+cover: ./cover.svg
+tags:
+  - Approvals
+  - Delegation
+  - Audit trail
+  - Purchasing
+---
+
+**The short answer.** Before trusting a purchase approval flow an AI built, test three things on a copy: who approved each request and whether the system would have refused anyone else, what happens when the approver is away or the amount crosses your limit, and whether you can rebuild the path later. A platform with built-in approvals enforces the first and records the third. The second is policy and stays yours, including what may change after approval. In our test an approved 2,400 request was edited to 24,000 and stayed approved, until one added rule made an approved amount final.
+
+*Measured on ObjectStack 18.6.0, the latest release when we ran it on 27 November 2026, on a new project from the official starter. Every command and raw output is in [The proof](#the-proof).*
+
+## Three questions before you trust it
+
+Purchase approval is the flow every operations lead knows: someone asks to buy something, their manager says yes or no, and above some amount Finance has to agree as well. An AI coding agent can write that flow from one sentence. What you need to know is not whether it can, but what the result will do on the day it matters.
+
+Three questions cover it:
+
+1. **Who approved, and could they?** Not "whose name is on it", but whether the system would have refused anyone else.
+2. **What happens when the approver is away, or the amount crosses a threshold?** A request that waits two weeks for someone on holiday is a failed approval, even if nobody did anything wrong.
+3. **Can you prove the whole path a month later?** Who asked, who decided each step, who stood in for whom, and what exactly was approved.
+
+This post is about running the flow. Whether the flow itself should go live, and who signs that off, is a different decision, covered in [who signs off on an AI-built system](/en/blog/who-signs-off-on-an-ai-built-system/).
+
+## The flow we built, in plain words
+
+We asked for the rule most small companies start with: *every purchase request goes to the requester's manager; above 10,000 it also goes to Finance.* On a new ObjectStack project that came to one record type (a purchase request with what, vendor, amount and why), one **approval flow**, which is a sequence of steps where the system stops and waits for a named person to say yes or no, and two **roles**: staff, who can raise requests, and Finance approver.
+
+Two choices were ours, not the platform's. We told both steps that the person who submitted a request may not approve it; the platform leaves that off unless you turn it on ([its own description](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/spec/src/automation/approval.zod.ts#L1118-L1123) says "Off by default"). Our run never put that setting to work, because Alice was never one of her own approvers. And we routed the first step to "the requester's manager", which the platform reads from a manager link an administrator sets on each person.
+
+Then we gave it four people (Alice, who asks; Mark, her manager; Fiona in Finance; and Dana, a colleague who can stand in) and ran it.
+
+## What happened
+
+| What we did | What the system answered | What it means for you |
+|:--|:--|:--|
+| Alice asked for 2,400 of monitors. | The request went to Mark only. He approved; the request read "approved". Finance was never asked. | The threshold works: small requests take one step. |
+| Alice tried to approve her own request. | Refused: she is not one of its approvers. | A requester cannot approve a request that is routed to someone else. The harder case is a requester who is also the approver, such as a manager's own purchase. We switched on the setting meant for that and did not test it. |
+| Dana, not assigned, tried to approve it. | Answered as if the request did not exist. | People outside the request cannot act on it, and the answer does not confirm that it exists. |
+| Alice tried to change the amount while Mark was deciding. | Refused: the request is locked while an approval is in progress. | The approver decides on the figure that was submitted. |
+| After Mark's approval, Alice changed the 2,400 request to 24,000. | **Saved.** The request still read "approved" and no new approval opened. The change was in the audit log, with her name and both amounts. | The flow approved a request, not every later version of it. We had not said otherwise. Alice could edit because we gave requesters edit rights on their own requests. |
+| We added one rule: an approved request's amount cannot change. Alice tried again on another approved request. | Refused, with our message. Other edits still saved. | One rule closes it for the amount. Vendor and every other field stay open until you say otherwise. |
+| Alice asked for 18,000 of software licences. Mark approved; then he tried to approve the Finance step as well. | Mark's approval opened a second step for Fiona. Mark's attempt on Finance's step: answered as if it did not exist. Fiona rejected it with a reason, and the request read "rejected". | Above 10,000, a manager's yes is not enough, and the manager cannot do Finance's part. |
+| Mark recorded an absence until 2 December, naming Dana as his deputy. Alice asked for 3,000 of conference tickets. | The request went straight to Dana, and the record noted the handover with Mark's reason, "Annual leave". Mark could not act on it; Dana approved. | Manager approvals keep moving while the manager is away, and the handover is on the record. |
+| The administrator tried to record Mark's absence for him. | Refused: only Mark can name his own deputy. | Nobody, including an administrator, can redirect someone's approvals by declaring them absent. |
+| Fiona recorded an absence too, naming Dana. Alice asked for 12,500 of laptops; Mark approved. | The Finance step went to Fiona alone and waited. | A deputy covers approvals addressed to a person, not approvals addressed to a role. |
+| The administrator gave Dana the Finance role until 2 December, with a reason. Alice asked for 15,000 of chairs. | The Finance step went to Fiona and Dana; Dana approved. The laptop request already waiting stayed with Fiona. | Cover for a role works, but only for requests that open after you arrange it. |
+| We restarted the server and read the trail back. | Every step came back: who submitted, who decided, the handover, the comments, the times, the amount Fiona saw, and which steps each request passed through. | The path is stored, not held in memory. |
+
+Two rows deserve a second look.
+
+### The edit after yes
+
+We call it that because approval happens at one moment, and the record goes on living. Our flow was written by an AI coding agent from that one sentence, and it starts once: when a request is created. Editing a request later does not start it again. Nothing in that sentence said what an approved request may still change, so the platform did exactly what we declared and no more. The audit log caught the change, so you could prove it afterwards, but nothing stopped it. Whether an approved amount is final, whether a vendor change should reopen the request, or whether a change under 5% is fine are your decisions. Write them down, then give the rule to your agent. We gave it one: an approved amount is final. The next attempt was refused.
+
+### The absent Finance approver
+
+Delegation, the platform's out-of-office handover, follows a person. Our Finance step pointed at a role, so Fiona's absence moved nothing. The platform's documentation [says so](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/automation/approvals.mdx#L1187-L1194) and names the other route: put someone else in the role, for dated days. We did, and the next request reached both people. Two more routes exist that we did not test. An approver can pass a single waiting request to someone else, and an administrator can decide or reassign a stuck one ([documented here](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/automation/approvals.mdx#L975-L990)).
+
+One setup step surprised us. On our first run, Mark could not record his absence at all: the platform refused him until we gave staff permission on absence records. The documentation calls the feature self-service. It is, once you grant it, and that grant is one more decision about who may hand their approvals to someone else.
+
+## Proving the path a month later
+
+What the platform kept, and where:
+
+- **Each decision**, as its own record: the step, the action (submitted, approved, rejected, handed over), who did it by name, their comment and the time. The handover record names both people and the reason given.
+- **What was approved**: each request keeps a copy of the purchase as it was submitted, so Fiona's rejection is tied to 18,000, not to whatever the record says today.
+- **Which path each request took**: the flow's run history, read after the restart, shows Finance skipped for 2,400 and 3,000 and reached for 18,000 and 12,500. The platform's documentation [describes this history as durable](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/automation/flows.mdx#L1811-L1820), and that is what we saw. The 15,000 request came after that read; its decision records show both steps.
+- **Every change to the purchase itself**, in the audit log, including the edit after yes.
+- **Who could have approved**: once a request is decided, it no longer lists its approvers on the request itself. The list survives as rows in the audit log. An auditor who asks "could anyone else have approved this?" gets the answer from there.
+
+One reading trap: when Mark approved the 18,000 request, its status read "approved" for a moment before Finance's step set it back to "pending". The status history of a request Fiona later rejected therefore contains the word "approved". Read the decisions, not the status history.
+
+A restart is not a month. We proved the records are stored and survive a restart; how long they are kept, and who may delete them, is your retention setting and your database backup, not something we measured here.
+
+## The case for a spreadsheet and email, or a procurement suite
+
+For a team that raises a few purchase requests a month, a shared spreadsheet and an email to the manager is a serious answer. It takes no setup, everyone already knows it, and an email thread is a reasonable record. What it cannot do is refuse: anyone can type "approved" in the cell, an email can be forwarded to whoever is around, and a figure changed after approval leaves no trace unless someone keeps versions. If nobody would think to check those things in your company, the spreadsheet is cheaper.
+
+A dedicated procurement suite is the opposite end. It brings supplier catalogues, budgets, purchase orders and matching against invoices, plus approval limits and delegation rules that procurement teams have refined over years. If buying is a large part of what your company does, that depth is worth paying for, and an approval flow on a general platform is not a substitute.
+
+The middle case is where an AI-built flow fits: approvals that belong to your own system, tied to your own records, that you want to change by asking an agent and reviewing a small change, rather than by configuring a separate product.
+
+## What ObjectStack does not decide for you
+
+- **Your delegation policy.** The platform enforces that people name only their own deputy. It does not decide who may be a deputy, for how long, or up to what amount. We set no limit on what Dana could approve in Mark's place, and the platform did not ask for one; we tested one 3,000 request. The platform's own notes say [delegation governance and segregation of duties](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-approvals/src/sys-approval-delegation.object.ts#L28-L32) and [approval-matrix governance](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/automation/approvals.mdx#L215) are enterprise concerns and not part of what we tested. We did not check what an enterprise edition provides.
+- **Your signing limits.** The 10,000 threshold is a branch we wrote into the flow. If Mark may approve up to 5,000 and his director up to 50,000, that table is yours to write.
+- **What "approved" freezes.** See the edit after yes.
+- **Deadlines that respect your calendar.** A step can escalate after a set number of hours, but they are [wall-clock hours](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/automation/approvals.mdx#L1125-L1143): nights and weekends count, and the platform ships no business-hours calendar. We did not run an escalation.
+- **Notifications.** The platform sends approvers a notice through whatever messaging you install. We did not test delivery.
+- **Purchasing itself.** It does not place orders, manage suppliers or check budgets unless you build that.
+
+## Give your agent the three questions
+
+If an agent will build or change your approval flows, give it the questions as standing instructions, so every change comes back with the answers instead of leaving you to find the gaps:
+
+```text
+For every approval flow you add or change, answer in plain words:
+1. Who approves each step, and who is refused (including the requester)?
+2. What happens when an approver is away: for steps routed to a person,
+   and for steps routed to a role? What happens above each threshold?
+3. After approval, which fields may still change, and does a change
+   reopen the approval?
+Then list where each decision is recorded, and test one approved
+and one rejected request on a test copy.
+```
+
+The [guide to pointing your coding agent at ObjectStack](/en/blog/how-to-point-your-agent-at-objectstack/) covers how such instructions reach the agent, and [what a long-running approval needs to survive](/en/blog/automation-pause-resume-approvals/) covers why a flow can wait days for a decision without losing its place. In ObjectStack an approval flow is a short written description that the platform enforces, so the answers above can be read from one file, not reconstructed from code.
+
+{/* the-proof */}
+## The proof
+
+**Version.** Measured on 2026-11-27.
+
+```text
+$ npm view @objectstack/cli dist-tags
+{ latest: '18.6.0', next: '19.0.0-next.0' }
+```
+
+**The project.** A new project from the official starter, which installs the 18.6.0 packages:
+
+```bash
+npm create objectstack@latest -- purchasing --skip-skills
+```
+
+We removed the starter's sample note object, added the files below, and added `'approvals'` to the capabilities the project requires. `objectstack validate` passed with three notes. Two are about approvals: if nobody holds a step's approver role or manager link, the request opens on the organization's administrators. The third says purchase requests are private, so each person sees only their own. Output condensed:
+
+```text
+  ✓ Validation passed (166ms)
+  Data: 1 Objects  5 Fields
+  Logic: 1 Flows
+  Security: 2 Positions  1 Permissions
+  ℹ flow "purchasing_request_approval" · node "manager_review": every approver on this node is { type: 'manager' }, so where sys_user.manager_id is unset the request opens on the organization's administrators, and (lockRecord) the record stays locked
+  ℹ flow "purchasing_request_approval" · node "finance_review": every approver on this node routes to a group (position/team/department/queue), so if none is staffed the request opens on the organization's administrators, and (lockRecord) the record stays locked
+  ℹ permission set "purchasing_user": "purchasing_request" is private (OWD) and this set grants allowRead without a readScope — holders see ONLY records they own (plus explicit shares).
+```
+
+The flow, `src/flows/purchase-approval.flow.ts`:
+
+```ts
+import { defineFlow } from '@objectstack/spec';
+
+// Every purchase request goes to the requester's manager.
+// Above 10,000 it also goes to Finance.
+export const PurchaseApprovalFlow = defineFlow({
+  name: 'purchasing_request_approval',
+  label: 'Purchase Request Approval',
+  description: 'Manager approves every request; Finance also approves requests above 10,000.',
+  type: 'autolaunched',
+  status: 'active',
+  nodes: [
+    {
+      id: 'start',
+      type: 'start',
+      label: 'On New Request',
+      config: {
+        objectName: 'purchasing_request',
+        triggerType: 'record-after-create',
+        condition: 'amount != null && amount > 0',
+      },
+    },
+    {
+      id: 'manager_review',
+      type: 'approval',
+      label: 'Manager Review',
+      config: {
+        approvers: [{ type: 'manager' }],
+        excludeSubmitter: true,
+        approvalStatusField: 'approval_status',
+      },
+    },
+    { id: 'over_threshold', type: 'decision', label: 'Above 10,000?' },
+    {
+      id: 'finance_review',
+      type: 'approval',
+      label: 'Finance Review',
+      config: {
+        approvers: [{ type: 'position', value: 'purchasing_finance' }],
+        excludeSubmitter: true,
+        approvalStatusField: 'approval_status',
+      },
+    },
+    { id: 'approved', type: 'end', label: 'Approved' },
+    { id: 'rejected', type: 'end', label: 'Rejected' },
+  ],
+  edges: [
+    { id: 'e1', source: 'start', target: 'manager_review' },
+    { id: 'e2', source: 'manager_review', target: 'over_threshold', label: 'approve' },
+    { id: 'e3', source: 'manager_review', target: 'rejected', label: 'reject' },
+    { id: 'e4', source: 'over_threshold', target: 'finance_review', label: 'true', condition: 'amount > 10000' },
+    { id: 'e5', source: 'over_threshold', target: 'approved', label: 'false', condition: 'amount <= 10000' },
+    { id: 'e6', source: 'finance_review', target: 'approved', label: 'approve' },
+    { id: 'e7', source: 'finance_review', target: 'rejected', label: 'reject' },
+  ],
+});
+```
+
+The roles and their permission set, `src/security/purchasing.ts` (condensed; the platform calls a role a position). The `sys_approval_delegation` line is the one our first run lacked:
+
+```ts
+export const PurchasingUser = definePermissionSet({
+  name: 'purchasing_user',
+  label: 'Purchasing User',
+  objects: {
+    purchasing_request: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: false },
+    // Lets each person declare their own out-of-office delegate.
+    sys_approval_delegation: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: true },
+  },
+});
+
+export const StaffPosition = definePosition({
+  name: 'purchasing_staff', label: 'Staff',
+  description: 'Anyone who may raise a purchase request.',
+  permissionSets: ['purchasing_user'],
+});
+
+export const FinancePosition = definePosition({
+  name: 'purchasing_finance', label: 'Finance Approver',
+  description: 'Approves purchase requests above 10,000.',
+  permissionSets: ['purchasing_user'],
+});
+```
+
+The purchase request object declares `title`, `vendor`, `amount` (currency), `justification` and a read-only `approval_status` select (pending, approved, rejected, recalled), with `sharingModel: 'private'` and field history on.
+
+**The first run: delegation without the grant.** Before the `sys_approval_delegation` line existed, Mark's attempt to declare his own absence:
+
+```text
+POST /api/v1/data/sys_approval_delegation  (as Mark, delegator = Mark, delegate = Dana)  → 403
+  {"error":"You do not have permission to perform this action. Contact your administrator if you need access.",
+   "code":"PERMISSION_DENIED","object":"sys_approval_delegation"}
+```
+
+The approvals guide at the tag reads ["Out-of-office delegation is self-service — create your own row via the data API"](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/automation/approvals.mdx#L1191-L1192), and the object's own comment says ["RLS/permission sets are the authz"](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-approvals/src/sys-approval-delegation.object.ts#L42-L45).
+
+**The measured run.** `objectstack dev` on a database file of its own (so it could be restarted onto the same data). The administrator created four users with the admin create-user endpoint, gave each the Staff position and Fiona the Finance position, and set Mark as Alice's manager with `POST /api/v1/auth/admin/set-user-manager`. New users are created with a password they must change, so each one changed it before their first request. Requests below are condensed to the call, its status code and the part of the answer that matters.
+
+Alice, 2,400:
+
+```text
+POST /api/v1/data/purchasing_request {"title":"Two monitors for the design team","amount":2400, …}  → 201
+GET  /api/v1/approvals/requests?status=pending
+  areq_11496989-… "Two monitors for the design team" manager_review  approvers: {"6uQKuyaW…":"Mark (Manager)"}
+POST /api/v1/approvals/requests/areq_11496989-…/approve  (as Alice)  → 403
+  {"code":"FORBIDDEN","error":"actor 'vr7oFDpG…' is not a pending approver"}
+POST /api/v1/approvals/requests/areq_11496989-…/approve  (as Dana)   → 404
+  {"code":"REQUEST_NOT_FOUND","error":"areq_11496989-…"}
+PATCH /api/v1/data/purchasing_request/IB302DKjEWHWM97O {"amount":24000}  (as Alice)  → 409
+  {"error":"Purchase Request 'Two monitors for the design team' is locked while an approval is in progress, …","code":"RECORD_LOCKED", …}
+POST /api/v1/approvals/requests/areq_11496989-…/approve {"comment":"OK, within team budget"}  (as Mark)  → 200
+GET  /api/v1/data/purchasing_request/IB302DKjEWHWM97O  → "amount":2400,"approval_status":"approved"
+```
+
+Alice, 18,000:
+
+```text
+POST /api/v1/data/purchasing_request {"title":"Annual design software licences","amount":18000, …}  → 201
+POST /api/v1/approvals/requests/areq_d3a92f48-…/approve {"comment":"Needed, but over my limit"}  (as Mark)  → 200
+GET  /api/v1/approvals/requests?status=pending  (as Fiona)
+  areq_847ba767-… "Annual design software licences" finance_review  approvers: {"bCeaBA2N…":"Fiona (Finance)"}
+POST /api/v1/approvals/requests/areq_847ba767-…/approve  (as Mark)  → 404 REQUEST_NOT_FOUND
+POST /api/v1/approvals/requests/areq_847ba767-…/reject {"comment":"Over this quarter software budget; resubmit in January"}  (as Fiona)  → 200
+GET  /api/v1/data/purchasing_request/OSjarg1CMvWMjYW8  → "amount":18000,"approval_status":"rejected"
+```
+
+Mark away, Alice 3,000:
+
+```text
+POST /api/v1/data/sys_approval_delegation {"delegator_id":"6uQKuyaW…","delegate_id":"VgaW2gqB…", …}  (as the administrator)  → 403
+  {"error":"you may only manage out-of-office delegations where you are the delegator ('qiB0qhYE…')","code":"FORBIDDEN", …}
+POST /api/v1/data/sys_approval_delegation {"delegator_id":"6uQKuyaW…","delegate_id":"6uQKuyaW…"}  (as Mark)  → 400
+  {"error":"Delegate must be someone other than the Delegator. …","code":"VALIDATION_FAILED", …}
+POST /api/v1/data/sys_approval_delegation {"delegator_id":"6uQKuyaW…","delegate_id":"VgaW2gqB…",
+  "valid_from":"2026-11-27T02:34:07Z","valid_until":"2026-12-02T00:00:00Z","reason":"Annual leave"}  (as Mark)  → 201
+POST /api/v1/data/purchasing_request {"title":"Conference tickets","amount":3000, …}  → 201
+GET  /api/v1/approvals/requests?status=pending
+  areq_b068a078-… "Conference tickets" manager_review  approvers: {"VgaW2gqB…":"Dana (Deputy)"}
+POST /api/v1/approvals/requests/areq_b068a078-…/approve {"comment":"from the beach"}  (as Mark)  → 404 REQUEST_NOT_FOUND
+POST /api/v1/approvals/requests/areq_b068a078-…/approve {"comment":"Approved for Mark while he is on leave"}  (as Dana)  → 200
+GET  /api/v1/data/purchasing_request/io4oYZdkB7TUgo3j  → "amount":3000,"approval_status":"approved"
+```
+
+Fiona away, Alice 12,500 (Mark first deleted his delegation):
+
+```text
+POST /api/v1/data/sys_approval_delegation {"delegator_id":"bCeaBA2N…","delegate_id":"VgaW2gqB…", …,"reason":"Annual leave"}  (as Fiona)  → 201
+POST /api/v1/data/purchasing_request {"title":"Laptop refresh, three machines","amount":12500, …}  → 201
+POST /api/v1/approvals/requests/areq_13b1a27a-…/approve {"comment":"Fine by me"}  (as Mark)  → 200
+GET  /api/v1/approvals/requests?status=pending
+  areq_74a0da00-… "Laptop refresh, three machines" finance_review  approvers: {"bCeaBA2N…":"Fiona (Finance)"}
+```
+
+Dana given the Finance position until 2 December, Alice 15,000:
+
+```text
+POST /api/v1/data/sys_user_position {"user_id":"VgaW2gqB…","position":"purchasing_finance",
+  "valid_from":"2026-11-27T02:36:29Z","valid_until":"2026-12-02T00:00:00Z","reason":"Covering for Fiona during leave"}  (as the administrator)  → 201
+POST /api/v1/data/purchasing_request {"title":"Office chairs, eight","amount":15000, …}  → 201
+POST /api/v1/approvals/requests/areq_73f1be07-…/approve {"comment":"Yes"}  (as Mark)  → 200
+GET  /api/v1/approvals/requests?status=pending  (as Dana)
+  areq_4cd80ca2-… "Office chairs, eight" finance_review  approvers: {"VgaW2gqB…":"Dana (Deputy)","bCeaBA2N…":"Fiona (Finance)"}
+POST /api/v1/approvals/requests/areq_4cd80ca2-…/approve {"comment":"Approved, covering Finance"}  (as Dana)  → 200
+GET  /api/v1/data/purchasing_request/AaOL5mgh-aGOofqC  → "amount":15000,"approval_status":"approved"
+```
+
+Dana's pending list held only the chairs: the laptop request, opened before her position row existed, stayed on Fiona alone.
+
+**After a restart onto the same database.** The decision records, read by the administrator, per purchase:
+
+```text
+GET /api/v1/data/sys_approval_action?filter={"record_id":…}&sort=created_at
+
+2,400   02:35:01 manager_review submit    -                | 
+        02:35:03 manager_review approve   Mark (Manager)   | OK, within team budget
+18,000  02:35:04 manager_review submit    -                | 
+        02:35:05 manager_review approve   Mark (Manager)   | Needed, but over my limit
+        02:35:05 finance_review submit    -                | 
+        02:35:06 finance_review reject    Fiona (Finance)  | Over this quarter software budget; resubmit in January
+3,000   02:35:07 manager_review submit    -                | 
+        02:35:07 manager_review ooo_substitute -           | 6uQKuyaW… → VgaW2gqB… — Annual leave
+        02:35:09 manager_review approve   Dana (Deputy)    | Approved for Mark while he is on leave
+12,500  02:35:10 manager_review submit    -                | 
+        02:35:11 manager_review approve   Mark (Manager)   | Fine by me
+        02:35:11 finance_review submit    -                | 
+```
+
+Each `submit` row carries Alice's id as `actor_id`; the handover row carries no actor and names both people by id with the reason. The flow's run history after the restart:
+
+```text
+GET /api/v1/automation/purchasing_request_approval/runs
+
+paused     12,500  start:success > manager_review:success > over_threshold:success > finance_review:success
+completed   3,000  start:success > manager_review:success > over_threshold:success > finance_review:skipped
+completed  18,000  start:success > manager_review:success > over_threshold:success > finance_review:success
+completed   2,400  start:success > manager_review:success > over_threshold:success > finance_review:skipped
+```
+
+(The chairs request was raised after this read.) Fiona's rejected request, read back by id, still carried the submitted amount:
+
+```text
+GET /api/v1/approvals/requests/areq_847ba767-…  → 200
+  {"status":"rejected","step_label":"Finance Review","submitter_name":"Alice (Requester)",
+   "submitted_at":"2026-11-27T02:35:05.483Z","completed_at":"2026-11-27T02:35:06.664Z", "payload":{"amount":18000, …}}
+```
+
+A decided request's `pending_approvers` is empty and its `sys_approval_approver` rows are deleted; the approver list survives in the audit log as the create rows, for example the row that names request `areq_11496989-…` and approver `6uQKuyaW…`. In this build, the audit log is kept in the project's separate telemetry database file.
+
+**The status trap.** From the audit log of the 18,000 request: Mark's approval, Finance's step opening 36 milliseconds later, and Fiona's rejection:
+
+```text
+02:35:05.458 update purchasing_request OSjarg1C…  by Mark   {"approval_status":"approved"}
+02:35:05.494 update purchasing_request OSjarg1C…  by Alice  {"approval_status":"pending"}
+02:35:06.683 update purchasing_request OSjarg1C…  by Fiona  {"approval_status":"rejected"}
+```
+
+**The edit after yes.** On the approved 2,400 request, as Alice:
+
+```text
+PATCH /api/v1/data/purchasing_request/IB302DKjEWHWM97O {"amount":24000}  → 200
+GET   /api/v1/data/purchasing_request/IB302DKjEWHWM97O  → "amount":24000,"approval_status":"approved"
+GET   /api/v1/approvals/requests?status=pending  → the 12,500 laptop request only
+GET   /api/v1/data/sys_audit_log?filter={"record_id":"IB302DKjEWHWM97O"}&sort=created_at
+  02:35:01.773 create vr7oFDpG…
+  02:35:01.808 update vr7oFDpG…  OLD {"approval_status":null}       NEW {"approval_status":"pending"}
+  02:35:03.147 update 6uQKuyaW…  OLD {"approval_status":"pending"}  NEW {"approval_status":"approved"}
+  02:36:00.644 update vr7oFDpG…  OLD {"amount":2400}                NEW {"amount":24000}
+```
+
+The rule we then added to the purchase request object:
+
+```ts
+validations: [
+  {
+    type: 'script' as const,
+    name: 'approved_amount_is_final',
+    label: 'Approved amount is final',
+    condition: P`record.approval_status == "approved" && record.amount != previous.amount`,
+    message: 'This request is approved. Its amount cannot change; raise a new request instead.',
+    severity: 'error' as const,
+  },
+],
+```
+
+On the approved 3,000 request, after a restart with the rule:
+
+```text
+PATCH /api/v1/data/purchasing_request/io4oYZdkB7TUgo3j {"amount":30000}  → 400
+  {"error":"This request is approved. Its amount cannot change; raise a new request instead.","code":"VALIDATION_FAILED", …}
+PATCH /api/v1/data/purchasing_request/io4oYZdkB7TUgo3j {"justification":"Two people, industry conference (booked)"}  → 200
+```
+
+A new 80 request created after the rule still opened its manager step on Mark.
+
+**Not measured.** A requester who is also one of the step's approvers; whether someone outside a request can read it or the purchase; a rejection at the manager step; a deputy window that ends while a request waits; a limit on what a deputy may approve; recall by the requester; escalation after a deadline; notification delivery; the single-request reassign; the administrator override; the enterprise delegation and approval-matrix features; and how long any record is retained.

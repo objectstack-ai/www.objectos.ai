@@ -1,0 +1,405 @@
+---
+title: "Wer hat diesen Einkauf genehmigt, und können Sie es beweisen?"
+description: "Eine KI-gebaute Einkaufsfreigabe, getestet auf ObjectStack 18.6.0. Ein genehmigter Antrag über 2.400 wurde auf 24.000 geändert und blieb genehmigt, bis eine Regel kam. Dazu: Vertretung, Finanz ab 10.000, Audit-Trail."
+author: ObjectStack Team
+date: 2026-12-02
+status: published
+topic: automation
+audience: business
+solutions: []
+industries: []
+cover: ./cover.svg
+tags:
+  - Genehmigungen
+  - Vertretung
+  - Audit-Trail
+  - Einkauf
+---
+
+**Die kurze Antwort.** Bevor Sie einem Einkaufs-Genehmigungsablauf vertrauen, den eine KI gebaut hat, testen Sie auf einer Kopie drei Dinge: wer jeden Antrag genehmigt hat und ob das System alle anderen abgewiesen hätte, was passiert, wenn der Genehmiger abwesend ist oder der Betrag Ihre Grenze überschreitet, und ob Sie den Weg später rekonstruieren können. Eine Plattform mit eingebauten Genehmigungen erzwingt das Erste und zeichnet das Dritte auf. Das Zweite ist Richtlinie und bleibt Ihre Sache, einschließlich dessen, was sich nach der Genehmigung noch ändern darf. In unserem Test wurde ein genehmigter Antrag über 2.400 auf 24.000 geändert und blieb genehmigt, bis eine zusätzliche Regel einen genehmigten Betrag endgültig machte.
+
+*Gemessen auf ObjectStack 18.6.0, dem neuesten Release zum Zeitpunkt unseres Tests am 27. November 2026, in einem neuen Projekt aus der offiziellen Vorlage. Alle Befehle und Rohausgaben stehen in [Der Beweis](#der-beweis).*
+
+## Drei Fragen, bevor Sie ihm vertrauen
+
+Die Einkaufsfreigabe ist der Ablauf, den jede Betriebsleitung kennt: Jemand möchte etwas kaufen, die Vorgesetzte sagt ja oder nein, und ab einem bestimmten Betrag muss auch die Finanzabteilung zustimmen. Ein KI-Coding-Agent kann diesen Ablauf aus einem Satz schreiben. Wissen müssen Sie nicht, ob er das kann, sondern was das Ergebnis an dem Tag tut, an dem es darauf ankommt.
+
+Drei Fragen decken es ab:
+
+1. **Wer hat genehmigt, und durfte er das?** Nicht „wessen Name darauf steht", sondern ob das System alle anderen abgewiesen hätte.
+2. **Was passiert, wenn der Genehmiger abwesend ist oder der Betrag eine Schwelle überschreitet?** Ein Antrag, der zwei Wochen auf jemanden im Urlaub wartet, ist eine gescheiterte Genehmigung, auch wenn niemand etwas falsch gemacht hat.
+3. **Können Sie den ganzen Weg einen Monat später beweisen?** Wer beantragt hat, wer jeden Schritt entschieden hat, wer wen vertreten hat und was genau genehmigt wurde.
+
+In diesem Beitrag geht es um den Betrieb des Ablaufs. Ob der Ablauf selbst live gehen soll und wer das abzeichnet, ist eine andere Entscheidung, behandelt in [wer ein KI-gebautes System abzeichnet](/de/blog/who-signs-off-on-an-ai-built-system/).
+
+## Der Ablauf, den wir gebaut haben, in einfachen Worten
+
+Wir wollten die Regel, mit der die meisten kleinen Firmen anfangen: *Jeder Einkaufsantrag geht an die Vorgesetzte des Antragstellers; über 10.000 geht er zusätzlich an die Finanzabteilung.* In einem neuen ObjectStack-Projekt ergab das einen Datensatztyp (einen Einkaufsantrag mit Was, Lieferant, Betrag und Begründung), einen **Genehmigungsablauf**, also eine Folge von Schritten, an denen das System anhält und wartet, bis eine benannte Person ja oder nein sagt, und zwei **Rollen**: Mitarbeitende, die Anträge stellen können, und Finanzfreigabe.
+
+Zwei Entscheidungen haben wir getroffen, nicht die Plattform. Wir haben beiden Schritten gesagt, dass die Person, die einen Antrag eingereicht hat, ihn nicht genehmigen darf; die Plattform lässt das aus, solange man es nicht einschaltet ([ihre eigene Beschreibung](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/spec/src/automation/approval.zod.ts#L1118-L1123) sagt "Off by default"). Unser Lauf hat diese Einstellung nie beansprucht, weil Alice nie eine ihrer eigenen Genehmigerinnen war. Und wir haben den ersten Schritt an „die Vorgesetzte des Antragstellers" geleitet, die die Plattform aus einer Vorgesetztenverknüpfung liest, die ein Administrator für jede Person setzt.
+
+Dann haben wir vier Personen eingesetzt (Alice, die beantragt; Mark, ihr Vorgesetzter; Fiona aus der Finanzabteilung; und Dana, eine Kollegin, die vertreten kann) und es laufen lassen.
+
+## Was passiert ist
+
+| Was wir getan haben | Was das System geantwortet hat | Was es für Sie bedeutet |
+|:--|:--|:--|
+| Alice beantragte Monitore für 2.400. | Der Antrag ging nur an Mark. Er genehmigte; der Antrag stand auf „genehmigt". Die Finanzabteilung wurde nie gefragt. | Die Schwelle funktioniert: Kleine Anträge brauchen einen Schritt. |
+| Alice versuchte, ihren eigenen Antrag zu genehmigen. | Abgewiesen: Sie gehört nicht zu seinen Genehmigern. | Ein Antragsteller kann keinen Antrag genehmigen, der an jemand anderen geht. Der schwierigere Fall ist ein Antragsteller, der zugleich Genehmiger ist, etwa der eigene Einkauf einer Führungskraft. Wir haben die Einstellung dafür eingeschaltet und sie nicht getestet. |
+| Dana, nicht zugewiesen, versuchte, ihn zu genehmigen. | Antwort, als gäbe es den Antrag nicht. | Personen außerhalb des Antrags können nicht darauf handeln, und die Antwort bestätigt nicht einmal, dass er existiert. |
+| Alice versuchte, den Betrag zu ändern, während Mark entschied. | Abgewiesen: Der Antrag ist gesperrt, solange eine Genehmigung läuft. | Der Genehmiger entscheidet über die eingereichte Zahl. |
+| Nach Marks Genehmigung änderte Alice den Antrag über 2.400 auf 24.000. | **Gespeichert.** Der Antrag stand weiter auf „genehmigt", und keine neue Genehmigung wurde eröffnet. Die Änderung stand im Audit-Log, mit ihrem Namen und beiden Beträgen. | Der Ablauf hat einen Antrag genehmigt, nicht jede spätere Version davon. Wir hatten nichts anderes festgelegt. Alice konnte ändern, weil wir Antragstellern Bearbeitungsrechte auf ihre eigenen Anträge gegeben hatten. |
+| Wir fügten eine Regel hinzu: Der Betrag eines genehmigten Antrags darf sich nicht ändern. Alice versuchte es an einem anderen genehmigten Antrag erneut. | Abgewiesen, mit unserer Meldung. Andere Änderungen wurden weiter gespeichert. | Eine Regel schließt die Lücke für den Betrag. Lieferant und alle anderen Felder bleiben offen, bis Sie etwas anderes festlegen. |
+| Alice beantragte Softwarelizenzen für 18.000. Mark genehmigte; dann versuchte er, auch den Finanzschritt zu genehmigen. | Marks Genehmigung eröffnete einen zweiten Schritt für Fiona. Marks Versuch am Finanzschritt: Antwort, als gäbe es ihn nicht. Fiona lehnte mit Begründung ab, und der Antrag stand auf „abgelehnt". | Über 10.000 reicht das Ja der Führungskraft nicht, und die Führungskraft kann den Teil der Finanzabteilung nicht übernehmen. |
+| Mark trug eine Abwesenheit bis 2. Dezember ein und benannte Dana als Vertretung. Alice beantragte Konferenztickets für 3.000. | Der Antrag ging direkt an Dana, und der Datensatz vermerkte die Übergabe mit Marks Begründung „Annual leave". Mark konnte nicht darauf handeln; Dana genehmigte. | Genehmigungen der Führungskraft laufen weiter, während sie weg ist, und die Übergabe ist dokumentiert. |
+| Der Administrator versuchte, Marks Abwesenheit für ihn einzutragen. | Abgewiesen: Nur Mark kann seine eigene Vertretung benennen. | Niemand, auch kein Administrator, kann die Genehmigungen eines anderen umleiten, indem er ihn für abwesend erklärt. |
+| Auch Fiona trug eine Abwesenheit ein und benannte Dana. Alice beantragte Laptops für 12.500; Mark genehmigte. | Der Finanzschritt ging allein an Fiona und wartete. | Eine Vertretung übernimmt Genehmigungen, die an eine Person gehen, nicht solche, die an eine Rolle gehen. |
+| Der Administrator gab Dana die Finanzrolle bis 2. Dezember, mit Begründung. Alice beantragte Stühle für 15.000. | Der Finanzschritt ging an Fiona und Dana; Dana genehmigte. Der bereits wartende Laptop-Antrag blieb bei Fiona. | Vertretung in einer Rolle funktioniert, aber nur für Anträge, die nach der Regelung eröffnet werden. |
+| Wir starteten den Server neu und lasen die Spur zurück. | Jeder Schritt war wieder da: wer eingereicht hat, wer entschieden hat, die Übergabe, die Kommentare, die Zeiten, der Betrag, den Fiona gesehen hat, und welche Schritte jeder Antrag durchlaufen hat. | Der Weg ist gespeichert, nicht nur im Arbeitsspeicher gehalten. |
+
+Zwei Zeilen verdienen einen zweiten Blick.
+
+### Die Änderung nach dem Ja
+
+Wir nennen sie so, weil die Genehmigung in einem Moment geschieht und der Datensatz weiterlebt. Unseren Ablauf hat ein KI-Coding-Agent aus diesem einen Satz geschrieben, und er startet einmal: wenn ein Antrag angelegt wird. Eine spätere Bearbeitung startet ihn nicht erneut. Nichts in diesem Satz sagte, was sich an einem genehmigten Antrag noch ändern darf, also tat die Plattform genau das, was wir deklariert hatten, und nicht mehr. Das Audit-Log hat die Änderung erfasst, sodass Sie sie hinterher beweisen könnten, aber nichts hat sie verhindert. Ob ein genehmigter Betrag endgültig ist, ob ein Lieferantenwechsel den Antrag wieder öffnen soll oder ob eine Änderung unter 5 % in Ordnung ist, entscheiden Sie. Schreiben Sie es auf und geben Sie die Regel dann Ihrem Agent. Wir haben ihm eine gegeben: Ein genehmigter Betrag ist endgültig. Der nächste Versuch wurde abgewiesen.
+
+### Die abwesende Finanzfreigabe
+
+Die Vertretung, die Abwesenheitsübergabe der Plattform, folgt einer Person. Unser Finanzschritt zeigte auf eine Rolle, also hat Fionas Abwesenheit nichts bewegt. Die Dokumentation der Plattform [sagt das](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/automation/approvals.mdx#L1187-L1194) und nennt den anderen Weg: eine weitere Person für festgelegte Tage in die Rolle setzen. Das haben wir getan, und der nächste Antrag erreichte beide. Zwei weitere Wege gibt es, die wir nicht getestet haben. Ein Genehmiger kann einen einzelnen wartenden Antrag an jemand anderen weitergeben, und ein Administrator kann einen festhängenden Antrag entscheiden oder neu zuweisen ([hier dokumentiert](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/automation/approvals.mdx#L975-L990)).
+
+Ein Einrichtungsschritt hat uns überrascht. In unserem ersten Lauf konnte Mark seine Abwesenheit gar nicht eintragen: Die Plattform wies ihn ab, bis wir Mitarbeitenden Rechte auf Abwesenheitsdatensätze gaben. Die Dokumentation nennt die Funktion Self-Service. Das ist sie, sobald Sie das Recht vergeben, und dieses Recht ist eine weitere Entscheidung darüber, wer seine Genehmigungen an jemand anderen übergeben darf.
+
+## Den Weg einen Monat später beweisen
+
+Was die Plattform aufbewahrt hat, und wo:
+
+- **Jede Entscheidung** als eigener Datensatz: der Schritt, die Aktion (eingereicht, genehmigt, abgelehnt, übergeben), wer sie mit Namen ausgeführt hat, der Kommentar und die Zeit. Der Übergabedatensatz nennt beide Personen und die angegebene Begründung.
+- **Was genehmigt wurde**: Jeder Antrag hält eine Kopie des Einkaufs so, wie er eingereicht wurde, sodass Fionas Ablehnung an 18.000 hängt und nicht an dem, was der Datensatz heute sagt.
+- **Welchen Weg jeder Antrag genommen hat**: Die Laufhistorie des Ablaufs, nach dem Neustart gelesen, zeigt den Finanzschritt übersprungen bei 2.400 und 3.000 und erreicht bei 18.000 und 12.500. Die Dokumentation der Plattform [beschreibt diese Historie als dauerhaft](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/automation/flows.mdx#L1811-L1820), und genau das haben wir gesehen. Der Antrag über 15.000 kam nach dieser Abfrage; seine Entscheidungsdatensätze zeigen beide Schritte.
+- **Jede Änderung am Einkauf selbst**, im Audit-Log, einschließlich der Änderung nach dem Ja.
+- **Wer hätte genehmigen können**: Sobald ein Antrag entschieden ist, listet er seine Genehmiger nicht mehr am Antrag selbst. Die Liste überlebt als Zeilen im Audit-Log. Eine Prüferin, die fragt „Hätte jemand anderes das genehmigen können?", findet die Antwort dort.
+
+Eine Lesefalle: Als Mark den Antrag über 18.000 genehmigte, stand der Status kurz auf „genehmigt", bevor der Finanzschritt ihn wieder auf „ausstehend" setzte. Die Statushistorie eines Antrags, den Fiona später ablehnte, enthält deshalb das Wort „genehmigt". Lesen Sie die Entscheidungen, nicht die Statushistorie.
+
+Ein Neustart ist kein Monat. Wir haben bewiesen, dass die Datensätze gespeichert sind und einen Neustart überstehen; wie lange sie aufbewahrt werden und wer sie löschen darf, hängt von Ihrer Aufbewahrungseinstellung und Ihrem Datenbank-Backup ab und war nicht Teil unserer Messung.
+
+## Was für Tabelle und E-Mail spricht, oder für eine Beschaffungssuite
+
+Für ein Team, das ein paar Einkaufsanträge im Monat stellt, sind eine gemeinsame Tabelle und eine E-Mail an die Vorgesetzte eine ernsthafte Antwort. Sie braucht keine Einrichtung, alle kennen sie schon, und ein E-Mail-Verlauf ist eine brauchbare Aufzeichnung. Was sie nicht kann, ist abweisen: Jeder kann „genehmigt" in die Zelle tippen, eine E-Mail lässt sich an wen auch immer weiterleiten, und eine nach der Genehmigung geänderte Zahl hinterlässt keine Spur, sofern niemand Versionen aufbewahrt. Wenn in Ihrer Firma niemand auf die Idee käme, diese Dinge zu prüfen, ist die Tabelle günstiger.
+
+Eine spezialisierte Beschaffungssuite ist das andere Ende. Sie bringt Lieferantenkataloge, Budgets, Bestellungen und den Abgleich mit Rechnungen mit, dazu Genehmigungsgrenzen und Vertretungsregeln, die Einkaufsteams über Jahre verfeinert haben. Wenn Einkauf einen großen Teil Ihres Geschäfts ausmacht, ist diese Tiefe ihr Geld wert, und ein Genehmigungsablauf auf einer allgemeinen Plattform ist kein Ersatz.
+
+Der Fall in der Mitte ist der, in den ein KI-gebauter Ablauf passt: Genehmigungen, die zu Ihrem eigenen System gehören, an Ihre eigenen Datensätze gebunden, die Sie ändern wollen, indem Sie einen Agent fragen und eine kleine Änderung prüfen, statt ein separates Produkt zu konfigurieren.
+
+## Was ObjectStack nicht für Sie entscheidet
+
+- **Ihre Vertretungsrichtlinie.** Die Plattform erzwingt, dass jede Person nur ihre eigene Vertretung benennt. Sie entscheidet nicht, wer Vertretung sein darf, wie lange oder bis zu welchem Betrag. Wir haben keine Grenze dafür gesetzt, was Dana an Marks Stelle genehmigen darf, und die Plattform hat keine verlangt; wir haben einen Antrag über 3.000 getestet. Die eigenen Notizen der Plattform nennen [Vertretungs-Governance und Funktionstrennung](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-approvals/src/sys-approval-delegation.object.ts#L28-L32) sowie [Governance per Genehmigungsmatrix](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/automation/approvals.mdx#L215) Enterprise-Themen, die nicht Teil unseres Tests waren. Was eine Enterprise-Edition bietet, haben wir nicht geprüft.
+- **Ihre Unterschriftsgrenzen.** Die Schwelle von 10.000 ist eine Verzweigung, die wir in den Ablauf geschrieben haben. Wenn Mark bis 5.000 und sein Direktor bis 50.000 genehmigen darf, schreiben Sie diese Tabelle.
+- **Was „genehmigt" einfriert.** Siehe die Änderung nach dem Ja.
+- **Fristen, die Ihren Kalender respektieren.** Ein Schritt kann nach einer festgelegten Zahl von Stunden eskalieren, aber es sind [Kalenderstunden](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/automation/approvals.mdx#L1125-L1143): Nächte und Wochenenden zählen mit, und die Plattform liefert keinen Geschäftszeitenkalender. Eine Eskalation haben wir nicht ausgeführt.
+- **Benachrichtigungen.** Die Plattform benachrichtigt Genehmiger über den Nachrichtendienst, den Sie installieren. Die Zustellung haben wir nicht getestet.
+- **Den Einkauf selbst.** Sie gibt keine Bestellungen auf, verwaltet keine Lieferanten und prüft keine Budgets, sofern Sie das nicht bauen.
+
+## Geben Sie Ihrem Agent die drei Fragen
+
+Wenn ein Agent Ihre Genehmigungsabläufe bauen oder ändern wird, geben Sie ihm die Fragen als feste Anweisung, damit jede Änderung mit den Antworten zurückkommt, statt Ihnen die Lücken zur Suche zu überlassen:
+
+```text
+Beantworte für jeden Genehmigungsablauf, den du hinzufügst oder änderst,
+in einfachen Worten:
+1. Wer genehmigt jeden Schritt, und wer wird abgewiesen (auch der Antragsteller)?
+2. Was passiert, wenn ein Genehmiger abwesend ist: bei Schritten an eine Person
+   und bei Schritten an eine Rolle? Was passiert über jeder Schwelle?
+3. Welche Felder dürfen sich nach der Genehmigung noch ändern, und öffnet
+   eine Änderung die Genehmigung erneut?
+Liste dann auf, wo jede Entscheidung festgehalten wird, und teste auf einer
+Testkopie je einen genehmigten und einen abgelehnten Antrag.
+```
+
+Der [Leitfaden, wie Sie Ihren Coding-Agent auf ObjectStack ausrichten](/en/blog/how-to-point-your-agent-at-objectstack/), beschreibt, wie solche Anweisungen den Agent erreichen, und [was eine lang laufende Genehmigung überstehen muss](/en/blog/automation-pause-resume-approvals/) erklärt, warum ein Ablauf tagelang auf eine Entscheidung warten kann, ohne seine Stelle zu verlieren. In ObjectStack ist ein Genehmigungsablauf eine kurze schriftliche Beschreibung, die die Plattform durchsetzt, sodass sich die Antworten oben aus einer Datei lesen lassen, statt sie aus Code zu rekonstruieren.
+
+{/* the-proof */}
+## Der Beweis
+
+**Version.** Gemessen am 2026-11-27.
+
+```text
+$ npm view @objectstack/cli dist-tags
+{ latest: '18.6.0', next: '19.0.0-next.0' }
+```
+
+**Das Projekt.** Ein neues Projekt aus der offiziellen Vorlage, die die 18.6.0-Pakete installiert:
+
+```bash
+npm create objectstack@latest -- purchasing --skip-skills
+```
+
+Wir haben das Beispielobjekt note der Vorlage entfernt, die Dateien unten hinzugefügt und `'approvals'` zu den Fähigkeiten ergänzt, die das Projekt verlangt. `objectstack validate` lief mit drei Hinweisen durch. Zwei betreffen Genehmigungen: Wenn niemand die Genehmigerrolle eines Schritts oder die Vorgesetztenverknüpfung hat, öffnet sich der Antrag bei den Administratoren der Organisation. Der dritte sagt, dass Einkaufsanträge privat sind, also jede Person nur ihre eigenen sieht. Ausgabe gekürzt:
+
+```text
+  ✓ Validation passed (166ms)
+  Data: 1 Objects  5 Fields
+  Logic: 1 Flows
+  Security: 2 Positions  1 Permissions
+  ℹ flow "purchasing_request_approval" · node "manager_review": every approver on this node is { type: 'manager' }, so where sys_user.manager_id is unset the request opens on the organization's administrators, and (lockRecord) the record stays locked
+  ℹ flow "purchasing_request_approval" · node "finance_review": every approver on this node routes to a group (position/team/department/queue), so if none is staffed the request opens on the organization's administrators, and (lockRecord) the record stays locked
+  ℹ permission set "purchasing_user": "purchasing_request" is private (OWD) and this set grants allowRead without a readScope — holders see ONLY records they own (plus explicit shares).
+```
+
+Der Ablauf, `src/flows/purchase-approval.flow.ts`:
+
+```ts
+import { defineFlow } from '@objectstack/spec';
+
+// Every purchase request goes to the requester's manager.
+// Above 10,000 it also goes to Finance.
+export const PurchaseApprovalFlow = defineFlow({
+  name: 'purchasing_request_approval',
+  label: 'Purchase Request Approval',
+  description: 'Manager approves every request; Finance also approves requests above 10,000.',
+  type: 'autolaunched',
+  status: 'active',
+  nodes: [
+    {
+      id: 'start',
+      type: 'start',
+      label: 'On New Request',
+      config: {
+        objectName: 'purchasing_request',
+        triggerType: 'record-after-create',
+        condition: 'amount != null && amount > 0',
+      },
+    },
+    {
+      id: 'manager_review',
+      type: 'approval',
+      label: 'Manager Review',
+      config: {
+        approvers: [{ type: 'manager' }],
+        excludeSubmitter: true,
+        approvalStatusField: 'approval_status',
+      },
+    },
+    { id: 'over_threshold', type: 'decision', label: 'Above 10,000?' },
+    {
+      id: 'finance_review',
+      type: 'approval',
+      label: 'Finance Review',
+      config: {
+        approvers: [{ type: 'position', value: 'purchasing_finance' }],
+        excludeSubmitter: true,
+        approvalStatusField: 'approval_status',
+      },
+    },
+    { id: 'approved', type: 'end', label: 'Approved' },
+    { id: 'rejected', type: 'end', label: 'Rejected' },
+  ],
+  edges: [
+    { id: 'e1', source: 'start', target: 'manager_review' },
+    { id: 'e2', source: 'manager_review', target: 'over_threshold', label: 'approve' },
+    { id: 'e3', source: 'manager_review', target: 'rejected', label: 'reject' },
+    { id: 'e4', source: 'over_threshold', target: 'finance_review', label: 'true', condition: 'amount > 10000' },
+    { id: 'e5', source: 'over_threshold', target: 'approved', label: 'false', condition: 'amount <= 10000' },
+    { id: 'e6', source: 'finance_review', target: 'approved', label: 'approve' },
+    { id: 'e7', source: 'finance_review', target: 'rejected', label: 'reject' },
+  ],
+});
+```
+
+Die Rollen und ihr Berechtigungssatz, `src/security/purchasing.ts` (gekürzt; die Plattform nennt eine Rolle eine Position). Die Zeile `sys_approval_delegation` ist die, die unserem ersten Lauf fehlte:
+
+```ts
+export const PurchasingUser = definePermissionSet({
+  name: 'purchasing_user',
+  label: 'Purchasing User',
+  objects: {
+    purchasing_request: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: false },
+    // Lets each person declare their own out-of-office delegate.
+    sys_approval_delegation: { allowRead: true, allowCreate: true, allowEdit: true, allowDelete: true },
+  },
+});
+
+export const StaffPosition = definePosition({
+  name: 'purchasing_staff', label: 'Staff',
+  description: 'Anyone who may raise a purchase request.',
+  permissionSets: ['purchasing_user'],
+});
+
+export const FinancePosition = definePosition({
+  name: 'purchasing_finance', label: 'Finance Approver',
+  description: 'Approves purchase requests above 10,000.',
+  permissionSets: ['purchasing_user'],
+});
+```
+
+Das Einkaufsantragsobjekt deklariert `title`, `vendor`, `amount` (Währung), `justification` und ein schreibgeschütztes Auswahlfeld `approval_status` (pending, approved, rejected, recalled), mit `sharingModel: 'private'` und eingeschalteter Feldhistorie.
+
+**Der erste Lauf: Vertretung ohne das Recht.** Bevor die Zeile `sys_approval_delegation` existierte, Marks Versuch, seine eigene Abwesenheit einzutragen:
+
+```text
+POST /api/v1/data/sys_approval_delegation  (as Mark, delegator = Mark, delegate = Dana)  → 403
+  {"error":"You do not have permission to perform this action. Contact your administrator if you need access.",
+   "code":"PERMISSION_DENIED","object":"sys_approval_delegation"}
+```
+
+Der Genehmigungsleitfaden am Tag nennt die Abwesenheitsvertretung eine Self-Service-Funktion, die jede Person selbst über die Daten-API anlegt (["Out-of-office delegation is self-service — create your own row via the data API"](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/content/docs/automation/approvals.mdx#L1191-L1192)), während der eigene Kommentar des Objekts festhält, dass Zeilensicherheit und Berechtigungssätze über den Zugriff entscheiden (["RLS/permission sets are the authz"](https://github.com/objectstack-ai/objectstack/blob/958ee03594968c651db1bc40ecb05bfe72f94b2d/packages/plugins/plugin-approvals/src/sys-approval-delegation.object.ts#L42-L45)).
+
+**Der gemessene Lauf.** `objectstack dev` auf einer eigenen Datenbankdatei (damit ein Neustart auf denselben Daten möglich war). Der Administrator legte mit dem Admin-Endpunkt create-user vier Benutzer an, gab jedem die Position Staff und Fiona die Finanzposition und setzte Mark mit `POST /api/v1/auth/admin/set-user-manager` als Alices Vorgesetzten. Neue Benutzer werden mit einem Passwort angelegt, das sie ändern müssen, also hat jeder es vor seiner ersten Anfrage geändert. Die Anfragen unten sind auf den Aufruf, seinen Statuscode und den relevanten Teil der Antwort gekürzt.
+
+Alice, 2.400:
+
+```text
+POST /api/v1/data/purchasing_request {"title":"Two monitors for the design team","amount":2400, …}  → 201
+GET  /api/v1/approvals/requests?status=pending
+  areq_11496989-… "Two monitors for the design team" manager_review  approvers: {"6uQKuyaW…":"Mark (Manager)"}
+POST /api/v1/approvals/requests/areq_11496989-…/approve  (as Alice)  → 403
+  {"code":"FORBIDDEN","error":"actor 'vr7oFDpG…' is not a pending approver"}
+POST /api/v1/approvals/requests/areq_11496989-…/approve  (as Dana)   → 404
+  {"code":"REQUEST_NOT_FOUND","error":"areq_11496989-…"}
+PATCH /api/v1/data/purchasing_request/IB302DKjEWHWM97O {"amount":24000}  (as Alice)  → 409
+  {"error":"Purchase Request 'Two monitors for the design team' is locked while an approval is in progress, …","code":"RECORD_LOCKED", …}
+POST /api/v1/approvals/requests/areq_11496989-…/approve {"comment":"OK, within team budget"}  (as Mark)  → 200
+GET  /api/v1/data/purchasing_request/IB302DKjEWHWM97O  → "amount":2400,"approval_status":"approved"
+```
+
+Alice, 18.000:
+
+```text
+POST /api/v1/data/purchasing_request {"title":"Annual design software licences","amount":18000, …}  → 201
+POST /api/v1/approvals/requests/areq_d3a92f48-…/approve {"comment":"Needed, but over my limit"}  (as Mark)  → 200
+GET  /api/v1/approvals/requests?status=pending  (as Fiona)
+  areq_847ba767-… "Annual design software licences" finance_review  approvers: {"bCeaBA2N…":"Fiona (Finance)"}
+POST /api/v1/approvals/requests/areq_847ba767-…/approve  (as Mark)  → 404 REQUEST_NOT_FOUND
+POST /api/v1/approvals/requests/areq_847ba767-…/reject {"comment":"Over this quarter software budget; resubmit in January"}  (as Fiona)  → 200
+GET  /api/v1/data/purchasing_request/OSjarg1CMvWMjYW8  → "amount":18000,"approval_status":"rejected"
+```
+
+Mark abwesend, Alice 3.000:
+
+```text
+POST /api/v1/data/sys_approval_delegation {"delegator_id":"6uQKuyaW…","delegate_id":"VgaW2gqB…", …}  (as the administrator)  → 403
+  {"error":"you may only manage out-of-office delegations where you are the delegator ('qiB0qhYE…')","code":"FORBIDDEN", …}
+POST /api/v1/data/sys_approval_delegation {"delegator_id":"6uQKuyaW…","delegate_id":"6uQKuyaW…"}  (as Mark)  → 400
+  {"error":"Delegate must be someone other than the Delegator. …","code":"VALIDATION_FAILED", …}
+POST /api/v1/data/sys_approval_delegation {"delegator_id":"6uQKuyaW…","delegate_id":"VgaW2gqB…",
+  "valid_from":"2026-11-27T02:34:07Z","valid_until":"2026-12-02T00:00:00Z","reason":"Annual leave"}  (as Mark)  → 201
+POST /api/v1/data/purchasing_request {"title":"Conference tickets","amount":3000, …}  → 201
+GET  /api/v1/approvals/requests?status=pending
+  areq_b068a078-… "Conference tickets" manager_review  approvers: {"VgaW2gqB…":"Dana (Deputy)"}
+POST /api/v1/approvals/requests/areq_b068a078-…/approve {"comment":"from the beach"}  (as Mark)  → 404 REQUEST_NOT_FOUND
+POST /api/v1/approvals/requests/areq_b068a078-…/approve {"comment":"Approved for Mark while he is on leave"}  (as Dana)  → 200
+GET  /api/v1/data/purchasing_request/io4oYZdkB7TUgo3j  → "amount":3000,"approval_status":"approved"
+```
+
+Fiona abwesend, Alice 12.500 (Mark hatte zuvor seine Vertretung gelöscht):
+
+```text
+POST /api/v1/data/sys_approval_delegation {"delegator_id":"bCeaBA2N…","delegate_id":"VgaW2gqB…", …,"reason":"Annual leave"}  (as Fiona)  → 201
+POST /api/v1/data/purchasing_request {"title":"Laptop refresh, three machines","amount":12500, …}  → 201
+POST /api/v1/approvals/requests/areq_13b1a27a-…/approve {"comment":"Fine by me"}  (as Mark)  → 200
+GET  /api/v1/approvals/requests?status=pending
+  areq_74a0da00-… "Laptop refresh, three machines" finance_review  approvers: {"bCeaBA2N…":"Fiona (Finance)"}
+```
+
+Dana erhält die Finanzposition bis 2. Dezember, Alice 15.000:
+
+```text
+POST /api/v1/data/sys_user_position {"user_id":"VgaW2gqB…","position":"purchasing_finance",
+  "valid_from":"2026-11-27T02:36:29Z","valid_until":"2026-12-02T00:00:00Z","reason":"Covering for Fiona during leave"}  (as the administrator)  → 201
+POST /api/v1/data/purchasing_request {"title":"Office chairs, eight","amount":15000, …}  → 201
+POST /api/v1/approvals/requests/areq_73f1be07-…/approve {"comment":"Yes"}  (as Mark)  → 200
+GET  /api/v1/approvals/requests?status=pending  (as Dana)
+  areq_4cd80ca2-… "Office chairs, eight" finance_review  approvers: {"VgaW2gqB…":"Dana (Deputy)","bCeaBA2N…":"Fiona (Finance)"}
+POST /api/v1/approvals/requests/areq_4cd80ca2-…/approve {"comment":"Approved, covering Finance"}  (as Dana)  → 200
+GET  /api/v1/data/purchasing_request/AaOL5mgh-aGOofqC  → "amount":15000,"approval_status":"approved"
+```
+
+Danas Liste offener Anträge enthielt nur die Stühle: Der Laptop-Antrag, eröffnet bevor ihr Positionsdatensatz existierte, blieb allein bei Fiona.
+
+**Nach einem Neustart auf derselben Datenbank.** Die Entscheidungsdatensätze, vom Administrator gelesen, pro Einkauf:
+
+```text
+GET /api/v1/data/sys_approval_action?filter={"record_id":…}&sort=created_at
+
+2,400   02:35:01 manager_review submit    -                | 
+        02:35:03 manager_review approve   Mark (Manager)   | OK, within team budget
+18,000  02:35:04 manager_review submit    -                | 
+        02:35:05 manager_review approve   Mark (Manager)   | Needed, but over my limit
+        02:35:05 finance_review submit    -                | 
+        02:35:06 finance_review reject    Fiona (Finance)  | Over this quarter software budget; resubmit in January
+3,000   02:35:07 manager_review submit    -                | 
+        02:35:07 manager_review ooo_substitute -           | 6uQKuyaW… → VgaW2gqB… — Annual leave
+        02:35:09 manager_review approve   Dana (Deputy)    | Approved for Mark while he is on leave
+12,500  02:35:10 manager_review submit    -                | 
+        02:35:11 manager_review approve   Mark (Manager)   | Fine by me
+        02:35:11 finance_review submit    -                | 
+```
+
+Jede `submit`-Zeile trägt Alices ID als `actor_id`; die Übergabezeile trägt keinen Akteur und nennt beide Personen per ID samt Begründung. Die Laufhistorie des Ablaufs nach dem Neustart:
+
+```text
+GET /api/v1/automation/purchasing_request_approval/runs
+
+paused     12,500  start:success > manager_review:success > over_threshold:success > finance_review:success
+completed   3,000  start:success > manager_review:success > over_threshold:success > finance_review:skipped
+completed  18,000  start:success > manager_review:success > over_threshold:success > finance_review:success
+completed   2,400  start:success > manager_review:success > over_threshold:success > finance_review:skipped
+```
+
+(Der Stuhl-Antrag wurde nach dieser Abfrage gestellt.) Fionas abgelehnter Antrag, per ID zurückgelesen, trug weiterhin den eingereichten Betrag:
+
+```text
+GET /api/v1/approvals/requests/areq_847ba767-…  → 200
+  {"status":"rejected","step_label":"Finance Review","submitter_name":"Alice (Requester)",
+   "submitted_at":"2026-11-27T02:35:05.483Z","completed_at":"2026-11-27T02:35:06.664Z", "payload":{"amount":18000, …}}
+```
+
+Bei einem entschiedenen Antrag ist `pending_approvers` leer und seine `sys_approval_approver`-Zeilen sind gelöscht; die Genehmigerliste überlebt im Audit-Log als Anlegezeilen, zum Beispiel die Zeile, die den Antrag `areq_11496989-…` und den Genehmiger `6uQKuyaW…` nennt. In diesem Build liegt das Audit-Log in der separaten Telemetrie-Datenbankdatei des Projekts.
+
+**Die Statusfalle.** Aus dem Audit-Log des Antrags über 18.000: Marks Genehmigung, der Finanzschritt 36 Millisekunden später und Fionas Ablehnung:
+
+```text
+02:35:05.458 update purchasing_request OSjarg1C…  by Mark   {"approval_status":"approved"}
+02:35:05.494 update purchasing_request OSjarg1C…  by Alice  {"approval_status":"pending"}
+02:35:06.683 update purchasing_request OSjarg1C…  by Fiona  {"approval_status":"rejected"}
+```
+
+**Die Änderung nach dem Ja.** Am genehmigten Antrag über 2.400, als Alice:
+
+```text
+PATCH /api/v1/data/purchasing_request/IB302DKjEWHWM97O {"amount":24000}  → 200
+GET   /api/v1/data/purchasing_request/IB302DKjEWHWM97O  → "amount":24000,"approval_status":"approved"
+GET   /api/v1/approvals/requests?status=pending  → the 12,500 laptop request only
+GET   /api/v1/data/sys_audit_log?filter={"record_id":"IB302DKjEWHWM97O"}&sort=created_at
+  02:35:01.773 create vr7oFDpG…
+  02:35:01.808 update vr7oFDpG…  OLD {"approval_status":null}       NEW {"approval_status":"pending"}
+  02:35:03.147 update 6uQKuyaW…  OLD {"approval_status":"pending"}  NEW {"approval_status":"approved"}
+  02:36:00.644 update vr7oFDpG…  OLD {"amount":2400}                NEW {"amount":24000}
+```
+
+Die Regel, die wir dann dem Einkaufsantragsobjekt hinzugefügt haben:
+
+```ts
+validations: [
+  {
+    type: 'script' as const,
+    name: 'approved_amount_is_final',
+    label: 'Approved amount is final',
+    condition: P`record.approval_status == "approved" && record.amount != previous.amount`,
+    message: 'This request is approved. Its amount cannot change; raise a new request instead.',
+    severity: 'error' as const,
+  },
+],
+```
+
+Am genehmigten Antrag über 3.000, nach einem Neustart mit der Regel:
+
+```text
+PATCH /api/v1/data/purchasing_request/io4oYZdkB7TUgo3j {"amount":30000}  → 400
+  {"error":"This request is approved. Its amount cannot change; raise a new request instead.","code":"VALIDATION_FAILED", …}
+PATCH /api/v1/data/purchasing_request/io4oYZdkB7TUgo3j {"justification":"Two people, industry conference (booked)"}  → 200
+```
+
+Ein neuer Antrag über 80, angelegt nach der Regel, öffnete seinen Vorgesetztenschritt weiterhin bei Mark.
+
+**Nicht gemessen.** Ein Antragsteller, der zugleich Genehmiger des Schritts ist; ob jemand außerhalb eines Antrags ihn oder den Einkauf lesen kann; eine Ablehnung im Vorgesetztenschritt; ein Vertretungsfenster, das endet, während ein Antrag wartet; eine Grenze für das, was eine Vertretung genehmigen darf; Rückruf durch den Antragsteller; Eskalation nach einer Frist; Zustellung von Benachrichtigungen; die Neuzuweisung eines einzelnen Antrags; die Übersteuerung durch den Administrator; die Enterprise-Funktionen für Vertretung und Genehmigungsmatrix; und wie lange ein Datensatz aufbewahrt wird.
